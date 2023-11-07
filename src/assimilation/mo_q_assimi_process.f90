@@ -1,4 +1,22 @@
 !>
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
 !! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
 !!
 !! @author
@@ -7,13 +25,12 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
+!! Tea Thum (2023-06-19): added calc_chlorophyll_fluorescence_yield()
+!! Jan Engel (2023-09-27): rename mo_assimi_update_canopy_fluxes -> mo_q_assimi_process
 !!
-MODULE mo_assimi_update_canopy_fluxes
-#ifndef __NO_JSBACH__
 
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
+MODULE mo_q_assimi_process
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
@@ -26,7 +43,7 @@ MODULE mo_assimi_update_canopy_fluxes
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
   PUBLIC :: discrimination_ps
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
 
 CONTAINS
 
@@ -35,53 +52,49 @@ CONTAINS
   !>
   SUBROUTINE update_canopy_fluxes(tile, options)
 
-    USE mo_jsb_class,               ONLY: Get_model
-    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    ! USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, RAD_, HYDRO_, PHENO_, VEG_
-    USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, RAD_, SPQ_, PHENO_, VEG_
-    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_jsb_parallel,            ONLY: Get_omp_thread
-    USE mo_atmland_constants,       ONLY: min_wind, max_wind
-    USE mo_jsb_physical_constants,  ONLY: r_gas, Tzero
-    USE mo_isotope_util,            ONLY: calc_fractionation
-    USE mo_phy_schemes
-    USE mo_assimi_constants,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
-    USE mo_rad_process,             ONLY: Has_minimal_radiation
-    dsl4jsb_Use_config(ASSIMI_)    
+    USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,         ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
+    USE mo_jsb_process_class,      ONLY: A2L_, ASSIMI_, PHENO_, VEG_, RAD_, SPQ_
+    USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,               ONLY: Get_vgrid
+    USE mo_atmland_constants,      ONLY: min_wind, max_wind
+    USE mo_jsb_physical_constants, ONLY: r_gas, Tzero
+    USE mo_isotope_util,           ONLY: calc_fractionation
+    USE mo_phy_schemes             ! e.g., heat_transfer_coef
+    USE mo_assimi_parameters,      ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_rad_util,               ONLY: Has_minimal_radiation
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(RAD_)
-    ! dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(RAD_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib                           !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy                     !< Vertical grid
-    INTEGER                               :: ncanopy                          !< number of canopy layers
-    INTEGER                               :: icanopy                          !< for looping across ncanopy layers
-    INTEGER                               :: no_omp_thread                    !< number of open mp thread (for task options)
-    LOGICAL,  DIMENSION(options%nc)       :: l_day                            !< day/night (calc as in RAD_)
-    REAL(wp)                              :: lctlib_g1                        !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp), DIMENSION(options%nc)       :: hlp1, hlp2, hlp3                 !< dummy variables
-    REAL(wp), DIMENSION(options%nc)       :: tmp_steplen_times_wind           !< dummy variable
-    INTEGER                               :: iblk, ics, ice, nc               !< dimensions
-    REAL(wp)                              :: steplen                          !< step length
+    TYPE(t_jsb_model),      POINTER       :: model                    !< the model
+    TYPE(t_lctlib_element), POINTER       :: lctlib                   !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy             !< Vertical grid
+    INTEGER                               :: ncanopy                  !< number of canopy layers
+    INTEGER                               :: icanopy                  !< for looping across ncanopy layers
+    LOGICAL,  DIMENSION(options%nc)       :: l_day                    !< day/night (calc as in RAD_)
+    REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(wp), DIMENSION(options%nc)       :: ga, hlp1, hlp2, hlp3     !< dummy variables
+    INTEGER                               :: iblk, ics, ice, nc, ic   !< dimensions
+    REAL(wp)                              :: steplen                  !< step length
+    REAL(wp)                              :: alpha                    !< implicitness factor
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
-    ! dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
@@ -97,7 +110,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     dsl4jsb_Real2D_onChunk      :: swvis_srf_down
     dsl4jsb_Real2D_onChunk      :: swnir_srf_down
-    dsl4jsb_Real2D_onChunk      :: ga
     ! ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -113,6 +125,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    ! ASSIMI_ 3D
     dsl4jsb_Real3D_onChunk      :: net_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
@@ -120,11 +133,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
+    dsl4jsb_Real3D_onChunk      :: chlfl_yield_cl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    ! ! HYDRO_ 2D
-    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! PHENO_ 2D
@@ -132,9 +144,9 @@ CONTAINS
     ! PHENO_ 3D
     dsl4jsb_Real3D_onChunk      :: lai_cl
     ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tacclim_mavg
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
@@ -147,38 +159,34 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
-    no_omp_thread = Get_omp_thread()
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    ! dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)                      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                       ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)               ! in     ! calculated from jsb4 co2_air_mol
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)               ! in     ! ICON-Land: calculated from jsb4 co2_air_mol
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! out    ! not aggregated at the moment
-    ! ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)      ! out
@@ -189,11 +197,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                    ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                    ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)               ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)                  ! out
-    ! ASSIMI_ 3D
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, net_assimilation_cl)         ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, gross_assimilation_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)   ! out
@@ -201,39 +208,29 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, co2_conc_leaf_cl)            ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, jmax_cl)                     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, vcmax_cl)                    ! out
-    ! RAD_ 3D
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, chlfl_yield_cl)              ! out 
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
-    ! ! HYDRO_ 2D
-    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pot)              ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)              ! in
-    ! PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
-    ! PHENO_ 3D
     dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! in
-    ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
-    ! VEG_ 3D
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tacclim_mavg)   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! in
+    ! ----------------------------------------------------------------------------------------------------- !
 
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-    !>  0.9.1 set output to zero
+    !>0.9.1 set output to zero
     !>
     canopy_cond(:)            = 0.0_wp
     co2_conc_leaf(:)          = 0.0_wp
 
-    !>  0.9.2 set g1 according to canopy_conductance_scheme
+    !>0.9.2 set g1 according to canopy_conductance_scheme
     !> 
     SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
@@ -249,11 +246,15 @@ CONTAINS
     beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
     beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
     ! catch beta_soil_ps getting zero
-    !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero, 
+    !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero,
     !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
 
-    ga(:) = heat_transfer_coef(drag_srf(:), steplen) * MIN( MAX(wind_10m(:), min_wind), max_wind)
+#ifdef __QUINCY_STANDALONE__
+    ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MAX(wind_10m, min_wind) 
+#else
+    ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MIN( MAX(wind_10m(:), min_wind), max_wind)
+#endif
 
     ! calc scaling factor to account for the 'state of acclimation' of evergreen conifers in spring
     beta_soa(:) = calc_beta_soa(soa_tsoa_mavg(:),lctlib%phenology_type)
@@ -261,8 +262,13 @@ CONTAINS
     !>2.0 calculate photosynthesis per layer
     !>
     ! get information about day/nigth (same way as in RAD_)
+#ifdef __QUINCY_STANDALONE__
+    ! init, simply to give it a value
+    l_day(:) = .FALSE.     ! day
+#else
     !$claw expand
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
+#endif
     ! calc photosynthesis
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(                                     &
@@ -284,7 +290,7 @@ CONTAINS
         & beta_air(:)                                             , &
         & beta_soa(:)                                             , &
         & beta_soil_ps(:)                                         , &
-        & beta_sinklim_ps(:)                                      , &
+        & beta_sinklim_ps_tacclim_mavg(:)                         , &
         & beta_soil_gs(:)                                         , &
         & fn_chl_cl(:,icanopy)                                    , &
         & fn_et_cl(:,icanopy)                                     , &
@@ -300,7 +306,8 @@ CONTAINS
         & co2_conc_leaf_cl(:,icanopy)                             , & ! out
         & hlp1(:)                                                 , & ! out  (output not needed here)
         & hlp2(:)                                                 , & ! out  (output not needed here)
-        & hlp3(:)                                                 )   ! out  (output not needed here)
+        & hlp3(:)                                                 , & ! out  (output not needed here)
+        & chlfl_yield_cl(:,icanopy)                                  )! out
 
       ! gross_assimilation incl. C13 & C14
       gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
@@ -321,7 +328,7 @@ CONTAINS
                                                       lctlib%ps_pathway)
         gross_assimilation_C14(:) = gross_assimilation_C14(:) + &
                                     gross_assimilation_cl(:,icanopy) * &
-                                    lai_cl(:,icanopy) * & 
+                                    lai_cl(:,icanopy) * &
                                     calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
                                                        hlp1(:), co2_mixing_ratio_C13(:))
       END WHERE
@@ -338,27 +345,26 @@ CONTAINS
 
       ! diagnose jmax and vcmax
       !> N specific rate of electron transport rate
-      jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
+      jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * &
                            EXP(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:)) / lctlib%t_jmax_omega) ** 2.0_wp)) * &
-                           beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
+                           beta_soil_ps(:) * beta_sinklim_ps_tacclim_mavg(:) * beta_soa(:) * & 
                            leaf_nitrogen_cl(:,icanopy)
-
 
       !> N specific rate of Rubisco turnover
       vcmax_cl(:,icanopy) = vcmax2n * fn_rub_cl(:,icanopy) * EXP(E0v - E1v / (r_gas * t_air(:))) * &
-                            beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) * &
+                            beta_soil_ps(:) * beta_sinklim_ps_tacclim_mavg(:) * beta_soa(:) * &
                             leaf_nitrogen_cl(:,icanopy)
 
     ENDDO ! DO icanopy = 1,ncanopy
 
-    !>3.0 update mean canopy CO2 concentration in the leaf
-    !>  was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
+    !> 3.0 update mean canopy CO2 concentration in the leaf
+    !>   was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
     !>
-    WHERE(lai(:) > eps8) 
+    WHERE(lai(:) > eps8)
       co2_conc_leaf(:) = co2_conc_leaf(:) / lai(:)
     END WHERE
 
-    !>4.0 uptake optimum temperature for electron transport
+    !> 4.0 uptake optimum temperature for electron transport
     !>
     IF(dsl4jsb_Config(ASSIMI_)%flag_t_jmax_acclimation) THEN
       t_jmax_opt(:) = t_jmax_offset + t_jmax_slope * ( t_air(:) - Tzero )
@@ -381,7 +387,7 @@ CONTAINS
                                             ps_pathway          , &
                                             canopy_cond_scheme  , &
                                             l_day               , &
-                                            temp                , &
+                                            t_air               , &
                                             press_srf           , &
                                             co2_mixing_ratio    , &
                                             ga                  , &
@@ -408,13 +414,15 @@ CONTAINS
                                             ci_cl               , &
                                             m_rub               , &
                                             m_et                , &
-                                            m_pepc)
+                                            m_pepc              , &
+                                            chlfl_yield_cl         ) 
 
-  USE mo_veg_constants,             ONLY: fmaint_rate_base  
+  USE mo_veg_constants,             ONLY: fmaint_rate_base
   USE mo_jsb_physical_constants,    ONLY: r_gas, Tzero
-  USE mo_assimi_constants,          ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
+  USE mo_assimi_parameters,         ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
-                                          chl2n, Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
+                                          chl2n
+  USE mo_assimi_constants,          ONLY: Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
   USE mo_veg_respiration,           ONLY: temperature_response_respiration
 
   IMPLICIT NONE
@@ -427,7 +435,7 @@ CONTAINS
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
   CHARACTER(len=*),         INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
   LOGICAL,                  INTENT(IN) :: l_day                   !< TRUE = day | FALSE = night
-  REAL(wp),                 INTENT(IN) :: temp                    !< temperature used for photosynthesis calculation (K)
+  REAL(wp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
   REAL(wp),                 INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
@@ -455,44 +463,68 @@ CONTAINS
   REAL(wp),                 INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
   REAL(wp),                 INTENT(OUT) :: m_et                   !< CO2 limitation of ET factor for calculating optimal N fraction
   REAL(wp),                 INTENT(OUT) :: m_pepc                 !< CO2 limitation for PEPC factor for calculating optimal N fraction
+  REAL(wp),                 INTENT(OUT) :: chlfl_yield_cl         !< leaf level chlorophyll fluorescence yield (unitless)
+
   ! ---------------------------
   ! 0.2 Local
-  REAL(wp) :: kc, ko, km              ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
-  REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
-  REAL(wp) :: f_resp                  ! N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
-  REAL(wp) :: nsat,nlim               ! foliar N that is light saturated / limited (mmol N)
-  REAL(wp) :: n1,n2,n3                ! N specific rates of electron-transport/Rubisco/PEPc limited PS
-  REAL(wp) :: m1,m2,m3                ! ci sensitivity of electron-transport/Rubisco/PEPc limited PS
-  REAL(wp) :: msat                    ! N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
-  REAL(wp) :: nco                     ! co-limitation factor
-  REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
-  REAL(wp) :: fabs,fabsb              ! fractional light absorption on chloroplast
-  REAL(wp) :: ppm2Pa                  ! factor to convert gas concentrations from ppm to Pa
-  REAL(wp) :: rtck                    ! dry static energy
-  REAL(wp) :: an_cl_old,dan_cl        ! dummy variables needed for iteration loop of CI
-  REAL(wp) :: agsf1,agsf2             ! dummy variables for PS calculation
-  INTEGER  :: it                      ! Iteration loop counter
-  LOGICAL  :: last_call               ! boolean to stop iteration at low conductance
+  REAL(wp) :: kc, ko, km                  !< Michaelis-Menten Kinetic parameters for Rubisco (Pa)
+  REAL(wp) :: pcp                         !< Photosynthetic compensation point (Pa)
+  REAL(wp) :: f_resp                      !< N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
+  REAL(wp) :: nsat,nlim                   !< foliar N that is light saturated / limited (mmol N)
+  REAL(wp) :: n1,n2,n3                    !< N specific rates of electron-transport/Rubisco/PEPc limited PS
+  REAL(wp) :: m1,m2,m3                    !< ci sensitivity of electron-transport/Rubisco/PEPc limited PS
+  REAL(wp) :: msat                        !< N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
+  REAL(wp) :: nco                         !< co-limitation factor
+  REAL(wp) :: agsh,agsl                   !< gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
+  REAL(wp) :: fabs,fabsb                  !< fractional light absorption on chloroplast
+  REAL(wp) :: ppm2Pa                      !< factor to convert gas concentrations from ppm to Pa
+  REAL(wp) :: rtck                        !< dry static energy
+  REAL(wp) :: an_cl_old,dan_cl            !< dummy variables needed for iteration loop of CI
+  REAL(wp) :: agsf1,agsf2                 !< dummy variables for PS calculation
+  INTEGER  :: iterate                     !< Iteration loop counter
+  LOGICAL  :: last_call                   !< boolean to stop iteration at low conductance
+  REAL(wp) :: ag_max_shaded_illumination  !< maximum photosynthesis, all light limited, for only shaded illumination (for ChlF)
+  REAL(wp) :: ag_max_sunlit               !< maximum photosynthesis, all light limited, for sunlit leaves (for ChlF)
+  REAL(wp) :: ag_max_shaded               !< maximum photosynthesis, all light limited, for shaded leaves (for ChlF)
+  REAL(wp) :: frac_tot_sunlit             !< fraction of how much photosynthesis taking place from maximum for sunlit (for ChlF)
+  REAL(wp) :: frac_tot_shaded             !< fraction of how much photosynthesis taking place from maximum for shaded (for ChlF)
+  REAL(wp) :: chlfl_yield_sunlit          !< chlorophyll fluorescence yield sunlit leafs
+  REAL(wp) :: chlfl_yield_shaded          !< chlorophyll fluorescence yield shaded leafs
+  REAL(wp) :: chlfl_yield                 !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_photosynthesis'
 
+  !> init out variables
+  !>
+  ag_cl           = 0.0_wp
+  an_cl           = 0.0_wp
+  maint_resp_cl   = 0.0_wp
+  gs_cl           = 0.0_wp
+  ci_cl           = 0.0_wp
+  m_rub           = 0.0_wp
+  m_et            = 0.0_wp
+  m_pepc          = 0.0_wp
+  chlfl_yield_cl  = 0.0_wp
 
   !> this routine is processed only for canopy layers with leafs
-  !!
+  !>
   IF(lai_cl > eps8) THEN
 
     !> static energy (R_gas: J mol-1 K-1 -> rtck: J mol-1)
-    rtck = r_gas * temp
+    rtck = r_gas * t_air
     !> conversion of ppm to Pa
     ppm2Pa = press_srf * 1.e-06_wp
     !>  Net canopy layer respiration (umol[CO2]/m2/s)
-    maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * &
+    maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(t_air, temp_acclim) * &
                       leaf_nitrogen_cl
 
 
     !> @par IF: initialise output for no-light condition
-    !! use l_day(:) for consistency with RAD_ 
-    !! (prev.in quincy it was used: "IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN")
+    !! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
+#ifdef __QUINCY_STANDALONE__
+    IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
+#else
     IF (.NOT. l_day) THEN
+#endif
       ag_cl    = 0.0_wp
       an_cl    = ag_cl - maint_resp_cl
       gs_cl    = MAX(gmin,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
@@ -512,7 +544,7 @@ CONTAINS
       pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa
 
       !> N specific rate of electron transport rate
-      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt) / t_jmax_omega) ** 2.0_wp)) * &
+      n1  = jmax2n * fn_et_cl * exp(-(((t_air - Tzero - t_jmax_opt) / t_jmax_omega) ** 2.0_wp)) * &
               beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> N specific rate of Rubisco turnover
@@ -529,10 +561,10 @@ CONTAINS
       !> iteration to find correct combination of ci_cl, Anl and gs_cl
       an_cl_old = 1000.0_wp
       dan_cl    = 1.0_wp
-      it        = 1
+      iterate        = 1
       last_call = .FALSE.
-      !> @par DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
-      DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
+      !> @par DO WHILE (iterate < ps_it_max .AND. dan_cl > eps4 )
+      DO WHILE (iterate < ps_it_max .AND. dan_cl > eps4 )
 
         SELECT CASE (ps_pathway)
         CASE (ic3phot)
@@ -556,7 +588,7 @@ CONTAINS
 
         CASE (ic4phot)
           !> N specific rate of PePc limited photosynthessis
-          n3 = pepc2n * fn_pepc_cl * 2.0_wp ** ((temp - Tzero - Tref_pepc )/ Tbase_pepc)
+          n3 = pepc2n * fn_pepc_cl * 2.0_wp ** ((t_air - Tzero - Tref_pepc )/ Tbase_pepc)
 
           !> ci sensitivity of Electron-transport limited photosynthesis
           m1 = ci_max/(ci_max + 2.0_wp * pcp)
@@ -608,6 +640,15 @@ CONTAINS
           !!  light-limited region (assumed to scale linearily with light)
           ag_cl = agsf1 * nsat + agsf2 * ppfd_shaded_cl * fabs
 
+          ! calc maximum photosynthesis, all light limited, for only shaded illumination
+          ag_max_shaded_illumination = agsf2 * ppfd_shaded_cl * (1.0_wp - fabsb)
+          ! calc fraction of how much photosynthesis taking place from photosynthesis maximum for shaded
+          IF (ag_cl < eps8) THEN
+            frac_tot_shaded = 0.0_wp
+          ELSE
+            frac_tot_shaded = ag_cl / ag_max_shaded_illumination
+          END IF
+
         !> @par ELSE: Case of direct and diffuse radiation
         ELSE
           !>  Theoretical cumulative N at co-limitation by Rubisco and
@@ -621,6 +662,15 @@ CONTAINS
           !> Rate of gross photosynthesis in sunlit foliage (umol/m2/s)
           agsl = agsf1 * nsat + agsf2 * ppfd_sunlit_cl * fabs
 
+          ! Calculation for the chlorophyll fluorescence
+          ag_max_sunlit =  agsf2 * ppfd_sunlit_cl * (1.0_wp - fabsb )
+          ! sunlit part
+          IF (agsl < eps8) THEN
+            frac_tot_sunlit = 0.0_wp
+          ELSE
+            frac_tot_sunlit = agsl / ag_max_sunlit
+          END IF
+
           !> Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in shaded foliage (mmol[N]/m2))
           nlim = -log(nco/(ppfd_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
@@ -631,6 +681,15 @@ CONTAINS
 
           !> Rate of gross photosynthesis in shaded foliage (umol/m2/s)
           agsh = agsf1 * nsat + agsf2 * ppfd_shaded_cl* fabs
+
+          ! calc maximum photosynthesis, all light limited, for shaded leaves
+          ag_max_shaded = agsf2 * ppfd_shaded_cl* (1.0_wp - fabsb)
+          ! calc fraction of how much photosynthesis taking place from photosynthesis maximum for shaded
+          IF (ag_max_shaded < eps8) THEN 
+            frac_tot_shaded = 0.0_wp
+          ELSE
+            frac_tot_shaded = agsh / ag_max_shaded
+          END IF
 
           !> Mean gross photosynthesis over sunlit and shaded fractions (umol/m2/s)
           ag_cl = fleaf_sunlit_cl * agsl + (1.0_wp - fleaf_sunlit_cl) * agsh
@@ -664,20 +723,43 @@ CONTAINS
 
         !> break-off point for numerical stability at low conductance
         IF(last_call) THEN
-          it    = ps_it_max + 1   ! ps_it_max is of TYPE REAL; it is of TYPE INTEGER
+          iterate    = ps_it_max + 1   ! ps_it_max is of TYPE REAL; iterate is of TYPE INTEGER
           ci_cl = pcp
         ENDIF
 !        IF( gs_cl <= g0 * rtck / press_srf .OR. ci_cl <= pcp ) THEN
 !          last_call = .TRUE.
 !          ci_cl     = pcp
 !        ENDIF
-        it =  it + 1
-      END DO  ! closing: [DO WHILE (it < ps_it_max .AND. dan_cl > eps4 ) ]
+        iterate =  iterate + 1
+      END DO  ! closing: [DO WHILE (iterate < ps_it_max .AND. dan_cl > eps4 ) ]
       !> END DO WHILE
     ENDIF     ! closing: IF (.NOT. l_day) THEN
-
-    !> for output purposes, convert ci to ppm
+    ! for output purposes, convert ci to ppm
     ci_cl = ci_cl / ppm2Pa
+
+    ! ChlF (chlorophyll fluorescence yield) calculation
+    ! if light levels above eps8
+    ! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
+#ifdef __QUINCY_STANDALONE__
+    IF (ppfd_sunlit_cl + ppfd_shaded_cl > eps8) THEN
+#else
+    IF (l_day) THEN
+#endif
+      ! sunlit area fluorescence
+      IF (fleaf_sunlit_cl > eps8) THEN
+        CALL calc_chlorophyll_fluorescence_yield(frac_tot_sunlit, t_air, chlfl_yield)
+        chlfl_yield_sunlit = chlfl_yield
+      ELSE
+        chlfl_yield_sunlit = 0.0_wp
+      ENDIF
+      ! shaded area fluorescence
+      CALL calc_chlorophyll_fluorescence_yield(frac_tot_shaded, t_air, chlfl_yield)
+      chlfl_yield_shaded = chlfl_yield
+      ! Add in the sunlit and shaded parts of the fluorescence yield
+      chlfl_yield_cl = fleaf_sunlit_cl * chlfl_yield_sunlit + (1.0_wp - fleaf_sunlit_cl) * chlfl_yield_shaded 
+    ELSE
+      chlfl_yield_cl = 0.0_wp
+    ENDIF
 
   ! lai_cl < eps8
   ELSE
@@ -718,15 +800,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_atm_moisture_stress'
 
     !>1.0 saturating specific humidity [kg kg-1]
-    !> 
+    !>
     q_sat = calc_spec_humidity_sat(t_air, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
-    !> 
+    !>
     vpd = MAX(q_sat - q_air, 0.0_wp) * press_srf / eps_vpd / 1000._wp
 
     !>  1.2 scalar for atmospheric humidity as relative humidity (fractions)
-    !> 
+    !>
     SELECT CASE(canopy_cond_scheme)
       CASE ("medlyn")
         !following Medlyn et al. 2011 [default]
@@ -736,6 +818,102 @@ CONTAINS
         beta = q_air / q_sat
     END SELECT
   END FUNCTION calc_atm_moisture_stress
+
+  ! ======================================================================================================= !
+  !> calculate chlorophyll fluorescence - diagnostic output
+  !>
+  !> does not affect photsynthesis calculation
+  !>
+  !> re-implementation of the model as published in:
+  !>    van der Tol et al, JGR, 2014. SCOPE v1.70
+  !>    https://doi.org/10.1002/2014JG002713
+  !>
+  !> source of parameter values: van der Tol et al, JGR, 2014; 
+  !>   or papers cited within, e.g., Flexas 2002 & Weis and Berry 1987
+  !>
+  ELEMENTAL SUBROUTINE calc_chlorophyll_fluorescence_yield( &
+    & frac_tot, &
+    & t_air, &
+    & chlfl_yield)
+
+    USE mo_jsb_physical_constants, ONLY: Tzero
+    USE mo_assimi_parameters,      ONLY: heat_dissipation_enrg_dep_param_1, &
+      &                                  heat_dissipation_enrg_dep_param_2, &
+      &                                  heat_dissipation_enrg_dep_param_3, &
+      &                                  k_fluorescence_rate, &
+      &                                  thermal_dissipation_enrg_constitutive_max_rate, &
+      &                                  thermal_dissipation_enrg_constitutive_param_1, &
+      &                                  thermal_dissipation_enrg_constitutive_param_2, &
+      &                                  k_photochemistry_rate
+
+    REAL(wp),     INTENT(IN)  :: frac_tot        !< fraction of actual photosynthesis to max
+    REAL(wp),     INTENT(IN)  :: t_air           !< air temperature [K]
+    REAL(wp),     INTENT(OUT) :: chlfl_yield     !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: thermal_dissipation_enrg_constitutive_rate  !< rate constant for energy constitutive thermal dissipation
+    REAL(wp) :: heat_dissipation_enrg_dep_rate  !< rate constant for energy dependent heat dissipation 
+    REAL(wp) :: photochemical_yield_rel         !< x in eq. 14 (van der Tol et al., 2014)
+    REAL(wp) :: frac_dark_photochemistry        !< dark photochemistry fraction (Genty et al., 1989)
+    REAL(wp) :: photochemical_yield             !< photochemical yield
+    REAL(wp) :: light_saturation_rel            !< relative light saturation
+    REAL(wp) :: fluorescence_yield_fo_dark      !< dark adapted fluorescence yield Fo
+    REAL(wp) :: fluorescence_yield_fo_light     !< light adapted fluorescence yield Fo
+    REAL(wp) :: fluorescence_yield_fm_dark      !< dark adapted fluorescence yield Fm
+    REAL(wp) :: fluorescence_yield_fm_light     !< light adapted fluorescence yield Fm
+    REAL(wp) :: quenching_phot                  !< photochemical quenching
+    REAL(wp) :: quenching_nonphot               !< non-photochemical quenching
+    REAL(wp) :: chlfl_yield_scaled              !< scaled chlorophyll fluorescence yield
+    REAL(wp) :: photochemistry_rate             !< actual rate for photochemistry
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':chlorophyll fluorescence yield'
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    !> 0.9.1 init local variables
+    !>
+    !> 0.9.2 parameter values are not PFT-specific (van der Tol et al. 2014)
+    !>
+    thermal_dissipation_enrg_constitutive_rate  = &
+      &   MAX(thermal_dissipation_enrg_constitutive_max_rate, thermal_dissipation_enrg_constitutive_param_1 &
+      &   * (t_air - Tzero) + thermal_dissipation_enrg_constitutive_param_2)
+    frac_dark_photochemistry = &
+      &   k_photochemistry_rate / (k_fluorescence_rate + thermal_dissipation_enrg_constitutive_rate + k_photochemistry_rate)
+    photochemical_yield     = &
+      &   MIN(frac_dark_photochemistry, frac_dark_photochemistry * frac_tot)
+    photochemical_yield_rel = &
+      &   MAX(0.0_wp, 1.0_wp - photochemical_yield / frac_dark_photochemistry)
+
+    !> 1.0 Calculation of the relative light saturation
+    !>
+    IF (photochemical_yield_rel > -eps8 .AND. photochemical_yield_rel < eps8) THEN
+      light_saturation_rel = 0.0_wp
+    ELSE
+      light_saturation_rel = EXP(LOG(photochemical_yield_rel) * heat_dissipation_enrg_dep_param_2)
+    ENDIF
+    heat_dissipation_enrg_dep_rate  = heat_dissipation_enrg_dep_param_1 * (1.0_wp + heat_dissipation_enrg_dep_param_3) &
+      &                               * light_saturation_rel / (heat_dissipation_enrg_dep_param_3 + light_saturation_rel)
+    fluorescence_yield_fo_dark      = k_fluorescence_rate / (k_fluorescence_rate + k_photochemistry_rate &
+      &                               + thermal_dissipation_enrg_constitutive_rate)
+    fluorescence_yield_fo_light     = k_fluorescence_rate / (k_fluorescence_rate + k_photochemistry_rate &
+      &                               + thermal_dissipation_enrg_constitutive_rate + heat_dissipation_enrg_dep_rate)
+    fluorescence_yield_fm_light     = k_fluorescence_rate / (k_fluorescence_rate + thermal_dissipation_enrg_constitutive_rate &
+      &                               + heat_dissipation_enrg_dep_rate)
+    fluorescence_yield_fm_dark      = k_fluorescence_rate / (k_fluorescence_rate + thermal_dissipation_enrg_constitutive_rate)
+    
+    !> 2.0 calc chlorophyll fluorescence yield
+    !>
+    chlfl_yield  = fluorescence_yield_fm_light * (1.0_wp - photochemical_yield)
+
+    ! @NOTE the below calculated variables are not yet used
+    !       but useful for future development (of this routine)
+    ! !> 3.0 additional calculations
+    ! !>
+    ! chlfl_yield_scaled = chlfl_yield / fluorescence_yield_fo_dark
+    ! quenching_phot     = 1.0_wp - (chlfl_yield - fluorescence_yield_fo_light) &
+    !   &                  / (fluorescence_yield_fm_light - fluorescence_yield_fo_light)
+    ! quenching_nonphot  = 1.0_wp - (fluorescence_yield_fm_light - fluorescence_yield_fo_light) &
+    !   &                  / (fluorescence_yield_fm_dark - fluorescence_yield_fo_dark )
+    ! ! calc actual rate for photochemistry
+    ! photochemistry_rate = photochemical_yield / chlfl_yield * k_fluorescence_rate
+  END SUBROUTINE calc_chlorophyll_fluorescence_yield
 
   ! ======================================================================================================= !
   !>calculate soil moisture stress on photosynthesis or conductance given current soil moisture
@@ -756,14 +934,14 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Calculate spring recovery period for evergreen conifers
-  !> 
+  !>
   !>  Based on Maekelae et al. (2004) https://doi.org/10.1093/treephys/24.4.369
   !>  returns beta_soa with a value [0.01,1.0]
   !>
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
     USE mo_pheno_constants,            ONLY: ievergreen
-    USE mo_assimi_constants,           ONLY: soa_b, soa_t_s
+    USE mo_assimi_parameters,          ONLY: soa_b, soa_t_s
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation
     INTEGER,  INTENT(in)  :: phenology_type   !< phenology type of the plant
@@ -794,9 +972,10 @@ CONTAINS
   !>
   PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
   
-    USE mo_assimi_constants,       ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
+    USE mo_assimi_parameters,      ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
                                          discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
-                                         discr_ps_phi, ic3phot, ic4phot
+                                         discr_ps_phi
+    USE mo_assimi_constants,       ONLY: ic3phot, ic4phot
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
     REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
@@ -829,4 +1008,4 @@ CONTAINS
   END FUNCTION discrimination_ps
 
 #endif
-END MODULE mo_assimi_update_canopy_fluxes
+END MODULE mo_q_assimi_process

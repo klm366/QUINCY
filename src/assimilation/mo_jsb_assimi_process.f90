@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_assimi_process
+MODULE mo_jsb_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
@@ -23,7 +23,7 @@ MODULE mo_assimi_process
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
     &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_process'
 
 CONTAINS
 
@@ -36,7 +36,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants,      ONLY: LaiLimit
+    USE mo_rad_parameters,     ONLY: LaiLimit
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
@@ -50,7 +50,7 @@ CONTAINS
 
     REAL(wp), INTENT(out) :: &
       & scaling_fact_cl
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) ::         &
@@ -99,7 +99,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                     ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                    ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     LOGICAL,  INTENT(in) ::   &
@@ -201,7 +201,7 @@ CONTAINS
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1))  ! Division "/T1 /t_air" are expressed strange here (and in the
                                                                 ! following) because if this subroutine is not used as elemental
                                                                 ! (e.g. for tests) it makes accuracy of calculation much better!
-                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. 
+                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14.
                                                                 !    Stelle nach dem Komma, obwohl Inputs (R_gas, T0, T1, t_air)
                                                                 !    genau gleich. Ursache: epsilon ist 2.22E-16 (JSBACH3
                                                                 !    und JSBACH4) und EXP verstaerkt Fehler.
@@ -423,7 +423,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                     ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
@@ -756,7 +756,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
+    USE mo_assimi_parameters,   ONLY: f_aut_leaf, cCost
 
     ! Arguments
     !$claw model-data
@@ -767,12 +767,12 @@ CONTAINS
 
     REAL(wp),  INTENT(out) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(wp)             :: hlp
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
 
@@ -785,6 +785,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    hlp =  (cCost -1._wp) / cCost
     maintenanceRespiration = dark_respiration_ca / f_aut_leaf
     growthRespiration = max(0._wp,hlp * (gross_assimilation_ca - maintenanceRespiration))
     NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration
@@ -810,7 +811,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
     REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
     REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
-    REAL(wp), INTENT(inout) :: NPP_sum_year       ! 
+    REAL(wp), INTENT(inout) :: NPP_sum_year       !
     REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
 !   local variables
@@ -836,4 +837,4 @@ CONTAINS
   END SUBROUTINE calc_NPPbuf
 
 #endif
-END MODULE mo_assimi_process
+END MODULE mo_jsb_assimi_process

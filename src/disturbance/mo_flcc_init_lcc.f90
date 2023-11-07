@@ -37,8 +37,8 @@ MODULE mo_flcc_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'flcc'
-  
-  INTEGER, PARAMETER :: nr_of_active_cqts = 2 
+
+  INTEGER, PARAMETER :: nr_of_active_cqts = 2
   INTEGER, PARAMETER :: nr_of_passive_cqts = 4
 
 CONTAINS
@@ -60,7 +60,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':flcc_init_lcc'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     IF (.NOT. tile%Is_process_calculated(FLCC_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')

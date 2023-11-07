@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! Adapted for QUINCY purposes (by Soenke Zaehle (2016-12-22)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -15,13 +16,14 @@
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,                 ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
-
-  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    thermal_radiation, lwnet_from_lwdown
+  PUBLIC :: qsat
+  PUBLIC :: q_effective, surface_dry_static_energy, heat_transfer_coef, &
+    &       thermal_radiation, lwnet_from_lwdown
+  PUBLIC :: calc_peaked_arrhenius_function
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
@@ -61,7 +63,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
-  !! 
+  !!
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
@@ -80,7 +82,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION surface_dry_static_energy
-  !! 
+  !!
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
@@ -102,7 +104,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION thermal_radiation
-  !! 
+  !!
   !! out: thermal_radiation
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
@@ -120,7 +122,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION lwnet_from_lwdown
-  !! 
+  !!
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
@@ -139,24 +141,53 @@ CONTAINS
   END FUNCTION lwnet_from_lwdown
 
 
-  !-----------------------------------------------------------------------------------------------------
-  !> FUNCTION heat_transfer_coef
-  !! 
-  !! out: heat_transfer_coef
-  !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
+  ! ======================================================================================================= !
+  !> calc heat_transfer_coef
+  !>
+  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen, alpha)
 
-    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
+    USE mo_jsb_physical_constants,      ONLY: grav
 
-    REAL(wp), INTENT(in) :: &
-      & drag,      &
-      & steplen
+    REAL(wp), INTENT(in) :: drag      !< ..
+    REAL(wp), INTENT(in) :: steplen   !< ..
+    REAL(wp), INTENT(in) :: alpha     !< differs for standalone & coupled simulations
 
     !$claw sca routine
-
-    heat_transfer_coef = drag / (cvdifts * grav * steplen)
-
+    heat_transfer_coef = drag / (alpha * grav * steplen)
   END FUNCTION heat_transfer_coef
+
+  ! ======================================================================================================= !
+  !>Calculates temperature response factor according to the peaked Arrhenius equation as defined in
+  !>  Medlyn et al. 2002, PCE, eq. 18
+  !>  NB if sensitivity of zero is specified, 1 will be returned
+  !>
+  !>  Input: temperature, (de-)activiation energy, optimum temperature
+  !>
+  !>  Output: rate modifier (unitless) 
+  !>
+  ELEMENTAL FUNCTION calc_peaked_arrhenius_function(temp,Ea,Ed,t_opt) RESULT(rate_modifier)
+
+    USE mo_jsb_physical_constants,  ONLY: r_gas
+    USE mo_jsb_math_constants,      ONLY: eps8
+    !------------------------------------------------------------------------------------------------------ !
+    REAL(wp), INTENT(in)  :: temp          !< temperature [K]
+    REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
+    REAL(wp), INTENT(in)  :: Ed            !< deactivation energy [J mol-1]
+    REAL(wp), INTENT(in)  :: t_opt         !< optimum temperature [K] 
+    REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless] 
+    !------------------------------------------------------------------------------------------------------ !
+    REAL(wp)              :: hlp1, hlp2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_peaked_arrhenius_function'
+
+    IF(Ea > eps8) THEN
+      hlp1 = temp - t_opt
+      hlp2 = temp * t_opt * r_gas
+      rate_modifier = (Ed * EXP(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._wp - EXP(Ed * hlp1 / hlp2))) 
+    ELSE
+      rate_modifier = 1._wp
+    ENDIF   
+
+  END FUNCTION calc_peaked_arrhenius_function 
 
 #endif
 END MODULE mo_phy_schemes

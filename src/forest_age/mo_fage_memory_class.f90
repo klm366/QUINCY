@@ -1,4 +1,4 @@
-!> Summary: fage (forest age) memory class 
+!> Summary: fage (forest age) memory class
 !>
 !>### Contains memory definitions for fage
 !>
@@ -85,7 +85,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_memory'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     model => Get_model(model_id)
 
     table = tables(1)

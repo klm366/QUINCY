@@ -26,11 +26,6 @@
 !! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
 MODULE mo_spq_update_turbulence
-#ifndef __NO_JSBACH__
-
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -44,64 +39,53 @@ MODULE mo_spq_update_turbulence
 
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Main Task
-  ! 
-  !-----------------------------------------------------------------------------------------------------
-  !> update soil moisture and theta for the plant only model
-  !! 
-  !! two cases considered: \n a) dynamic water uptake calculation, \n b) prescribed values from namelist
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>update soil moisture and theta for the plant only model
+  !> 
+  ! two cases considered:
+  !   a) dynamic water uptake calculation
+  !   b) prescribed values from namelist
   SUBROUTINE update_soil_turbulence(tile, options)
 
-    USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_math_constants,    ONLY: dtime
-    USE mo_atmland_constants,     ONLY: min_wind, max_wind 
-    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, vtmpc1
-    USE mo_spq_constants,         ONLY: height_wind
-
-    ! Use of process configurations (t_PROC_config)
+    USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_process_class,      ONLY: A2L_, SPQ_, PHENO_, VEG_
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,         ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element    
+    USE mo_jsb_math_constants,     ONLY: dtime
+    USE mo_atmland_constants,      ONLY: min_wind, max_wind 
+    USE mo_atmland_util,           ONLY: calc_spec_humidity_sat
+    USE mo_jsb_physical_constants, ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, rd_o_cpd, rvd1
+    USE mo_spq_constants,          ONLY: height_wind, w_snow_min
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SPQ_)
-
-    ! Use of process memories
-    dsl4jsb_Use_memory(A2L_) 
-    dsl4jsb_Use_memory(SPQ_)        !  USE mo_spq_memory_class,     ONLY: t_spq_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(PHENO_)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER       :: model              !< the model
+    TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, zg, zgh, zdu2, zril, zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              csat, cair, z0m, z0h, zchnl, zlev, wind_air
     REAL(wp), DIMENSION(options%nc)       :: fract_fpc, blended_height 
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
-    INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp)                              :: steplen
+    INTEGER                               :: iblk, ics, ice, nc !< dimensions
+    REAL(wp)                              :: steplen            !< ...
+    REAL(wp)                              :: alpha              !< implicitness factor
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SPQ_)
-    dsl4jsb_Def_memory(A2L_) 
-    dsl4jsb_Def_memory(SPQ_)                        !     TYPE(t_spq_memory),     POINTER :: spq__mem
-    dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(PHENO_)
-    ! Declare pointers to variables in memory
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk                :: t_air
     dsl4jsb_Real2D_onChunk                :: q_air
@@ -119,66 +103,65 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: fact_qsat_srf
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
-    ! VEG_
-    dsl4jsb_Real2D_onChunk                :: height 
+    dsl4jsb_Real3D_onChunk                :: w_snow_snl
+    dsl4jsb_Real3D_onChunk                :: t_snow_snl
     ! PHENO_
     dsl4jsb_Real2D_onChunk                :: lai 
-    ! Get local variables from options argument
+    ! VEG_
+    dsl4jsb_Real2D_onChunk                :: height 
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+    alpha   = options%alpha
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
+    ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    ! Get process config
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SPQ_)
-    ! Get process memories
-    dsl4jsb_Get_memory(A2L_) 
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
-    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)             ! out
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                   !     not used or calculated here anymore but in update_canopy_fluxes() !
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                   ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, pch)                  ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef)              ! out
-    ! SPQ_ 2D
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_q_air)           ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_qsat_srf)        ! in
-    ! SPQ_ 3D
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_, t_snow_snl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)            ! in
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
-    ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in
+    ! ----------------------------------------------------------------------------------------------------- !
 
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-    ! 0.8 correct height for bare soil effect on roughness
+    !>0.8 correct height for bare soil effect on roughness
+    !>
     ! note: the '* 1.0_wp' for calc of blended_height(:) is the minimum/default height in meter
     !       using the VEG_ min_height parameter (= 0.1_wp) instead would change simulation results
     fract_fpc(:)      = 1.0_wp - EXP(- 0.5_wp * lai(:))
     blended_height(:) = height(:) * fract_fpc(:) + (1._wp - fract_fpc(:)) * 1.0_wp 
 
-    ! 0.9 init local variables and constants
+    !>0.9 init local variables and constants
+    !>
     ! Some constants from echam/mo_surface_land.f90
     csat(:)     = fact_qsat_srf(:)  
     cair(:)     = fact_q_air(:)     
@@ -194,18 +177,28 @@ CONTAINS
     zgh(:)      = zg(:)                          ! height_humidity and height_temperature have to be equal
     zdu2(:)     = wind_air(:)**2._wp
 
+    !>1.0 ...
+    !>
     ! virtual potential air temperature (see mo_surface_boundary.f90)
     ! according to Saucier, WJ Principles of Meteoroligical Analyses
     ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
     ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-    ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * q_air) ! virtual potential temperature
-    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**zkappa * ( 1._wp + vtmpc1 * q_air(:) )
-    ztvir(:)      = t_air(:) * ( 1._wp + vtmpc1 * q_air(:) )
+    ! tvd = tair * (100000/p_pa)^rd_o_cpd * 1 + rvd1 * q_air) ! virtual potential temperature
+    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**rd_o_cpd * ( 1._wp + rvd1 * q_air(:) )
+    ztvir(:)      = t_air(:) * ( 1._wp + rvd1 * q_air(:) )
     ! virtual potential surface temperature
-    q_sat_surf(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
-    ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**zkappa * &
-                    ( 1._wp + vtmpc1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+    WHERE (w_snow_snl(:,1) > w_snow_min)
+      q_sat_surf(:) = calc_spec_humidity_sat(t_snow_snl(:,1),press_srf(:))
+      ztvs(:)       = t_snow_snl(:,1) * ( 100000._wp/press_srf(:))**rd_o_cpd * &
+                    ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+    ELSEWHERE
+      q_sat_surf(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
+      ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**rd_o_cpd * &
+                    ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+    ENDWHERE
 
+    !>2.0 ...
+    !>
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
     ! SZ: limited zril to < 1.5 to avoid complete decoupling
@@ -213,17 +206,17 @@ CONTAINS
     zril(:)       = MIN(zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:)) / 2._wp ), 0.5_wp)
 
     CALL calc_drag_coefficient(steplen, &
+                               alpha, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:), &
                                zril(:), &                 ! inout
-                               drag_srf(:),pch(:),ga(:))  ! out   NOTE 'ga' is not calculated here anymore
+                               drag_srf(:),pch(:),ga(:))  ! out
 
     ! Richtmeyer-Morton coefficient for explicit coupling
     t_acoef(:) = 0.0_wp
     t_bcoef(:) = t_air(:) * cpd * (1._wp + cpvd1 * q_air(:)) + zgh 
     q_acoef(:) = 0.0_wp
     q_bcoef(:) = q_air(:)
-
   END SUBROUTINE update_soil_turbulence
 
   !-----------------------------------------------------------------------------------------------------
@@ -236,17 +229,19 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_drag_coefficient( &
                                    steplen, &
+                                   alpha, &
                                    t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
                                    drag_srf,pch,ga)            
 
     USE mo_phy_schemes,             ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts, vtmpc1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, von_karman, rvd1
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
     REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp),                        INTENT(in)    :: alpha                  !< implicitness factor
     REAL(wp),                        INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
@@ -277,12 +272,12 @@ CONTAINS
     zcons8     = 2._wp * 5.0_wp 
     zcons9     = 3._wp * 5.0_wp 
     zcons11    = 3._wp * 5.0_wp * 5.0_wp
-    zcons12    = cvdifts * steplen * grav / r_gas_dryair 
+    zcons12    = alpha * steplen * grav / r_gas_dryair 
     zdu2       = wind_air**2._wp
 
     ! Neutral drag coefficient for momentum and heat
-    zcdnl = (ckap / LOG(1._wp + zg / (grav *z0m )))**2._wp
-    zchnl = ckap**2._wp / (LOG(1._wp + zg / (grav * z0m )) * &
+    zcdnl = (von_karman / LOG(1._wp + zg / (grav *z0m )))**2._wp
+    zchnl = von_karman**2._wp / (LOG(1._wp + zg / (grav * z0m )) * &
                            LOG( ( grav * z0m + zgh ) / (grav * z0h )) )
 
     ! account for stable/unstable case: helper variables
@@ -291,7 +286,7 @@ CONTAINS
     zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp  + zgh / (grav * z0h))))
 
     ! ignoring cloud water correction (see mo_surface_land.f90)
-    zcons    = zcons12 * press_srf / ( t_air * (1._wp + vtmpc1 * q_air))
+    zcons    = zcons12 * press_srf / ( t_air * (1._wp + rvd1 * q_air))
     zcfncl   = zcons * SQRT(zdu2) * zcdnl
     zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
@@ -307,13 +302,8 @@ CONTAINS
     ! total surface drag (ECHAM)
     drag_srf = zcfhl
     pch      = zcfhl / zcfnchl * zchnl
-
-    ! calculated in ICON-L in mo_assimi_update_canopy_fluxes:update_canopy_fluxes
-    ! ! aerodynamic conductance (m/s)
-    ! ga       = heat_transfer_coef(drag_srf, steplen) * & 
-    !            wind_air
-
+    ! aerodynamic conductance (m/s)
+    ga       = heat_transfer_coef(drag_srf, steplen, alpha) * wind_air
   END SUBROUTINE calc_drag_coefficient
 
-#endif
 END MODULE mo_spq_update_turbulence

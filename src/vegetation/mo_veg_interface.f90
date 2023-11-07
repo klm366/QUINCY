@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,11 +16,11 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the interface for plant growth and turnover processes 
+!!
+!! @brief Contains the interface for plant growth and turnover processes
 !!
 !! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
@@ -45,9 +45,7 @@ MODULE mo_veg_interface
   USE mo_veg_growth,                  ONLY: update_veg_growth
   USE mo_veg_update_pools,            ONLY: update_veg_pools
 
-  ! Use of processes in this module
   dsl4jsb_Use_processes VEG_, PHENO_, RAD_, SB_
-  ! Use of process memories
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
@@ -57,10 +55,9 @@ MODULE mo_veg_interface
   PRIVATE
   PUBLIC :: Register_veg_tasks
 
-
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_veg_fluxes
   CONTAINS
@@ -70,7 +67,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_veg_turnover task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_veg_turnover
   CONTAINS
@@ -80,7 +77,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_veg_dynamics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_veg_dynamics
   CONTAINS
@@ -90,7 +87,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_veg_growth task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_veg_growth
   CONTAINS
@@ -100,17 +97,17 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_veg_pools task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_veg_pools
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_veg_pools      !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_veg_pools   !< Aggregates computed task variables
-  END TYPE tsk_veg_pools  
+  END TYPE tsk_veg_pools
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: time_average_vegetation task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_vegetation
   CONTAINS
@@ -121,7 +118,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_reset_veg_fluxes
     PROCEDURE Create_task_reset_veg_fluxes         !< Constructor function for task
@@ -129,7 +126,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_turnover task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_veg_turnover
     PROCEDURE Create_task_update_veg_turnover         !< Constructor function for task
@@ -137,7 +134,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_dynamics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_veg_dynamics
     PROCEDURE Create_task_update_veg_dynamics         !< Constructor function for task
@@ -145,7 +142,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_growth task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_veg_growth
     PROCEDURE Create_task_update_veg_growth         !< Constructor function for task
@@ -153,7 +150,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_pools task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_veg_pools
     PROCEDURE Create_task_update_veg_pools         !< Constructor function for task
@@ -161,7 +158,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_time_average_vegetation task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_time_average_vegetation
     PROCEDURE Create_task_update_time_average_vegetation         !< Constructor function for task
@@ -169,16 +166,13 @@ MODULE mo_veg_interface
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_interface'
 
-
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: VEG_ process
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_veg_tasks(this, model_id)
-
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
@@ -188,103 +182,82 @@ CONTAINS
     CALL this%Register_task(tsk_veg_growth(model_id))
     CALL this%Register_task(tsk_veg_pools(model_id))
     CALL this%Register_task(tsk_time_average_vegetation(model_id))
-
   END SUBROUTINE Register_veg_tasks
-
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_veg_fluxes(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
 
     ALLOCATE(tsk_reset_veg_fluxes::return_ptr)
     CALL return_ptr%Construct(name='reset_veg_fluxes', process_id=VEG_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_veg_fluxes
 
+
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_veg_turnover task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_veg_turnover(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
     ALLOCATE(tsk_veg_turnover::return_ptr)
     CALL return_ptr%Construct(name='veg_turnover', process_id=VEG_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_veg_turnover
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_veg_dynamics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_veg_dynamics(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
     ALLOCATE(tsk_veg_dynamics::return_ptr)
     CALL return_ptr%Construct(name='veg_dynamics', process_id=VEG_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_veg_dynamics
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_veg_growth task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_veg_growth(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
     ALLOCATE(tsk_veg_growth::return_ptr)
     CALL return_ptr%Construct(name='veg_growth', process_id=VEG_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_veg_growth
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_veg_pools task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_veg_pools(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
     ALLOCATE(tsk_veg_pools::return_ptr)
     CALL return_ptr%Construct(name='veg_pools', process_id=VEG_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_veg_pools
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: tsk_time_average_vegetation task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_time_average_vegetation(model_id) RESULT(return_ptr)
 
@@ -293,38 +266,37 @@ CONTAINS
 
     ALLOCATE(tsk_time_average_vegetation::return_ptr)
     CALL return_ptr%Construct(name='tavrg_vegetation', process_id=VEG_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_time_average_vegetation
-  
 
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "update": reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_reset_veg_fluxes(tile, options)
-  
+
     USE mo_veg_util, ONLY: reset_veg_fluxes
-  
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-  
+
     INTEGER :: iblk
-  
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_veg_fluxes'
-  
+
     iblk    = options%iblk
-  
+
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-  
+
     CALL reset_veg_fluxes(tile, options)
-  
+
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-  
+
   END SUBROUTINE update_reset_veg_fluxes
-  
+
   ! ======================================================================================================= !
   !>Implementation of "aggregate": reset_veg_fluxes task
-  !> 
+  !>
   SUBROUTINE aggregate_reset_veg_fluxes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -389,9 +361,10 @@ CONTAINS
 
   END SUBROUTINE aggregate_reset_veg_fluxes
 
+
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_turnover task
-  !> 
+  !>
   SUBROUTINE aggregate_veg_turnover(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -434,7 +407,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_dynamics task
-  !> 
+  !>
   SUBROUTINE aggregate_veg_dynamics(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -471,7 +444,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_growth task
-  !> 
+  !>
   SUBROUTINE aggregate_veg_growth(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -509,7 +482,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_act                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_act                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, cost_n_uptake_root                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, cost_n_fixation                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, target_np_leaf                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, target_cn_fine_root               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, target_cn_coarse_root             , weighted_by_fract)
@@ -564,7 +536,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_pools task
-  !> 
+  !>
   SUBROUTINE aggregate_veg_pools(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -610,6 +582,18 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_n          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c13        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c14        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_n15        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c13    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c14    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n15    , weighted_by_fract)
     ! VEG_ 3D
     dsl4jsb_Aggregate_onChunk(VEG_, leaf_nitrogen_cl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_rub_cl                   , weighted_by_fract)
@@ -640,7 +624,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_veg_util,            ONLY: real_update_time_average_vegetation => update_time_average_vegetation
+    USE mo_veg_util,            ONLY: calculate_time_average_vegetation
     dsl4jsb_Use_processes VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -653,9 +637,8 @@ CONTAINS
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    CALL calculate_time_average_vegetation(tile, options)
 
-    CALL real_update_time_average_vegetation(tile, options)
-    
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE update_time_average_vegetation
@@ -689,7 +672,6 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
 
     ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, daytime_counter                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime_dacc                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime_dacc            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime_dacc     , weighted_by_fract)
@@ -721,7 +703,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, press_srf_tcnl_mavg               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, ga_tcnl_mavg                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, uptake_n_tcnl_mavg                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fmaint_rate_tcnl_mavg             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, growth_cn_tcnl_mavg               , weighted_by_fract)
@@ -730,7 +711,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, labile_carbon_tcnl_mavg           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, labile_nitrogen_tcnl_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, labile_phosphorus_tcnl_mavg       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, cost_n_fixation_talloc_mavg       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp_talloc_mavg                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_talloc_mavg            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, unit_npp_talloc_mavg              , weighted_by_fract)

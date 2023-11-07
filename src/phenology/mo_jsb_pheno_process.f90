@@ -14,7 +14,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_pheno_process
+MODULE mo_jsb_pheno_process
 #ifndef __NO_JSBACH__
 
    USE mo_kind, ONLY: wp
@@ -27,7 +27,7 @@ MODULE mo_pheno_process
              get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, &
              calc_gdd
 
-   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
+   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pheno_process'
 
  CONTAINS
 
@@ -122,7 +122,7 @@ MODULE mo_pheno_process
        &                        heat_sum_SG,        &
        &                        growth_phase_SG,    &
        &                        lai                   ! Total LAI.
-     !$claw end model-data                                
+     !$claw end model-data
 
 
      !-----------------------------------------------------------------------
@@ -368,7 +368,7 @@ MODULE mo_pheno_process
         END IF
         IF(lai > pheno_param_jsbach%all%LAI_negligible) THEN
            ! otherwise nothing to do
-           grRate = pheno_param_jsbach%EG%growthRate ! R: xtmp zu grRate geaendert um Konsistent zu bleiben mit anderen Aufrufen wie 
+           grRate = pheno_param_jsbach%EG%growthRate ! R: xtmp zu grRate geaendert um Konsistent zu bleiben mit anderen Aufrufen wie
                                              !    z.B. bei crops....
            lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
         END IF
@@ -546,7 +546,7 @@ MODULE mo_pheno_process
             ! If there are winter crops and summer crops would have been harvested already twice
             ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
             IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                                 ! winter crops in growth phase..
-               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested 
+               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
                                                                                        ! already twice..
                   growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
             END IF
@@ -1044,4 +1044,4 @@ MODULE mo_pheno_process
   END FUNCTION get_foliage_projected_cover
 
 #endif
-END MODULE mo_pheno_process
+END MODULE mo_jsb_pheno_process

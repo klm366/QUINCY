@@ -37,19 +37,19 @@ MODULE mo_wlcc_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_wlcc_interface'
   CHARACTER(len=*), PARAMETER :: procname = 'wlcc'
-  
+
   !> Type definition for wlcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_wlcc
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_wlcc     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_wlcc  !< Aggregates computed task variables
   END TYPE tsk_wlcc
-  
+
   !> Constructor interface for wlcc pre task
   INTERFACE tsk_wlcc
     PROCEDURE Create_task_wlcc                        !< Constructor function for task
   END INTERFACE tsk_wlcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -66,7 +66,7 @@ CONTAINS
     CALL return_ptr%Construct(name=procname, process_id=WLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_wlcc
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for wlcc process
@@ -78,7 +78,7 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_wlcc(model_id))
-    
+
   END SUBROUTINE Register_wlcc_tasks
 
   ! ====================================================================================================== !
@@ -121,7 +121,7 @@ CONTAINS
     LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
     INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
     CLASS(t_jsb_tile_abstract), POINTER :: first_ac ! pointer to first ac (only if running with age classes)
-  
+
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_memory_tile(DISTURB_, d_tile)
     dsl4jsb_Real2D_onChunk :: damaged_fract_d_tile
@@ -134,7 +134,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(WLCC_)
@@ -144,7 +144,7 @@ CONTAINS
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Assertion: wlcc is currently implemented to run on
@@ -163,7 +163,7 @@ CONTAINS
     !>
     dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    
+
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
@@ -300,7 +300,7 @@ CONTAINS
         ELSE
           current_tile => tile%self_tile
         ENDIF
-        
+
         i_tile = 0
         DO WHILE (i_tile < nr_of_tiles)
 
@@ -341,9 +341,9 @@ CONTAINS
     DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_wlcc
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "wlcc"
@@ -363,11 +363,11 @@ CONTAINS
     iblk = options%iblk
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     !> Currently nothing to do
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_wlcc

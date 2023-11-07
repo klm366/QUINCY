@@ -2,14 +2,14 @@
 !>
 !>### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all lcc processes
 !>
-!> Note: 
+!> Note:
 !>
 !>       1. This module takes advantage of the handling of the integrate and aggregate routines, which both
-!>          call the same routines in this module (integrate = aggregate). 
+!>          call the same routines in this module (integrate = aggregate).
 !>          Thereby each tile is processed by the same routine for the tasks of this process.
 !>
 !>       2. currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
-!>          these will anyway have to specially be dealt with in the concept and thus need to be 
+!>          these will anyway have to specially be dealt with in the concept and thus need to be
 !>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>          Also, integration of pool-structure might need some additional work.
 !>
@@ -32,7 +32,7 @@ MODULE mo_pplcc_interface
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   !USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -52,21 +52,21 @@ MODULE mo_pplcc_interface
 
   ! Use of process memories
   dsl4jsb_Use_memory(PPLCC_)
-  dsl4jsb_Use_memory(PHENO_)  
+  dsl4jsb_Use_memory(PHENO_)
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_pplcc_tasks, global_pplcc_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pplcc_interface'
-  
+
   !> Type definition for pplcc pre task (preprocessing for lcc)
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_pplcc_pre_lcc
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_pplcc_pre_lcc  !< prepares lcc processes for leaves
     PROCEDURE, NOPASS :: Aggregate => update_pplcc_pre_lcc  !< prepares lcc processes for all other nodes
   END TYPE tsk_pplcc_pre_lcc
-  
+
   !> Constructor interface for pplcc pre task (preprocessing for lcc)
   INTERFACE tsk_pplcc_pre_lcc
     PROCEDURE Create_task_pplcc_pre_lcc                      !< Constructor function for task
@@ -78,12 +78,12 @@ MODULE mo_pplcc_interface
     PROCEDURE, NOPASS :: Integrate => update_pplcc_post_lcc  !< does postprocessing for lcc processes on leaves
     PROCEDURE, NOPASS :: Aggregate => update_pplcc_post_lcc  !< does postprocessing for lcc processes on other nodes
   END TYPE tsk_pplcc_post_lcc
-  
+
   !> Constructor interface for pplcc post task (postprocessing for lcc)
   INTERFACE tsk_pplcc_post_lcc
     PROCEDURE Create_task_pplcc_post_lcc                        !< Constructor function for task
   END INTERFACE tsk_pplcc_post_lcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -131,14 +131,14 @@ CONTAINS
 
     CALL this%Register_task(tsk_pplcc_pre_lcc(model_id))
     CALL this%Register_task(tsk_pplcc_post_lcc(model_id))
-    
+
   END SUBROUTINE Register_pplcc_tasks
 
   ! ====================================================================================================== !
   !
   !> Implementation of "update" for task "pplcc_pre_lcc"
   !>
-  !> Task "pplcc_pre_lcc" prepares lcc processes 
+  !> Task "pplcc_pre_lcc" prepares lcc processes
   !> -- for now: convert all cq vars to per grid cell.
   !
   SUBROUTINE update_pplcc_pre_lcc(tile, options)
@@ -174,7 +174,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
 
     ! If process is not to be calculated on this tile, do nothing
@@ -182,11 +182,11 @@ CONTAINS
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF( tile%Has_conserved_quantities()) THEN
-      
+
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
 
@@ -215,8 +215,8 @@ CONTAINS
             ENDIF
 
             !- Set pointers to memory on the current tile
-            dsl4jsb_Get_memory(PHENO_)       
-            ! and get required variables on this tile 
+            dsl4jsb_Get_memory(PHENO_)
+            ! and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
 dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! out
@@ -227,11 +227,11 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
             !>
-            !> Assertion: for each CQT a conversion needs to be specified in pplcc_pre_lcc 
-            !> 
+            !> Assertion: for each CQT a conversion needs to be specified in pplcc_pre_lcc
+            !>
             CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqt_id))
         END SELECT
-          
+
         ! Convert all variables of this type
         DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
 
@@ -263,7 +263,7 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
   !
   !> Implementation of "update" for task "pplcc_post_lcc"
   !>
-  !> Task "pplcc_post_lcc" does a postprocessing after all lcc processes were executed 
+  !> Task "pplcc_post_lcc" does a postprocessing after all lcc processes were executed
   !> -- for now: convert all cq vars back to their initial reference area.
   !> -- and if the carbon process is active: recalculate ta variables
   !
@@ -299,7 +299,7 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
     ics     = options%ics
     ice     = options%ice
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
 
     ! If process is not to be calculated on this tile, do nothing
@@ -307,7 +307,7 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF( tile%Has_conserved_quantities()) THEN
@@ -337,8 +337,8 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
             ENDIF
 
             !- Set pointers to memory on the current tile
-            dsl4jsb_Get_memory(PHENO_)       
-            ! and get required variables on this tile 
+            dsl4jsb_Get_memory(PHENO_)
+            ! and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! inout
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! in
@@ -348,11 +348,11 @@ fract_fpc_max(:) = fract_fpc_max_save(:)
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
             !>
-            !> Assertion: for each CQT a conversion needs to be specified in pplcc_post_lcc 
-            !> 
+            !> Assertion: for each CQT a conversion needs to be specified in pplcc_post_lcc
+            !>
             CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqt_id))
         END SELECT
-        
+
         ! Convert all variables of this type
         DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
 

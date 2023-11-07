@@ -25,8 +25,11 @@ MODULE mo_pheno_init
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+#ifdef __QUINCY_STANDALONE__
+#else
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
+#endif
 
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
@@ -37,6 +40,8 @@ MODULE mo_pheno_init
 
   PUBLIC :: pheno_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   TYPE t_pheno_init_vars
     REAL(wp), POINTER ::  &
       & lai_mon(:,:,:), &
@@ -46,15 +51,17 @@ MODULE mo_pheno_init
   END TYPE t_pheno_init_vars
 
   TYPE(t_pheno_init_vars) :: pheno_init_vars
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
 CONTAINS
 
+  ! ======================================================================================================= !
   !> Run phenology init
-  !! 
-  !! run jsb4 or/and quincy init routine
-  !! 
+  !> 
+  !> run jsb4 or/and quincy init routine
+  !> 
   SUBROUTINE pheno_init(tile)
 
     ! Arguments
@@ -69,6 +76,8 @@ CONTAINS
 
     ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
+#ifdef __QUINCY_STANDALONE__
+#else
     CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL pheno_read_init_vars(tile)
@@ -78,11 +87,14 @@ CONTAINS
       IF (tile%Is_last_process_tile(PHENO_)) THEN
         CALL pheno_finalize_init_vars()
       END IF
+#endif
     CASE (MODEL_QUINCY)
       CALL pheno_init_bc_quincy(tile)
     END SELECT
   END SUBROUTINE pheno_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE pheno_finalize_init_vars
 
     DEALLOCATE( &
@@ -245,8 +257,8 @@ CONTAINS
 
   SUBROUTINE pheno_init_ic_jsbach(tile)
 
-    USE mo_pheno_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
+    USE mo_jsb_pheno_process, ONLY: get_foliage_projected_cover
+    USE mo_jsb_time,          ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -301,12 +313,13 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic_jsbach
+#endif
 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> Intialize pheno variables for boundary conditions (bc)
-  !! 
-  !! quincy
-  !-----------------------------------------------------------------------------------------------------
+  !>
+  !> quincy
+  !>
   SUBROUTINE pheno_init_bc_quincy(tile)
 
     ! see also the USE statements in the module header
@@ -319,7 +332,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
-       
+    
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -354,10 +367,23 @@ CONTAINS
     !!
     !! init growing_season, lai_max, lai
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
+#ifdef __QUINCY_STANDALONE__
+      !> QS - QUINCY standalone
+      !>
+      ! set lai_max from the site specific LAI from all_site_list.dat (saved in pheno_config:lai_max) and check for sensible values
+      IF (dsl4jsb_Config(PHENO_)%lai_max > 0.5_wp .AND. dsl4jsb_Config(PHENO_)%lai_max < 8.0_wp) THEN
+        lai_max(:,:) = dsl4jsb_Config(PHENO_)%lai_max
+      ELSE
+        lai_max(:,:) = 6.0_wp
+      END IF
+#else
+      !> IQ - QUINCY in ICON-Land
+      !>
       ! lai_max
       lai_max(:,:) = 6.0_wp  ! for jsbach4 a lctlib parameter 'dsl4jsb_Lctlib_param(MaxLAI)' is available
       ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
       lai(:,:)     = 1.0_wp
+#endif
       ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
       IF(dsl4jsb_Lctlib_param(phenology_type) == ievergreen) THEN
         growing_season(:,:) = true

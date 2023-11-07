@@ -1,5 +1,5 @@
 !>
-!! @brief Interface to run JSBACH for one time step
+!! @brief Interface to run ICON-Land for one time step with a coupled simulation ('interface_full')
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -19,7 +19,7 @@ MODULE mo_jsb_interface
   USE mo_exception,           ONLY: message, finish !,message_text
   ! USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -29,6 +29,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_physical_constants, ONLY: cvdifts
 
   dsl4jsb_Use_processes CARBON_, ALCC_
 
@@ -36,7 +37,7 @@ MODULE mo_jsb_interface
   PRIVATE
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
-  PUBLIC :: jsbach_get_var
+  ! PUBLIC :: jsbach_get_var
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -47,6 +48,13 @@ MODULE mo_jsb_interface
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> is called by host model (ICON) in a coupled simulation in './atm_phy_echam/mo_surface'
+  !>
+  !> @NOTE for a standalone simulation 'mo_jsbach_model:jsbach_model' is called 
+  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
+  !>
   SUBROUTINE interface_full( &
     & model_id,         &
     & iblk, ics, ice,   &
@@ -92,7 +100,8 @@ CONTAINS
     & alb_nir_dif,      &
     & CO2_flux,         &
     & DEBUG_VAR,        &
-    ! For lakes (optional):
+    ! OPTIONAL arguments:
+    !   for lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
@@ -103,19 +112,14 @@ CONTAINS
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                    & !< out
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
-    ! For standalone jsbach
-    & evapopot                                                          & !< out; optional
+    !   for ICON-Land standalone
+    & evapopot                                                          & !< out
     & )
 
 #ifndef __ICON__
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
 #endif
-
-    ! INTEGER :: p_pe
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
-
-    ! Arguments
+    ! ----------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: &
       & model_id,          &
       & iblk,              &
@@ -198,22 +202,20 @@ CONTAINS
       & albedo_lice       (:), &
       & ice_fract_lake    (:)
     ! For standalone jsbach:
-    REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
-
-    ! Local variables
-    CLASS(t_jsb_model),          POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
-
-    INTEGER :: nc
-    INTEGER :: no_omp_thread
-
-    ! ---------------------------
-    ! Go
-
-    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
-
+    REAL(wp), INTENT(out), OPTIONAL :: &
+      & evapopot(:)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_model),         POINTER :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER                             :: nc
+    INTEGER                             :: no_omp_thread
+    ! INTEGER                             :: p_pe
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (timer_on() .OR. l_timer_host) THEN
+      CALL timer_start(timer_jsbach(model_id))
+    END IF
     no_omp_thread = Get_omp_thread()
-
     ! Note: Since write_interface_variables is not yet implemented for ICON, the call to it is suppressed here for ICON.
     !       This is an exception since we don't want to use conditional compiling, but otherwise there are lots
     !       of compiler warnings about unused dummy arguments.
@@ -224,29 +226,34 @@ CONTAINS
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
 #endif
-
     nc = ice - ics + 1
-
     model => Get_model(model_id)
-
+    IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
+    ! ----------------------------------------------------------------------------------------------------- !
+    
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
 !!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
 !!$    p_pe = get_my_global_mpi_id()
 !!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
 !!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
-    IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
-    ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.0 Update options
+    !>
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
+      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()))
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 2.0 associate variable pointers to current chunk of gridcells
+    !>
     CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
-    ! Put atmospheric forcing into the a2l memory.
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 3.0 put atmospheric forcing into the a2l memory
+    !>
     CALL model%Get_top_tile(tile)
-
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
@@ -285,12 +292,18 @@ CONTAINS
       & )
     NULLIFY(tile)
 
-    ! Run tasks in queue
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 Run tasks in queue
+    !>
+    !>  run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
+    !>
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
-
-    ! give the required variables back to the atmosphere
-    !   Note: evapopot is an optional parameter, so it has to be passed without the colon!
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 5.0 give the required variables back to the atmosphere
+    !>
+    !>   @NOTE evapopot is an optional parameter, so it has to be passed without the colon!
+    !>
     CALL model%Get_top_tile(tile)
     CALL update_land2atm(                        &
       & tile,                                    &
@@ -333,30 +346,39 @@ CONTAINS
       & )
     NULLIFY(tile)
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 6.0 messages
+    !>
 !!$    IF (iblk == 1)                                                              &
 !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
 !!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
 !!$      &              all_print=.TRUE.)
-    IF (debug_on('basic') .AND. iblk == 1) &
-      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
+    IF (debug_on('basic') .AND. iblk == 1) THEN
+      CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
+    END IF
 
-    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 7.0 update timer
+    !>
+    IF (timer_on() .OR. l_timer_host) THEN
+      CALL timer_stop(timer_jsbach(model_id))
+    END IF
   END SUBROUTINE interface_full
 
-  !
-  ! Not used currently
+  ! ======================================================================================================= !
+  !> @TODO not used at the moment
+  !> 
   ! SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
   !   & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
-
+  !
   !   CHARACTER(len=*), PARAMETER :: routine = modname//':interface_inquire'
-
+  !
   !   INTEGER, INTENT(in) :: &
   !     & model_id,          &
   !     & iblk,              &
   !     & ics,               &
   !     & ice
-
+  !
   !   REAL(wp), INTENT(inout) :: &
   !     & t_srf    (:), &
   !     & t_eff_srf(:), &
@@ -365,92 +387,103 @@ CONTAINS
   !     & zm_srf   (:), &
   !     & alb_vis  (:), &
   !     & alb_nir  (:)
-
   ! END SUBROUTINE interface_inquire
 
+  ! ======================================================================================================= !
+  !>
+  !> start ICON-Land timestep
+  !>
+  !>   is called by both:
+  !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
+  !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
+  !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
-
     USE mo_alcc_init,           ONLY : read_land_use_data
-
+    ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
-
-    TYPE(t_jsb_model),           POINTER :: model
-
-    INTEGER :: no_omp_thread
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),  POINTER :: model
+    INTEGER                     :: no_omp_thread
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
-
+    ! ----------------------------------------------------------------------------------------------------- !
     no_omp_thread = Get_omp_thread()   ! Should always be 1
-    IF (no_omp_thread /= 1) CALL finish(routine, 'should not be called inside OMP parallel region!')
-
+    IF (no_omp_thread /= 1) THEN
+      CALL finish(routine, 'should not be called inside OMP parallel region!')
+    END IF
     model => Get_model(model_id)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    
+    ! ..
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    !> For the ALCC process land use data has to be read once a year
+    ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
   END SUBROUTINE jsbach_start_timestep
 
+  ! ======================================================================================================= !
+  !>
+  !> finish ICON-land timestep
+  !>
+  !>   is called by both:
+  !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
+  !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
+  !>
   SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
-
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_seb_interface,      ONLY: global_seb_diagnostics
-    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
-    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
-    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
-    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
+    USE mo_seb_interface,       ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,     ONLY: global_hydrology_diagnostics
+    USE mo_jsb_pheno_interface, ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,    ONLY: global_carbon_diagnostics
+    USE mo_pplcc_interface,     ONLY: global_pplcc_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
-
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_processes HYDRO_
     dsl4jsb_Use_processes PHENO_
     dsl4jsb_Use_processes PPLCC_
-
+    ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: steplen
-
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
-
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    REAL(wp)                            :: dtime
+    LOGICAL                             :: l_trace_memory
+    INTEGER                             :: no_omp_thread
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
-
-    REAL(wp) :: dtime
-    LOGICAL :: l_trace_memory
-    INTEGER :: no_omp_thread
-
-    no_omp_thread = Get_omp_thread()
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
-
+    no_omp_thread = Get_omp_thread()
     model => Get_model(model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! TBD: this is only required if restart or output is written for this timestep!
+    ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
+    CALL model%Write_back_to_bgcms()
 
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
@@ -508,84 +541,86 @@ CONTAINS
     IF (l_trace_memory) CALL report_memory_usage()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
   END SUBROUTINE jsbach_finish_timestep
 
-  SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)
-
-    USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
-    USE mo_jsb_process_class, ONLY: Get_process_id
-
-    CHARACTER(len=*),  INTENT(in) :: var_name
-    INTEGER,           INTENT(in) :: model_id
-    INTEGER, OPTIONAL, INTENT(in) :: &
-      & iblk,              &
-      & ics,               &
-      & ice
-    REAL(wp), OPTIONAL, POINTER   :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
-
-    TYPE(t_jsb_model),           POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
-    CLASS(t_jsb_var),            POINTER :: var_ptr
-    CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-    INTEGER :: process_id, pos
-    LOGICAL :: l_on_chunk
-    INTEGER :: no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
-
-    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
-    model => Get_model(model_id)
-    CALL model%Get_top_tile(tile)
-
-    pos = INDEX(var_name, '_')
-    IF (pos < 1) CALL finish(routine, 'var_name must have format <process name>_<variable name>')
-    process_name = var_name(1:pos-1)
-    variable_name = var_name(pos+1:LEN(TRIM(var_name)))
-    process_id = Get_process_id(process_name)
-    var_ptr => tile%mem(process_id)%p%Get_var(variable_name)
-
-    IF (PRESENT(ics) .OR. PRESENT(ice) .OR. PRESENT(iblk)) THEN
-      IF (.NOT. (PRESENT(ics) .AND. PRESENT(ice) .AND. PRESENT(iblk))) THEN
-        CALL finish(routine, 'Must provide either none or all of ics,ice,iblk arguments!')
-      ELSE
-        l_on_chunk = .TRUE.
-        IF (var_ptr%type == REAL2d) THEN
-          IF (.NOT. PRESENT(ptr1d)) CALL finish(routine, 'Must provide argument ptr1d')
-        ELSE
-          IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-        END IF
-      END IF
-    ELSE
-      IF (.NOT. Is_omp_inside_serial()) THEN
-        CALL finish(TRIM(routine), 'Should not be called inside parallel OMP region')
-      END IF
-      l_on_chunk = .FALSE.
-      IF (var_ptr%type == REAL2d) THEN
-        IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-      ELSE
-        IF (.NOT. PRESENT(ptr3d)) CALL finish(routine, 'Must provide argument ptr3d')
-      END IF
-    END IF
-
-    IF (l_on_chunk) THEN
-      IF (var_ptr%type == REAL2d) THEN
-        ptr1d => var_ptr%ptr2d(ics:ice,iblk)
-      ELSE
-        ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
-      END IF
-    ELSE
-      IF (var_ptr%type == REAL2d) THEN
-        ptr2d => var_ptr%ptr2d(:,:)
-      ELSE
-        ptr3d => var_ptr%ptr3d(:,:,:)
-      END IF
-    END IF
-
-    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
-  END SUBROUTINE jsbach_get_var
+  ! ======================================================================================================= !
+  !> ... @TODO not used anymore ?!
+  !> 
+  ! SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)
+  ! 
+  !   USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
+  !   USE mo_jsb_process_class, ONLY: Get_process_id
+  ! 
+  !   CHARACTER(len=*),  INTENT(in) :: var_name
+  !   INTEGER,           INTENT(in) :: model_id
+  !   INTEGER, OPTIONAL, INTENT(in) :: &
+  !     & iblk,              &
+  !     & ics,               &
+  !     & ice
+  !   REAL(wp), OPTIONAL, POINTER   :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
+  ! 
+  !   TYPE(t_jsb_model),           POINTER :: model
+  !   CLASS(t_jsb_tile_abstract),  POINTER :: tile
+  !   CLASS(t_jsb_var),            POINTER :: var_ptr
+  !   CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
+  !   INTEGER :: process_id, pos
+  !   LOGICAL :: l_on_chunk
+  !   INTEGER :: no_omp_thread
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
+  ! 
+  !   IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+  ! 
+  !   model => Get_model(model_id)
+  !   CALL model%Get_top_tile(tile)
+  ! 
+  !   pos = INDEX(var_name, '_')
+  !   IF (pos < 1) CALL finish(routine, 'var_name must have format <process name>_<variable name>')
+  !   process_name = var_name(1:pos-1)
+  !   variable_name = var_name(pos+1:LEN(TRIM(var_name)))
+  !   process_id = Get_process_id(process_name)
+  !   var_ptr => tile%mem(process_id)%p%Get_var(variable_name)
+  ! 
+  !   IF (PRESENT(ics) .OR. PRESENT(ice) .OR. PRESENT(iblk)) THEN
+  !     IF (.NOT. (PRESENT(ics) .AND. PRESENT(ice) .AND. PRESENT(iblk))) THEN
+  !       CALL finish(routine, 'Must provide either none or all of ics,ice,iblk arguments!')
+  !     ELSE
+  !       l_on_chunk = .TRUE.
+  !       IF (var_ptr%type == REAL2d) THEN
+  !         IF (.NOT. PRESENT(ptr1d)) CALL finish(routine, 'Must provide argument ptr1d')
+  !       ELSE
+  !         IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
+  !       END IF
+  !     END IF
+  !   ELSE
+  !     IF (.NOT. Is_omp_inside_serial()) THEN
+  !       CALL finish(TRIM(routine), 'Should not be called inside parallel OMP region')
+  !     END IF
+  !     l_on_chunk = .FALSE.
+  !     IF (var_ptr%type == REAL2d) THEN
+  !       IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
+  !     ELSE
+  !       IF (.NOT. PRESENT(ptr3d)) CALL finish(routine, 'Must provide argument ptr3d')
+  !     END IF
+  !   END IF
+  ! 
+  !   IF (l_on_chunk) THEN
+  !     IF (var_ptr%type == REAL2d) THEN
+  !       ptr1d => var_ptr%ptr2d(ics:ice,iblk)
+  !     ELSE
+  !       ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
+  !     END IF
+  !   ELSE
+  !     IF (var_ptr%type == REAL2d) THEN
+  !       ptr2d => var_ptr%ptr2d(:,:)
+  !     ELSE
+  !       ptr3d => var_ptr%ptr3d(:,:,:)
+  !     END IF
+  !   END IF
+  ! 
+  !   IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
+  ! 
+  ! END SUBROUTINE jsbach_get_var
 
 #endif
 END MODULE mo_jsb_interface

@@ -1,14 +1,14 @@
 !> Summary: Definitions and methods for landcover types.
 !>
-!>### Landcover types 
+!>### Landcover types
 !>
-!> This module provides possible ids for landcover types (lcts), a constructor for new lct instances and 
+!> This module provides possible ids for landcover types (lcts), a constructor for new lct instances and
 !> further methods.
 !>
-!> Each lct has a named id. Furthermore, it can have a name, a longname, a fraction, 
+!> Each lct has a named id. Furthermore, it can have a name, a longname, a fraction,
 !> and in case that it is a PFT tile an id for the lctlib.
 !>
-!> lcts are used in usecases upon tile generation. 
+!> lcts are used in usecases upon tile generation.
 !> Each tile has a primary lct and, in addition, contains all lcts of its descendant tiles.
 !> Leaf tiles only have one lct.
 !> The lcts of a tile are used to define properties of the tile.
@@ -30,16 +30,18 @@
 !>
 !> @todo currently the constructor does not catch cases where the id is not contained in the enumerator
 !>
-!> @todo clarify language by adding another term and renaming members of t_jsb_lct: 
+!> @todo clarify language by adding another term and renaming members of t_jsb_lct:
 !>       -> issue: the id of the lct is not a unique id of the created t_jsb_lct, at least not in case of PFTs
 !>                 (all PFTs share the same id (VEG_TYPE) and only differ in fract and lib_id?!)
 !>       => suggestion: call it type_id
 !>
 !> @todo change default id to -1 instead of 0?
+!>
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
@@ -58,7 +60,7 @@ MODULE mo_jsb_lct_class
       & LAKE_TYPE        !< Lake
   END ENUM
 
-   TYPE t_jsb_lct
+  TYPE t_jsb_lct
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
     CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
@@ -120,7 +122,7 @@ CONTAINS
 !!$    INTEGER,         INTENT(in) :: lct_type
 !!$    LOGICAL                     :: return_value
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains'
+!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains'
 !!$
 !!$    return_value = Contains_lct(this%id, lct_type)
 !!$
@@ -139,7 +141,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains_lct'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains_lct'
     ! -------------------------------------------------------------------------------------------------- !
 
     return_value = .FALSE.
@@ -161,7 +163,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_name'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_name'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%name /= '') THEN
       return_value = TRIM(this%name)
@@ -191,7 +193,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_longname'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_longname'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%long_name /= '') THEN
       return_value = TRIM(this%long_name)

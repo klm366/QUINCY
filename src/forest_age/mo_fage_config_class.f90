@@ -61,7 +61,7 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
-    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC 
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_fage_config), INTENT(inout) :: config !< Configuration type of process (t_fage_config)
@@ -130,7 +130,7 @@ CONTAINS
     ALLOCATE(age_class_max_age(nacs+1))
     ALLOCATE(age_class_mean_age(nacs))
 
-    ! Assertion: 
+    ! Assertion:
     IF ( max_age .LT. nacs) CALL finish(TRIM(routine), 'Assertion: number of age classes needs to be <= max age!')
 
     !> specifies vertical grid with age-class dimension
@@ -145,7 +145,7 @@ CONTAINS
       & units='y')
     CALL register_vgrid(age_classes_grid)
 
-    !> specifies vertical grid with tracked age dimension 
+    !> specifies vertical grid with tracked age dimension
     fage_grid_levels(1:max_age) = (/ (REAL(i,kind=wp),i=1,max_age) /)
     forest_age  => new_vgrid('forest_age', ZAXIS_GENERIC, max_age, &
       & levels  = fage_grid_levels (1:max_age) - 0.5_wp, &
@@ -169,7 +169,7 @@ CONTAINS
   !
   SUBROUTINE derive_age_class_boundaries(age_class_scheme, max_age, nacs, age_class_max_age, age_class_mean_age)
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), INTENT(IN) ::  age_class_scheme 
+    CHARACTER(len=*), INTENT(IN) ::  age_class_scheme
       !< the age class scheme to determine age class boundaries: currently either 'equal' or 'shorterYoung'
     INTEGER, INTENT(IN)          ::  max_age               !<
     INTEGER, INTENT(IN)          ::  nacs                  !<

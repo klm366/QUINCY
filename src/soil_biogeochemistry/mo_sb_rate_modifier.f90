@@ -26,11 +26,6 @@
 !! First version by Jan Engel (20170509): copyied from mo_sb_simple_model.f90
 !!
 MODULE mo_sb_rate_modifier
-#ifndef __NO_JSBACH__
-
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
 
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish
@@ -41,60 +36,44 @@ MODULE mo_sb_rate_modifier
   PRIVATE
   PUBLIC :: update_sb_rate_modifier
 
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_rate_modifier'
 
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Main Task
-  ! 
-  !-----------------------------------------------------------------------------------------------------
-  !> biophysical rate modifier 
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>biophysical rate modifier 
+  !> 
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
-    USE mo_jsb_class,             ONLY: Get_model
-    ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_sb_constants,          ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
-                                        kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, &
-                                        ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
-                                        t_opt_nitrification, lambda_anvf, k_anvf, &
-                                        ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition
-
-    ! Use of process memory
+    USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_process_class,      ONLY: SB_, SPQ_
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,         ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
+    USE mo_jsb_physical_constants, ONLY: Tzero
+    USE mo_sb_constants,           ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
+      &                                  kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, &
+      &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
+      &                                  t_opt_nitrification, lambda_anvf, k_anvf, &
+      &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition, &
+      &                                  kmr_asymb_bnf
+    USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf 
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(SB_)
-    ! dsl4jsb_Use_memory(SSE_)
-    ! dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SPQ_)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER   :: model              !< the model
+    TYPE(t_lctlib_element), POINTER   :: lctlib             !< land-cover-type library - parameter across pft's
+    INTEGER                           :: iblk, ics, ice, nc !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
-    ! dsl4jsb_Def_memory(SSE_)
-    ! dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SPQ_)
-    ! Declare pointers to variables in memory
+    ! ----------------------------------------------------------------------------------------------------- !
     ! SB_
     dsl4jsb_Real3D_onChunk :: rtm_decomposition 
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
@@ -106,6 +85,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_nitrification
     dsl4jsb_Real3D_onChunk :: rtm_denitrification
     dsl4jsb_Real3D_onChunk :: rtm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rtm_asymb_bnf
     dsl4jsb_Real3D_onChunk :: rmm_decomposition 
     dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
@@ -115,45 +95,30 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_hsc
     dsl4jsb_Real3D_onChunk :: rmm_nitrification
     dsl4jsb_Real3D_onChunk :: rmm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rmm_asymb_bnf
     dsl4jsb_Real3D_onChunk :: anaerobic_volume_fraction_sl 
-    ! ! SSE_
-    ! dsl4jsb_Real3D_onChunk :: t_soil_sl
-    ! ! HYDRO_ 3D
-    ! dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    ! dsl4jsb_Real3D_onChunk :: w_soil_sl
-    ! dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
-    ! dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
-    ! dsl4jsb_Real3D_onChunk :: w_soil_pot_sl
     ! SPQ_
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pot_sl
-
-    ! Get local variables from options argument
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(SB_)
-    ! Get process memories
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-    ! dsl4jsb_Get_memory(SSE_)
-    ! dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SPQ_)
-    ! Get process variables (Set pointers to variables in memory)
+    ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id) 
-    ! ---------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! out
@@ -164,6 +129,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_nitrification)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_denitrification)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_gasdiffusion)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_asymb_bnf)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! out
@@ -173,39 +139,29 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)                     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_nitrification)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_gasdiffusion)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_asymb_bnf)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       anaerobic_volume_fraction_sl)! out 
     ! ---------------------------
-    ! dsl4jsb_Get_var3D_onChunk(SSE_,      t_soil_sl)                   ! in
-    ! ! HYDRO_ 3D
-    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)               ! in
-    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)                   ! in
-    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)                ! in
-    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sat_sl)               ! in
-    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pot_sl)               ! in    
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    t_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    w_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    w_soil_fc_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    w_soil_sat_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,    w_soil_pot_sl)               ! in    
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     t_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_fc_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_sat_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_pot_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     soil_depth_sl)               ! in
+    ! ----------------------------------------------------------------------------------------------------- !
 
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    !> 1.0 soil organic rate calc modifiers
-    !!
-    !> 1.1 simple model
-    !!
-    rtm_decomposition    = calc_peaked_temperature_rate_modifier(t_soil_sl,ea_decomposition, &
-                                                                 ed_decomposition,t_ref_decomposition)
-    rmm_decomposition    = MAX(1._wp - w_soil_pot_sl/kmr_decomposition,0.0_wp)
-    !> 1.2 JSM
-    !!
+    !>1.0 soil organic rate calc modifiers
+    !>
+    
+    !>  1.1 simple model
+    !>
+    rtm_decomposition    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), &
+      &                                                          ea_decomposition, &
+      &                                                          ed_decomposition, &
+      &                                                          t_ref_decomposition)
+    rmm_decomposition    = MAX(1._wp - w_soil_pot_sl / kmr_decomposition, 0.0_wp)
+    !>  1.2 JSM
+    !>
     rtm_depolymerisation(:,:) = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
     rtm_mic_uptake(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_mic_uptake)
     rtm_sorption(:,:)         = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_sorption) 
@@ -218,25 +174,28 @@ CONTAINS
     rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:),soil_depth_sl(:,:),kmr_sorption) 
     rmm_hsc(:,:)              = calc_substrate_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_hsc) 
 
-    !> 2.0 nitrification-denitrification model
-    !!
-    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_nitrification, & 
-                                                                 ed_nitrification,t_opt_nitrification) 
-    rtm_denitrification(:,:)  = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_denitrification) 
-    rtm_gasdiffusion(:,:)     = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_gasdiffusion) 
-    rmm_nitrification(:,:)    = calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
-    rmm_gasdiffusion(:,:)     = 1.0_wp - calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
-    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:),w_soil_sat_sl(:,:),lambda_anvf,k_anvf) 
+    !>2.0 nitrification-denitrification model
+    !>
+    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_nitrification, & 
+      &                                                               ed_nitrification, t_opt_nitrification) 
+    rtm_denitrification(:,:)  = calc_temperature_rate_modifier(t_soil_sl(:,:), ea_denitrification) 
+    rtm_gasdiffusion(:,:)     = calc_temperature_rate_modifier(t_soil_sl(:,:), ea_gasdiffusion) 
+    rmm_nitrification(:,:)    = calc_moisture_modifier(w_soil_sl(:,:), w_soil_fc_sl(:,:)) 
+    rmm_gasdiffusion(:,:)     = 1.0_wp - calc_moisture_modifier(w_soil_sl(:,:), w_soil_fc_sl(:,:)) 
+    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:), w_soil_sat_sl(:,:), lambda_anvf, k_anvf) 
 
-    !> 3.0 root model
-    !!
-    rtm_plant_uptake     = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_decomposition, &
-                                                                 ed_decomposition,t_ref_decomposition)
-    rmm_plant_uptake     = MAX(1._wp - w_soil_pot_sl/lctlib%phi_leaf_min,0.0_wp)
+    !>  2.1 N fixation model
+    !>   Using the symbiotic T-function as no other data available
+    !>
+    rtm_asymb_bnf(:,:) = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_symb_bnf, &
+      &                                                        ed_symb_bnf, t_opt_symb_bnf) 
+    rmm_asymb_bnf(:,:) = MAX(1._wp - w_soil_pot_sl / kmr_asymb_bnf, 0.0_wp)
 
-    ! finished
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
+    !>3.0 root model
+    !>
+    rtm_plant_uptake = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_decomposition, &
+      &                                                      ed_decomposition, t_ref_decomposition)
+    rmm_plant_uptake = MAX(1._wp - w_soil_pot_sl / lctlib%phi_leaf_min, 0.0_wp)
   END SUBROUTINE update_sb_rate_modifier
 
 
@@ -260,9 +219,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
 
-    USE mo_jsb_physical_constants,  ONLY: r_gas
-    USE mo_jsb_math_constants,      ONLY: eps8
-    USE mo_sb_constants,            ONLY: t_ref_tresponse 
+    USE mo_jsb_physical_constants, ONLY: r_gas
+    USE mo_jsb_math_constants,     ONLY: eps8
+    USE mo_sb_constants,           ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
     ! ---------------------------
@@ -305,9 +264,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
 
-    USE mo_jsb_physical_constants,  ONLY: r_gas
-    USE mo_jsb_math_constants,      ONLY: eps8
-    USE mo_sb_constants,            ONLY: t_ref_tresponse 
+    USE mo_jsb_physical_constants, ONLY: r_gas
+    USE mo_jsb_math_constants,     ONLY: eps8
+    USE mo_sb_constants,           ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
     ! ---------------------------
@@ -473,31 +432,28 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction( &
-    & w_soil_sl, &
-    & w_soil_sat_sl, &
-    & lambda, &
-    & k_weibull) &
-    RESULT(rate_modifier)
+  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda,k) RESULT(rate_modifier)
 
     USE mo_jsb_math_constants,    ONLY: eps4
 
+    IMPLICIT NONE
     ! ---------------------------
+    ! 0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
     REAL(wp), INTENT(in)  :: w_soil_sat_sl       !< soil moisture at saturation [m]
     REAL(wp), INTENT(in)  :: lambda              !< lambda in Weibull function 
-    REAL(wp), INTENT(in)  :: k_weibull           !< k in Weibull function
+    REAL(wp), INTENT(in)  :: k                   !< k in Weibull function
     REAL(wp)              :: rate_modifier       !< oxygen availability rate modifier [unitless] 
     ! ---------------------------
+    ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_anaerobic_volume_fraction'
 
-    ! catch w_soil_sat_sl = zero
-    IF(w_soil_sat_sl > eps4) THEN
-      air_filled_pore_space = (w_soil_sat_sl - w_soil_sl ) / w_soil_sat_sl
-      rate_modifier         = 1.0_wp - exp(-(lambda * (1.0_wp - air_filled_pore_space)) ** k_weibull) 
+    air_filled_pore_space = (w_soil_sat_sl - w_soil_sl ) / w_soil_sat_sl
+    IF(air_filled_pore_space > eps4) THEN
+       rate_modifier = 1.0_wp - exp(-(lambda * (1.0_wp - air_filled_pore_space))**k) 
     ELSE 
-      rate_modifier         = 1.0_wp - exp(-(lambda * (1.0_wp - eps4)) ** k_weibull)
+       rate_modifier = 1._wp - exp(-(lambda * (1.0_wp - eps4))**k)
     ENDIF
 
   END FUNCTION calc_anaerobic_volume_fraction
@@ -536,5 +492,4 @@ CONTAINS
 
   END FUNCTION calc_moisture_modifier
 
-#endif
 END MODULE mo_sb_rate_modifier

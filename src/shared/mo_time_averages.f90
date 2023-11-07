@@ -1,32 +1,32 @@
+
+!> Summary: generic routine providing various ways for the averaging of variables over time for all model processes
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., and Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License as published by
-!!    the Free Software Foundation, either version 3 of the License, or
-!!    (at your option) any later version.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief
-!!    generic routine providing various ways for the averaging of variables over time for all model processes
-!!
-!! @author
-!!    Jan Engel, Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!!    1st version in jsb4 by Jan Engel (2019-08-30) - integration of calc_mavg() from QUINCY model
-!!    
-!!
+!>### Provides routines to specify, create and write quincy netcdf4 output
+!>
+!> Copyright (c) Jan Engel, Soenke Zaehle, MPI-BGC Jena
+!>
+!>#### Revision History
+!>
+!> 1st version in jsb4 by Jan Engel (2019-08-30) - integration of calc_mavg() from QUINCY model
+!>
+!>#### License
+!>
+!> QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!> Copyright (C) 2022 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>
+!> This file is part of the QUINCY model.
+!> The QUINCY model is free software: you can redistribute it and/or modify
+!> it under the terms of the GNU General Public License version 3,
+!> as published by the Free Software Foundation.
+!>
+!> The QUINCY model is distributed in the hope that it will be useful,
+!> but WITHOUT ANY WARRANTY; without even the implied warranty of
+!> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!> GNU General Public License for more details.
+!>
+!> You should have received a copy of the GNU General Public License
+!> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!> ======================================================================================================
 MODULE mo_time_averages
 #ifndef __NO_JSBACH__
 
@@ -41,25 +41,25 @@ MODULE mo_time_averages
   !!   you can add new parameters here, please sort by increasing numbers
   !!   the default unit of the averaging period is 'day'
   !!   but can also be 'week' or 'year'
-  !! 
+  !!
   ! generic memory time-scales (in days):
     REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
     REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
     REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
-    
+
   ! specific memory time-scales (in days):
     REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF) 
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool 
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF)
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
     REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
     REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
     REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
     REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes 
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes
     REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
   !!----------------------------------------------------------------------------------------------------
 

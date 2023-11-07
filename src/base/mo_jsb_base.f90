@@ -28,6 +28,14 @@ MODULE mo_jsb_base
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> setup the ICON-Land models
+  !>
+  !>   is called by both:
+  !>      ICON-Land standalone: 'mo_jsbach_model:jsbach_model'
+  !>      host model (ICON):    'src/drivers/mo_atmo_model.f90'
+  !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
@@ -41,13 +49,14 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
-    USE mo_rad_constants,       ONLY: init_rad_constants
+    USE mo_rad_parameters,      ONLY: init_rad_parameters_quincy, init_rad_parameters_jsbach
     USE mo_atmland_constants,   ONLY: init_atmland_constants
-    USE mo_assimi_constants,    ONLY: init_assimi_constants
+    USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
+    USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
@@ -97,7 +106,7 @@ CONTAINS
     jsbach%no_of_models = no_of_models
 
     ALLOCATE(jsbach_subsets(no_of_models))
-  
+
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -123,6 +132,36 @@ CONTAINS
           CALL finish(routine, 'Only one model_scheme allowed!')
        END IF
 
+       !> set the bgcm index var used in the scientific routines
+       !>   it depends on the model config and is identical across models
+       !>   assuming the namelist options are identical across models
+       !> 
+       IF (model_idx == 1) THEN
+         CALL set_bgcm_element_idx(model%config%elements_index_map)
+       END IF
+
+       !> parameter init
+       !>
+       IF (model_idx == 1) THEN
+         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
+         SELECT CASE (model_scheme)
+         CASE (MODEL_QUINCY)
+           CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
+           CALL init_rad_parameters_quincy
+           CALL init_assimi_parameters_quincy
+           CALL init_veg_constants
+           CALL init_spq_constants
+           CALL init_sb_constants
+           CALL init_pheno_parameters_quincy
+           CALL init_atmland_constants
+         CASE (MODEL_JSBACH)
+           CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
+           CALL init_pheno_parameters_jsbach
+           CALL init_assimi_parameters_jsbach
+           CALL init_rad_parameters_jsbach
+         END SELECT
+       END IF
+
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
        CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
@@ -142,9 +181,19 @@ CONTAINS
 
       ALLOCATE(model%processes(max_no_of_processes))
       DO iproc=1,max_no_of_processes
-        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename), model_scheme)
       END DO
 
+      ! point from each associated process%config to the model_config
+      DO iproc = 1,max_no_of_processes
+        IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+          IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+            model%processes(iproc)%p%config%model_config => model%config
+          ENDIF
+        ENDIF
+      ENDDO
+
+      ! configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
@@ -244,7 +293,7 @@ CONTAINS
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
 
-        IF(model%Is_process_enabled(FAGE_) & 
+        IF(model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -264,23 +313,6 @@ CONTAINS
       END SELECT
 
     END DO
-
-    !>quincy constants init
-    !>
-    ! assuming the shared/constants/ modules are available here already (impl, math, physical)
-    SELECT CASE (model_scheme)
-    CASE (MODEL_QUINCY)
-      CALL message(TRIM(routine), 'starting init of QUINCY process constants')
-      CALL init_rad_constants      
-      CALL init_assimi_constants   
-      CALL init_veg_constants    
-      CALL init_spq_constants
-      CALL init_sb_constants
-      CALL init_pheno_parameters_quincy
-      CALL init_atmland_constants  
-    CASE (MODEL_JSBACH)
-      CALL init_pheno_parameters_jsbach
-    END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
 
@@ -311,10 +343,10 @@ CONTAINS
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT
-    
+
     ! import lctlib
     ! use model_scheme_char, instead of the ENUM model_scheme, to differentiate between model schemes
-    !  because mo_jsb_model_class is not used in this function 
+    !  because mo_jsb_model_class is not used in this function
     model%lctlib => Read_lctlib(TRIM(lctlib_filename), &
       &                         TRIM(model%config%model_scheme_char), &
       &                         TRIM(model%config%usecase))

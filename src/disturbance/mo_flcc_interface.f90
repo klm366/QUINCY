@@ -37,19 +37,19 @@ MODULE mo_flcc_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_interface'
   CHARACTER(len=*), PARAMETER :: procname = 'flcc'
-  
+
   !> Type definition for flcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_flcc
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_flcc     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_flcc  !< Aggregates computed task variables
   END TYPE tsk_flcc
-  
+
   !> Constructor interface for flcc pre task
   INTERFACE tsk_flcc
     PROCEDURE Create_task_flcc                        !< Constructor function for task
   END INTERFACE tsk_flcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -66,7 +66,7 @@ CONTAINS
     CALL return_ptr%Construct(name=procname, process_id=FLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_flcc
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for flcc process
@@ -78,7 +78,7 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_flcc(model_id))
-    
+
   END SUBROUTINE Register_flcc_tasks
 
   ! ====================================================================================================== !
@@ -148,7 +148,7 @@ CONTAINS
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Assertion: flcc is currently implemented to run on
@@ -366,8 +366,8 @@ CONTAINS
 
           ! - go to next tile (if associated)
           current_tile => current_tile%Get_next_sibling_tile()
-          
-        ENDDO 
+
+        ENDDO
 
         !>
         !> 5. Each lcc process needs to call end lcc to make the passive matter transfer
@@ -383,9 +383,9 @@ CONTAINS
     DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_flcc
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "flcc"
@@ -405,11 +405,11 @@ CONTAINS
     iblk = options%iblk
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     !> Currently nothing to do
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_flcc

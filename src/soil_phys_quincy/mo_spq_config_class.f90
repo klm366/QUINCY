@@ -32,6 +32,7 @@ MODULE mo_spq_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_util,              ONLY: real2string
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -44,23 +45,24 @@ MODULE mo_spq_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_spq_config
-    CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation (available in HYDRO_ too, for jsbach4 physics)
-    
-    INTEGER               :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see ticket #521
-    INTEGER               :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see ticket #521
-    REAL(wp)              :: soil_depth           !< actual soil and rooting depth
-    REAL(wp)              :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
-    REAL(wp)              :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
-    REAL(wp)              :: soil_awc_prescribe, &
-                             soil_theta_prescribe
-    REAL(wp)              :: soil_sand            !< soil sand proportion - site specific from forcing info file
-    REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
-    REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp)              :: bulk_density    
+    LOGICAL                     :: flag_snow            !< on/off snow accumulation 
+    INTEGER                     :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see ticket #521
+    INTEGER                     :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see ticket #521
+    REAL(wp)                    :: soil_depth           !< actual soil and rooting depth
+    REAL(wp)                    :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp)                    :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+    REAL(wp)                    :: soil_awc_prescribe, &
+                                   soil_theta_prescribe
+    REAL(wp)                    :: soil_sand            !< soil sand proportion - site specific from forcing info file
+    REAL(wp)                    :: soil_silt            !< soil silt proportion - site specific from forcing info file
+    REAL(wp)                    :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp)                    :: bulk_density   
+    CHARACTER(len=filename_max) :: bc_sso_filename      !< For elevation and oro_stddev 
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
 
+  INTEGER, PARAMETER :: max_snow_layers = 20  ! consistent with JSBACH4
   INTEGER, PARAMETER :: max_soil_layers = 20  ! consistent with JSBACH4
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_config_class'
@@ -73,11 +75,16 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_spq_config(config)
-
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+#ifdef __QUINCY_STANDALONE__
+    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
+#else
+    USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
+#endif
+    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
-    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
+    USE mo_spq_constants,      ONLY: snow_height_min
     USE mo_jsb_math_constants, ONLY: eps8
 
     IMPLICIT NONE
@@ -88,8 +95,9 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: flag_snow
     INTEGER                     :: nsoil_energy    , &
-                                   nsoil_water    
+                                   nsoil_water
     REAL(wp)                    :: dz_energy(max_soil_layers), &                        ! vector of soil layer thicknesses 
                                    dz_water(max_soil_layers)
     REAL(wp)                    :: soil_layer_profile_ubound_estimate(max_soil_layers)  ! intial estimate of soil profile using the upper bound of each soil layer [m]
@@ -105,17 +113,29 @@ CONTAINS
                                    soil_clay
     REAL(wp)                    :: bulk_density
     INTEGER                     :: isoil   ! looping
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
+    INTEGER                     :: i       ! looping over snow layers, consistent with jsb4
+    CHARACTER(len=filename_max) :: ic_filename
+    CHARACTER(len=filename_max) :: bc_filename
+    CHARACTER(len=filename_max) :: bc_sso_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    INTEGER                     :: nsnow
+    REAL(wp)                    :: dz_snow(max_snow_layers)   ! width of each snow layer
+    REAL(wp), ALLOCATABLE       :: depths(:), mids(:)         ! snow-layer vgrid init
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb              ! soil layers
+    TYPE(t_jsb_vgrid), POINTER  :: snow_vgrid                 ! snow layers  <- name may be consistent with jsb4
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
-    
-    NAMELIST /jsb_spq_nml/       & 
+
+#ifdef __QUINCY_STANDALONE__
+    NAMELIST /spq_ctl/       & 
+#else
+    NAMELIST /jsb_spq_nml/   & 
+#endif
                           active                  , &
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
+                          flag_snow               , &
                           nsoil_energy            , &
                           nsoil_water             , &
                           dz_energy               , &
@@ -132,18 +152,25 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (config%model_config%model_scheme == MODEL_QUINCY) THEN
+      CALL message(TRIM(routine), 'Starting spq configuration')
+    ELSE
+      CALL message(TRIM(routine), 'NOT starting spq configuration - not running MODEL_QUINCY')
+      RETURN
+    END IF
+    ! ----------------------------------------------------------------------------------------------------- !
 
     ! variabales for soil layer calculations
     k_soil_profile  = 0.25_wp
     min_layer_depth = 0.065_wp
-
-    CALL message(TRIM(routine), 'Starting spq configuration')
 
     ! Set defaults
     active                        = .TRUE.
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
+    flag_snow                     = .FALSE.
     nsoil_energy                  = 5
     nsoil_water                   = 5
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
@@ -161,11 +188,14 @@ CONTAINS
     bulk_density                  = 1500.0_wp
 
     ! read the namelist
-    ! &SPQ_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
-
+#ifdef __QUINCY_STANDALONE__
+    nml_unit = position_nml('spq_ctl', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, spq_ctl)
+#else
     nml_unit = position_nml('jsb_spq_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_spq_nml)
+#endif
 
     CALL close_nml(nml_handler)
 
@@ -201,7 +231,7 @@ CONTAINS
     ! run check for soil depth namelist-definition; may not be less/equal zero or larger than covered by soil profile
     IF (soil_depth .LE. 0.0_wp) CALL finish('Init_spq_config','Initialization with non positive soil depth')
     IF (soil_depth .GT. SUM(dz_energy)) &
-      &  CALL finish('Init_spq_config','Initialization of soil depth larger than soil profile not possible')
+      & CALL finish('Init_spq_config','Initialization of soil depth larger than soil profile not possible')
 
     ! calc upper bound of soil layers (water and energy) from layer thickness
     ! note: upper bound is the larger value compared to lower bound of the same layer!
@@ -219,6 +249,7 @@ CONTAINS
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename
+    config%flag_snow                 = flag_snow
     config%nsoil_energy              = nsoil_energy     ! depreciated feature, but needed for now, see ticket #521
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
     config%soil_awc_prescribe        = soil_awc_prescribe 
@@ -238,7 +269,44 @@ CONTAINS
        CALL finish(routine, message_text)
     END IF
 
-    !< Create vertical axis (vgrid)
+    !< Create vertical snow-layer axis (vgrid) - consistent with jsb4
+    !! 
+    !! these are "infrastructure" values \n
+    !! layer 1 is the one at the ground \n
+    !! snow_lay_thickness_snl(:,:) defines how much each of the layers if filled with snow
+    !! 
+    nsnow             = 5       ! by default 5 snow layer (in jsb4 it is a namelist value, which is actually not used)
+    dz_snow(:)        = 0._wp   ! jsb4 default
+    dz_snow(1:nsnow)  = 0.05_wp ! jsb4 default
+    IF (dz_snow(1) < snow_height_min) THEN
+      CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_height_min=' &
+      &                            //real2string(snow_height_min))
+    END IF
+    ALLOCATE(depths(nsnow+1))
+    ALLOCATE(mids(nsnow))
+    depths(1) = 0._wp
+    DO i=1,nsnow
+      depths(i+1) = depths(i) + dz_snow(i)
+    END DO
+    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
+
+    snow_vgrid  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
+      & levels  = mids                 (1:nsnow  ),                         &
+      & lbounds = depths               (1:nsnow  ),                         &
+      & ubounds = depths               (2:nsnow+1),                         &
+      & units='m')
+    CALL register_vgrid(snow_vgrid)
+    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', snow_vgrid%lbounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', snow_vgrid%levels
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', snow_vgrid%ubounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', snow_vgrid%dz
+    CALL message(TRIM(routine), message_text)
+    DEALLOCATE(depths, mids)
+
+    !< Create vertical soil-layer axis (vgrid)
     !! 
     !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
     !! 

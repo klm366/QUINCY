@@ -26,7 +26,7 @@ MODULE mo_a2l_memory_class
 
   PUBLIC :: t_a2l_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 50
+  INTEGER, PARAMETER :: max_no_of_vars = 60
 
   ! ======================================================================================================= !
   !>Type definition for atm2land memory
@@ -39,7 +39,6 @@ MODULE mo_a2l_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & DEBUG_VAR               , &  !<
-      & fract_par_diffuse       , &  !<
       & CO2_air                 , &  !<
       & CO2_air_mol                  !<
 
@@ -62,6 +61,7 @@ MODULE mo_a2l_memory_class
       & swvis_srf_down          , &  !< shortwave surface downward flux in the visible band [W m-2]
       & swnir_srf_down          , &  !< shortwave surface downward flux in the near infrared band [W m-2]
       & swpar_srf_down          , &  !< shortwave surface downward flux in the PAR band [W m-2]
+      & fract_par_diffuse       , &  !< fraction of shortwave surface downward flux that is diffuse [fraction]
       & press_srf               , &  !< surface air pressure [Pa]
       & drag_srf                , &  !< total surface drag [unitless]
       & t_acoef                 , &  !< Richtmeyer-Morten coefficient A for temperature [unitless]
@@ -84,14 +84,9 @@ MODULE mo_a2l_memory_class
       & q_acoef_ice             , &  !< Richtmeyer-Morten coefficient A for specific humidity over ice [unitless]
       & q_bcoef_ice                  !< Richtmeyer-Morten coefficient A for specific humidity over ice [unitless]
 
-    TYPE (t_jsb_var_real2d) :: test
     !------------------------------------------------------------------------------------------------------ !
     !>3.0 quincy
     !>
-
-    TYPE(t_jsb_var_real2d) :: &
-      & swpar_fdiffuse            !< fraction of shortwave surface downward flux that is diffuse [fraction]
-                                  !< in jsbach4 this variable is named: fract_par_diffuse
 
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
@@ -117,7 +112,29 @@ MODULE mo_a2l_memory_class
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) :: &
       & prev_one_cos_zenith_angle   , &   !< cos_zenith_angle of the previous timestep [unitless]
-      & prev_two_cos_zenith_angle         !< cos_zenith_angle of the before previous timestep [unitless]
+      & prev_two_cos_zenith_angle   , &   !< cos_zenith_angle of the before previous timestep [unitless]
+      & prev_three_cos_zenith_angle , &   !< cos_zenith_angle of the before before previous timestep [unitless]
+      & daytime_counter                   !< number of timesteps of current day with light available [#]
+
+#ifdef __QUINCY_STANDALONE__
+    ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_acc, &             !< accumulate (simply add) input value of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_acc, &               !< accumulate (simply add) input value of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_acc, &           !< accumulate (simply add) input value of co2_mixing_ratio [ppm]
+      & co2_dC13_acc, &                   !< accumulate (simply add) input value of co2_dC13 [ppm]
+      & co2_DC14_acc, &                   !< accumulate (simply add) input value of co2_DC14 [scaled]
+      & const_input_timestep_counter      !< count number of timesteps since simulation start [unitless]
+
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
+      & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
+      & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
+#endif
 
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
@@ -125,9 +142,7 @@ MODULE mo_a2l_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_a2l_memory_class'
 
-
 CONTAINS
-
 
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: atm2land
@@ -147,17 +162,17 @@ CONTAINS
     USE mo_isotope_util,      ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)            :: prefix
-    CHARACTER(len=*),    INTENT(in)            :: suffix
-    INTEGER,             INTENT(in)            :: lct_ids(:)
-    INTEGER,             INTENT(in)            :: model_id
+    CLASS(t_a2l_memory),       INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),          INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),          INTENT(in)            :: suffix          !> tile name
+    INTEGER,                   INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,                   INTENT(in)            :: model_id        !> model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_grid),   POINTER :: hgrid
-    TYPE(t_jsb_vgrid),  POINTER :: surface
-    TYPE(t_jsb_model),  POINTER :: model
-    INTEGER                     :: table
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_a2l_memory'
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER                    :: table
+    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
     ! quincy - local variables needed for init of memory variables @TODO move to actual init routine
     REAL(wp) :: C13C12_mixing_ratio, &
                 C14C_mixing_ratio
@@ -171,7 +186,7 @@ CONTAINS
                 swvis_srf_down_init, &
                 swnir_srf_down_init, &
                 swpar_srf_down_init, &
-                swpar_fdiffuse_init, &
+                fract_par_diffuse_init, &
                 cos_zenith_angle_init, &
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
@@ -184,7 +199,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     ! ----------------------------------------------------------------------------------------------------- !
-    ! move to atm2land_init and init a2l variables there  @TODO
+    ! @TODO move to atm2land_init and init a2l variables there
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       C13C12_mixing_ratio         = calc_mixing_ratio_C13C12(def_co2_deltaC13)
       C14C_mixing_ratio           = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
@@ -198,7 +213,7 @@ CONTAINS
       swvis_srf_down_init         = def_swdown * frac_vis_swtot_srf
       swnir_srf_down_init         = def_swdown * (1._wp - frac_vis_swtot_srf)
       swpar_srf_down_init         = swvis_srf_down_init * frac_par_swvis_srf
-      swpar_fdiffuse_init         = def_fdiffuse
+      fract_par_diffuse_init      = def_fdiffuse !TODO: is this still required? Probably for QS?!
       cos_zenith_angle_init       = def_cos_angle
       co2_mixing_ratio_init       = def_co2_mixing_ratio
       co2_mixing_ratio_c13_init   = co2_mixing_ratio_init / (1._wp + 1._wp / C13C12_mixing_ratio)
@@ -218,15 +233,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=777.7_wp )
-
-    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
-      & hgrid, surface,                                                      &
-      & t_cf('fract_par_diffuse', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'co2_air', mem%CO2_air,                                                      &
       & hgrid, surface,                                                                            &
@@ -336,6 +342,15 @@ CONTAINS
     CALL mem%Add_var( 'swpar_srf_down', mem%swpar_srf_down,                  &
       & hgrid, surface,                                                      &
       & t_cf('downward_par_shortwave_radiation', 'W/m2', ''),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
+      & hgrid, surface,                                                      &
+      & t_cf('fract_par_diffuse', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
@@ -619,6 +634,16 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = swpar_srf_down_init)
 
+      CALL mem%Add_var('fract_par_diffuse', mem%fract_par_diffuse, &
+        & hgrid, surface, &
+        & t_cf('fract_par_diffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = fract_par_diffuse_init)
+
       CALL mem%Add_var('press_srf', mem%press_srf, &
         & hgrid, surface, &
         & t_cf('press_srf', 'Pa', 'surface air pressure'), &
@@ -807,16 +832,6 @@ CONTAINS
       ! ------------------------------------------------------------------------------------------------- !
       ! variables used only with quincy
       !
-      CALL mem%Add_var('swpar_fdiffuse', mem%swpar_fdiffuse, &
-        & hgrid, surface, &
-        & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = swpar_fdiffuse_init)
-
       CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
         & hgrid, surface, &
         & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
@@ -924,6 +939,27 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('prev_three_cos_zenith_angle', mem%prev_three_cos_zenith_angle, &
+        & hgrid, surface, &
+        & t_cf('prev_three_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before before previous timestep'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
+        & hgrid, surface, &
+        & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 

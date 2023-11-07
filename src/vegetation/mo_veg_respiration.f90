@@ -26,7 +26,6 @@
 !! First version by Soenke Zaehle (2016-02-17)
 !!
 MODULE mo_veg_respiration
-#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
   PRIVATE
@@ -130,5 +129,4 @@ CONTAINS
      
   END FUNCTION calc_maintenance_respiration
 
-#endif
 END MODULE mo_veg_respiration

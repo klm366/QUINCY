@@ -26,7 +26,6 @@
 !! First version by Jan Engel (2016-07-21)
 !!
 MODULE mo_veg_constants
-#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
 
@@ -67,8 +66,12 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: &
       ! default turnover time of the labile carbo-hydrates (in days)
       tau_labile,           & !< default turnover time of the labile carbo-hydrates (in days)
+      ! ratio between the pull of carbon from the reserve pool
+      ! and carbon allocation to growth (both w.r.t. labile pool turnover rate)
+      k_labphen_tree,       & !< ration between pull from reserve pool and allocation to growth for trees
+      k_labphen_grass,      & !< ration between pull from reserve pool and allocation to growth for grass
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
-      ! tuned to reduce growth between 5degC to zero at 0 degC
+      ! tuned to reduce growth between 5degC to zero at 0degC
       lambda_labile_temp,   & !< lambda in temperature response function of labile pool 
       k_labile_temp,        & !< k in temperature response function of labile pool 
       ! moisture scalar on turnover time of labile pool (1-exp(-(lambda * theta)^k))
@@ -112,8 +115,6 @@ MODULE mo_veg_constants
       kappa_f_demand_nc    , & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50% 
       kappa_f_demand_pn    , & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50% 
       k_f_demand           , & !< k in nutrient uptake response funktion to labile nutrient concentration
-      cost_n_fixation_max  , & !< maximum cost of N fixation at low / high temperatures (mol C / mol N)
-      cost_n_fixation_min  , & !< mimumum cost of N fixation at 25degC (mol C / mol N)
       k1_temp_bnf          , & !< k1 .. k4 factors in temperature response function of nitrogenase activity
       k2_temp_bnf          , &
       k3_temp_bnf          , &
@@ -123,8 +124,12 @@ MODULE mo_veg_constants
       transform_cost_org   , & !< N transformation costs of converting organic N to organic N (mol C / mol N)
       f_nacq_no3           , & !< fractions of NO3 and NH4 uptake based on transformation costs
       f_nacq_nh4           , &
-      vmax_bnf             , & !< maximum rate of N fixation (micro-mol N / mol C fine root / s )
-      k_bnf                , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
+      vmax_symb_bnf        , & !< maximum rate of N fixation (micro-mol N / mol C fine root / s )
+      km_symb_bnf          , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
+      k_cost_symb_bnf      , & !< cost of symbiotic N fixation (mol C / mol N)
+      t_opt_symb_bnf       , & !< optimal temperature for BNF (K) 
+      ea_symb_bnf          , & !< activation energy for symbiotic N fixation (J mol-1)
+      ed_symb_bnf          , & !< de-activation energy for symbiotic N fixation (J mol-1)
       eta_nfixation        , & !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
       f_myc_exudation_max  , & !< maximum fraction of current growth allocated to mycorrhiza
       f_mycorrhization_min , & !< minimum root mycorrhization 
@@ -157,7 +162,6 @@ MODULE mo_veg_constants
       k_est_moist                 , & !< parameter in the Weibull function controlling moisture-limited establishment 
       wood_extraction_rate        , & !< fraction of wood removed from site after harvesting
       min_greff                   , & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
-      k1_mort_greff               , & !< asymptotic growth efficiency mortality rate (1/yr)
       k2_mort_greff               , & !< scaling coefficient 
       k3_mort_greff               , & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
       max_crown_area              , & !< maximum crown area (m2)
@@ -206,12 +210,12 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize constants used in the vegetation process
-  !! called by jsbach_setup_models()
+  !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_veg_constants
 
-    USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_math_constants,     ONLY: one_day, one_year
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C, molar_mass_N, molar_mass_P
 
     IMPLICIT NONE
     ! ---------------------------
@@ -240,7 +244,9 @@ CONTAINS
       jmax2vcmax_C4               = 1.4_wp  
 
   ! Labile pool parameters 
-      tau_labile                  = 5.0_wp  
+      tau_labile                  = 5.0_wp
+      k_labphen_grass             = 0.5_wp
+      k_labphen_tree              = 0.25_wp
       lambda_labile_temp          = 0.5_wp 
       k_labile_temp               = 2.0_wp 
       lambda_labile_theta         = 10.0_wp
@@ -277,8 +283,6 @@ CONTAINS
       kappa_f_demand_nc           = 0.75_wp 
       kappa_f_demand_pn           = 0.9_wp 
       k_f_demand                  = 2.0_wp
-      cost_n_fixation_max         = 17.5_wp   / (molar_mass_C/molar_mass_N) 
-      cost_n_fixation_min         = 8.0_wp    / (molar_mass_C/molar_mass_N) 
       k1_temp_bnf                 = 1.25_wp
       k2_temp_bnf                 = -3.62_wp
       k3_temp_bnf                 = 0.27_wp
@@ -288,8 +292,12 @@ CONTAINS
       transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_bnf                    = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp
-      k_bnf                       = 5.0_wp    / (molar_mass_C/molar_Mass_N)
+      vmax_symb_bnf               = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp  ! Meyerholt et. al 2016
+      km_symb_bnf                 = 5.0_wp    / (molar_mass_C/molar_Mass_N)                                   ! Meyerholt et. al 2016
+      k_cost_symb_bnf             = 12.75_wp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021 
+      t_opt_symb_bnf              = 32.0_wp+273.15_wp  ! calibrated from Bytnerowicz et al. 2022 
+      ea_symb_bnf                 = 72000._wp          ! calibrated from Bytnerowicz et al. 2022 
+      ed_symb_bnf                 = 250000._wp         ! calibrated from Bytnerowicz et al. 2022 
       eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
       f_myc_exudation_max         = 0.3_wp
       f_mycorrhization_min        = 0.1_wp
@@ -318,7 +326,6 @@ CONTAINS
       lambda_est_moist            = 10._wp  
       k_est_moist                 = 2.0_wp  
       wood_extraction_rate        = 0.8_wp
-      k1_mort_greff               = 0.05_wp 
       k2_mort_greff               = 0.3_wp 
       k3_mort_greff               = 25.0_wp 
       min_greff                   = 1.0_wp
@@ -348,5 +355,4 @@ CONTAINS
 
   END SUBROUTINE init_veg_constants
 
-#endif
 END MODULE mo_veg_constants

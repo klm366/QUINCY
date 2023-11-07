@@ -17,7 +17,7 @@
 !>
 MODULE mo_wlcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -62,7 +62,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_wlcc_config'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     CALL message(TRIM(routine), 'Starting wlcc configuration')
 
     ! Set defaults
@@ -82,7 +82,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    
+
   END SUBROUTINE Init_wlcc_config
 
 #endif

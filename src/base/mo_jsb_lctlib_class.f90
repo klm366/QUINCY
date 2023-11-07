@@ -149,19 +149,18 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
     
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
-
-    INTEGER  :: growthform 
+    INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
-    REAL(wp) :: sla                 
-    REAL(wp) :: sigma_vis 
-    REAL(wp) :: sigma_nir 
-    REAL(wp) :: omega_clumping 
-    REAL(wp) :: crown_shape_factor 
-    REAL(wp) :: cn_leaf             
+    REAL(wp) :: sla
+    REAL(wp) :: sigma_vis
+    REAL(wp) :: sigma_nir
+    REAL(wp) :: omega_clumping
+    REAL(wp) :: crown_shape_factor
+    REAL(wp) :: cn_leaf
     REAL(wp) :: cn_leaf_min
     REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf  
+    REAL(wp) :: np_leaf
     REAL(wp) :: np_leaf_min
     REAL(wp) :: np_leaf_max
     REAL(wp) :: k0_fn_struc
@@ -184,7 +183,7 @@ MODULE mo_jsb_lctlib_class
                 tau_seed_est      , &
                 tau_mycorrhiza
 
-    ! N uptake parameters    
+    ! N uptake parameters
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
                 bnf_base
@@ -192,7 +191,8 @@ MODULE mo_jsb_lctlib_class
     ! Vegetation dynamics parameters
     REAL(wp) :: lambda_est_light  , &
                 k_est_light       , &
-                seed_size
+                seed_size         , &
+                k1_mort_greff
 
     ! Phenology parameters
     REAL(wp) :: beta_soil_flush       , &
@@ -218,9 +218,9 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: k_root_dist    
+    REAL(wp) :: k_root_dist
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
-    
+
   END TYPE t_lctlib_element
 
 CONTAINS
@@ -262,11 +262,14 @@ CONTAINS
     !
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
+#ifdef __QUINCY_STANDALONE__
+    USE mo_util,        ONLY: tolower
+#else
     USE mo_util_string, ONLY: tolower
-
+#endif
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
@@ -284,7 +287,7 @@ CONTAINS
     INTEGER            :: pos,length
     CHARACTER(len=2)   :: blank_set = " "//achar(9) !< the blank characters: BLANK and TAB
     INTEGER,ALLOCATABLE:: itmp(:)                   !< temporary array used for input of logicals
-    INTEGER            :: apu  ! THT 30.10.2012
+    INTEGER            :: apu
 
     LOGICAL            :: exist_LctNumber              = .FALSE.
     LOGICAL            :: exist_LctName                = .FALSE.
@@ -359,7 +362,7 @@ CONTAINS
     LOGICAL            :: exists_leaflit_coef             = .FALSE.
     LOGICAL            :: exists_litveg_coef              = .FALSE.
     LOGICAL            :: exists_root_dist_beta           = .FALSE.
-    ! quincy model ------------------------------------------------------------------------------------------
+    ! quincy model - start
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.
     LOGICAL            :: exists_phenology_type = .FALSE.
@@ -397,6 +400,7 @@ CONTAINS
     LOGICAL            :: exists_lambda_est_light = .FALSE.
     LOGICAL            :: exists_k_est_light = .FALSE.
     LOGICAL            :: exists_seed_size = .FALSE.
+    LOGICAL            :: exists_k1_mort_greff = .FALSE.
     LOGICAL            :: exists_beta_soil_flush = .FALSE.
     LOGICAL            :: exists_beta_soil_senescence = .FALSE.
     LOGICAL            :: exists_gdd_req_max = .FALSE.
@@ -417,7 +421,7 @@ CONTAINS
     LOGICAL            :: exists_c0_allom = .FALSE.
     LOGICAL            :: exists_fstore_target = .FALSE.
     LOGICAL            :: exists_k_root_dist = .FALSE.
-    ! quincy model - end ------------------------------------------------------------------------------------
+    ! quincy model - end
     INTEGER            :: i, j
     INTEGER            :: nlct, npft
 
@@ -892,6 +896,9 @@ CONTAINS
             CASE ('seed_size')
               READ(line(pos:length),*) lctlib(1:nlct)%seed_size
               exists_seed_size = .TRUE.
+            CASE ('k1_mort_greff')
+              READ(line(pos:length),*) lctlib(1:nlct)%k1_mort_greff
+              exists_k1_mort_greff = .TRUE.
 
             CASE ('beta_soil_flush')
               READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_flush
@@ -953,7 +960,7 @@ CONTAINS
               exists_fstore_target = .TRUE.
 
             CASE ('k_root_dist')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist          
+              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist
               exists_k_root_dist = .TRUE.
             CASE default
               ! nothing to do
@@ -966,7 +973,7 @@ CONTAINS
 
        !> test if the lctLib parameter could be read, if not finish()
        !>
-       
+
        ! three main parameters
        IF(.NOT. exist_LctNumber) &
             CALL finish('init_lctlib','No data for LctNumber found in '//TRIM(lctlib_file_name))
@@ -976,7 +983,7 @@ CONTAINS
             lctlib%LctName = "undefined"
        IF(.NOT. exist_LandcoverClass) &
             CALL finish('init_lctlib','No data for LandcoverClass found in '//TRIM(lctlib_file_name))
-            
+
        ! model scheme: jsbach / jsbach_quincy
        IF (model_scheme_char == "jsbach" .OR. model_scheme_char == "jsbach_quincy") THEN
          IF(.NOT. exist_AlbedoSnowVisMin) &
@@ -1131,7 +1138,7 @@ CONTAINS
            lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
          END DO
          !------------------------------------------------------------------------------------------
-       END IF 
+       END IF
 
        ! model scheme: jsbach_quincy / quincy
        IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
@@ -1209,6 +1216,8 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_est_light found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_seed_size) &
           CALL finish('init_lctlib','No data for seed_size found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k1_mort_greff) &
+          CALL finish('init_lctlib','No data for k1_mort_greff found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_beta_soil_flush) &
           CALL finish('init_lctlib','No data for beta_soil_flush found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_beta_soil_senescence) &
@@ -1266,7 +1275,7 @@ CONTAINS
          ELSE
            j = 2
          END IF
-         
+
        ! sla
          DO i = j,nlct
              lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
@@ -1312,7 +1321,7 @@ CONTAINS
          END DO
        ! t_air_senescence
          DO i = j,nlct
-           lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + tmelt
+           lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + Tzero
          END DO
        ! wood_density
          DO i = j,nlct
@@ -1325,30 +1334,31 @@ CONTAINS
        ! k_sapwood
          DO i = j,nlct
            lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
-        END DO
+         END DO
         ! k_rtos
-        DO i = j,nlct
+         DO i = j,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
-              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
               !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
            ELSE
               lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
            END IF
-        END DO
-       ! c0_allom
+         END DO
+         ! c0_allom
          DO i = j,nlct
            IF(lctlib(i)%growthform == itree) THEN
-             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
-                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * & 
+             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
+                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
                                   lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
            ELSE
              lctlib(i)%c0_allom = 0.0_wp
            END IF
          END DO
        END IF
-       ! quincy ------------------------------------------------------------------------------------------
+       ! quincy
 
+       !------------------------------------------------------------------------------------------
 
        ! --- translate landcover class information into landcover class flags
 
@@ -1559,6 +1569,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%lambda_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%seed_size, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k1_mort_greff, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%beta_soil_flush, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%beta_soil_senescence, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%gdd_req_max, p_io, mpi_comm)
@@ -1585,7 +1596,7 @@ CONTAINS
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
 
     !>Throw away values for glacier (first column) for some model usecases (mo_jsb_usecases)
-    !> 
+    !>
     SELECT CASE (usecase)
     ! quincy model with 8 PFT tiles
     CASE ('quincy_eight_pfts')

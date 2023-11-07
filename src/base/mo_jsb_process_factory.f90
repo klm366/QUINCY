@@ -44,6 +44,8 @@ MODULE mo_jsb_process_factory
   USE mo_top_memory_class,     ONLY: t_top_memory
   USE mo_ch4_memory_class,     ONLY: t_ch4_memory
   USE mo_rad_interface,        ONLY: Register_rad_tasks
+  USE mo_q_rad_interface,      ONLY: Register_rad_tasks_quincy
+  USE mo_jsb_rad_interface,    ONLY: Register_rad_tasks_jsbach
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
@@ -53,9 +55,11 @@ MODULE mo_jsb_process_factory
   USE mo_sse_config_class,     ONLY: t_sse_config
   USE mo_hydro_interface,      ONLY: Register_hydro_tasks
   USE mo_hydro_config_class,   ONLY: t_hydro_config
-  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
+  USE mo_q_assimi_interface,   ONLY: Register_assimi_tasks_quincy
+  USE mo_jsb_assimi_interface, ONLY: Register_assimi_tasks_jsbach
   USE mo_assimi_config_class,  ONLY: t_assimi_config
-  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
+  USE mo_q_pheno_interface,    ONLY: Register_pheno_tasks_quincy
+  USE mo_jsb_pheno_interface,  ONLY: Register_pheno_tasks_jsbach
   USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
@@ -110,11 +114,18 @@ MODULE mo_jsb_process_factory
 
 CONTAINS
 
-  FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
+  FUNCTION Create_process( &
+    & iproc, &
+    & model_id, &
+    & namelist_filename, &
+    & model_scheme) RESULT(return_ptr)
+    
+    USE mo_jsb_model_class,     ONLY: MODEL_JSBACH, MODEL_QUINCY
 
-    INTEGER, INTENT(in) :: iproc
-    INTEGER, INTENT(in) :: model_id
-    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
+    INTEGER,          INTENT(in)  :: iproc
+    INTEGER,          INTENT(in)  :: model_id
+    CHARACTER(LEN=*), INTENT(in)  :: namelist_filename
+    INTEGER,          INTENT(in)  :: model_scheme
     CLASS(t_jsb_process), POINTER :: return_ptr
 
     ALLOCATE(t_jsb_process::return_ptr)
@@ -130,7 +141,12 @@ CONTAINS
     CASE (A2L_, L2A_)
       ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
     CASE (RAD_)
-      CALL Register_rad_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_rad_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_rad_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_rad_config::return_ptr%config)
     CASE (SEB_)
       CALL Register_seb_tasks(return_ptr, model_id)
@@ -145,10 +161,20 @@ CONTAINS
       CALL Register_hydro_tasks(return_ptr, model_id)
       ALLOCATE(t_hydro_config::return_ptr%config)
     CASE (ASSIMI_)
-      CALL Register_assimi_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_assimi_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_assimi_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_assimi_config::return_ptr%config)
     CASE (PHENO_)
-      CALL Register_pheno_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_pheno_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_pheno_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_pheno_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
