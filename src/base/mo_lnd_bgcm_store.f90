@@ -140,6 +140,7 @@ CONTAINS
           idx_1l_2d_bgcm = idx_1l_2d_bgcm + 1
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(nr_of_elements))
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
+          this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_wp
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_2d_bgcm
           DO i_element = 1, nr_of_elements
@@ -150,6 +151,7 @@ CONTAINS
           idx_1l_3d_bgcm = idx_1l_3d_bgcm + 1
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(nr_of_elements))
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
+          this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_wp
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_3d_bgcm
           DO i_element = 1, nr_of_elements
@@ -175,6 +177,7 @@ CONTAINS
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
+          this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_wp
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_2d_bgcm
@@ -183,6 +186,7 @@ CONTAINS
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
+          this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_wp
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_3d_bgcm
