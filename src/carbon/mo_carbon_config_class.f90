@@ -54,6 +54,7 @@ CONTAINS
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_carbon_constants,   ONLY: FireFracWood2Atmos
+    USE mo_master_config,      ONLY: isRestart
 
     CLASS(t_carbon_config), INTENT(inout) :: config
 
@@ -95,6 +96,11 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_carbon_nml)
 
     CALL close_nml(nml_handler)
+
+    IF (isRestart() .AND. read_cpools) THEN
+      read_cpools = .FALSE.
+      CALL message(routine,'Cpools are read only at experiment start')
+    ENDIF
 
     ! Write resulting values in config memory
     config%active                 = active

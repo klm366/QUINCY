@@ -208,6 +208,7 @@ CONTAINS
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -247,6 +248,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    dsl4jsb_Real2D_onChunk :: GDD_prev_year
+    dsl4jsb_Real2D_onChunk :: GDD_sum
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -263,7 +266,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     ! Local variables
-    LOGICAL :: l_newday
+    LOGICAL :: l_newday, l_newyear
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(wp) :: MaxLAI
@@ -322,6 +325,7 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
@@ -390,6 +394,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_sum)                ! inout
     ! ---------------------------
     ! Go
 
@@ -672,6 +678,13 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! Calculate GDD for methane process
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL calc_GDD(l_newyear,l_newday,5._wp,      & ! in
+                  & previous_day_temp_mean(:),     & ! in
+                  & GDD_prev_year(:),              & ! inout
+                  & GDD_sum(:))                      ! inout
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

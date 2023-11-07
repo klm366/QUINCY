@@ -14,7 +14,7 @@
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
-MODULE mo_carbon_process_shared
+MODULE mo_carbon_shared
 #ifndef __NO_JSBACH__
 
   USE mo_kind,             ONLY: wp
@@ -22,6 +22,8 @@ MODULE mo_carbon_process_shared
   PRIVATE
 
   PUBLIC :: calc_plant_c, yasso, distribute_yasso_litter, add_litter_to_yasso_pool, get_per_tile
+
+  CHARACTER(*), PARAMETER :: module = 'mo_carbon_shared'
 
 CONTAINS
 
@@ -449,9 +451,9 @@ CONTAINS
     REAL(wp), DIMENSION(18), INTENT(out) :: Yasso_out          ! updated Y pools (1:9) and fluxes (10:18)
                                                                !   see update_Cpools for more information
 
-    REAL(wp), OPTIONAL,      INTENT(in)  ::  redFact_Nlimit
-    LOGICAL,  OPTIONAL,      INTENT(in)  ::  is_anoxic
-    LOGICAL,  OPTIONAL,      INTENT(in)  ::  is_peat
+    REAL(wp), OPTIONAL,      INTENT(in)  :: redFact_Nlimit
+    LOGICAL,  OPTIONAL,      INTENT(in)  :: is_anoxic
+    LOGICAL,  OPTIONAL,      INTENT(in)  :: is_peat
 
     ! Possibilities to overwrite (some of) the default exchange coefficients (AWEN2H for backward compatibility)
     REAL(wp), OPTIONAL,      INTENT(in)  :: A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H
@@ -772,23 +774,15 @@ CONTAINS
 !                              + CAflx_from_humus
 
     !   litter ag & bg respiration (needed for N cycle)
-    CAflx_resp_from_litter_ag =  (CAflx_from_acid_ag )                          &
-                               * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H)     &
-                               + (CAflx_from_water_ag )                         &
-                               * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H)     &
-                               + (CAflx_from_ethanol_ag )                       &
-                               * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H)     &
-                               + (CAflx_from_nonsoluble_ag )                    &
-                               * (1.0_wp - N_2_A - N_2_W - N_2_E - N_2_H)
+    CAflx_resp_from_litter_ag =  CAflx_from_acid_ag       * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
+                               + CAflx_from_water_ag      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
+                               + CAflx_from_ethanol_ag    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
+                               + CAflx_from_nonsoluble_ag * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
 
-    CAflx_resp_from_litter_bg =  (CAflx_from_acid_bg )                          &
-                               * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H)     &
-                               + (CAflx_from_water_bg )                         &
-                               * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H)     &
-                               + (CAflx_from_ethanol_bg )                       &
-                               * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H)     &
-                               + (CAflx_from_nonsoluble_bg )                    &
-                               * (1.0_wp - N_2_A - N_2_W - N_2_E - N_2_H)
+    CAflx_resp_from_litter_bg =  CAflx_from_acid_bg       * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
+                               + CAflx_from_water_bg      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
+                               + CAflx_from_ethanol_bg    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
+                               + CAflx_from_nonsoluble_bg * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
 
     CAflx_respiration         =  CAflx_resp_from_litter_ag                      &
                                + CAflx_resp_from_litter_bg                      &
@@ -968,4 +962,4 @@ CONTAINS
   END SUBROUTINE get_per_tile
 
 #endif
-END MODULE mo_carbon_process_shared
+END MODULE mo_carbon_shared

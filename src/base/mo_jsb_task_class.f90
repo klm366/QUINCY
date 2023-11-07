@@ -17,7 +17,7 @@
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp, i4, i8
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop
 
@@ -137,6 +137,7 @@ CONTAINS
 !!$      IF (.NOT. ASSOCIATED(task%Aggregate)) &
 !!$        & CALL finish(TRIM(routine), 'Procedure pointer for Aggregate not set')
 !!$
+
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
         IF (timer_on('detail')) THEN

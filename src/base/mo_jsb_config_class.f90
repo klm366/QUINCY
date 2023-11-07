@@ -73,6 +73,7 @@ MODULE mo_jsb_config_class
   ! Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
+    INTEGER :: run_case
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename

@@ -314,8 +314,6 @@ CONTAINS
         !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
-! StW: Extra peat tile needed?
-
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
@@ -531,6 +529,15 @@ CONTAINS
           IF (model%processes(DISTURB_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
+          ! See comment above regarding placement of TOP_ and CH4_ processes
+          IF (model%processes(CH4_)%p%config%run_case == 2) THEN
+            IF (model%processes(TOP_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
+            END IF
+            IF (model%processes(CH4_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
+            END IF
+          ENDIF
 
             DO i=1,npft
 

@@ -127,6 +127,8 @@ CONTAINS
       return_value = 'spq'
     CASE (TOP_)
       return_value = 'top'
+    CASE (CH4_)
+      return_value = 'methane'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -193,6 +195,8 @@ CONTAINS
       return_value = SPQ_
     CASE ('top')
       return_value = TOP_
+    CASE ('methane')
+      return_value = CH4_
     CASE DEFAULT
       return_value = 0
     END SELECT

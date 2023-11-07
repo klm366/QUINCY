@@ -170,7 +170,6 @@ CONTAINS
       & CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
-
     grid => new_grid(patch, type)
     CALL Register_grid(grid)
     model%grid_id = grid%id
@@ -391,6 +390,7 @@ CONTAINS
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
       CALL model%Queue_task(TOP_,    "inundated_area") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(CH4_,    "methane_processes") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -653,6 +653,9 @@ CONTAINS
         END IF
         IF (tile%Is_process_active(TOP_)) THEN
           CALL topmodel_init(tile)
+        END IF
+        IF (tile%Is_process_active(CH4_)) THEN
+          CALL methane_init(tile)
         END IF
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)

@@ -11,6 +11,7 @@
 
 PROGRAM example
 
+  dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%prod_out)
   dsl4jsb_Use_processes SOIL_, &
     & VEG_
   dsl4jsb_Use_memory(ATM2LAND_)
@@ -63,6 +64,6 @@ PROGRAM example
   ! veg_litterfall_mt => bgcm_store%Get_matrix_from_store_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name)
 
   ! Test abort on error
-  dsl4jsb_Def_menory(SOIL_)
+  dsl4jsb_Def_memory(SOIL_)
 
 END PROGRAM example

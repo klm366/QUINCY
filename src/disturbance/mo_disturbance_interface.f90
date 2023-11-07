@@ -493,6 +493,8 @@ CONTAINS
 
       IF (tile%Has_process_memory(CARBON_)) THEN
 
+    ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
+
         ! Calculate carbon relocation connected with damages and fires
         IF (.NOT. model%processes(WLCC_)%p%config%active) THEN
           ! If WLCC is not active, wind disturbance is executed directly on this pft
