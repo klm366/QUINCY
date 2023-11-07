@@ -147,7 +147,7 @@ CONTAINS
     &  wtr_soil_sl, ice_soil_sl,          &
     &  water_table,                       &
     &  frac_liquid_top                    &
-  )
+    & )
 
     ! Parameters
     LOGICAL,  INTENT(in)    :: with_permafrost      ! Soil may contain frozen water?
@@ -395,6 +395,15 @@ CONTAINS
 
       IF (lmonth) THEN
 
+        IF (lyear) THEN
+
+          ! Reset yearly values
+          frac_inun_summ_year =    0._wp
+          frac_inun_min_year  = 1000._wp
+          wt_inun_min_year    = 1000._wp
+
+        ENDIF ! lyear
+
         ! frac_inun: Monthly average of inundated fraction
         frac_inun_mean_month = frac_inun_sum_month / (mlen * tspd)
         frac_inun_sum_month  = 0._wp
@@ -438,13 +447,10 @@ CONTAINS
             frac_permanent_wetland = frac_inun_min_lt
           ENDIF
 
-          ! Reset yearly values
-          frac_inun_summ_year =    0._wp
-          frac_inun_min_year  = 1000._wp
-          wt_inun_min_year    = 1000._wp
-
         ENDIF ! lyear
+
       ENDIF ! lmonth
+
     ENDIF ! lday
 
     ! Any time step: Just add to sums

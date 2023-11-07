@@ -32,10 +32,11 @@ MODULE mo_pheno_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_, CH4_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(CH4_)
 
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -220,7 +221,8 @@ CONTAINS
       &                                   recalc_carbon_per_tile_vars
     USE mo_pheno_process,           ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
       &                                   calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
-      &                                   track_max_green_pool, derive_maxlai_according_to_allometric_relationships
+      &                                   track_max_green_pool, derive_maxlai_according_to_allometric_relationships,   &
+      &                                   calc_GDD
     USE mo_jsb_time_iface,          ONLY: get_year_day
     USE mo_jsb_time,                ONLY: is_newyear, is_newday, timestep_in_days
     USE mo_pheno_parameters,        ONLY: pheno_param_jsbach
@@ -248,6 +250,7 @@ CONTAINS
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -287,6 +290,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    dsl4jsb_Real2D_onChunk :: GDD_prev_year
+    dsl4jsb_Real2D_onChunk :: GDD_sum
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -303,7 +308,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     ! Local variables
-    LOGICAL :: l_newday
+    LOGICAL :: l_newday, l_newyear
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(wp) :: MaxLAI
@@ -334,6 +339,7 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
@@ -402,6 +408,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_sum)                ! inout
     ! ---------------------------
     ! Go
 
@@ -412,8 +420,9 @@ CONTAINS
     END IF
 
     ! Initialization of local variables
-    l_newday = is_newday(options%current_datetime, options%dtime)
-    timestep = timestep_in_days(options%dtime)
+    l_newday  = is_newday (options%current_datetime, options%dtime)
+    l_newyear = is_newyear(options%current_datetime, options%dtime)
+    timestep  = timestep_in_days(options%dtime)
 
     !$claw expand parallel update
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
@@ -659,6 +668,13 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_4 tile_name=tile%name
     lai_ta(:) = lai(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
+    ! Calculate GDD for methane process
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL calc_GDD(l_newyear,l_newday,5._wp,      & ! in
+                  & previous_day_temp_mean(:),     & ! in
+                  & GDD_prev_year(:),              & ! inout
+                  & GDD_sum(:))                      ! inout
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

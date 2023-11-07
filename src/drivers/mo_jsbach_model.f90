@@ -369,9 +369,11 @@ CONTAINS
       !
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
       !
-      CALL jsbach_init_after_restart(1)
 
     END IF
+
+    ! StW: Moved outside the IF (isRestart()) to secure optional reading of cpools at model coldstart
+    CALL jsbach_init_after_restart(1)
 
     !------------------------------------------------------------------
     ! Prepare output
@@ -528,7 +530,7 @@ CONTAINS
     CALL message('','')
   
     jstep = jstep0+1
-  
+
     TIME_LOOP: DO
 
       ! optional memory loggin

@@ -42,6 +42,7 @@ MODULE mo_jsb_process_factory
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
   USE mo_top_memory_class,     ONLY: t_top_memory
+  USE mo_ch4_memory_class,     ONLY: t_ch4_memory
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
@@ -90,10 +91,12 @@ MODULE mo_jsb_process_factory
   USE mo_spq_config_class,      ONLY: t_spq_config
   USE mo_top_interface,         ONLY: Register_top_tasks
   USE mo_top_config_class,      ONLY: t_top_config
+  USE mo_methane_interface,     ONLY: Register_methane_tasks
+  USE mo_ch4_config_class,      ONLY: t_ch4_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_
 
   IMPLICIT NONE
   PRIVATE
@@ -206,6 +209,9 @@ CONTAINS
     CASE (TOP_)
       CALL Register_top_tasks(return_ptr, model_id)
       ALLOCATE(t_top_config::return_ptr%config)
+    CASE (CH4_)
+      CALL Register_methane_tasks(return_ptr, model_id)
+      ALLOCATE(t_ch4_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -244,6 +250,7 @@ CONTAINS
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
     USE mo_top_memory_class,     ONLY: max_no_of_top_vars => max_no_of_vars
+    USE mo_ch4_memory_class,     ONLY: max_no_of_ch4_vars => max_no_of_vars
 
     INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
@@ -317,6 +324,9 @@ CONTAINS
     CASE (TOP_)
       ALLOCATE(t_top_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_top_vars
+    CASE (CH4_)
+      ALLOCATE(t_ch4_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_ch4_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

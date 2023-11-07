@@ -260,7 +260,12 @@ WoodLit_coef 1.0000 0.6500 0.6500 0.6900 0.7300 0.7300 0.7300 0.6900 0.6900 0.73
                      
 #WoodLitterSize:                     
 WoodLitterSize 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
-                     
+
+#root_dist_beta:
+root_dist_beta -99. 0.962 0.961 0.976 0.966 0.966 0.966 0.976 0.966 0.964 0.964 0.943 0.972 -99. 0.943 0.972 0.914 -99. 0.961 0.943 0.972
+#
+# 0.943 for peatlands
+
 #                     
 # Parameters for Spitfire fire algorithm (Thonicke et al. 2010)                     
 #                     

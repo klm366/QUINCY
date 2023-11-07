@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_, CH4_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
@@ -156,7 +156,6 @@ CONTAINS
       & CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
-
     grid => new_grid(patch, type)
     CALL Register_grid(grid)
     model%grid_id = grid%id
@@ -195,7 +194,8 @@ CONTAINS
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fage_init,           ONLY: fage_init
     USE mo_tcq_init,            ONLY: tcq_init
-    USE mo_top_init,       ONLY: topmodel_init
+    USE mo_top_init,            ONLY: topmodel_init
+    USE mo_methane_init,        ONLY: methane_init
 
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
@@ -363,6 +363,7 @@ CONTAINS
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
       CALL model%Queue_task(TOP_,    "inundated_area") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(CH4_,    "methane_processes") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")
@@ -616,6 +617,9 @@ CONTAINS
         END IF
         IF (tile%Is_process_active(TOP_)) THEN
           CALL topmodel_init(tile)
+        END IF
+        IF (tile%Is_process_active(CH4_)) THEN
+          CALL methane_init(tile)
         END IF
 #ifndef __NO_JSBACH_HD__
         IF (tile%Is_process_active(HD_)) THEN

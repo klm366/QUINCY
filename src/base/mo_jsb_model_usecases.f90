@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, TOP_
+    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, TOP_, CH4_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -232,8 +232,6 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
-! StW: Extra peat tile needed?
-
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
@@ -268,10 +266,18 @@ CONTAINS
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
-          ! StW: Is the veg-level the right level for topmodel?
-          IF (model%processes(TOP_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(TOP_, ON_TILE_, AGGREGATE_)
-          END IF
+
+          ! All "normal" vegetation PFTs are processed the same way by TOP_ and CH_ processes,
+          ! thus much time can be saved by calculating only once. However, a specific peatland tile
+          ! requires special treatment and thus each PFT must be calculcated by itself
+          IF (model%processes(CH4_)%p%config%run_case == 1) THEN
+            IF (model%processes(TOP_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(TOP_, ON_TILE_, AGGREGATE_)
+            END IF
+            IF (model%processes(CH4_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(CH4_, ON_TILE_, AGGREGATE_)
+            END IF
+          ENDIF
           
         ! using quincy: 
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
@@ -306,6 +312,15 @@ CONTAINS
           IF (model%processes(DISTURB_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
+          ! See comment above regarding placement of TOP_ and CH4_ processes
+          IF (model%processes(CH4_)%p%config%run_case == 2) THEN
+            IF (model%processes(TOP_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
+            END IF
+            IF (model%processes(CH4_)%p%config%active) THEN
+              CALL veg_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
+            END IF
+          ENDIF
 
             DO i=1,npft
               pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &

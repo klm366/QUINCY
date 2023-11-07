@@ -286,7 +286,6 @@ CONTAINS
 
     CLASS(t_jsb_model), INTENT(inout) :: this
     LOGICAL, OPTIONAL,  INTENT(in)    :: debug
-
     CLASS(t_Task_queue),  POINTER :: current_queue_element
     CLASS(t_Message), POINTER :: msg
     LOGICAL :: l_debug
@@ -303,7 +302,6 @@ CONTAINS
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
-
       ASSOCIATE(task => current_queue_element%task)
         IF (this%processes(task%process_id)%p%config%active) THEN  ! Only if process this task belongs to is active
           this%current_task(no_omp_thread)%p => task
@@ -315,8 +313,6 @@ CONTAINS
           IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_stop(timer_process_msg(this%id))
         END IF
       END ASSOCIATE
-
-      current_queue_element => current_queue_element%next
 
     END DO
 

@@ -1,5 +1,6 @@
 PROGRAM example
 
+  dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%prod_out)
   dsl4jsb_Use_processes SOIL_, &
     & VEG_
   dsl4jsb_Use_memory(ATM2LAND_)
@@ -57,6 +58,6 @@ PROGRAM example
   CALL sub($soil_respiration(ic,:,iblk)$)
 
   ! Test abort on error
-  dsl4jsb_Def_menory(SOIL_)
+  dsl4jsb_Def_memory(SOIL_)
 
 END PROGRAM example

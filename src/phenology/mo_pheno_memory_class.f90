@@ -26,16 +26,18 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes PHENO_, CH4_
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(CH4_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_pheno_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+!  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 41
 
   ! ======================================================================================================= !
   !>Type definition for pheno memory
@@ -71,6 +73,7 @@ MODULE mo_pheno_memory_class
       & fract_fpc,                      & !< Foliage projected cover of the pft
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
+      & fract_fpc_max_save,             & !< Dirty workaround!
       & fract_forest,                   & !< Forest fraction
       & growth_phase_SG,                & !< For summergreen only: values are:
                                           !<   -1.0  .. during rest phase (i.e. from autumn event to spring event)
@@ -118,7 +121,7 @@ MODULE mo_pheno_memory_class
                                           !< growing period (autumn to spring) and negative during summer. (stream)
       & chill_days_SG,                  & !< Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,                  & !< evergreens (stream)
-      & veg_fract_correction              !< Factor representing clumpyness of vegetation (for each tile type).
+      & veg_fract_correction,           & !< Factor representing clumpyness of vegetation (for each tile type).
                                           !< To write it in the output file we define it as 2d even when there is no change
                                           !< between gridcells as it is in fact a 1d constant for each tile.
                                           !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
@@ -131,6 +134,8 @@ MODULE mo_pheno_memory_class
                                           ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wueste" und Vegetation
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
+      & GDD_prev_year,                  & ! Growing degree days of previous year.
+      & GDD_sum                           ! Sum of growing degree days of current year
 
     !------------------------------------------------------------------------------------------------------ !
     !> 3.0 variables used only by QUINCY
@@ -207,6 +212,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),  POINTER :: model
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER                     :: table                        ! ...
@@ -215,6 +221,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
@@ -266,6 +273,14 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'fract_fpc_max_save', mem%fract_fpc_max_save,          &
+        & hgrid, surface,                                                      &
+        & t_cf('maximum_fpc_save', '', ''),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=FULL,                                                   &
+        & initval_r=0.0_wp )
+
       CALL mem%Add_var( 'fract_forest', mem%fract_forest,                      &
         & hgrid, surface,                                                      &
         & t_cf('forest_fraction', '', ''),                                     &
@@ -282,6 +297,30 @@ CONTAINS
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
+      IF (dsl4jsb_Config(CH4_)%active) THEN
+        CALL mem%Add_var('GDD_prev_year', mem%GDD_prev_year, &
+          & hgrid, surface, &
+          & t_cf('GDD_prev_year', 'K days', 'growing degree days above 5 degC of previous year'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = -1.0_wp) ! Secure that uninitialized values are not used
+
+        CALL mem%Add_var('GDD_sum', mem%GDD_sum, &
+          & hgrid, surface, &
+          & t_cf('GDD_sum', 'K days', 'growing degree days above 5 degC of past part of year'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ENDIF
+        
       ! --------------------------------------------------------------------------------------------------- !
       ! logrop
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'logrop') THEN

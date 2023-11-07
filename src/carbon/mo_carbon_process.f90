@@ -23,7 +23,7 @@ MODULE mo_carbon_process
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
                                & i_lctlib_nonsoluble, i_lctlib_humus,             &
                                & molarMassCO2_kg
-  USE mo_carbon_process_shared, ONLY: yasso, distribute_yasso_litter
+  USE mo_carbon_shared,    ONLY: yasso, distribute_yasso_litter
 
   IMPLICIT NONE
   PRIVATE
@@ -35,7 +35,7 @@ MODULE mo_carbon_process
 CONTAINS
 
   ! Calculations to allocate NPP to the plant C pools.
-  ELEMENTAL SUBROUTINE calc_soil_c( &
+  PURE ELEMENTAL SUBROUTINE calc_soil_c( &
     ! General inputs
     & dt,                         &
     ! Input coefficients (fixed)
@@ -225,8 +225,9 @@ CONTAINS
     !! ============== COMPUTE SOIL RESPIRATION ===================================================================
     Cflx_soil_respiration = 0._wp
 
+
     !! call yasso for leaf litter
-    CALL yasso(dt,Yasso_io_pools(1:9), Weather, Cflx_green_2_litter * sec_per_day, LeafLit_coefV,                &
+    CALL yasso(dt,Yasso_io_pools(1:9), Weather, Cflx_green_2_litter * dt, LeafLit_coefV,                &
       &        sizeZero, Yasso_out, fract_green_aboveGround, Cflx_2_root_exudates * sec_per_day, redFact_Nlimitation)
 
     c_acid_ag1        = Yasso_out(1)
@@ -243,10 +244,10 @@ CONTAINS
     c_into_humus_1_sum   = c_into_humus_1_sum + Yasso_out(18)
 
     ! rescale respiration (from leaf litter decomposition) from "per day" to "per second"
-    Cflx_soil_respiration = Yasso_out(10) / sec_per_day
+    Cflx_soil_respiration = Yasso_out(10) / dt
 
     !! call yasso for woody litter
-    CALL yasso(dt,Yasso_io_pools(10:18), Weather, Cflx_wood_2_litter * sec_per_day, WoodLit_coefV,       &
+    CALL yasso(dt,Yasso_io_pools(10:18), Weather, Cflx_wood_2_litter * dt, WoodLit_coefV,       &
       & WoodLitterSize, Yasso_out, fract_wood_aboveGround, 0.0_wp, redFact_Nlimitation) ! no exudates
 
     c_acid_ag2        = Yasso_out(1)
@@ -261,7 +262,7 @@ CONTAINS
 
     !! Yasso total respiration
     ! add respiration from wood litter decomposition and rescale respiration from "per day" to "per second"
-    Cflx_soil_respiration = CFlx_soil_respiration  + Yasso_out(10) / sec_per_day
+    Cflx_soil_respiration = CFlx_soil_respiration + Yasso_out(10) / dt
 
     c_decomp_humus_2_sum = c_decomp_humus_2_sum + Yasso_out(17)
     c_into_humus_2_sum   = c_into_humus_2_sum + Yasso_out(18)

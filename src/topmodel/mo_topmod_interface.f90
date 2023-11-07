@@ -27,7 +27,6 @@ MODULE mo_top_interface
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
-use mo_util, only: real2string, int2string, logical2string
 
   dsl4jsb_Use_processes TOP_
   dsl4jsb_Use_config(TOP_)
@@ -104,8 +103,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_topmodel(tile, options)
 
-    USE mo_jsb_time,    ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, timesteps_per_day, &
-      &                       get_date_components, get_year_length, get_month_length
+    USE mo_jsb_time,    ONLY: is_time_experiment_start, is_time_restart, is_newyear, is_newmonth, is_newday, &
+      &                       timesteps_per_day, get_date_components, get_year_length, get_month_length
     USE mo_top_process, ONLY: update_topmodel_runmean, update_peat_runmean, update_water_table, update_inun_frac, &
       &                       update_aet, update_water_balance_peatland, get_climatological_inun
 
@@ -185,23 +184,26 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
     REAL(wp) :: water_table_t, frac_liquid_top_t
-    LOGICAL  :: lstart, lnew_year, lnew_month, lnew_day, lstop
+    LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i
     INTEGER  :: year, month, summer_state, ylen, mlen
     REAL(wp) :: dtime, sw, si, swmx, simx, wtmx
-    INTEGER, SAVE :: n = 0
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_topmodel'
 
     IF (.NOT. tile%Is_process_calculated(TOP_)) RETURN
+    IF (.NOT. is_newday(options%current_datetime,options%dtime)) RETURN ! Topmodel process is updated only once per day
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    lstart     = is_time_experiment_start(options%current_datetime)
+    lrestart   = is_time_restart(options%current_datetime)
 
+    dtime = options%dtime
+ 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-    dtime = options%dtime
     tspd  = timesteps_per_day(dtime)
 
     model  => Get_model(tile%owner_model_id)
@@ -254,7 +256,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top)
 
     IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_topmodel)) call message(routine,'First instance of update_topmodel')
-
 
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
       ! Variables only available if lpeat
@@ -319,7 +320,9 @@ CONTAINS
       cti_mu        => dsl4jsb_memory(TOP_)%cti_mu       (ics:ice,iblk)
 
       ! Save inundated fraction from last time step for the methane process
-      frac_inun_pre(:) = frac_inun(:)
+      IF (.NOT. lrestart) THEN
+        frac_inun_pre(:) = frac_inun(:)
+      ENDIF
 
       ! Calculate water table
       !
@@ -327,13 +330,14 @@ CONTAINS
         water_table      (i  ) = 0._wp
         frac_liquid_top  (i  ) = 0._wp
       ENDDO
+
       DO i = 1, nc
         ! Secure calculations are done on contiguous data - may be faster
         t_soil  (:) = t_soil_sl  (i,:)
         wtr_soil(:) = wtr_soil_sl(i,:)
         ice_soil(:) = ice_soil_sl(i,:)
 
-! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
+        ! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
         CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
           &  soil_depth(i),dsl4jsb_Config(TOP_)%soil_depth_min,                                 &
           &  soil_e%dz(:),soil_e%ubounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
@@ -346,7 +350,6 @@ CONTAINS
         frac_liquid_top(i  ) = frac_liquid_top_t
 !        frac_liquid_sl (i,:) = frac_liquid_t_sl(:)
       ENDDO
-
       DO i=1, nc
         frac_liquid_top_uncorr(i) =            frac_liquid_top(i)
         frac_liquid_top       (i) = MAX(0.1_wp,frac_liquid_top(i))
@@ -373,6 +376,8 @@ CONTAINS
         & frac_inun(:),frac_inun_uncorr(:),          & ! Outputs
         & wt_inun(:) &
       )
+
+      IF (lstart) frac_inun_pre(:) = frac_inun(:) 
 
     ENDIF
 
