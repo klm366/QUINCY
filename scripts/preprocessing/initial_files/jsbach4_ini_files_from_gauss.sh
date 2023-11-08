@@ -52,6 +52,12 @@ debug_remap_scheme=nn
 dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
 clean=true    # Delete workdir after finished (true/false)
 
+# minimum/maximum land grid cell fraction
+min_fract=${min_fract:-0.001}
+max_fract=${max_fract:-0.999}
+# minimum lake fraction
+min_lake=0.01
+
 # Currently, only 0 or 11 possible
 npfts_list="0 11"
 
@@ -217,14 +223,14 @@ function generate_land_sea_mask {
 
     # Get fractional mask from fractional mask file depending on ocean grid
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
-      -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${lsm_file} ${grid_name}_notsea.nc
+      -setrtoc,${max_fract},1.1,1 -setrtoc,-1,${min_fract},0 ${lsm_file} ${grid_name}_notsea.nc
 
     # Glacier mask
     ${cdo} remapycon,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
     ${cdo} -gtc,0.5   ${temp} ${grid_name}_glac-05_remap.nc
-    ${cdo} -gtc,0.001 ${temp} ${grid_name}_glac-0001_remap.nc
-    # The glacier mask corresponds to the 0.5 mask within the continents and to the 0.001 mask
-    # at the costs to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
+    ${cdo} -gtc,${min_fract} ${temp} ${grid_name}_glac-0001_remap.nc
+    # The glacier mask corresponds to the 0.5 mask within the continents and to the "min_fract" mask
+    # at the coasts to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
     ${cdo} ifthenelse -gtc,0.7 ${lsm_file}   \
           ${grid_name}_glac-05_remap.nc ${grid_name}_glac-0001_remap.nc \
           ${grid_name}_glac_remap.tmp.nc
@@ -241,7 +247,7 @@ function generate_land_sea_mask {
         if [[ $(cdo -s showvar ${lsm_file} | grep 'FR_LAND ') != "" ]]; then
           # Extpar file contains FR_LAND, FR_LAKE and ICE (typically in NWP extpar file)
           lsm_var=FR_LAND
-          ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
+          ${cdo} setname,notsea -setrtoc,-1,${min_fract},0 -setrtoc,${max_fract},1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
              -setgrid,${icon_grid_file} -add -selvar,FR_LAND ${extpar_file} -selvar,FR_LAKE ${extpar_file} \
              ${grid_name}_notsea.nc
           ${cdo} setname,glac -setgrid,${icon_grid_file} -mul -gtc,0 ${grid_name}_notsea.nc \
@@ -249,7 +255,7 @@ function generate_land_sea_mask {
         elif [[ $(cdo -s showvar ${lsm_file} | grep 'FR_LAND_TOPO') != "" ]]; then
           # Extpar file contains FR_LAND_TOPO including lake fractions (typically in MPIM extpar file)
           lsm_var=FR_LAND_TOPO
-          ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
+          ${cdo} setname,notsea -setrtoc,-1,${min_fract},0 -setrtoc,${max_fract},1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
              -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} ${grid_name}_notsea.nc
           # Just a dummy glacier mask: will be replaced by extpar mask ...
           ${cdo} mulc,0. ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc
@@ -261,7 +267,7 @@ function generate_land_sea_mask {
     else
       # Get land sea masks from grids file (This results in non-fractional 0/1 land sea mask!)
       lsm_var=cell_sea_land_mask
-      ${cdo} chname,cell_sea_land_mask,notsea -setrtoc,0.999,2.1,1 -setrtoc,-2,0.001,0 \
+      ${cdo} chname,cell_sea_land_mask,notsea -setrtoc,${max_fract},2.1,1 -setrtoc,-2,${min_fract},0 \
           -selvar,cell_sea_land_mask ${lsm_file} ${grid_name}_notsea.nc
       # Just a dummy glacier mask: will be replaced by extpar mask ...
       ${cdo} mulc,0. ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc
@@ -277,11 +283,11 @@ function generate_land_sea_mask {
   ncatted -a long_name,notsea,m,c,'Fraction of land+lake' ${grid_name}_notsea.nc
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
-  # Set small lake fractions below 0.01 to zero
-  ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
+  # Set small lake fractions below "min_fract" to zero
+  ${cdo} setvar,lake -setrtoc,-1,${min_lake},0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -ltc,0.5 ${grid_name}_glac_remap.nc -ifthen -gec,0.999 ${grid_name}_notsea.nc \
-	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -ltc,0.5 ${grid_name}_glac_remap.nc -ifthen -gec,${max_fract} ${grid_name}_notsea.nc \
+	 -setrtoc,-1,${min_lake},0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
 
