@@ -26,7 +26,7 @@
 !! First version by Soenke Zaehle (20170124): adopted from JSM_interface and JSM_core
 !! some refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
 !!
-MODULE mo_sb_jsm_processes
+MODULE mo_q_sb_jsm_processes
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
@@ -45,7 +45,7 @@ MODULE mo_sb_jsm_processes
     &       calc_fast_po4, calc_nitri_denitri_partitioning_rate, &
     &       calc_Psorption_parameter
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
 
 CONTAINS
 
@@ -1257,7 +1257,7 @@ CONTAINS
     & sb_formation_mt)
 
     USE mo_sb_constants
-    USE mo_time_averages,                   ONLY: mavg_period_tenzyme
+    USE mo_lnd_time_averages,               ONLY: mavg_period_tenzyme
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                           !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_sb                     !< number of soil layers
@@ -1937,4 +1937,4 @@ CONTAINS
     END IF  ! double/single Langmuir
   END SUBROUTINE calc_Psorption_parameter
 
-END MODULE mo_sb_jsm_processes
+END MODULE mo_q_sb_jsm_processes

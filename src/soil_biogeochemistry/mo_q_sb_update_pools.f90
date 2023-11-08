@@ -26,7 +26,7 @@
 !! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
 !! refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
 !!
-MODULE mo_sb_update_pools
+MODULE mo_q_sb_update_pools
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -46,7 +46,7 @@ MODULE mo_sb_update_pools
   PRIVATE
   PUBLIC :: update_sb_pools
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_update_pools'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_update_pools'
 
 CONTAINS
 
@@ -74,9 +74,9 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: dtime, eps8
     USE mo_jsb_physical_constants, ONLY: lambda_C14
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,       ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
+    USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
                                          calc_qmax_bulk_density_correction
-    USE mo_sb_jsm_transport,       ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
+    USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_spq_util,               ONLY: calc_qmax_texture
 
@@ -1365,4 +1365,4 @@ CONTAINS
       &                             + sb_pool_mt(ix_woody_litter, ix_elem, :, :)
   END SUBROUTINE calculate_sb_pool_litter_for_element
 
-END MODULE mo_sb_update_pools
+END MODULE mo_q_sb_update_pools

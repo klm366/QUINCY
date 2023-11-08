@@ -525,8 +525,8 @@ CONTAINS
     net_growth_tvegdyn_mavg(:,:)          = 5.0_wp
     lai_tvegdyn_mavg(:,:)                 = 0.1_wp
     beta_sinklim_ps_tacclim_mavg(:,:)     = 1.0_wp
-    t_air_tacclim_mavg(:,:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
-    t_soil_root_tacclim_mavg(:,:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
+    t_air_tacclim_mavg(:,:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
+    t_soil_root_tacclim_mavg(:,:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp

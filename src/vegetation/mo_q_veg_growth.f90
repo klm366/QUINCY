@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
 !!
-MODULE mo_veg_growth
+MODULE mo_q_veg_growth
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -43,7 +43,7 @@ MODULE mo_veg_growth
   PUBLIC :: update_veg_growth
   PUBLIC :: calc_diameter_from_woody_biomass, calc_height_from_diameter
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_growth'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_growth'
 
 CONTAINS
 
@@ -59,8 +59,8 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
-    USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
+    USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration 
+    USE mo_q_veg_canopy,            ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(ASSIMI_)
@@ -2219,7 +2219,7 @@ CONTAINS
       k_labphen = k_labphen_grass
     CASE DEFAULT
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
-      CALL finish("mo_veg_growth",message_text)
+      CALL finish("mo_q_veg_growth",message_text)
     END SELECT
 
     DO ic = 1,nc
@@ -2679,7 +2679,7 @@ CONTAINS
       !! Write statement
       !! 
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
-      CALL finish("mo_veg_growth",message_text)
+      CALL finish("mo_q_veg_growth",message_text)
     END SELECT
 
     !> 1.3 Convert biomass increments to allocation fractions
@@ -3178,4 +3178,4 @@ CONTAINS
 
    END SUBROUTINE calc_root_distribution_change
 
-END MODULE mo_veg_growth
+END MODULE mo_q_veg_growth

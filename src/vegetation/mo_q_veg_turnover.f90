@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
 !!
-MODULE mo_veg_turnover
+MODULE mo_q_veg_turnover
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
@@ -42,7 +42,7 @@ MODULE mo_veg_turnover
   PRIVATE
   PUBLIC :: update_veg_turnover
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_turnover'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_turnover'
 
 CONTAINS
 
@@ -591,4 +591,4 @@ CONTAINS
     ENDSELECT
   END FUNCTION calc_phosphorus_recycling_fract
 
-END MODULE mo_veg_turnover
+END MODULE mo_q_veg_turnover

@@ -24,9 +24,9 @@
 !!  Soenke Zaehle 
 !!
 !! @par Revision History
-!!  First version by Jan Engel (20181001): copyied from sb/mo_sb_simple_model.f90
+!!  First version by Jan Engel (20181001): copyied from sb/mo_q_sb_ssm_main.f90
 !!
-MODULE mo_sb_litter_processes
+MODULE mo_q_sb_litter_processes
 
   USE mo_kind,            ONLY: wp
   USE mo_lnd_bgcm_idx
@@ -36,7 +36,7 @@ MODULE mo_sb_litter_processes
   PRIVATE
   PUBLIC :: calc_litter_partitioning
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_litter_processes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_litter_processes'
 
 CONTAINS
 
@@ -500,4 +500,4 @@ CONTAINS
     END DO  
   END SUBROUTINE calc_litter_partitioning
 
-END MODULE mo_sb_litter_processes
+END MODULE mo_q_sb_litter_processes

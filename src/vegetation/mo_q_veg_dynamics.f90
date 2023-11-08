@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2016-04-14)
 !!
-MODULE mo_veg_dynamics
+MODULE mo_q_veg_dynamics
 
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
@@ -42,7 +42,7 @@ MODULE mo_veg_dynamics
   PRIVATE
   PUBLIC :: update_veg_dynamics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_dynamics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_dynamics'
 
 CONTAINS
 
@@ -646,4 +646,4 @@ CONTAINS
     delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
   END FUNCTION calc_delta_dens_ind
 
-END MODULE mo_veg_dynamics
+END MODULE mo_q_veg_dynamics

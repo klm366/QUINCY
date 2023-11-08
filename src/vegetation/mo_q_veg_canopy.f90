@@ -26,7 +26,7 @@
 !! First version by Soenke Zaehle (2016-29-08)
 !!
 !!
-MODULE mo_veg_canopy
+MODULE mo_q_veg_canopy
 
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
@@ -38,7 +38,7 @@ MODULE mo_veg_canopy
   PRIVATE
   PUBLIC :: calc_canopy_layers, calc_marginal_canopy_flux_increment, calc_dir_optimal_cn_leaf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_canopy'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_canopy'
 
 CONTAINS
 
@@ -190,7 +190,7 @@ CONTAINS
           .NOT.PRESENT(t_jmax_opt)) THEN
 
           WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate] variables'
-          CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
+          CALL finish("mo_q_veg_canopy:calc_canopy_layer",message_text)
        ENDIF
     ENDIF
 
@@ -836,11 +836,11 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
+  ! Sub Task to calc_growth (currently in mo_q_veg_canopy to get rid of circular dependencies)
   !
   !------------------------------------------------------------------------------------------------------
   !> Subroutine to calculate change in net photosynthesis and transpiration with small change in LAI
-  !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
+  !! Needed for calculation of optimal leaf and root allocation fraction. See mo_q_veg_growth
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment( nc                      , &
                                                   ncanopy                 , &
@@ -999,7 +999,7 @@ CONTAINS
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_cl(:,:)
 
- !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
+ !> @todo: mo_q_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
  !! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
  !! ratios, not a fixed constant. ie
  !! f_increment = f_alloc_leaf/f_alloc_root+sapwood
@@ -1128,7 +1128,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
+  ! Sub Task to calc_growth (currently in mo_q_veg_canopy to get rid of circular dependencies)
   !
   !------------------------------------------------------------------------------------------------------
   !> Subroutine to determine direction in which total leaf N should change in order to increase NPP
@@ -1187,7 +1187,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
-    USE mo_time_averages,                 ONLY: mavg_period_tgrowth
+    USE mo_lnd_time_averages,             ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1416,4 +1416,4 @@ CONTAINS
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
   
-END MODULE mo_veg_canopy
+END MODULE mo_q_veg_canopy

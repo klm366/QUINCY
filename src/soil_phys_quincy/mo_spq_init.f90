@@ -412,7 +412,7 @@ CONTAINS
 
     ! init root fraction
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
-      !>    6.3.1 dynamic root fractions across soil layers (see mo_veg_growth)
+      !>    6.3.1 dynamic root fractions across soil layers (see mo_q_veg_growth)
       !>
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp

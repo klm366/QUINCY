@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (20170124): adopted from JSM_interface and JSM_core
 !! some refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
-MODULE mo_sb_jsm_transport
+MODULE mo_q_sb_jsm_transport
 
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish
@@ -43,7 +43,7 @@ MODULE mo_sb_jsm_transport
     &       calc_bioturbation_transport, &
     &       calc_liquid_phase_transport
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
 
 CONTAINS
 
@@ -869,4 +869,4 @@ CONTAINS
     ENDDO
   END SUBROUTINE calc_bioturbation_transport
 
-END MODULE mo_sb_jsm_transport
+END MODULE mo_q_sb_jsm_transport

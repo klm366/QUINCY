@@ -27,7 +27,7 @@
 !! Second version by Soenke Zaehle (20170331): added a 4 pool model 
 !! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
 !!
-MODULE mo_sb_simple_model
+MODULE mo_q_sb_ssm_main
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -45,9 +45,9 @@ MODULE mo_sb_simple_model
 
   PRIVATE
   PUBLIC :: update_sb_simple_model
-  PUBLIC :: calc_sb_inorganic_n15_fluxes  ! used by mo_sb_jsm_main
+  PUBLIC :: calc_sb_inorganic_n15_fluxes  ! used by mo_q_sb_jsm_main
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_simple_model'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_ssm_main'
 
 CONTAINS
 
@@ -66,8 +66,8 @@ CONTAINS
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_veg_constants,         ONLY: ITREE
-    USE mo_sb_jsm_transport,      ONLY: calc_bioturbation_rate
-    USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
+    USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
+    USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
@@ -1503,8 +1503,8 @@ CONTAINS
                                            emission_n2, &  
                                            emission_n2_n15)
 
-    USE mo_sb_constants,     ONLY: fleach_nh4, fleach_po4
-    USE mo_sb_jsm_transport, ONLY: calc_liquid_phase_transport
+    USE mo_sb_constants,       ONLY: fleach_nh4, fleach_po4
+    USE mo_q_sb_jsm_transport, ONLY: calc_liquid_phase_transport
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2884,7 +2884,7 @@ CONTAINS
     & transport_po4_occluded, &
     & sb_transport_mt)
 
-    USE mo_sb_jsm_transport,        ONLY: calc_bioturbation_transport
+    USE mo_q_sb_jsm_transport,      ONLY: calc_bioturbation_transport
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_sb                    !< number of soil layers
@@ -3284,4 +3284,4 @@ CONTAINS
     END DO
   END SUBROUTINE calc_mycorrhiza_dynamics
 
-END MODULE mo_sb_simple_model
+END MODULE mo_q_sb_ssm_main
