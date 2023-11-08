@@ -713,8 +713,7 @@ CONTAINS
     ! Surface fluxes for lake ice
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(s_air, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG(STATIC: 1) VECTOR PRIVATE(s_air, heat_tcoef)
       DO ic=1,nc
 
         IF (use_tmx) THEN
