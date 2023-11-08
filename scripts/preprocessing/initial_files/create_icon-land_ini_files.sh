@@ -21,11 +21,6 @@
 #       FR_SAND, FR_SILT, FR_CLAY, FR_OC, SUB_FR_SAND, SUB_FR_SILT,
 #       SUB_FR_CLAY and SUB_FR_OC
 #
-#  4) adapt_extpar_file.bash
-#     The extpar data file read by the NWP atmosphere contains several
-#     variables, that are also included in the bc_land files. For consistency,
-#     these variables are replaced by the respective bc_land file variables.
-#
 # This approach is meant to be preliminary. It documents the current process
 # of initial data generation. The aim is however, to generate all initial data
 # from extpar in the not so far future.
@@ -41,7 +36,6 @@ run_jsbach4_ini_files_from_gauss=true
 run_extpar4jsbach_mpim_icon=true
 run_jsbach4_ini_files_from_extpar=true
 rm_bc_files_from_gauss=true
-run_adapt_extpar_file=true
 
 #
 # Settings - also needed in sub-scripts
@@ -60,11 +54,7 @@ if [[ ${coupled} == true ]]; then
 else
   export grid_label=$atmGridID
 fi
-# Initial Extpar file (needed by jsbach4_ini_files_from_gauss.sh)
 export initial_extpar_file=${icon_grid_rootdir}/${grid_label}/icon_extpar_0012_R02B04_G_20161124_tiles.nc
-# Extpar file read by the NWP atmosphere at run time, only used in adapt_extpar_file below
-export coupled_extpar_file=/pool/data/ICON/grids/public/mpim/0012-0035/icon_extpar_oceLSM_a0012_R02B04_o0035_R02B06_20161124_tiles.nc
-
 if [[ ${coupled} == true ]]; then
   export fractional_mask=${icon_grid_rootdir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
 else
@@ -86,10 +76,6 @@ export extpar_file=icon_extpar4jsbach_${grid_label}_${today}.nc
 export work_dir=/scratch/m/$USER/ini_files/work/${grid_label}/${revision}  # temporary working directory
 export output_root_dir=/work/mj0060/m220053/ini_files     # root directory for the new ic/bc files
 export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
-
-# Shared parameters
-export min_fract=0.000001 # minimum land grid cell fraction if not complete ocean
-export max_fract=0.999999 # maximum land grid cell fraction if not complete land
 
 # 1. Run jsbach4_ini_files_from_gauss
 if [[ ${run_jsbach4_ini_files_from_gauss} == true ]]; then
@@ -144,12 +130,6 @@ if [[ ${rm_bc_files_from_gauss} == true ]]; then
   echo "$(basename $0): Output moved to"
   echo "     ${bc_file_dir}"
 fi
-
-# 5. Run jsbach4_ini_files_from_extpar
-if [[ ${run_adapt_extpar_file} == true ]]; then
-  ./adapt_extpar_file.bash
-fi
-
 echo "====  Initial and boundary file generation completed. ===="
 echo ""
 

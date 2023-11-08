@@ -3,13 +3,8 @@
                                                   Veronika Gayler, April 2023
 ------------------------------------------------------------------------------
 
-We use a series of scripts
- - to generate ICON-Land initial (ic) and boundary condition (bc) files and
- - to adapt the extpar data file read by the NWP atmosphere accordingly.
-
-Besides, we provide a script to generate initial soil conditions from model
-output (generate_ic_soil_from_output.bash).
-
+We use a series of scripts to generate ICON-Land initial (ic) and boundary
+condition (bc) files.
 
 The master script "create_icon-land_ini_files.sh" makes use of the previously
 existing scripts:
@@ -30,12 +25,6 @@ existing scripts:
      - Rooting depth (and maxmoist) replaced, additional variables:
        FR_SAND, FR_SILT, FR_CLAY, FR_OC, SUB_FR_SAND, SUB_FR_SILT,
        SUB_FR_CLAY and SUB_FR_OC
-
- 4) adapt_extpar_file.bash
-    The extpar data file read by the NWP atmosphere contains several
-    variables, that are also included in the bc_land files. For consistency,
-    these variables are replaced by the respective bc_land file variables.
-
 
 This approach is meant to be preliminary. It documents the current process
 of initial data generation. The aim is however, to generate all initial data
