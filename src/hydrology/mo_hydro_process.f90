@@ -135,7 +135,7 @@ CONTAINS
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
 
-    INTEGER :: ic
+    INTEGER :: ic, nc
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
     !
@@ -143,6 +143,8 @@ CONTAINS
     REAL(wp), PARAMETER :: zc2 = 1.87E5_wp     ! [Ks]
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
     !$noACC DECLARE COPYIN(zc1, zc2, zc3)
+
+    nc = SIZE(snowmelt_soil)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(rain_in_m, new_snow, weq_snow_soil_old)           &
@@ -152,9 +154,9 @@ CONTAINS
     !$ACC PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)                 &
     !$ACC PRIVATE(rain_to_skinres, wtr_skin_pre_rain)
 
-    DO ic = 1, SIZE(snowmelt_soil)
+    DO ic = 1, nc
       snow_accum(ic)        = 0._wp
-      weq_snow_soil_old = weq_snow_soil(ic)
+      weq_snow_soil_old     = weq_snow_soil(ic)
       snowmelt_soil(ic)     = 0._wp
       evapotrans_soil(ic)   = 0._wp
       evapo_skin(ic)        = 0._wp
@@ -312,8 +314,9 @@ CONTAINS
 
     END DO
     !$ACC END LOOP
-    !$ACC WAIT(1)
     !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -1544,12 +1547,12 @@ CONTAINS
 
   SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                           & ! in
-    & steplen,                         & ! in
+    & use_tmx,                         & ! in
     & skinres_max,                     & ! in
     & oro_stddev,                      & ! in
     & t_srf_old,                       & ! in
     & press_srf,                       & ! in
-    & drag_srf,                        & ! in
+    & heat_tcoef,                      & ! in
     & q_air,                           & ! in
     & wtr_skin,                        & ! in
     & weq_snow_soil,                   & ! in
@@ -1559,18 +1562,19 @@ CONTAINS
     & fract_snow_soil                  & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
+
+    LOGICAL, INTENT(in) :: use_tmx
 
     REAL(wp), INTENT(in), DIMENSION(:) :: &
       & oro_stddev,         &
       & t_srf_old,          &
       & press_srf,          &
-      & drag_srf,           &
+      & heat_tcoef,         &
       & q_air,              &
       & skinres_max,        &
       & wtr_skin,           &
@@ -1591,7 +1595,7 @@ CONTAINS
     nc = SIZE(press_srf)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR &
+    !$ACC LOOP GANG(STATIC: 1) VECTOR &
     !$ACC   PRIVATE(qsat_srf_old, evapo_pot)
     DO ic=1,nc
 
@@ -1612,8 +1616,8 @@ CONTAINS
 
 
       ! Potential evaporation using old values of air and surface humidity
-      qsat_srf_old = qsat(t_srf_old(ic), press_srf(ic))
-      evapo_pot    = -1._wp * heat_transfer_coef(drag_srf(ic), steplen) * (q_air(ic) - qsat_srf_old)  ! Positive upwards
+      qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      evapo_pot    = -1._wp * heat_tcoef(ic) * (q_air(ic) - qsat_srf_old)  ! Positive upwards
 
       ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
       ! snow water content from soil and canopy; same for skin reservoir
@@ -1637,12 +1641,12 @@ CONTAINS
 
   SUBROUTINE calc_wskin_fractions_bare( &
     & dtime,                            & ! in
-    & steplen,                          & ! in
+    & use_tmx,                          & ! in
     & skinres_max,                      & ! in
     & oro_stddev,                       & ! in
-    & t_srf,                            & ! in
+    & t_srf_old,                        & ! in
     & press_srf,                        & ! in
-    & drag_srf,                         & ! in
+    & heat_tcoef,                       & ! in
     & q_air,                            & ! in
     & wtr_skin,                         & ! in
     & weq_snow_soil,                    & ! in
@@ -1650,18 +1654,19 @@ CONTAINS
     & fract_snow_soil                   & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
+
+    LOGICAL, INTENT(in) :: use_tmx
 
     REAL(wp), INTENT(in), DIMENSION(:) :: &
       & oro_stddev,         &
-      & t_srf,              &
+      & t_srf_old,          &
       & press_srf,          &
-      & drag_srf,           &
+      & heat_tcoef,         &
       & q_air,              &
       & skinres_max,        &
       & wtr_skin,           &
@@ -1673,7 +1678,6 @@ CONTAINS
       & fract_snow_soil
 
     REAL(wp) ::       &
-      & t_srf_old,    &
       & qsat_srf_old, &
       & evapo_pot
 
@@ -1683,7 +1687,7 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR &
-    !$ACC   PRIVATE(t_srf_old, qsat_srf_old, evapo_pot)
+    !$ACC   PRIVATE(qsat_srf_old, evapo_pot)
     DO ic=1,nc
 
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
@@ -1696,9 +1700,8 @@ CONTAINS
       fract_snow_soil(ic) = Get_snow_fract_noforest(weq_snow_soil(ic), oro_stddev(ic)) ! snow on soil below forest
 
       ! Potential evaporation using old values of air and surface humidity
-      t_srf_old    = t_srf(ic)
-      qsat_srf_old = qsat(t_srf_old, press_srf(ic))
-      evapo_pot    = heat_transfer_coef(drag_srf(ic), steplen) * (qsat_srf_old - q_air(ic)) ! Positive upwards
+      qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      evapo_pot    = heat_tcoef(ic) * (qsat_srf_old - q_air(ic)) ! Positive upwards
 
       ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
       ! snow water content from soil and canopy together

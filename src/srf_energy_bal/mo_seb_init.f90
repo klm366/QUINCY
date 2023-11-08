@@ -18,6 +18,8 @@ MODULE mo_seb_init
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
+  USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
 
   !USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
@@ -46,6 +48,8 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init'
 
     dsl4jsb_Real2D_onDomain :: &
@@ -54,6 +58,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(SEB_)
 
+    model => get_model(tile%owner_model_id)
+
     CALL seb_init_bc(tile)
     !CALL seb_init_ic(tile)
 
@@ -61,7 +67,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
 
-    IF (tile%contains_land) THEN
+    IF (tile%contains_land .OR. model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 

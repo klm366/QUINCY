@@ -115,6 +115,10 @@ CONTAINS
       & variable_name='roughness_length',         &
       & fill_array = turb_init_vars%rough_m)
     ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
+    IF (dsl4jsb_Config(TURB_)%max_ini_rough_m > 0._wp) THEN
+      ptr_2D = MIN(ptr_2D, dsl4jsb_Config(TURB_)%max_ini_rough_m)
+                                  ! TODO: rough_m should not be larger than lowest model layer thickness, or even half of that !?
+    END IF
 
     CALL input_file%Close()
 
@@ -162,7 +166,7 @@ CONTAINS
     ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
     ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
     ! We also need rough_m for runs without PFTs, e.g. jsbach_lite, on vegetation tiles that are not PFTs (e.g. veg_tile)
-    IF (jsbach_runs_standalone() .OR. (tile%is_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
+    IF (jsbach_runs_standalone() .OR. (tile%contains_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
 
       IF (debug_on()) CALL message(TRIM(routine), &
           'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
@@ -171,7 +175,13 @@ CONTAINS
       dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
       dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star))
+      ! Needed for tmx
+      IF (.NOT. jsbach_runs_standalone()) & ! (TODO: doesn't work for standalone ... why?)
+        & dsl4jsb_var2D_onDomain(TURB_,rough_h) = turb_init_vars%rough_m
+
+      !$ACC UPDATE &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h))
 
     END IF
 

@@ -398,7 +398,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
 
     ! IF (TRIM(tile%name) /= 'box') THEN
-    IF (TRIM(tile%name) == 'land') THEN
+    IF ( (model%config%use_tmx .AND. .NOT. tile%Has_children()) .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
@@ -748,7 +748,6 @@ CONTAINS
       !$ACC EXIT DATA DELETE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
       DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
-      !$noACC UPDATE DEVICE(heat_cond)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
         DO ib=1,nblks
@@ -800,9 +799,6 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         END IF
       END IF
-      !$noACC UPDATE HOST(vol_heat_cap_snow, heat_cond_snow)
-      ! ELSE
-      !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
     END IF
 
   END SUBROUTINE init_soil_properties
