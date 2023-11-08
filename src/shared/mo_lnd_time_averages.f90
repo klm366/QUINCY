@@ -1,20 +1,32 @@
-!> defines routine for averaging variables
+
+!> Summary: generic routine providing various ways for the averaging of variables over time for all model processes
 !>
-!> ICON-Land
+!>### Provides routines to specify, create and write quincy netcdf4 output
 !>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (c) Jan Engel, Soenke Zaehle, MPI-BGC Jena
 !>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
-!> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+!>#### Revision History
 !>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!> 1st version in jsb4 by Jan Engel (2019-08-30) - integration of calc_mavg() from QUINCY model
 !>
-!>#### defines a generic routine providing various ways for the averaging of variables over time for all model processes
+!>#### License
 !>
+!> QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!> Copyright (C) 2022 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>
+!> This file is part of the QUINCY model.
+!> The QUINCY model is free software: you can redistribute it and/or modify
+!> it under the terms of the GNU General Public License version 3,
+!> as published by the Free Software Foundation.
+!>
+!> The QUINCY model is distributed in the hope that it will be useful,
+!> but WITHOUT ANY WARRANTY; without even the implied warranty of
+!> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!> GNU General Public License for more details.
+!>
+!> You should have received a copy of the GNU General Public License
+!> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!> ======================================================================================================
 MODULE mo_lnd_time_averages
 #ifndef __NO_JSBACH__
 
@@ -71,18 +83,16 @@ CONTAINS
   !! if the optional parameter 'do_calc' is present: the moving average is calculated only if do_calc = TRUE !
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_time_mavg(dtime, &
-                                         current_avg, new_value, avg_period_length, &   ! default  input arguments
+  PURE ELEMENTAL FUNCTION calc_time_mavg(current_avg, new_value, avg_period_length, &   ! default  input arguments
                                          do_calc, avg_period_unit) &                    ! optional input arguments
                                          RESULT(new_avg)
 
     USE mo_kind,                ONLY: wp
-    USE mo_jsb_math_constants,  ONLY: one_day, one_year
+    USE mo_jsb_math_constants,  ONLY: dtime, one_day, one_year
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in)                      :: dtime              !< timestep length
     REAL(wp), INTENT(in)                      :: current_avg        !< current average value
     REAL(wp), INTENT(in)                      :: new_value          !< new value
     REAL(wp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged

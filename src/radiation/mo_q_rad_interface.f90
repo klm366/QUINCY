@@ -212,7 +212,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     dsl4jsb_Use_processes A2L_, VEG_, RAD_, PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(VEG_)

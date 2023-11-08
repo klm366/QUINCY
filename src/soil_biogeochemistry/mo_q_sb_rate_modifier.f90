@@ -23,9 +23,9 @@
 !!  Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Jan Engel (20170509): copyied from mo_sb_simple_model.f90
+!! First version by Jan Engel (20170509): copyied from mo_q_sb_ssm_main.f90
 !!
-MODULE mo_sb_rate_modifier
+MODULE mo_q_sb_rate_modifier
 
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish
@@ -36,7 +36,7 @@ MODULE mo_sb_rate_modifier
   PRIVATE
   PUBLIC :: update_sb_rate_modifier
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_rate_modifier'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_rate_modifier'
 
 CONTAINS
 
@@ -492,4 +492,4 @@ CONTAINS
 
   END FUNCTION calc_moisture_modifier
 
-END MODULE mo_sb_rate_modifier
+END MODULE mo_q_sb_rate_modifier

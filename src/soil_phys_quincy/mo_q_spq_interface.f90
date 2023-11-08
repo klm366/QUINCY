@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-07-19)
 !!
-MODULE mo_spq_interface
+MODULE mo_q_spq_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -39,8 +39,8 @@ MODULE mo_spq_interface
 
   ! "Integrate" routines  
   USE mo_spq_util,                    ONLY: reset_spq_fluxes
-  USE mo_spq_update_turbulence,       ONLY: update_soil_turbulence
-  USE mo_spq_update_physics,          ONLY: update_spq_physics
+  USE mo_q_spq_update_turbulence,     ONLY: update_soil_turbulence
+  USE mo_q_spq_update_physics,        ONLY: update_spq_physics
 
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(RAD_)
@@ -48,7 +48,7 @@ MODULE mo_spq_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_spq_tasks
+  PUBLIC :: Register_spq_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_spq_fluxes task
@@ -113,14 +113,14 @@ CONTAINS
   !> Register tasks: SPQ_ process
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Register_spq_tasks(this, model_id)
+  SUBROUTINE Register_spq_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_spq_fluxes(model_id))
     CALL this%Register_task(tsk_soil_turbulence(model_id))
     CALL this%Register_task(tsk_spq_physics(model_id))
-  END SUBROUTINE Register_spq_tasks
+  END SUBROUTINE Register_spq_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_spq_fluxes task
@@ -322,4 +322,4 @@ CONTAINS
   END SUBROUTINE aggregate_spq_physics
 
 #endif
-END MODULE mo_spq_interface
+END MODULE mo_q_spq_interface

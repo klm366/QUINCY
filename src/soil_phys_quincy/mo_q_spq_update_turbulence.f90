@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
-MODULE mo_spq_update_turbulence
+MODULE mo_q_spq_update_turbulence
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -35,7 +35,7 @@ MODULE mo_spq_update_turbulence
   PRIVATE
   PUBLIC :: update_soil_turbulence
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_update_turbulence'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_spq_update_turbulence'
 
 CONTAINS
 
@@ -306,4 +306,4 @@ CONTAINS
     ga       = heat_transfer_coef(drag_srf, steplen, alpha) * wind_air
   END SUBROUTINE calc_drag_coefficient
 
-END MODULE mo_spq_update_turbulence
+END MODULE mo_q_spq_update_turbulence

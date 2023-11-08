@@ -164,7 +164,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, SPQ_
     dsl4jsb_Use_config(VEG_)
@@ -785,7 +785,7 @@ CONTAINS
                                               
     !>  2.11 tacclim (averages at the respiration acclimation time-scale)
     !>    t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
-    !>    this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration
+    !>    this IF statement has a direct impact on mo_q_veg_respiration:temperature_response_respiration
     !>
     IF (dsl4jsb_Config(ASSIMI_)%flag_t_resp_acclimation) THEN
       t_air_tacclim_mavg(:)       = calc_time_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
