@@ -379,15 +379,11 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-          ! fraction of organic upper soil
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='FR_OC',                     &
-            & fill_array=hydro_init_vars%fr_oc)
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-        ELSE
-          hydro_init_vars%fr_oc = 0._wp
-        END IF
+        ! fraction of organic upper soil
+        ptr_2D => input_file%Read_2d(                  &
+          & variable_name='FR_OC',                     &
+          & fill_array=hydro_init_vars%fr_oc)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of sand deep soil
         ptr_2D => input_file%Read_2d(                  &
@@ -407,15 +403,11 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-          ! fraction of organic deep soil
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='SUB_FR_OC',                 &
-            & fill_array=hydro_init_vars%fr_oc_deep)
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-        ELSE
-          hydro_init_vars%fr_oc_deep = 0._wp
-        END IF
+        ! fraction of organic deep soil
+        ptr_2D => input_file%Read_2d(                  &
+          & variable_name='SUB_FR_OC',                 &
+          & fill_array=hydro_init_vars%fr_oc_deep)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! calculate volumetric soil porosity incl. organic fraction
         CALL soil_init_from_texture( &

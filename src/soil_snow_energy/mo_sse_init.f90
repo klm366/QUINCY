@@ -132,7 +132,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
 
     REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
@@ -157,7 +156,6 @@ CONTAINS
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
 
     ALLOCATE(                                          &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
@@ -214,14 +212,10 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        ptr_2D => input_file%Read_2d(             &
-          & variable_name='FR_OC',                &
-          & fill_array = sse_init_vars%fr_oc)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-      ELSE
-        sse_init_vars%fr_oc=0._wp
-      END IF
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='FR_OC',                &
+        & fill_array = sse_init_vars%fr_oc)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ptr_2D => input_file%Read_2d(             &
         & variable_name='SUB_FR_SAND',              &
@@ -238,15 +232,10 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        ptr_2D => input_file%Read_2d(                 &
-          & variable_name='SUB_FR_OC',                &
-          & fill_array = sse_init_vars%fr_oc_deep)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-      ELSE
-        sse_init_vars%fr_oc_deep=0._wp
-      END IF
-
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='SUB_FR_OC',                &
+        & fill_array = sse_init_vars%fr_oc_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
