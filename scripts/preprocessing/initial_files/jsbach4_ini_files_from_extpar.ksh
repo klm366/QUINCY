@@ -72,6 +72,8 @@ upper_bound_lai_clim=6.
 fact_NDVI_lai_clim=8.8235294 # should be: upper_bound_lai_clim / (upper_bound_NDVI_lai_clim - lower_bound_NDVI_lai_clim)
 minimum_root_depth=0.15
 
+min_fract=${min_fract:-0.001} # minimum land grid cell fraction other than 0.
+
 year=${start_year}
 
 [[ -d ${path_bc_new} ]] || mkdir -p ${path_bc_new}
@@ -152,7 +154,7 @@ fi
 # and convert it relative to the land fraction. We need an integer mask, also at coastal grid cells.
 ${cdo} div -selvar,ICE ${file_extpar}.nc -selvar,FR_LAND ${file_extpar}.nc ${file_extpar}_glac.nc
 ${cdo} setmisstoc,0 -gtc,0.5 ${file_extpar}_glac.nc glac.tmp
-${cdo} setmisstoc,0 -ifthen -gtc,0.001 notsea.nc glac.tmp glac.nc
+${cdo} setmisstoc,0 -ifthen -gtc,${min_fract} notsea.nc glac.tmp glac.nc
 
 ${cdo} chname,ICE,fract_glac glac.nc ${file_extpar}_fract_glac.nc
 ${cdo} chname,ICE,glac       glac.nc ${file_extpar}_glac.nc
