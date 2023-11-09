@@ -107,7 +107,7 @@ CONTAINS
       & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER  :: iblk, ics, ice, nc, i
@@ -121,7 +121,7 @@ CONTAINS
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk ::  &
       & t_air_ptr,             &
       & q_air_ptr,             &
@@ -182,6 +182,10 @@ CONTAINS
     tile_contains_lake = tile%contains_lake
 
     model => Get_model(tile%owner_model_id)
+    grid  => get_grid(model%grid_id)
+    lon   => grid%lon(ics:ice, iblk)
+    mtime_current => time_config%tc_current_date
+    global_seconds_day = get_secs_of_day(mtime_current)
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -399,14 +403,11 @@ CONTAINS
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      prev_one_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-      prev_two_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
-      prev_three_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
       daytime_counter             => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
+      local_time_day_seconds      => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
     END IF
 
     !$acc parallel default(present)
-
     IF (PRESENT(DEBUG_VAR)) THEN
       !$acc loop gang vector
       DO i=1,nc
@@ -619,7 +620,6 @@ CONTAINS
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
       END IF
-
     END IF
     !$acc end parallel
 
