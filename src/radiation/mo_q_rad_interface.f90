@@ -230,6 +230,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
+    INTEGER                                 :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -241,10 +242,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
@@ -266,6 +265,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)               RETURN  ! only if the present tile is a pft
@@ -286,10 +286,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     ! PHENO_
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
     ! 2D RAD_
@@ -342,14 +340,8 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
-    !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
-    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
-    !>
     DO ic = 1, nc
-      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
-          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
+      IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)

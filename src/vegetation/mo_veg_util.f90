@@ -191,6 +191,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
+    INTEGER                                 :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -210,10 +211,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
@@ -335,6 +334,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
@@ -365,10 +365,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
@@ -524,13 +522,8 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
-    !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
-    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
-      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
-        & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
+       IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ! 1D
@@ -544,7 +537,7 @@ CONTAINS
           fleaf_sunlit_daytime_cl(ic,:) = fleaf_sunlit_daytime_dacc_cl(ic,:)  / daytime_counter(ic)
         ELSE
           ! if there was no daylight during the previous day, just leave previous values for most variables
-          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp          
+          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp
         END IF
         ! zero the accumulation variables after daily average has been calculated
         ! 1D

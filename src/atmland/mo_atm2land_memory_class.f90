@@ -103,7 +103,7 @@ MODULE mo_a2l_memory_class
       & ga                         !< aerodynamic conductance [m s-1]
 
     ! Deposition
-    TYPE(t_jsb_var_real2d) :: &
+    TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
@@ -111,11 +111,9 @@ MODULE mo_a2l_memory_class
       & p_deposition               !< surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
-    TYPE(t_jsb_var_real2d) :: &
-      & prev_one_cos_zenith_angle   , &   !< cos_zenith_angle of the previous timestep [unitless]
-      & prev_two_cos_zenith_angle   , &   !< cos_zenith_angle of the before previous timestep [unitless]
-      & prev_three_cos_zenith_angle , &   !< cos_zenith_angle of the before before previous timestep [unitless]
-      & daytime_counter                   !< number of timesteps of current day with light available [#]
+    TYPE(t_jsb_var_real2d) ::   &
+      & daytime_counter       , &  !< number of timesteps of current day with light available [#]
+      & local_time_day_seconds     !< seconds passed on this day (local cell time)
 
 #ifdef __QUINCY_STANDALONE__
     ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
@@ -923,32 +921,13 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle, &
+      CALL mem%Add_var('local_time_day_seconds', mem%local_time_day_seconds, &
         & hgrid, surface, &
-        & t_cf('prev_one_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the previous timestep'), &
+        & t_cf('local_time_day_seconds', 's', 'local time of this grid-cell'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle, &
-        & hgrid, surface, &
-        & t_cf('prev_two_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before previous timestep'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('prev_three_cos_zenith_angle', mem%prev_three_cos_zenith_angle, &
-        & hgrid, surface, &
-        & t_cf('prev_three_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before before previous timestep'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
