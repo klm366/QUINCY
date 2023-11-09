@@ -383,7 +383,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT ) ! By dynamic roots: TSTEP_INSTANT
+      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT ) ! By dynamic roots: TSTEP_INSTANT
 
   CONTAINS
 
@@ -542,9 +542,9 @@ call message(routine,'Defining: '//TRIM(prefix)//'_'//TRIM(specie_name)//'_total
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
-      CALL mem%Add_var( specie_name//'_layer', specie%dens_sl,                 &
+      CALL mem%Add_var( specie_name//'_sl', specie%dens_sl,                    &
         & hgrid, layer,                                                        &
-        & t_cf(specie_name//'_layer', 'mol m-2', ''),                          &
+        & t_cf(specie_name//'_sl', 'mol m-2', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
