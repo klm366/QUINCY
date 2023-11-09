@@ -388,11 +388,11 @@ CONTAINS
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
       !
 
-      DO jg=1,no_models
-        CALL jsbach_init_after_restart(jg)
-      END DO
-
     END IF
+
+    DO jg=1,no_models
+      CALL jsbach_init_after_restart(jg)
+    END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 13.0 Prepare output
