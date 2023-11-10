@@ -105,9 +105,10 @@ CONTAINS
   END SUBROUTINE Register_methane_tasks
 
   SUBROUTINE reset_chem_specie(specie)
+
     USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
 
-    TYPE (t_chem_ptrs), intent(inout) :: specie
+    TYPE (t_chem_ptrs), INTENT(inout) :: specie
 
     specie%diff_out    = 0._wp
     specie%prod_out    = 0._wp
@@ -126,6 +127,55 @@ CONTAINS
 ! <<<
 
   END SUBROUTINE reset_chem_specie
+
+  SUBROUTINE update_chem_specie(dt,nly,i,frac,specie,diff,act_sl,prod_sl,plant_sl,oxid_sl,other_sl,to_other_i)
+
+    USE mo_ch4_memory_class, ONLY: t_chem_ptrs
+
+    REAL(wp),           INTENT(in)    :: dt
+    INTEGER,            INTENT(in)    :: nly
+    INTEGER,            INTENT(in)    :: i
+    REAL(wp),           INTENT(in)    :: frac
+    TYPE (t_chem_ptrs), INTENT(inout) :: specie
+    REAL(wp),           INTENT(in)    :: diff
+    REAL(wp),           INTENT(in)    :: act_sl(:)
+    REAL(wp),           INTENT(in)    :: prod_sl(:)
+    REAL(wp),           INTENT(in)    :: plant_sl(:)
+    REAL(wp),           INTENT(in)    :: oxid_sl(:)
+    REAL(wp), OPTIONAL, INTENT(in)    :: other_sl(:)
+    INTEGER,  OPTIONAL, INTENT(in)    :: to_other_i
+
+    INTEGER  :: j
+    REAL(wp) :: mul
+
+    mul = frac / dt
+
+    specie%dens_sl    (i,:) =     act_sl  ( :   )  * frac
+    specie%total_final(i)   = SUM(act_sl  (1:nly)) * frac
+    specie%prod_out   (i)   = SUM(prod_sl (1:nly)) * mul
+    specie%plant_out  (i)   = SUM(plant_sl(1:nly)) * mul
+    specie%oxid_out   (i)   = SUM(oxid_sl (1:nly)) * mul
+    specie%diff_out   (i)   =     diff             * mul
+    specie%total_out  (i)   = specie%diff_out(i) + specie%plant_out(i)
+    IF (PRESENT(other_sl)) THEN
+      specie%other_out(i)   = SUM(other_sl(1:nly)) * mul
+      IF (PRESENT(to_other_i)) THEN
+        IF (to_other_i /= 0) specie%total_out(i) = specie%total_out(i) + specie%other_out(i)
+      ENDIF
+    ENDIF
+! >>> Debug
+    DO j = 1, nly
+      specie%prod_out_sl (i,j) = prod_sl (j) * mul
+      specie%plant_out_sl(i,j) = plant_sl(j) * mul
+      specie%oxid_out_sl (i,j) = oxid_sl (j) * mul
+      IF (PRESENT(other_sl)) THEN
+        specie%other_out_sl(i,j) = other_sl(j) * mul
+      ENDIF
+    ENDDO
+! <<<
+
+  END SUBROUTINE update_chem_specie
+
   !-----------------------------------------------------------------------------------------------------
   !> update_methane
   !!
@@ -248,7 +298,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i, lt
     INTEGER  :: iWetness, iWetness_st, iWetness_en
     REAL(wp) :: dt
-    REAL(wp) :: acro_height , frac_inun_loc
+    REAL(wp) :: acro_height, frac_inun_loc, frac
     REAL(wp) :: D_CH4_surface, D_CO2_surface, D_O2_surface
     REAL(wp) :: CH4_Prod, CO2_Prod, O2_Prod, CH4_prod_ratio
     REAL(wp) :: CH4_diff, CO2_diff, O2_diff
@@ -775,7 +825,21 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
                                     D_used, lissue_tst)
             lissue = lissue .OR. lissue_tst
 
-            ! Update global soil gas states
+            ! Fill global memory for output (fluxes in s-1)
+            IF (is_Wet) THEN
+              frac = frac_inun_loc
+              CALL update_chem_specie(dt,nly,i,frac,CH4_wet,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,CH4_ebul_sl,1)
+              CALL update_chem_specie(dt,nly,i,frac,CO2_wet,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl)
+              CALL update_chem_specie(dt,nly,i,frac, O2_wet, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,O2_other_sl)
+              CH4_prod_ratio_out_wet(i) = CH4_prod_ratio
+            ELSE
+              frac = 1._wp-frac_inun_loc
+              CALL update_chem_specie(dt,nly,i,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl)
+              CALL update_chem_specie(dt,nly,i,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl)
+              CALL update_chem_specie(dt,nly,i,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,O2_other_sl)
+            ENDIF
+
+            ! Peatlands updates densities differently
             IF (is_peat) THEN
               frac_inun_pre  (i)   = 1._wp
               CH4_dry%dens_sl(i,:) = 0._wp
@@ -785,92 +849,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
               CO2_wet%dens_sl(i,:) = CO2_act(:)
                O2_wet%dens_sl(i,:) =  O2_act(:)
             ELSE
-              IF (is_Wet) THEN
-                CH4_wet%dens_sl(i,:) = CH4_act(:) * frac_inun_loc
-                CO2_wet%dens_sl(i,:) = CO2_act(:) * frac_inun_loc
-                 O2_wet%dens_sl(i,:) =  O2_act(:) * frac_inun_loc
-              ELSE
-                CH4_dry%dens_sl(i,:) = CH4_act(:) * (1._wp - frac_inun_loc)
-                CO2_dry%dens_sl(i,:) = CO2_act(:) * (1._wp - frac_inun_loc)
-                 O2_dry%dens_sl(i,:) =  O2_act(:) * (1._wp - frac_inun_loc)
-              ENDIF
               frac_inun_pre(i) = frac_inun_loc
-            ENDIF
-
-            ! Fill global memory for output (fluxes now in s-1)
-            IF (is_Wet) THEN
-              CH4_wet%total_final    (i) = SUM(CH4_act      (1:nly))      * frac_inun_loc
-              CH4_wet%prod_out       (i) = SUM(CH4_prod_sl  (1:nly)) / dt * frac_inun_loc
-              CH4_wet%plant_out      (i) = SUM(CH4_plant_sl (1:nly)) / dt * frac_inun_loc
-              CH4_wet%oxid_out       (i) = SUM(CH4_oxid_sl  (1:nly)) / dt * frac_inun_loc
-              CH4_wet%other_out      (i) = SUM(CH4_ebul_sl  (1:nly)) / dt * frac_inun_loc ! Notice, CH4_wet%other field is used for ebullition
-              CH4_wet%diff_out       (i) =     CH4_diff              / dt * frac_inun_loc
-              CH4_wet%total_out      (i) = CH4_wet%diff_out(i) + CH4_wet%plant_out(i) + CH4_wet%other_out(i)
-              CH4_prod_ratio_out_wet (i) =     CH4_prod_ratio
-              CO2_wet%total_final    (i) = SUM(CO2_act      (1:nly))      * frac_inun_loc
-              CO2_wet%prod_out       (i) = SUM(CO2_prod_sl  (1:nly)) / dt * frac_inun_loc
-              CO2_wet%plant_out      (i) = SUM(CO2_plant_sl (1:nly)) / dt * frac_inun_loc
-              CO2_wet%oxid_out       (i) = SUM(CO2_oxid_sl  (1:nly)) / dt * frac_inun_loc
-              CO2_wet%diff_out       (i) =     CO2_diff              / dt * frac_inun_loc
-              CO2_wet%total_out      (i) = CO2_wet%diff_out(i) + CO2_wet%plant_out(i)
-               O2_wet%total_final    (i) = SUM( O2_act      (1:nly))      * frac_inun_loc
-               O2_wet%prod_out       (i) = SUM( O2_prod_sl  (1:nly)) / dt * frac_inun_loc
-               O2_wet%plant_out      (i) = SUM( O2_plant_sl (1:nly)) / dt * frac_inun_loc
-               O2_wet%oxid_out       (i) = SUM( O2_oxid_sl  (1:nly)) / dt * frac_inun_loc
-               O2_wet%other_out      (i) = SUM( O2_other_sl (1:nly)) / dt * frac_inun_loc
-               O2_wet%diff_out       (i) =      O2_diff              / dt * frac_inun_loc
-               O2_wet%total_out      (i) =  O2_wet%diff_out(i) +  O2_wet%plant_out(i)
-!              CH4_wet%excess         (i) = SUM(CH4_excess_sl(1:nly)) / dt * frac_inun_loc
-!              CO2_wet%excess         (i) = SUM(CO2_excess_sl(1:nly)) / dt * frac_inun_loc
-!               O2_wet%excess         (i) = SUM( O2_excess_sl(1:nly)) / dt * frac_inun_loc
-! >>> Debug
-              CH4_wet%prod_out_sl    (i,1:nly) = CH4_prod_sl  (1:nly) / dt * frac_inun_loc
-              CH4_wet%plant_out_sl   (i,1:nly) = CH4_plant_sl (1:nly) / dt * frac_inun_loc
-              CH4_wet%oxid_out_sl    (i,1:nly) = CH4_oxid_sl  (1:nly) / dt * frac_inun_loc
-              CH4_wet%other_out_sl   (i,1:nly) = CH4_ebul_sl  (1:nly) / dt * frac_inun_loc ! Notice, CH4_wet%other field is used for ebullition
-              CO2_wet%prod_out_sl    (i,1:nly) = CO2_prod_sl  (1:nly) / dt * frac_inun_loc
-              CO2_wet%plant_out_sl   (i,1:nly) = CO2_plant_sl (1:nly) / dt * frac_inun_loc
-              CO2_wet%oxid_out_sl    (i,1:nly) = CO2_oxid_sl  (1:nly) / dt * frac_inun_loc
-               O2_wet%prod_out_sl    (i,1:nly) =  O2_prod_sl  (1:nly) / dt * frac_inun_loc
-               O2_wet%plant_out_sl   (i,1:nly) =  O2_plant_sl (1:nly) / dt * frac_inun_loc
-               O2_wet%oxid_out_sl    (i,1:nly) =  O2_oxid_sl  (1:nly) / dt * frac_inun_loc
-               O2_wet%other_out_sl   (i,1:nly) =  O2_other_sl (1:nly) / dt * frac_inun_loc
-! <<<
-           ELSE 
-              CH4_dry%total_final    (i) = SUM(CH4_act      (1:nly))      * (1._wp-frac_inun_loc)
-              CH4_dry%prod_out       (i) = SUM(CH4_prod_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CH4_dry%plant_out      (i) = SUM(CH4_plant_sl (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CH4_dry%oxid_out       (i) = SUM(CH4_oxid_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CH4_dry%diff_out       (i) =     CH4_diff              / dt * (1._wp-frac_inun_loc)
-              CH4_dry%total_out      (i) = CH4_dry%diff_out(i) + CH4_dry%plant_out(i)
-              CO2_dry%total_final    (i) = SUM(CO2_act      (1:nly))      * (1._wp-frac_inun_loc)
-              CO2_dry%prod_out       (i) = SUM(CO2_prod_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CO2_dry%plant_out      (i) = SUM(CO2_plant_sl (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CO2_dry%oxid_out       (i) = SUM(CO2_oxid_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-              CO2_dry%diff_out       (i) =     CO2_diff              / dt * (1._wp-frac_inun_loc)
-              CO2_dry%total_out      (i) = CO2_dry%diff_out(i) + CO2_dry%plant_out(i)
-               O2_dry%total_final    (i) = SUM( O2_act      (1:nly))      * (1._wp-frac_inun_loc)
-               O2_dry%prod_out       (i) = SUM( O2_prod_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-               O2_dry%plant_out      (i) = SUM( O2_plant_sl (1:nly)) / dt * (1._wp-frac_inun_loc)
-               O2_dry%oxid_out       (i) = SUM( O2_oxid_sl  (1:nly)) / dt * (1._wp-frac_inun_loc)
-               O2_dry%other_out      (i) = SUM( O2_other_sl (1:nly)) / dt * (1._wp-frac_inun_loc)
-               O2_dry%diff_out       (i) =      O2_diff              / dt * (1._wp-frac_inun_loc)
-               O2_dry%total_out      (i) =  O2_dry%diff_out(i) +  O2_dry%plant_out(i)
-!              CH4_dry%excess         (i) = SUM(CH4_excess_sl(1:nly)) / dt * (1._wp-frac_inun_loc)
-!              CO2_dry%excess         (i) = SUM(CO2_excess_sl(1:nly)) / dt * (1._wp-frac_inun_loc)
-!               O2_dry%excess         (i) = SUM( O2_excess_sl(1:nly)) / dt * (1._wp-frac_inun_loc)
-! >>> Debug
-              CH4_dry%prod_out_sl    (i,1:nly) = CH4_prod_sl  (1:nly) / dt * frac_inun_loc
-              CH4_dry%plant_out_sl   (i,1:nly) = CH4_plant_sl (1:nly) / dt * frac_inun_loc
-              CH4_dry%oxid_out_sl    (i,1:nly) = CH4_oxid_sl  (1:nly) / dt * frac_inun_loc
-              CO2_dry%prod_out_sl    (i,1:nly) = CO2_prod_sl  (1:nly) / dt * frac_inun_loc
-              CO2_dry%plant_out_sl   (i,1:nly) = CO2_plant_sl (1:nly) / dt * frac_inun_loc
-              CO2_dry%oxid_out_sl    (i,1:nly) = CO2_oxid_sl  (1:nly) / dt * frac_inun_loc
-               O2_dry%prod_out_sl    (i,1:nly) =  O2_prod_sl  (1:nly) / dt * frac_inun_loc
-               O2_dry%plant_out_sl   (i,1:nly) =  O2_plant_sl (1:nly) / dt * frac_inun_loc
-               O2_dry%oxid_out_sl    (i,1:nly) =  O2_oxid_sl  (1:nly) / dt * frac_inun_loc
-               O2_dry%other_out_sl   (i,1:nly) =  O2_other_sl (1:nly) / dt * frac_inun_loc
-! <<<
             ENDIF
 
           ENDDO ! iWetness
