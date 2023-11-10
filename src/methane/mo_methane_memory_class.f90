@@ -59,7 +59,6 @@ MODULE mo_ch4_memory_class
     TYPE(t_jsb_var_real3d) ::   &
       & prod_out_sl,            &
       & oxid_out_sl,            &
-      & diff_out_sl,            &
       & other_out_sl,           & ! Ebulition or "other"
       & plant_out_sl
  
@@ -86,7 +85,6 @@ MODULE mo_ch4_memory_class
     REAL(wp), DIMENSION(:,:), POINTER ::   &
       & prod_out_sl,            &
       & oxid_out_sl,            &
-      & diff_out_sl,            &
       & other_out_sl,           & ! Ebulition or "other"
       & plant_out_sl
 
@@ -475,14 +473,6 @@ CONTAINS
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
-      CALL mem%Add_var( specie_name//'_diff_out_sl', specie%diff_out_sl,       &
-        & hgrid, layer,                                                        &
-        & t_cf(specie_name//'_diff_out_sl', 'mol m-2 s-1', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
       CALL mem%Add_var( specie_name//'_plant_out_sl', specie%plant_out_sl,     &
         & hgrid, layer,                                                        &
         & t_cf(specie_name//'_plant_out_sl', 'mol m-2 s-1', ''),               &
@@ -507,7 +497,6 @@ CONTAINS
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
 ! >>> Debug
-call message(routine,'Defining: '//TRIM(prefix)//'_'//TRIM(str)//'_sl_'//trim(suffix))
         CALL mem%Add_var( TRIM(str)//'_sl', specie%other_out_sl,                 &
           & hgrid, layer,                                                        &
           & t_cf(TRIM(str)//'_sl', 'mol m-2 s-1', ''),                           &
@@ -517,7 +506,7 @@ call message(routine,'Defining: '//TRIM(prefix)//'_'//TRIM(str)//'_sl_'//trim(su
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 ! <<<
       ENDIF
-call message(routine,'Defining: '//TRIM(prefix)//'_'//TRIM(specie_name)//'_total_out_'//trim(suffix))
+
       CALL mem%Add_var( specie_name//'_total_out', specie%total_out,           &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_out', 'mol m-2 s-1', ''),                  &

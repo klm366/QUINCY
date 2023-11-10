@@ -120,7 +120,6 @@ CONTAINS
 !      specie%other_out   = 0._wp
 !    ENDIF
 ! >>> Debug
-    specie%diff_out_sl = 0._wp
     specie%prod_out_sl = 0._wp
     specie%plant_out_sl= 0._wp
     specie%oxid_out_sl = 0._wp
@@ -528,29 +527,23 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
 ! >>> Debug
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%other_out_sl) ! Ebullition
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%plant_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%plant_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%plant_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%plant_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%other_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%plant_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%prod_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%diff_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%other_out_sl)
     dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%plant_out_sl)
 ! <<<
@@ -1096,30 +1089,24 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
 ! >>> Debug
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%other_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%plant_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%plant_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%other_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%plant_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%other_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%plant_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%plant_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%prod_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%diff_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%other_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%plant_out_sl, weighted_by_fract)
 ! <<<
