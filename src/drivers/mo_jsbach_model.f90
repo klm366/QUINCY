@@ -804,7 +804,7 @@ CONTAINS
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
-    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
+    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day
     USE mo_jsb_model_class,           ONLY: MODEL_QUINCY
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
@@ -815,7 +815,7 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_jsb_math_constants,        ONLY: eps8
+    USE mo_q_atm2land_process,        ONLY: update_local_time_and_daytime_counter
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -866,10 +866,8 @@ CONTAINS
 
     ! quincy
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
-    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -880,6 +878,7 @@ CONTAINS
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
     INTEGER :: nc, nt, it, ics, ice
+    INTEGER :: global_seconds_day
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -938,7 +937,6 @@ CONTAINS
       startidx(iblk) = grid%Get_col_start(iblk)
       endidx  (iblk) = grid%Get_col_end(iblk)
     END DO
-
 
     CALL model%Get_top_tile(tile)
     IF (tile%contains_lake) THEN
@@ -1110,28 +1108,13 @@ CONTAINS
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
 
+        ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_one_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
-
-        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
-        WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
-            & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8)
-          ! zero the counter for number of accumulated values per day
-          daytime_counter(:,:) = 0.0_wp
-        END WHERE
-
+        dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
-        WHERE(swpar_srf_down(:,:) > eps8)
-          ! count number of daytime values
-          daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
-        END WHERE
-
-        ! shift for cos_zenith_angle tracing for midnight identification
-        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
-        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
-        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+        global_seconds_day = get_secs_of_day(datetime_new)
+        CALL update_local_time_and_daytime_counter( &
+          &     global_seconds_day, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
       END SELECT
 
       DEALLOCATE(evapo_act2pot)

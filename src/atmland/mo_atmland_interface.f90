@@ -21,6 +21,8 @@ MODULE mo_atmland_interface
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
+  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
   !USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -88,8 +90,11 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
-    USE mo_jsb_math_constants,     ONLY: eps8
-
+    USE mtime,                     ONLY: datetime
+    USE mo_time_config,            ONLY: time_config
+    USE mo_jsb_time,               ONLY: get_secs_of_day
+    USE mo_q_atm2land_process,     ONLY: update_local_time_and_daytime_counter
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
@@ -100,15 +105,19 @@ CONTAINS
       & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER ::  iblk, ics, ice, nc, i, ic
+    INTEGER :: iblk, ics, ice, nc, i, ic
+    INTEGER :: global_seconds_day
+    TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+    REAL(wp), POINTER :: lon(:)
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk ::  &
       & t_air_ptr,             &
       & q_air_ptr,             &
@@ -144,11 +153,9 @@ CONTAINS
       & q_acoef_ice_ptr,       &
       & q_bcoef_ice_ptr
     ! quincy
-    dsl4jsb_Real2D_onChunk :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: daytime_counter
-
+    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     iblk = options%iblk
@@ -157,6 +164,10 @@ CONTAINS
     nc   = options%nc
 
     model => Get_model(tile%owner_model_id)
+    grid  => get_grid(model%grid_id)
+    lon   => grid%lon(ics:ice, iblk)
+    mtime_current => time_config%tc_current_date
+    global_seconds_day = get_secs_of_day(mtime_current)
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -264,14 +275,11 @@ CONTAINS
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      prev_one_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-      prev_two_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
-      prev_three_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
       daytime_counter             => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
+      local_time_day_seconds      => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
     END IF
 
     !$acc parallel default(present)
-
     IF (PRESENT(DEBUG_VAR)) THEN
       !$acc loop gang vector
       DO i=1,nc
@@ -468,7 +476,6 @@ CONTAINS
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
       END IF
-
     END IF
     !$acc end parallel
 
@@ -477,27 +484,9 @@ CONTAINS
         CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
       END IF
 
-      ! Update the daytime counter and trace the cosine zenith angle for time averaging purposes
-      DO ic = 1, nc
-      ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-      ! reset the daytime_counter if last timestep was midnight
-        IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
-            & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
-          ! zero the counter for number of accumulated values per day
-          daytime_counter(ic) = 0.0_wp
-        ENDIF
-
-        ! count number of daytime values
-        IF (swpar_srf_down(ic) > eps8) THEN
-          daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
-        ENDIF
-      END DO
-
-      ! shift cos_zenith_angle tracing
-      prev_three_cos_zenith_angle(:) = prev_two_cos_zenith_angle(:)
-      prev_two_cos_zenith_angle(:)   = prev_one_cos_zenith_angle(:)
-      prev_one_cos_zenith_angle(:)   = cos_zenith_angle(:)
-
+      ! Update local time and the daytime counter
+      CALL update_local_time_and_daytime_counter( &
+        &     global_seconds_day, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
     END IF ! MODEL_QUINCY
 
   END SUBROUTINE update_atm2land

@@ -26,7 +26,7 @@
 !! First version by Soenke Zaehle (20160104)
 !! Permafrost specific processes included (Fabrice Lacroix 04/11/2020)
 !! 
-MODULE mo_spq_update_physics
+MODULE mo_q_spq_update_physics
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -36,7 +36,7 @@ MODULE mo_spq_update_physics
   PRIVATE
   PUBLIC :: update_spq_physics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_update_physics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_spq_update_physics'
 
 CONTAINS
 
@@ -1074,10 +1074,10 @@ CONTAINS
       gw_runoff_sl(:,isoil) = 0.0_wp
       ! update water balance of lower soil layers
       w_soil_sl(:,isoil)    = w_soil_sl(:,isoil) + & 
-                              (( 1.0_wp - drain_frac ** soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - &
+                              (drainage_sl(:,isoil-1) - drainage_sl(:,isoil) - &
                               evaporation(:) * fevaporation(:,isoil) - &
                               transpiration(:) * ftranspiration(:,isoil)) / &
-                             1000._wp * dtime
+                              1000._wp * dtime
 
       ! Compute flows to avoid w_soil_sl being above field capacity  
       ! Check if water content (including ice volume) is above field capacity
@@ -1191,8 +1191,8 @@ CONTAINS
 
        ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
        hlp3(:) =  soil_depth_sl(:,isoil-1) / (soil_depth_sl(:,isoil))             
-       hlp2(:) = ((w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1)) * water2ice_density_ratio - &
-         &        (w_soil_sl(:,isoil) + w_ice_sl(:,isoil)* water2ice_density_ratio)  * hlp3(:)) / (1._wp + hlp3(:))
+       hlp2(:) = ((w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio) - &
+         &        (w_soil_sl(:,isoil) + w_ice_sl(:,isoil)* water2ice_density_ratio) * hlp3(:)) / (1._wp + hlp3(:))
        ! ...
        WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
        WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
@@ -1750,4 +1750,4 @@ CONTAINS
       snow_srf_heat_flux(ichunk) = snow_heat_flux(ichunk,nsnow_top)
     ENDDO
   END SUBROUTINE
-END MODULE mo_spq_update_physics
+END MODULE mo_q_spq_update_physics

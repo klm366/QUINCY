@@ -27,7 +27,7 @@
 !> You should have received a copy of the GNU General Public License
 !> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 !> ======================================================================================================
-MODULE mo_time_averages
+MODULE mo_lnd_time_averages
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -64,7 +64,7 @@ MODULE mo_time_averages
   !!----------------------------------------------------------------------------------------------------
 
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_time_averages'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_lnd_time_averages'
 
 CONTAINS
 
@@ -140,4 +140,4 @@ CONTAINS
   END FUNCTION calc_time_mavg
 
 #endif
-END MODULE mo_time_averages
+END MODULE mo_lnd_time_averages

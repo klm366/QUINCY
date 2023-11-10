@@ -423,7 +423,7 @@ CONTAINS
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
                                           chl2n
   USE mo_assimi_constants,          ONLY: Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
-  USE mo_veg_respiration,           ONLY: temperature_response_respiration
+  USE mo_q_veg_respiration,         ONLY: temperature_response_respiration
 
   IMPLICIT NONE
   ! ---------------------------

@@ -84,11 +84,11 @@ MODULE mo_jsb_process_factory
   USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
-  USE mo_veg_interface,         ONLY: Register_veg_tasks
+  USE mo_q_veg_interface,       ONLY: Register_veg_tasks_quincy
   USE mo_veg_config_class,      ONLY: t_veg_config
-  USE mo_sb_interface,          ONLY: Register_sb_tasks
+  USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
-  USE mo_spq_interface,         ONLY: Register_spq_tasks
+  USE mo_q_spq_interface,       ONLY: Register_spq_tasks_quincy
   USE mo_spq_config_class,      ONLY: t_spq_config
 
   USE mo_jsb_process_class, ONLY: &
@@ -217,13 +217,13 @@ CONTAINS
       CALL Register_nlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_nlcc_config::return_ptr%config)
     CASE (VEG_)
-      CALL Register_veg_tasks(return_ptr, model_id)
+      CALL Register_veg_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
     CASE (SB_)
-      CALL Register_sb_tasks(return_ptr, model_id)
+      CALL Register_sb_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_sb_config::return_ptr%config)
     CASE (SPQ_)
-      CALL Register_spq_tasks(return_ptr, model_id)
+      CALL Register_spq_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_spq_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()

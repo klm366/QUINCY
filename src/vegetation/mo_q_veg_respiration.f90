@@ -25,13 +25,13 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2016-02-17)
 !!
-MODULE mo_veg_respiration
+MODULE mo_q_veg_respiration
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: calc_maintenance_respiration, temperature_response_respiration
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_respiration'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_respiration'
 
 CONTAINS
 
@@ -129,4 +129,4 @@ CONTAINS
      
   END FUNCTION calc_maintenance_respiration
 
-END MODULE mo_veg_respiration
+END MODULE mo_q_veg_respiration

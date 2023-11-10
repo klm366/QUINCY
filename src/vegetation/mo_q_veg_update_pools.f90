@@ -27,7 +27,7 @@
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_q_assimi_process.f90
 !! some refactoring and rewriting for bgcm -- Jan Engel MPI-BGC (2023-05)
 !!
-MODULE mo_veg_update_pools
+MODULE mo_q_veg_update_pools
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message
@@ -43,7 +43,7 @@ MODULE mo_veg_update_pools
   PRIVATE
   PUBLIC :: update_veg_pools
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_update_pools'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_update_pools'
 
 CONTAINS
 
@@ -66,8 +66,8 @@ CONTAINS
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_parameters,                  ONLY: rfr_ratio_toc 
-    USE mo_veg_canopy,                      ONLY: calc_canopy_layers
-    USE mo_veg_growth,                      ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
+    USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
+    USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
     USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_assimi_constants,                ONLY: ic3phot, ic4phot
@@ -647,4 +647,4 @@ CONTAINS
 
   END SUBROUTINE update_veg_pools
 
-END MODULE mo_veg_update_pools
+END MODULE mo_q_veg_update_pools

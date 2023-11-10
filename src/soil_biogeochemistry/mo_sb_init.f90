@@ -514,7 +514,7 @@ CONTAINS
     & flag_spp1685, &   ! optional in
     & site_ID_spp1685 ) ! optional in
 
-    USE mo_sb_jsm_processes,              ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+    USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
     USE mo_spq_util,                      ONLY: calc_qmax_texture
@@ -639,7 +639,7 @@ CONTAINS
       END DO
     END DO
 
-    ! NOTE: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
+    ! NOTE: this differs on purpose from the calculation in mo_q_sb_update_pools for the prescribed option
     !       this is because here I'm trying to ensure that the models are initialised with the same amount of nutrient
     !       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
     !       to more nutrient in the soil column in 1d compared to 0d.
@@ -949,10 +949,10 @@ CONTAINS
     & flag_spp1685, &           ! optional in
     & site_ID_spp1685 )         ! optional in
 
-    USE mo_sb_jsm_processes,              ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+    USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
-    USE mo_sb_jsm_transport,              ONLY: calc_bioturbation_rate
+    USE mo_q_sb_jsm_transport,            ONLY: calc_bioturbation_rate
     USE mo_spq_util,                      ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
@@ -1474,7 +1474,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: molar_mass_P
     USE mo_sb_constants           ! e.g.: k1_p_pool_depth_corr, k2_p_pool_depth_corr, k3_p_pool_depth_corr, &
                                   !       k4_p_pool_depth_corr, k_p_pool_depth_corr_min_occlud, p_labile_slow_global_avg
-    USE mo_sb_jsm_processes,       ONLY: calc_fast_po4
+    USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
 
     INTEGER,                          INTENT(in)     :: nc                        !< dimensions
     INTEGER                         , INTENT(in)     :: nsoil_sb                  !< number of soil layers as used/defined by the SB_ process

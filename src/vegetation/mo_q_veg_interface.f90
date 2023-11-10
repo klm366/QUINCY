@@ -26,7 +26,7 @@
 !! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719)
 !!
-MODULE mo_veg_interface
+MODULE mo_q_veg_interface
 #ifndef __NO_JSBACH__
 
 
@@ -40,10 +40,10 @@ MODULE mo_veg_interface
   USE mo_jsb_process_class,           ONLY: t_jsb_process
 
   ! "Integrate" routines
-  USE mo_veg_turnover,                ONLY: update_veg_turnover
-  USE mo_veg_dynamics,                ONLY: update_veg_dynamics
-  USE mo_veg_growth,                  ONLY: update_veg_growth
-  USE mo_veg_update_pools,            ONLY: update_veg_pools
+  USE mo_q_veg_turnover,              ONLY: update_veg_turnover
+  USE mo_q_veg_dynamics,              ONLY: update_veg_dynamics
+  USE mo_q_veg_growth,                ONLY: update_veg_growth
+  USE mo_q_veg_update_pools,          ONLY: update_veg_pools
 
   dsl4jsb_Use_processes VEG_, PHENO_, RAD_, SB_
   dsl4jsb_Use_memory(VEG_)
@@ -53,7 +53,7 @@ MODULE mo_veg_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_veg_tasks
+  PUBLIC :: Register_veg_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
@@ -164,7 +164,7 @@ MODULE mo_veg_interface
     PROCEDURE Create_task_update_time_average_vegetation         !< Constructor function for task
   END INTERFACE tsk_time_average_vegetation
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_veg_interface'
 
 CONTAINS
 
@@ -172,7 +172,7 @@ CONTAINS
   !> Register tasks: VEG_ process
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Register_veg_tasks(this, model_id)
+  SUBROUTINE Register_veg_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
@@ -182,7 +182,7 @@ CONTAINS
     CALL this%Register_task(tsk_veg_growth(model_id))
     CALL this%Register_task(tsk_veg_pools(model_id))
     CALL this%Register_task(tsk_time_average_vegetation(model_id))
-  END SUBROUTINE Register_veg_tasks
+  END SUBROUTINE Register_veg_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_veg_fluxes task
@@ -754,4 +754,4 @@ CONTAINS
   END SUBROUTINE aggregate_time_average_vegetation
 
 #endif
-END MODULE mo_veg_interface
+END MODULE mo_q_veg_interface
