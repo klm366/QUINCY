@@ -667,40 +667,38 @@ CONTAINS
       DO jg = 1,no_models
         CALL run_one_timestep( &
           & jg, &                   ! model
-          & p_patch(jg)%nblks_c, &  ! ..
+          & p_patch(jg)%nblks_c, &  ! the number of the block, i.e., tha last dimension of ICON-land variables
           & dtime, &                ! length of timestep in seconds
-          & mtime_current)          ! ..
+          & mtime_current)          ! instance of a TYPE with time information date & time & ...
       END DO
 
-      ! update accumulated values
+      ! update accumulated values, e.g., mean output value calculation
       CALL update_statistics
 
+      ! write output
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep)
       END IF
 
-      ! re-initialize MAX/MIN fields with 'resetval'
-      !   @NOTE must be done AFTER output
+      ! re-initialize/re-set actions
+      !   NOTE must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
 
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.2 Write restart file
-      !>
-      !>  check whether time has come for writing restart file
-      !>
-      ! default is to assume we do not write a checkpoint/restart file
+      !> 4.2.2 Write restart file
+      !>   check whether time has come for writing restart file
+      !>   by default no restart file is written at the end of the experiment
       lwrite_checkpoint = .FALSE.
       ! if the model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
-        ! to clarify the decision tree we use shorter and more expressive names:
-        l_isStartdate    = (time_config%tc_startdate == mtime_current)
-        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
-        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
-        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
-        l_doWriteRestart = time_config%tc_write_restart
-        ! ...
+        ! set time related variable and events
+        l_isStartdate    = (time_config%tc_startdate == mtime_current)                        ! is start date of experiment
+        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)                     ! is stop date of teh complete experiment experiment, including all restarts
+        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)     ! is it time to write a restart file
+        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)  ! is it time to write a checkpoint data
+        l_doWriteRestart = time_config%tc_write_restart                                       ! if we want to write retsrat files at all
+        ! check if a checkpoint may be written (write restat file but do no model restart)
         IF ( &
-              !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
+              !  if time for checkpoint or restart has been reached
               &         (l_isRestart .OR. l_isCheckpoint)                     &
               &  .AND.                                                        &
               !  and the current date differs from the start date
@@ -712,75 +710,85 @@ CONTAINS
           lwrite_checkpoint = .TRUE.
         END IF
       END IF
-      ! ..
+      ! if a checkpoint may be written
       IF (lwrite_checkpoint) THEN
+        ! update patch (ICON infrastructure; grid information)
         DO jg=1,n_dom
           CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
         END DO
-        ! finally write restart file
+        ! write restart file
         CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
-      END IF  ! lwrite_checkpoint
-      ! ...
+      END IF
+      ! have we reached the experiment stop date of current restart job (== restart stops)
       IF (mtime_current >= time_config%tc_stopdate) THEN
         ! leave time loop
         EXIT TIME_LOOP
       END IF
-
       ! increase timestep by one
       jstep = jstep + 1
+
+      ! NOTE 'sim_time' can be deleted, not used here anymore
       ! step_in_forcing_file = step_in_forcing_file + 1
       sim_time = getElapsedSimTimeInSeconds(mtime_current)
     END DO TIME_LOOP
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 18.0  ... @TODO describe
+    !>
+    !> cleanup and finalization
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 5.0 cleanup and finalization (mostly ICON infrastructure)
+    !>
+    !>
+
+    !> cleanup restart descriptors
     !>
     CALL deleteRestartDescriptor(restartDescriptor)
 
-    ! ..
+    !> stop timer for total runtime
+    !>
     IF (ltimer) CALL timer_stop(timer_total)
 
-    ! ..
+    !> deallocate and destruct
+    !>
+    ! temporary output file used for averaging and so on
     IF (output_mode%l_nml) THEN
       DEALLOCATE(output_jfile, STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
-    ENDIF
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 19.0 deallocation of structure and variables
-    !>
+    END IF
+    ! mtime_old instance of mtime TYPE
     CALL deallocateDatetime(mtime_old)
-
-    ! Deallocate global registry for lon-lat grids
+    ! global registry for lon-lat grids
     CALL lonlat_grids%finalize()
-
-    ! Destruct communication patterns
+    ! communication patterns
     CALL destruct_comm_patterns( p_patch, p_patch_local_parent )
-
-    ! Deallocate grid patches
+    ! grid patches
     CALL destruct_patches( p_patch )
-
-    ! ..
+    ! patch (ICON infrastructure for grid information)
     DEALLOCATE( p_patch, STAT=error_status )
-    IF (error_status/=SUCCESS) THEN
+    IF (error_status /= SUCCESS) THEN
       CALL finish(routine, 'deallocate for patch array failed')
-    ENDIF
+    END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 20.0 close memory logging files and finalize model
+    !> close memory logging files and finalize model
     !>
     CALL memory_log_terminate
     CALL destruct_icon_communication()
+
+    !> ICON-Land cleanup and finalize
+    !>
     CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 21.0 Delete variable lists
+    !> delete variable lists
     !>
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
-    ENDIF
+    END IF
 #ifdef HAVE_CDI_PIO
+    ! cdipo is a parallel version of cdi
     IF (pio_type == pio_type_cdipio) THEN
       prev_cdi_namespace = namespaceGetActive()
       CALL namespaceSetActive(nml_io_cdi_pio_namespace)
@@ -789,8 +797,7 @@ CONTAINS
     END IF
 #endif
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 22.0 finish message and print performance timers
+    !> write finish message and print runtime timers
     !>
     CALL message(routine, 'clean-up finished')
     IF (ltimer) CALL print_timer
@@ -800,7 +807,11 @@ CONTAINS
   !>
   !> run ICON-Land for one timestep
   !>
-  SUBROUTINE run_one_timestep(model_id, nblks, dtime, datetime_new)
+  SUBROUTINE run_one_timestep( &
+    & model_id, &
+    & nblks, &
+    & dtime, &
+    & datetime_new)
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
@@ -810,7 +821,7 @@ CONTAINS
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver_variables
     USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
@@ -823,25 +834,27 @@ CONTAINS
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER,                INTENT(in)            :: model_id
-    INTEGER,                INTENT(in)            :: nblks
+    INTEGER,                INTENT(in)            :: model_id       !< model ID, number of the model or site
+    INTEGER,                INTENT(in)            :: nblks          !< number of the block
     REAL(wp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
     ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=max_timedelta_str_len) :: dtime_string     !< time delta as string
-    TYPE(timedelta)         , POINTER    :: dtime_mtime      !< time delta as mtime variable
-    TYPE(datetime)          , POINTER    :: datetime_old     !< date and time at the beginning of this time step
-    TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
-    TYPE(datetime)          , POINTER    :: datetime_forcing
+    CHARACTER(len=max_timedelta_str_len) :: dtime_string        !< time delta as string (dtime, timestep length)
+    TYPE(timedelta)         , POINTER    :: dtime_mtime         !< time delta as mtime variable (dtime, timestep length)
+    TYPE(datetime)          , POINTER    :: datetime_old        !< date and time at the beginning of this time step
+    TYPE(datetime)          , POINTER    :: datetime_old_old    !< date and time one time step before datetime_old
+    TYPE(datetime)          , POINTER    :: datetime_forcing    !<
 
-    INTEGER  :: nproma
-    INTEGER  :: iblk                           !< index of block loop
-    INTEGER  :: startblk, endblk               !< start and end indices of block   loop
-    INTEGER  :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop
+    INTEGER                              :: nproma                         !< number of grid cells per chunk
+    INTEGER                              :: iblk                           !< index of block loop
+    INTEGER                              :: startblk, endblk               !< start and end indices of block   loop
+    INTEGER                              :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop, i.e., stat and end index of each block
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: land_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: lake_tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
@@ -869,16 +882,19 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
-    REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
+    REAL(wp), POINTER       :: lon(:,:)
+    REAL(wp), POINTER       :: lat(:,:)
+    REAL(wp), POINTER       :: coslat(:,:)
+    REAL(wp), POINTER       :: sinlat(:,:)
+    REAL(wp), ALLOCATABLE   :: evapo_act2pot(:,:) !< evaporation ratio: evapotranspirtaion / potential evaporation
 
-    LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
-    LOGICAL :: l_first_forcing_file    = .TRUE.
-    LOGICAL :: l_shift_one_timestep    = .TRUE.
-    LOGICAL :: l_first_step_in_restart = .FALSE.
+    LOGICAL :: use_external_forcing               !< use forcing from external forcing (e.g., observation based data)
+    LOGICAL :: l_first_forcing_file    = .TRUE.   !< first forcing file in the experiment
+    LOGICAL :: l_shift_one_timestep    = .TRUE.   !< TODO delete - not used anymore
+    LOGICAL :: l_first_step_in_restart = .FALSE.  !< first timestep after a restart was done TODO restructure, just use the function below, no local var needed
 
-    INTEGER :: nc, nt, it, ics, ice
-    INTEGER :: global_seconds_day
+    INTEGER :: nc, nt, it, ics, ice               !< dimensions
+    INTEGER :: global_seconds_day                 !< number of seconds since day has started - global time the model does use, probably at UTC
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1011,9 +1027,9 @@ CONTAINS
       !> get variables (that are in the coupled simulation provided via the model interface by the host model)
       !>   including dimensional data and data from external forcing, i.e., forcing input files
       !>   see: 'mo_jsb_interface:interface_full'
-      !> 
+      !>
       IF (model%config%use_lakes) THEN
-        CALL get_standalone_driver( &
+        CALL get_standalone_driver_variables( &
           ! in
           & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
           & .TRUE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                         &
@@ -1062,7 +1078,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
           & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
       ELSE
-        CALL get_standalone_driver( &
+        CALL get_standalone_driver_variables( &
           ! in
           & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
           & .FALSE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                        &

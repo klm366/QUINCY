@@ -53,7 +53,7 @@ CONTAINS
   !> is called by host model (ICON) in a coupled simulation in './atm_phy_echam/mo_surface'
   !>
   !> @NOTE for a standalone simulation 'mo_jsbach_model:jsbach_model' is called 
-  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
+  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver_variables'
   !>
   SUBROUTINE interface_full( &
     & model_id,         &
