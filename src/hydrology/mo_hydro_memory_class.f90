@@ -64,7 +64,8 @@ MODULE mo_hydro_memory_class
       & ws_negative,          & !< sum of negative soil moisture (diagnosis of errors) [m]
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
-      & internal_drain          !< internal drain
+      & internal_drain,       & !< internal drain
+      & water_to_parflow        !< water to Parflow
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
@@ -346,6 +347,13 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'water_to_parflow', mem%water_to_parflow,              &
+      & hgrid, surface,                                                      &
+      & t_cf('water_to_parflow', 'kg m-2 s-1', 'water_to_parflow'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'water_flux', mem%water_flux,                                  &

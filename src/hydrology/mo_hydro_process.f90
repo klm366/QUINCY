@@ -95,7 +95,7 @@ CONTAINS
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
     & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
     & q_snocpymlt, snow_accum, snow_melt_soil,                     &
-    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
+    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit, water_to_parflow)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -110,7 +110,7 @@ CONTAINS
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out), DIMENSION(:)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
-      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
+      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit, water_to_parflow
     !
     !  local variables
     !
@@ -159,6 +159,7 @@ CONTAINS
       evapo_snow(ic) = 0._wp
       water_to_soil(ic) = 0._wp
       evapo_deficit(ic) = 0._wp
+      water_to_parflow(ic) = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -262,6 +263,9 @@ CONTAINS
       END IF
       evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m  ! Evaporation from ground
 
+      ! Positive and negative values of evaporation and transpiration are added to water_to_parflow
+      water_to_parflow(ic) = water_to_soil(ic) + evapotrans_soil_in_m
+
       ! positive values of evaporation and transpiration (dew) are added to water_to_soil
       ! negative fluxes change soil moisture later in calc_soil_hydrology
       IF (evapo_soil_in_m > 0._wp)    water_to_soil(ic) = water_to_soil(ic) + evapo_soil_in_m
@@ -288,6 +292,7 @@ CONTAINS
       evapotrans_soil(ic) = evapotrans_soil_in_m * rhoh2o / delta_time
       evapo_skin(ic)      = evapo_skin_in_m      * rhoh2o / delta_time
       evapo_snow(ic)      = sfract_srf(ic) * evapopot(ic)
+      water_to_parflow(ic) = water_to_parflow(ic) * rhoh2o / delta_time
 
     END DO
     !$ACC END LOOP

@@ -428,6 +428,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_excess
     dsl4jsb_Real2D_onChunk :: w_glac
+    dsl4jsb_Real2D_onChunk :: water_to_parflow
 
 
     ! Locally allocated vectors
@@ -491,6 +492,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, water_to_parflow)   ! out
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
       DO ic=1,nc
@@ -498,6 +500,7 @@ CONTAINS
         drainage(ic) = 0._wp
         w_snow(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
+        water_to_parflow(ic) = runoff(ic)
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
@@ -528,6 +531,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, water_to_parflow) ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
     IF (tile%is_glacier) THEN
@@ -591,6 +595,7 @@ CONTAINS
         drainage(ic) = 0._wp
         w_snow_soil(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
+        water_to_parflow(ic) = runoff(ic)
         IF (l_compat401_config) THEN
           snow_soil_dens(ic) = 330._wp
         ELSE
@@ -652,6 +657,7 @@ CONTAINS
         & evapo_snow(:),                 & !< out
         & water_excess(:),               & !< out
         & evapo_deficit(:)               & !< out
+        & water_to_parflow(:)            & !< out
         & )
 
       IF (l_compat401_config) THEN
@@ -738,6 +744,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_parflow, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

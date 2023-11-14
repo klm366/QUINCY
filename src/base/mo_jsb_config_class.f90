@@ -19,6 +19,7 @@ MODULE mo_jsb_config_class
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message
   USE mo_jsb_io_netcdf,      ONLY: t_input_file
+  USE mo_kind,               ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -34,6 +35,8 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
+    LOGICAL                        :: use_parflow
+    REAL(wp)                       :: parflow_lat      ! North-south extent of the Parflow latitude belt
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
@@ -88,6 +91,8 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
+    LOGICAL                       :: use_parflow
+    REAL(wp)                      :: parflow_lat
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
@@ -102,6 +107,8 @@ CONTAINS
       use_lakes, &
       use_glacier, &
       use_quincy, &
+      use_parflow, &
+      parflow_lat, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
@@ -124,6 +131,8 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
+    use_parflow                = .FALSE.
+    parflow_lat                = 0.35
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -153,6 +162,8 @@ CONTAINS
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
+    model_config%use_parflow                = use_parflow
+    model_config%parflow_lat                = parflow_lat
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme
