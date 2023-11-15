@@ -640,7 +640,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat
+    USE mo_phy_schemes,   ONLY: qsat_water
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -667,6 +667,7 @@ CONTAINS
     INTEGER :: icanopy, ncanopy
     REAL(wp) :: ratio_lim_over_unlim(options%nc)
     LOGICAL :: q_air_gt_qsat_tmp
+    LOGICAL :: use_tmx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
@@ -680,6 +681,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    use_tmx = model%config%use_tmx
 
     dsl4jsb_Get_config(ASSIMI_)
 
@@ -707,7 +710,7 @@ CONTAINS
     !$ACC LOOP GANG(STATIC: 1) VECTOR &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
-      q_air_gt_qsat_tmp = q_air(ic) > qsat(t(ic),press_srf(ic))      
+      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)      
       canopy_cond_limited(ic) = &
         &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
                                   water_stress(ic),          & ! in, water stress factor

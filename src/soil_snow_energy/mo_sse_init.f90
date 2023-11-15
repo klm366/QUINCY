@@ -132,6 +132,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HYDRO_)
 
     REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
@@ -156,6 +157,7 @@ CONTAINS
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HYDRO_)
 
     ALLOCATE(                                          &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
@@ -212,10 +214,14 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_OC',                &
-        & fill_array = sse_init_vars%fr_oc)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+        ptr_2D => input_file%Read_2d(             &
+          & variable_name='FR_OC',                &
+          & fill_array = sse_init_vars%fr_oc)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      ELSE
+        sse_init_vars%fr_oc=0._wp
+      END IF
 
       ptr_2D => input_file%Read_2d(             &
         & variable_name='SUB_FR_SAND',              &
@@ -232,10 +238,15 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_OC',                &
-        & fill_array = sse_init_vars%fr_oc_deep)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+        ptr_2D => input_file%Read_2d(                 &
+          & variable_name='SUB_FR_OC',                &
+          & fill_array = sse_init_vars%fr_oc_deep)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      ELSE
+        sse_init_vars%fr_oc_deep=0._wp
+      END IF
+
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
@@ -418,7 +429,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
 
     ! IF (TRIM(tile%name) /= 'box') THEN
-    IF (TRIM(tile%name) == 'land') THEN
+    IF ( (model%config%use_tmx .AND. .NOT. tile%Has_children()) .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
@@ -652,7 +663,6 @@ CONTAINS
       ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
       !$ACC ENTER DATA CREATE(fract_water, fract_ice)
 
-      !$noACC UPDATE DEVICE(soil_depth_sl,w_soil_sl,w_ice_sl)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
         DO ib = 1, nblks
@@ -723,7 +733,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$noACC UPDATE DEVICE(heat_cond)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
         DO ib=1,nblks
@@ -775,9 +784,6 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         END IF
       END IF
-      !$noACC UPDATE HOST(vol_heat_cap_snow, heat_cond_snow)
-      ! ELSE
-      !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
     END IF
 
   END SUBROUTINE init_soil_properties
