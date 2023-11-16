@@ -162,6 +162,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: D_O2_surface         ! diffusivity of O2 in surface air [m2 s-1]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':diffusion_setup'
+
     ! locals
     REAL(wp) :: D_CH4_air  (mxlay_above_rock)        ! diffusivity of CH4 in air [m2 s-1]
     REAL(wp) :: D_CO2_air  (mxlay_above_rock)        ! diffusivity of CO2 in air [m2 s-1]
@@ -213,11 +214,11 @@ CONTAINS
     ! Ensure that layer diffusivity is not larger than for layer(s) above
     DO iLayer = 2, mxlay_above_rock
       IF (D_CH4(iLayer) > D_CH4(iLayer-1)) &
-        D_CH4(iLayer) = D_CH4(iLayer-1)
+          D_CH4(iLayer) = D_CH4(iLayer-1)
       IF (D_CO2(iLayer) > D_CO2(iLayer-1)) &
-        D_CO2(iLayer) = D_CO2(iLayer-1)
-      IF (D_O2(iLayer) > D_O2(iLayer-1)) &
-        D_O2(iLayer) = D_O2(iLayer-1)
+          D_CO2(iLayer) = D_CO2(iLayer-1)
+      IF (D_O2 (iLayer) > D_O2 (iLayer-1)) &
+          D_O2 (iLayer) = D_O2 (iLayer-1)
     END DO
 
     ! Diffusivity to the air is assumed to be the same as for the upper soil layer
@@ -366,7 +367,7 @@ CONTAINS
         IF (frac_inun_pre < frac_inun_min) THEN
           CH4_dens_wet(1:mxlay) = 0._wp
           CO2_dens_wet(1:mxlay) = 0._wp
-          O2_dens_wet (1:mxlay) = 0._wp
+           O2_dens_wet(1:mxlay) = 0._wp
         END IF
 
         ! CH4
@@ -422,25 +423,24 @@ CONTAINS
     ! Define local arrays scaled to respective (non-)inundated parts of tile
     CH4_wet = CH4_dens_wet
     CO2_wet = CO2_dens_wet
-    O2_wet  = O2_dens_wet 
+     O2_wet =  O2_dens_wet
     CH4_dry = CH4_dens_dry
     CO2_dry = CO2_dens_dry
-    O2_dry  = O2_dens_dry 
+     O2_dry =  O2_dens_dry
 
     IF (frac_inun > 0._wp) THEN
       CH4_wet = CH4_dens_wet / frac_inun
       CO2_wet = CO2_dens_wet / frac_inun
-      O2_wet  = O2_dens_wet  / frac_inun
+       O2_wet =  O2_dens_wet / frac_inun
     ENDIF
 
     IF (frac_inun < 1._wp) THEN
       CH4_dry = CH4_dens_dry / (1._wp - frac_inun)
       CO2_dry = CO2_dens_dry / (1._wp - frac_inun)
-      O2_dry  = O2_dens_dry  / (1._wp - frac_inun)
+       O2_dry =  O2_dens_dry / (1._wp - frac_inun)
     ENDIF
 
   END SUBROUTINE init_gas_pools
-
 
   !!
   ! @brief     Determine the CH4 / CO2 production and vertical distribution
@@ -449,7 +449,7 @@ CONTAINS
   PURE SUBROUTINE production(is_peatland, is_wet, mxlay_above_rock, mxlay_above_wt,        &
                         frac_CH4_anox_mineral, frac_CH4_anox_organic, meth_q10, root_dist, &
                         inun_frac, Tsoil, OxicDecompCarbon, AnoxDecompCarbon,              &
-                        CH4_Prod, CO2_Prod, O2_Uptake, CH4_prod_ratio, CO2_Prod_anoxid,co)
+                        CH4_Prod, CO2_Prod, O2_Uptake, CH4_prod_ratio)
     LOGICAL,  INTENT(in)  :: is_peatland      ! peatland flag (.TRUE. if peatland)
     LOGICAL,  INTENT(in)  :: is_wet           ! wetness state, .FALSE. = dry, .TRUE. = wet
     INTEGER,  INTENT(in)  :: mxlay_above_rock ! layer number above bedrock
@@ -466,8 +466,6 @@ CONTAINS
     REAL(wp), INTENT(out) :: CO2_Prod(:)      ! CO2 production per layer [mol m-2 ts-1]
     REAL(wp), INTENT(out) :: O2_Uptake(:)     ! O2 uptake during oxic CO2 production per layer [mol m-2 ts-1]
     REAL(wp), INTENT(out) :: CH4_Prod_ratio   ! ratio of CH4 to total anoxic production []
-REAL(wp), INTENT(out), optional :: CO2_Prod_anoxid(:) ! CO2 production per layer under anoxid cond. [mol m-2 ts-1]
-REAL(wp), INTENT(out), optional :: CO ! Total oxid input [mol m-2 ts-1]
 
     ! Parameters
     CHARACTER(len=*), PARAMETER :: routine = modname//':production'
@@ -498,7 +496,6 @@ REAL(wp), INTENT(out), optional :: CO ! Total oxid input [mol m-2 ts-1]
     carbon_dist    = 0._wp
     root_dist_peat = 1._wp                ! we assume equally distributed C emissions per layer in peatland
     CH4_Prod_ratio = 0._wp
-if (present(co)) co = 0._wp
 
     ! production is different for peatlands and inundated areas:
     ! peatlands have vertically stacked oxic / anoxic layers, while
@@ -521,7 +518,6 @@ if (present(co)) co = 0._wp
       carbon_oxic = OxicDecompCarbon
       carbon_anox = AnoxDecompCarbon
     END IF ! .NOT. is_peatland
-if (present(co)) co = carbon_oxic
 
     ! In non-peatlands, inundated fraction is completely anoxic. This simplifies things substantially.
     ! we assume mineral soils in this case, using frac_CH4_anox_mineral
@@ -609,11 +605,6 @@ if (present(co)) co = carbon_oxic
     IF (SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock)) > 0._wp) &
       CH4_Prod_ratio = SUM(CH4_prod(1:mxlay_above_rock))/SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock))
 
-if (present(co2_prod_anoxid)) then
-        co2_prod_anoxid(:) = 0._wp
-        co2_prod_anoxid(1:mxlay_above_rock) = carbon_dist(1:mxlay_above_rock)
-endif
-
   END SUBROUTINE production
 
   !!
@@ -623,7 +614,9 @@ endif
   PURE ELEMENTAL SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, Tsoil, rel_soil_moist, &
                                          dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod, &
                                          CH4_Oxid, CO2_Oxid, O2_Oxid, O2_Other)
+
     USE mo_jsb_physical_constants, ONLY: tmelt
+
     LOGICAL,  INTENT(in)  :: is_wet            ! wetness state: .FALSE. = dry, .TRUE. = wet
     REAL(wp), INTENT(in)  :: dt                ! time step [s]
     REAL(wp), INTENT(in)  :: oxid_scale_dry    ! 
@@ -716,8 +709,10 @@ endif
   PURE SUBROUTINE plant_transport(GAS, layer_thick, layer_depth, mxlay_above_rock, mxlay_above_wt, &
                                   dt, Tsoil, relative_porevol, dens2conc, conc2dens, tiller_area,  &
                                   D_GAS, GAS_conc_atm, GAS_dens, GAS_Plant, GAS_excess)
+
     USE mo_methane_constants, ONLY: t_specie_const, minimum_porevol
     USE mo_methane_util,      ONLY: determine_Henry_cc
+
     TYPE (t_specie_const), INTENT(in)  :: GAS                 ! Constants for specific gas
     REAL(wp),              INTENT(in)  :: layer_thick(:)      ! soil layer thickness [m]
     REAL(wp),              INTENT(in)  :: layer_depth(:)      ! soil layer depth [m]
@@ -786,6 +781,7 @@ endif
   SUBROUTINE ebullition(is_peatland, mxlay_above_rock, mxlay_above_wt, Tsoil, surface_air_pressure, &
                         Dz, relative_porevol, water_table, &
                         dens2conc, conc2dens, CH4_dens, CH4_ebul)
+
     USE mo_jsb_physical_constants, ONLY: UniversalGasConstant => argas, tmelt, rhoh2o, grav
     USE mo_methane_util,           ONLY: dissolved_gas
     USE mo_methane_constants,      ONLY: CH4_consts
@@ -904,12 +900,6 @@ endif
           CH4_Ebul(iLayer) = -CH4_ebul_vol / ((UniversalGasConstant * Tsoil(iLayer)) / (surface_air_pressure + hydro_press))
         END IF
 
-!        IF (CH4_Ebul(iLayer) > 0._wp) THEN
-!          WRITE(message_text,*) 'Ebullition positive in layer ', iLayer
-!          CALL message(routine, TRIM(message_text), all_print=.TRUE., level=em_warn)
-!          WRITE(message_text,*) 'ebulvol vgc gasvol gas ebul ', CH4_ebul_vol,CH4_vgc,CH4_gas_vol,CH4_gas(iLayer),CH4_Ebul(iLayer)
-!          CALL message(routine, TRIM(message_text), all_print=.TRUE., level=em_warn)
-!        END IF
       END IF
 
     END DO
@@ -931,8 +921,10 @@ endif
                    CH4_dens, CO2_dens, O2_dens,                                &
                    CH4_Oxid, CO2_Oxid, O2_Oxid, CH4_Ebul, O2_Other,            &
                    surf_CH4_flux, surf_CO2_flux, surf_O2_flux, D_used, lissue, nissue)
+
     USE mo_methane_util,      ONLY: determine_Henry_cc, diffusion_cn
     USE mo_methane_constants, ONLY: CH4_consts, CO2_consts, O2_consts
+
     INTEGER,  INTENT(in)    :: nstep                  ! #diffusion time steps per model time step
     REAL(wp), INTENT(in)    :: implicit_contribution  ! Implicit contribution for Crank-Nicolson
     REAL(wp), INTENT(in)    :: dt                     ! Time step [s]
@@ -1020,7 +1012,7 @@ endif
           END IF
         END IF
         CH4_Oxid(iLayer) = CH4_Oxid(iLayer) * CH4_stress
-        O2_Oxid(iLayer) = O2_Oxid(iLayer) * CH4_stress
+         O2_Oxid(iLayer) =  O2_Oxid(iLayer) * CH4_stress
       ELSE    ! O2 limited
         IF (CH4_stress < 1._wp) THEN
           CH4_demand = -(CH4_Ebul(iLayer) + CH4_Plant(iLayer))
@@ -1031,21 +1023,13 @@ endif
           END IF
         END IF
         CH4_Oxid(iLayer) = CH4_Oxid(iLayer) * O2_stress
-        O2_Oxid (iLayer) = O2_Oxid (iLayer) * O2_stress
+         O2_Oxid(iLayer) =  O2_Oxid(iLayer) * O2_stress
       END IF
-      CO2_Oxid (iLayer) = -CH4_Oxid(iLayer)
-      CH4_Ebul (iLayer) =  CH4_Ebul(iLayer)  * CH4_stress
-      CH4_Plant(iLayer) =  CH4_Plant(iLayer) * CH4_stress
-      O2_Other (iLayer) =  O2_Other(iLayer)  * O2_stress
+      CO2_Oxid (iLayer) = -CH4_Oxid (iLayer)
+      CH4_Ebul (iLayer) =  CH4_Ebul (iLayer)  * CH4_stress
+      CH4_Plant(iLayer) =  CH4_Plant(iLayer)  * CH4_stress
+       O2_Other(iLayer) =   O2_Other(iLayer)  * O2_stress
 
-!      IF (O2_stress < 0._wp) THEN
-!        WRITE(message_text,*) 'O2 stress negative in layer ', iLayer
-!        CALL message(routine, TRIM(message_text), all_print=.TRUE., level=em_warn)
-!      END IF
-!      IF (CH4_stress < 0._wp) THEN
-!        WRITE(message_text,*) 'CH4 stress negative in layer ', iLayer
-!        CALL message(routine, TRIM(message_text), all_print=.TRUE., level=em_warn)
-!      END IF
     END DO   ! iLayer
 
     ! add density from CH4 ebullition to layer above water table, if water table is below surface
@@ -1107,9 +1091,11 @@ endif
   !!
   PURE ELEMENTAL SUBROUTINE calc_methane_fire(CO2_fire_emission, landscape_type,                &
                                               CH4_out_fire, fire_em_NO, fire_em_CO, fire_em_iso)
+
     USE mo_methane_constants,      ONLY: max_specietypes, ef => emission_factors_for_methane, &
                                          SPECIE_CH4, SPECIE_NOx, SPECIE_CO, SPECIE_ISOPRENE,  &
                                          molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
+
     REAL(wp), INTENT(in)  :: CO2_fire_emission                ! CO2 emissions from fire [kg(CO2) m-2(grid cell) s-1]
     INTEGER,  INTENT(in)  :: landscape_type                   ! Emission factors for tile veg type and various chem species
                                                               ! [g(specie) kg-1(dry matter)]
@@ -1147,6 +1133,7 @@ endif
 !          (cover_type==13) .OR. (cover_type==16))      : C4Flag
   PURE ELEMENTAL SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
                                                   termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
+
     USE mo_methane_constants, ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
 
     LOGICAL,            INTENT(in)    :: is_crop            ! Is this a crop type
@@ -1160,14 +1147,14 @@ endif
     REAL(wp),           INTENT(inout) :: frac_non_crop      ! Fraction of area over which sum_non_crop has been summed
     REAL(wp),           INTENT(inout) :: sum_non_crop       ! CH4 production from all non-crop tiles
 
-    ! locals
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_methane_termites'
-    REAL(wp) :: termite_CH4_g_h
-
     REAL(wp), PARAMETER  :: efactor_CH4_TRO = 2.8e-6_wp     ! [g CH4 / g termite / h]
     REAL(wp), PARAMETER  :: efactor_CH4_TEM = 1.7e-6_wp     ! [g CH4 / g termite / h]
     REAL(wp), PARAMETER  :: seconds_per_year = 31536000._wp
     REAL(wp), PARAMETER  :: seconds_per_hour = 3600._wp
+
+    ! locals
+    REAL(wp) :: termite_CH4_g_h
 
     termite_biomass = 0._wp
     termite_CH4_g_h = 0._wp
@@ -1201,6 +1188,7 @@ endif
   END SUBROUTINE calc_methane_termites
 
   PURE ELEMENTAL SUBROUTINE calc_methane_herbivores(herbivory2atm, iswoody, CH4_out_herbivore)
+
     USE mo_methane_constants, ONLY: molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
 
     REAL(wp), INTENT(in)  :: herbivory2atm                 ! herbivory C-flux to atmosphere
@@ -1249,7 +1237,6 @@ endif
     root_dist(:) = 0._wp
 
     IF (root_dist_beta < 0._wp) THEN
-!      CALL message(routine, 'Cannot determine root distribution for tile', level=em_warn)
       root_dist(1:mxlay_above_rock) = layer_thick(1:mxlay_above_rock)
     ELSE
       DO iLayer = 1, mxlay_above_rock
