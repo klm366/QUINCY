@@ -33,16 +33,6 @@ MODULE mo_pheno_constants
   IMPLICIT NONE
   PUBLIC
 
-  !< photosynthetic pathways and growth forms in the QUINCY model
-  !<
-  !< TODO re-write as ENUM
-  !<
-  INTEGER, PARAMETER ::                     &
-      ievergreen              = 1         , &
-      isummergreen            = 2         , &
-      iraingreen              = 3         , &
-      iperennial              = 4
-
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_constants'
 
 #endif

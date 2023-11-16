@@ -54,7 +54,8 @@ CONTAINS
     USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
-    USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
+    USE mo_pheno_parameters,    ONLY: init_pheno_parameters
+    USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
@@ -152,11 +153,11 @@ CONTAINS
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_sb_constants
-           CALL init_pheno_parameters_quincy
+           CALL init_q_pheno_parameters
            CALL init_atmland_constants
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
-           CALL init_pheno_parameters_jsbach
+           CALL init_pheno_parameters
            CALL init_assimi_parameters_jsbach
            CALL init_rad_parameters_jsbach
          END SELECT

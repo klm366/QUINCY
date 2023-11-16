@@ -1,32 +1,20 @@
+!> Summary: QUINCY calculate vegetation phenology
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief module to determine the phenological state of a plant 
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2016-04-11)
-!! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### determine onset and end of the growing season across plant functional types (PFT)
+!>
 MODULE mo_q_pheno_process
 #ifndef __NO_JSBACH__
 
@@ -37,7 +25,7 @@ MODULE mo_q_pheno_process
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_phenology_quincy
+  PUBLIC :: update_q_phenology
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_pheno_process'
 
@@ -54,16 +42,16 @@ CONTAINS
   !>  Dev: Have more cost-benefit in decision to start/stop growing season
   !>      what about seasonality beyond off/on behaviour? -> implies some collaboration between
   !>      turnover rates and phenology -> should the two be linked?
-  SUBROUTINE update_phenology_quincy(tile, options)
+  SUBROUTINE update_q_phenology(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, PHENO_, ASSIMI_, VEG_
+    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, ASSIMI_, VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -73,16 +61,16 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology_quincy'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_q_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
@@ -104,7 +92,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_PHENO_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)                 RETURN  ! run task only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -113,15 +101,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)                            ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)                    ! inout
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                            ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                    ! inout
     ! ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)       ! in
     ! VEG_ 2D
@@ -162,7 +150,7 @@ CONTAINS
       & growth_req_p_tlabile_mavg(:)       , &
       & nd_dormance(:)                     , &
       & gdd(:)                             )    ! inout
-  END SUBROUTINE update_phenology_quincy 
+  END SUBROUTINE update_q_phenology 
 
   ! ======================================================================================================= !
   !> calculate phenology 
@@ -195,8 +183,8 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
-    USE mo_pheno_parameters,        ONLY: gdd_t_air_threshold
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
     REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter

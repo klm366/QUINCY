@@ -57,7 +57,7 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_
+    USE mo_jsb_process_class,               ONLY: VEG_, Q_PHENO_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_grid
     USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
@@ -72,7 +72,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -92,9 +92,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ (used only with models: QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+    ! Q_PHENO_ (used only with models: QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
     dsl4jsb_Real2D_onDomain      :: lai    
     dsl4jsb_Real3D_onDomain      :: lai_cl
     ! VEG_ 2D
@@ -191,18 +191,18 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     SELECT CASE(model%config%qmodel_id)
     CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
-      dsl4jsb_Get_memory(PHENO_)
+      dsl4jsb_Get_memory(Q_PHENO_)
     END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
     veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D & 3D
+    ! Q_PHENO_ 2D & 3D
     SELECT CASE(model%config%qmodel_id)
     CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
-      dsl4jsb_Get_var2D_onDomain(PHENO_, lai)
-      dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)
+      dsl4jsb_Get_var2D_onDomain(Q_PHENO_, lai)
+      dsl4jsb_Get_var3D_onDomain(Q_PHENO_, lai_cl)
     END SELECT
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
