@@ -33,16 +33,27 @@ MODULE mo_methane_constants
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_constants'
 
   ! Types and constants for specific chemical species
+  ! Diffusivity constants expects temperature in °C
   TYPE t_specie_const
     CHARACTER (LEN=10)         :: specie_name  ! Name of chemical specie
     REAL(wp)                   :: molarMass_kg ! Molar mass of the speice [kg mol-1]
     REAL(wp)                   :: henry_k_inv  ! inverted Henry constant at 298K [L atm mol-1]
     REAL(wp)                   :: henry_const  ! Coefficient in Henry's law (Sander 1999) [K-1]
+    REAL(wp)                   :: D_air_0      ! Constant part of diffusivity in air (Lerman, 1979) [cm2 s-1]
+    REAL(wp)                   :: D_air_1      ! Linear temperature dependency of diffusivity in air (Lerman, 1979) [cm2 s-1 K-1]
+    REAL(wp)                   :: D_water_0    ! Constant part of diffusivity in water (Broecker and Peng, 1974) [cm2 s-1]
+    REAL(wp)                   :: D_water_1    ! Linear temperature dependency of diffusivity in water (B&P, 1974) [cm2 s-1 K-1]
+    REAL(wp)                   :: D_water_2    ! Square temperature dependency of diffusivity in water (B&P, 1974) [cm2 s-1 K-2]
+    REAL(wp)                   :: D_water_scale! Scaling of water diffusivity  (Broecker and Peng, 1974) []
   END TYPE t_specie_const
 
-  TYPE (t_specie_const), PARAMETER :: CO2_consts = t_specie_const('CO2',molarMassCO2,    29.4_wp, 2400.0_wp)
-  TYPE (t_specie_const), PARAMETER :: CH4_consts = t_specie_const('CH4',amch4/1000.0_wp,714.29_wp,1600.0_wp)
-  TYPE (t_specie_const), PARAMETER :: O2_consts  = t_specie_const('O2', amo2 /1000.0_wp,769.23_wp,1500.0_wp)
+  ! Name  molarMass_kg   henry_k_inv henry_const   D_air_0     D_air_1   D_water_0   D_water_1     D_water_2 D_water_scale
+  TYPE (t_specie_const), PARAMETER :: CO2_consts = t_specie_const( &
+    'CO2',molarMassCO2,      29.4_wp,  2400.0_wp, 0.1325_wp, 0.00090_wp, 0.9390_wp, 0.02671_wp, 0.0004095_wp,         1e-5 )
+  TYPE (t_specie_const), PARAMETER :: CH4_consts = t_specie_const( &
+    'CH4',amch4/1000.0_wp, 714.29_wp,  1600.0_wp, 0.1875_wp, 0.00130_wp, 0.9798_wp, 0.02986_wp, 0.0004381_wp,         1e-5 )
+  TYPE (t_specie_const), PARAMETER :: O2_consts  = t_specie_const( &
+    'O2', amo2 /1000.0_wp, 769.23_wp,  1500.0_wp, 0.1759_wp, 0.00117_wp, 1.1720_wp, 0.03443_wp, 0.0005048_wp,         1e-5 )
 
   ! All emission factors from Kaiser et al., 2012, doi:10.5194/bg-9-527-2012
   ! All in [g(specie)/kg(dry matter)]

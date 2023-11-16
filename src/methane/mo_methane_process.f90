@@ -144,7 +144,9 @@ CONTAINS
   PURE SUBROUTINE diffusion_setup(is_peatland, mxlay_above_rock, mxlay_above_wt, bclapp, &
                                   relative_porevol, relative_pore_air, Tsoil, &
                                   D_CH4, D_CO2, D_O2, D_CH4_surface, D_CO2_surface, D_O2_surface)
-    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_methane_constants, ONLY: CO2_consts, CH4_consts, O2_consts
+    USE mo_methane_util,      ONLY: calc_diffusivity
+
     LOGICAL,  INTENT(in)  :: is_peatland          ! peatland flag (TRUE = peatland)
     INTEGER,  INTENT(in)  :: mxlay_above_rock     ! layer number above bedrock
     INTEGER,  INTENT(in)  :: mxlay_above_wt       ! layer number above water table
@@ -167,35 +169,17 @@ CONTAINS
     REAL(wp) :: D_CH4_water(mxlay_above_rock)        ! diffusivity of CH4 in water [m2 s-1]
     REAL(wp) :: D_CO2_water(mxlay_above_rock)        ! diffusivity of CO2 in water [m2 s-1]
     REAL(wp) :: D_O2_water (mxlay_above_rock)        ! diffusivity of O2 in water [m2 s-1]
-    REAL(wp) :: Tsoil_C    (mxlay_above_rock)        ! soil temperature [degC]
 
     REAL(wp) :: conv                                            ! conversion factor
     INTEGER  :: iLayer                                          ! layer counter
 
+    CALL calc_diffusivity(CH4_consts,Tsoil(1:mxlay_above_rock),D_CH4_air(:),D_CH4_water(:))
+    CALL calc_diffusivity(CO2_consts,Tsoil(1:mxlay_above_rock),D_CO2_air(:),D_CO2_water(:))
+    CALL calc_diffusivity( O2_consts,Tsoil(1:mxlay_above_rock),D_O2_air (:),D_O2_water (:))
+
     D_CH4 = 0._wp
     D_CO2 = 0._wp
     D_O2  = 0._wp
-
-    Tsoil_C(1:mxlay_above_rock) = Tsoil(1:mxlay_above_rock) - tmelt
-
-    DO iLayer = 1, mxlay_above_rock
-      ! Diffusivity in air
-      ! From Lerman (1979)
-      ! Units are [cm2 s-1]
-      D_CH4_air(iLayer) = 0.1875_wp + 0.0013_wp  * Tsoil_C(iLayer)
-      D_CO2_air(iLayer) = 0.1325_wp + 0.0009_wp  * Tsoil_C(iLayer)
-      D_O2_air (iLayer) = 0.1759_wp + 0.00117_wp * Tsoil_C(iLayer)
-
-      ! Diffusivity in water
-      ! following Broecker and Peng (1974)
-      ! Units are [cm2 s-1]
-      D_CH4_water(iLayer) = (0.9798_wp + 0.02986_wp   * Tsoil_C(iLayer) + &
-                                         0.0004381_wp * Tsoil_C(iLayer) ** 2._wp) * 1.e-5_wp
-      D_CO2_water(iLayer) = (0.939_wp  + 0.02671_wp   * Tsoil_C(iLayer) + &
-                                         0.0004095_wp * Tsoil_C(iLayer) ** 2._wp) * 1.e-5_wp
-      D_O2_water (iLayer) = (1.172_wp  + 0.03443_wp   * Tsoil_C(iLayer) + &
-                                         0.0005048_wp * Tsoil_C(iLayer) ** 2._wp) * 1.e-5_wp
-    END DO
 
     ! Use Millington and Quirk 1961 (MQ) Model tested in
     ! Iiyama and Hasegawa 2005.
@@ -236,17 +220,10 @@ CONTAINS
         D_O2(iLayer) = D_O2(iLayer-1)
     END DO
 
-    ! Convert diffusivity from cm2 s-1 to m2 s-1
-    ! cm2 / 10000 = m2
-    ! Wanias actual units are m2 day-1 -> she also multiplies with 86400
-    ! -------------------------------------------
-    D_CH4(1:mxlay_above_rock) = D_CH4(1:mxlay_above_rock) / 10000._wp
-    D_CO2(1:mxlay_above_rock) = D_CO2(1:mxlay_above_rock) / 10000._wp
-    D_O2(1:mxlay_above_rock)  = D_O2(1:mxlay_above_rock)  / 10000._wp
-
-    D_CH4_surface = D_CH4_air(1) / 10000._wp
-    D_CO2_surface = D_CO2_air(1) / 10000._wp
-    D_O2_surface  = D_O2_air (1) / 10000._wp
+    ! Diffusivity to the air is assumed to be the same as for the upper soil layer
+    D_CH4_surface = D_CH4_air(1)
+    D_CO2_surface = D_CO2_air(1)
+    D_O2_surface  = D_O2_air (1)
 
   END SUBROUTINE diffusion_setup
 
