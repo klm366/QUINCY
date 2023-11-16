@@ -29,7 +29,7 @@ MODULE mo_methane_util
   PUBLIC :: concentration_mol_m3_2_mmr, concentration_vmr_2_mmr
   PUBLIC :: concentration_mol_m3_2_vmr, concentration_mmr_2_vmr
   PUBLIC :: convert_2_vmr, convert_2_mmr, convert_2_mol_m3
-  PUBLIC :: diffusion_cn
+  PUBLIC :: calc_diffusivity, diffusion_cn
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_util'
 
@@ -340,6 +340,32 @@ CONTAINS
     END SELECT
 
   END SUBROUTINE convert_2_mol_m3
+
+  !!
+  ! @brief Calculates diffusivities for a gas in air and water
+  !
+  !!
+  PURE ELEMENTAL SUBROUTINE calc_diffusivity(GAS,TK,D_air,D_water)
+
+    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_methane_constants,      ONLY: t_specie_const
+
+    TYPE (t_specie_const), INTENT(in)  :: GAS     ! Constants for relevante GAS
+    REAL(wp),              INTENT(in)  :: TK      ! Temperature to calculate diffusivities for [K]
+    REAL(wp), OPTIONAL,    INTENT(out) :: D_air   ! Diffusivity of gas in air [m2 s-1]
+    REAL(wp), OPTIONAL,    INTENT(out) :: D_water ! Diffusivity of gas in air [m2 s-1]
+
+    REAL(wp) :: T
+
+    T = TK - tmelt ! Convert to °C
+
+    ! Constants are in [cm2 s-1]. convert to [m2 s-1] on the fly
+    IF (PRESENT(D_air)) &
+      D_air   = (GAS%D_air_0   + GAS%D_air_1   * T)                                             * 1.e-4_wp
+    IF (PRESENT(D_water)) &
+      D_water = (GAS%D_water_0 + GAS%D_water_1 * T + GAS%D_water_2 * T * T) * GAS%D_water_scale * 1.e-4_wp
+
+  END SUBROUTINE calc_diffusivity
 
   !!
   ! @brief Adds a surface layer to a layer vector. Vectors must have the right size upon call
