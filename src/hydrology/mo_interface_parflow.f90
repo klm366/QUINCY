@@ -33,8 +33,10 @@ MODULE mo_interface_parflow
   USE mo_master_control,      ONLY: get_my_process_name
   USE mo_yac_finterface,      ONLY: yac_fget_version, yac_fdef_comp, &
        &                            yac_fdef_datetime, yac_fdef_grid, &
-       &                            yac_fdef_field, yac_fput, &
-       &                            yac_fdef_mask,            &
+       &                            yac_fdef_points, yac_fset_global_index, &
+       &                            yac_fset_core_mask, yac_fdef_mask,      &
+       &                            yac_fdef_field_mask, yac_fenddef,       &
+       &                            yac_fput, &
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
@@ -93,7 +95,6 @@ CONTAINS
     INTEGER :: comp_ids(1)
     INTEGER :: cell_point_ids(1) ! yac point ids
     INTEGER :: grid_id           ! yac grid id
-    INTEGER :: n_patch_cells     ! number of cells (compute + halo), n_patch_cells <= nproma*nblks
 
     INTEGER :: cell_mask_ids(1)
     INTEGER :: jb, jc, nn
@@ -107,6 +108,8 @@ CONTAINS
     LOGICAL,  ALLOCATABLE :: is_valid(:)
 
     REAL(wp), ALLOCATABLE :: lsmnolake(:,:)
+
+    REAL(wp), PARAMETER :: eps = 1.E-10_wp
 
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: startdatestring
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: stopdatestring
@@ -278,8 +281,8 @@ CONTAINS
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
 
-              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) 
-                .OR. ABS( prm_field(1)%clat(jc,jb) ) .GT. model%config%parflow_lat) THEN
+              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
+                & .OR. ABS( prm_field(1)%clat(jc,jb) ) .GT. model%config%parflow_lat) THEN
                 ! ocean point (fraction of ocean is >0., lsmnolake .lt. 1.) is valid
                 ! or grid point outside the Parflow latitude belt
                 is_valid((jb-1)*nproma+jc) = .FALSE.

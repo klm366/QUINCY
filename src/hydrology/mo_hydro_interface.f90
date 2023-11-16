@@ -656,7 +656,7 @@ CONTAINS
         & evapo_skin(:),                 & !< out
         & evapo_snow(:),                 & !< out
         & water_excess(:),               & !< out
-        & evapo_deficit(:)               & !< out
+        & evapo_deficit(:),              & !< out
         & water_to_parflow(:)            & !< out
         & )
 
