@@ -110,7 +110,7 @@ CONTAINS
   !>
   SUBROUTINE calculate_time_average_assimilation(tile, options)
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
@@ -127,9 +127,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
+    REAL(wp)                                :: dtime                !< timestep
     INTEGER                                 :: ic                   !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                                 :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_assimilation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -237,7 +237,7 @@ CONTAINS
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
     DO ic = 1, nc
-      IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
+      IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           beta_air_daytime(ic)     = beta_air_daytime_dacc(ic)     / daytime_counter(ic)

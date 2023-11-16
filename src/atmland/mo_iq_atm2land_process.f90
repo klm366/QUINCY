@@ -1,20 +1,34 @@
-!> quincy atm2land routines: only required within ICON-Land and not in QS (thus _iq_)
-!>
-!> ICON-Land
-!>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
-!>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
-!> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+
+!> Summary: quincy atm2land routines: only required within ICON-Land and not in QS (thus _iq_)
 !>
 !>### Contains routines for the a2l (atm2land) proc
 !>
-MODULE mo_iq_atm2land_process
-#ifndef __NO_QUINCY__
+!>
+!> Copyright (c) 2023 Julia Nabel
+!>
+!>#### Revision History
+!> - First version    by Julia Nabel (2023-11-06)
+!>
+!>#### License
+!>
+!> QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!> Copyright (C) 2023 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
+!>
+!> This file is part of the QUINCY model.
+!> The QUINCY model is free software: you can redistribute it and/or modify
+!> it under the terms of the GNU General Public License version 3,
+!> as published by the Free Software Foundation.
+!>
+!> The QUINCY model is distributed in the hope that it will be useful,
+!> but WITHOUT ANY WARRANTY; without even the implied warranty of
+!> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!> GNU General Public License for more details.
+!>
+!> You should have received a copy of the GNU General Public License
+!> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!> ======================================================================================================
+MODULE mo_q_atm2land_process
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8
@@ -24,7 +38,7 @@ MODULE mo_iq_atm2land_process
 
   PUBLIC :: update_local_time_and_daytime_counter
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_iq_atm2land_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_atm2land_process'
 
 CONTAINS
 
@@ -67,5 +81,5 @@ CONTAINS
   END SUBROUTINE update_local_time_and_daytime_counter
 
 #endif
-END MODULE mo_iq_atm2land_process
+END MODULE mo_q_atm2land_process
 

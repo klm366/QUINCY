@@ -33,7 +33,7 @@ MODULE mo_q_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
-  USE mo_jsb_math_constants,    ONLY: eps8
+  USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
 
@@ -80,6 +80,8 @@ CONTAINS
     INTEGER                           :: icanopy             !< loop 1,ncanopy
     INTEGER                           :: nsnow               !< number of snow layers
     INTEGER                           :: iblk, ics, ice, nc  !< dimensions
+    INTEGER                           :: ic                  !< looping
+    REAL(wp)                          :: dtime               !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -108,6 +110,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: appfd
     dsl4jsb_Real2D_onChunk :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk :: albedo
+    dsl4jsb_Real2D_onChunk :: albedo_noon
     dsl4jsb_Real2D_onChunk :: net_radiation
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
@@ -124,6 +127,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
+    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: w_snow_snl    
     ! PHENO_ 2D
@@ -140,6 +144,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -168,6 +173,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)   ! in
     ! ---------------------------
     ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! out
@@ -189,6 +195,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)            ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_noon)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)            ! out
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)           ! out
@@ -253,11 +260,21 @@ CONTAINS
 
     !> 4.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    WHERE((swvis_srf_down(:) + swnir_srf_down(:)) > eps8)
-      albedo(:) = ( alb_vis(:) * swvis_srf_down(:)   + &
-                    alb_nir(:) * swnir_srf_down(:) ) / &
-                    (swvis_srf_down(:) + swnir_srf_down(:))
-    END WHERE
+    DO ic = 1, nc
+      IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
+        albedo(ic) = ( alb_vis(ic) * swvis_srf_down(ic) + alb_nir(ic) * swnir_srf_down(ic) ) &
+          &           / (swvis_srf_down(ic) + swnir_srf_down(ic))
+      ELSE
+        ! albedo is not defined when radiation <= 0 and set to zero
+        albedo(ic) = 0.0_wp 
+      ENDIF
+
+      ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
+      IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
+        albedo_noon(ic) = albedo(ic)
+      ENDIF
+    END DO
+
     sw_srf_net(:) = swvis_srf_net(:) + swnir_srf_net(:)
 
     !> 5.0 diagnose net radiation (temporarily here for diagnostic purposes)
