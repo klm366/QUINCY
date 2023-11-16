@@ -270,8 +270,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Real2D_onChunk :: GDD_prev_year
     dsl4jsb_Real2D_onChunk :: GDD_sum
     dsl4jsb_Real2D_onChunk :: min_mmtemp20
-    dsl4jsb_Real2D_onChunk :: layer_wt
-    dsl4jsb_Real2D_onChunk :: test
 
     ! Pointers to allocated non-variables
     !
@@ -451,7 +449,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_net)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_out_net)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_prod_ratio_out_wet)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%diff_out)
@@ -461,7 +458,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%diff_out)
@@ -472,7 +468,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%dens_sl)
-!    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%prod_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%oxid_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%diff_out)
@@ -482,7 +477,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%total_initial)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_tot%total_final)
 !    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_tot%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%diff_out)
@@ -492,7 +486,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%diff_out)
@@ -502,7 +495,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%diff_out)
@@ -513,7 +505,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, O2_dry%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%prod_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%diff_out)
@@ -531,7 +522,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_CO)
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_iso)
     dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
-!    dsl4jsb_Get_var2D_onChunk(CH4_, layer_wt)
     IF (dbg) THEN
       dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)
       dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%oxid_out_sl)
@@ -646,18 +636,12 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
         IF (nly < dsl4jsb_Config(CH4_)%minimum_no_layers) THEN
           compute_flag = .FALSE.
           CH4_out_net(i) = 0._wp
-          CH4_wet%out(i) = 0._wp
-          CH4_dry%out(i) = 0._wp
           CO2_out_net(i) = -(OxicDecompCarbon(i) + AnoxDecompCarbon(i)) / dt
-          CO2_wet%out(i) = CO2_out_net(i)
-          CO2_dry%out(i) = 0._wp
         ENDIF
 
         IF (frac_tile(i) < dsl4jsb_Config(CH4_)%tile_threshold) THEN
           compute_flag = .FALSE.
           CH4_out_net(i) = 0._wp
-          CH4_wet%out(i) = 0._wp
-          CH4_dry%out(i) = 0._wp
           CO2_out_net(i) = -(OxicDecompCarbon(i) + AnoxDecompCarbon(i)) / dt
 
           ! flush stored C out and reset to ensure conservation
@@ -676,8 +660,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
           END IF
 
           CO2_out_net(i) = CO2_out_net(i) + stored_C_sum / dt
-          CO2_dry%out(i) = CO2_out_net(i)
-          CO2_wet%out(i) = 0._wp
 
           CO2_dry%dens_sl(i,1:nly) = 0._wp
           CO2_wet%dens_sl(i,1:nly) = 0._wp
@@ -845,7 +827,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
             IF (is_Wet) THEN
               IF (dbg) THEN
                 CH4_wet%test2d(i) = REAL(mxlay_above_wt,wp)
-                CH4_wet%test3d(i,:) = D_CH4(:)
+!                CH4_wet%test3d(i,:) = D_CH4(:)
                 CO2_wet%test3d(i,:) = D_CO2(:)
                  O2_wet%test3d(i,:) = D_O2(:)
               ENDIF
@@ -884,14 +866,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
           ENDDO ! iWetness
 
         ENDIF ! Compute flag
-
-        CH4_dry%out(i) = CH4_dry%total_out(i)! * (1._wp - frac_inun_loc)
-        CO2_dry%out(i) = CO2_dry%total_out(i)! * (1._wp - frac_inun_loc)
-         O2_dry%out(i) =  O2_dry%total_out(i)! * (1._wp - frac_inun_loc)
-        CH4_wet%out(i) = CH4_wet%total_out(i)! *          frac_inun_loc
-        CO2_wet%out(i) = CO2_wet%total_out(i)! *          frac_inun_loc
-         O2_wet%out(i) =  O2_wet%total_out(i)! *          frac_inun_loc
-        layer_wt(i) = REAL(mxlay_above_wt,wp)
 
 !        CH4_tot%out          (i) = CH4_dry%out          (i) * (1._wp-frac_inun_loc) + CH4_wet%out          (i) * frac_inun_loc
 !        CH4_tot%prod_out     (i) = CH4_dry%prod_out     (i) * (1._wp-frac_inun_loc) + CH4_wet%prod_out     (i) * frac_inun_loc
@@ -1043,12 +1017,10 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_air, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_air, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, mxlay_above_rock, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, layer_wt, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, root_dist_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_out_net, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_out_net, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_prod_ratio_out_wet, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%diff_out, weighted_by_fract)
@@ -1058,7 +1030,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%total_initial, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%total_final, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%dens_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%diff_out, weighted_by_fract)
@@ -1069,7 +1040,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%total_initial, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%total_final, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%dens_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%diff_out, weighted_by_fract)
@@ -1079,7 +1049,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%total_initial, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%total_final, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%dens_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%diff_out, weighted_by_fract)
@@ -1089,7 +1058,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%total_initial, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%total_final, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%dens_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%diff_out, weighted_by_fract)
@@ -1100,7 +1068,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%total_initial, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%total_final, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%dens_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%prod_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%oxid_out, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%diff_out, weighted_by_fract)
@@ -1147,10 +1114,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
       dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%oxid_out_sl, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%other_out_sl, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%plant_out_sl, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%test2d,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%test2d,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%test3d,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%test3d,       weighted_by_fract)
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

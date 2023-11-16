@@ -40,7 +40,6 @@ MODULE mo_ch4_memory_class
   !>
   TYPE t_chem_specie
     TYPE(t_jsb_var_real2d) ::   &
-      & out,                    & 
       & prod_out,               &
       & oxid_out,               &
       & diff_out,               &
@@ -72,7 +71,6 @@ MODULE mo_ch4_memory_class
 
   TYPE t_chem_ptrs
     REAL(wp), DIMENSION(:), POINTER ::     &
-      & out,                               & 
       & prod_out,                          &
       & oxid_out,                          &
       & diff_out,                          &
@@ -123,8 +121,6 @@ MODULE mo_ch4_memory_class
       & fire_em_CO,             &
       & fire_em_iso,            &
       & mxlay_above_rock,       & ! Contant throughout run
-      & mxlay_root,             & ! Currently constant thoughout run but may in future be dynamic
-      & layer_wt,               & ! StW: Integer? Need for these as variables?
       & tillers,                &
       & termite_biomass,        &
 !                               
@@ -141,16 +137,6 @@ MODULE mo_ch4_memory_class
 
     ! per layer
     TYPE(t_jsb_var_real3d) :: &
-!      & CH4_plant_sl,         &
-!      & CH4_prod_sl,          &
-!      & CH4_oxic_sl,          &
-!      & CH4_ebul_sl,          &
-!      & O2_plant_sl,          &
-!      & O2_other_sl,          &
-!      & O2_oxic_sl,           &
-!      & CH4_initial_sl,       &
-!      & CO2_initial_sl,       &
-!      & O2_initial_sl,        &
       & root_dist_sl
 
     REAL(wp), POINTER ::               &
@@ -228,14 +214,6 @@ CONTAINS
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=7.706281e-5_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
-    CALL mem%Add_var( 'test', mem%test,                                &
-      & hgrid, surface,                                                      &
-      & t_cf('test', 'xxx', ''),                                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level = BASIC, l_aggregate_all=.TRUE.,                        &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
     CALL mem%Add_var( 'CO2_air', mem%CO2_air,                                &
       & hgrid, surface,                                                      &
       & t_cf('CO2_air', 'mol m-3', ''),                                      &
@@ -255,22 +233,6 @@ CONTAINS
     CALL mem%Add_var( 'mxlay_above_rock', mem%mxlay_above_rock,              &
       & hgrid, surface,                                                      &
       & t_cf('mxlay_above_rock', '', ''),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
-    CALL mem%Add_var( 'mxlay_root', mem%mxlay_root,                          &
-      & hgrid, surface,                                                      &
-      & t_cf('mxlay_root', '', ''),                                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT ) ! NOTE: With dynamic roots: TSTEP_INSTANT
-
-    CALL mem%Add_var( 'layer_wt', mem%layer_wt,                              &
-      & hgrid, surface,                                                      &
-      & t_cf('layer_wt', '', ''),                                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
@@ -370,33 +332,16 @@ CONTAINS
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     ENDIF
 
-!    CALL mem%Add_var( 'anox_prod_in', mem%anox_prod_in,                      &
-!      & hgrid, surface,                                                      &
-!      & t_cf('anox_prod_in', '', ''),                                        & ! unit?
-!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-!      & prefix, suffix,                                                      &
-!      & output_level = FULL, l_aggregate_all=.TRUE.,                         &
-!      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
-!    CALL mem%Add_var( 'oxic_prod_in', mem%oxic_prod_in,                      &
-!      & hgrid, surface,                                                      &
-!      & t_cf('oxic_prod_in', '', ''),                                        & ! unit?
-!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-!      & prefix, suffix,                                                      &
-!      & output_level = FULL, l_aggregate_all=.TRUE.,                         &
-!      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
     CALL mem%Add_var( 'root_dist_sl', mem%root_dist_sl,                      &
       & hgrid, soil_w,                                                       &
       & t_cf('root_dist_sl', '', ''),                                        & ! unit?
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT ) ! By dynamic roots: TSTEP_INSTANT
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT ) ! By dynamic roots: TSTEP_INSTANT
 
   CONTAINS
 
-!    SUBROUTINE Init_chem_specie(specie_name, specie, mem, prefix, suffix, hgrid, use_other, other_name)
     SUBROUTINE Init_chem_specie(specie_name, specie, use_other, other_name)
     
       USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -423,14 +368,6 @@ CONTAINS
       layer         => Get_vgrid('soil_depth_water')
 
       specie%specie_name = TRIM(specie_name)
-    
-      CALL mem%Add_var( specie_name//'_out', specie%out,                       &
-        & hgrid, surface,                                                      &
-        & t_cf(specie_name//'_out', 'mol m-2 s-1', ''),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level = FULL, & !default_output_level,                                 &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
       CALL mem%Add_var( specie_name//'_prod_out', specie%prod_out,             &
         & hgrid, surface,                                                      &
@@ -473,7 +410,6 @@ CONTAINS
 !        & lrestart = .FALSE.,                                                  &
 !        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
-! >>> Debug
       IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
 
         CALL mem%Add_var( specie_name//'_prod_out_sl', specie%prod_out_sl,       &
@@ -518,8 +454,6 @@ CONTAINS
 
       ENDIF
     
-! <<<
-
       IF (uother) THEN
         IF (PRESENT(other_name)) THEN
           str = specie_name//'_'//other_name//'_out'
@@ -534,7 +468,6 @@ CONTAINS
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
-! >>> Debug
         IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
           CALL mem%Add_var( TRIM(str)//'_sl', specie%other_out_sl,                 &
             & hgrid, layer,                                                        &
@@ -544,7 +477,6 @@ CONTAINS
             & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
             & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
         ENDIF
-! <<<
       ENDIF
 
       CALL mem%Add_var( specie_name//'_total_out', specie%total_out,           &
