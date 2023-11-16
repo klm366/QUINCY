@@ -1,5 +1,5 @@
 
-!> Summary: quincy atm2land routines
+!> Summary: quincy atm2land routines: only required within ICON-Land and not in QS (thus _iq_)
 !>
 !>### Contains routines for the a2l (atm2land) proc
 !>
@@ -31,7 +31,7 @@ MODULE mo_q_atm2land_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
-  USE mo_jsb_math_constants,    ONLY: eps8
+  USE mo_jsb_math_constants,    ONLY: eps1, eps8
 
   IMPLICIT NONE
   PRIVATE
@@ -47,22 +47,23 @@ CONTAINS
   !> updates local time and updates or resets quincys daytime counter depending on the local time
   !>
   PURE ELEMENTAL SUBROUTINE update_local_time_and_daytime_counter( &
-      &                       global_seconds_day, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+      &                       global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
 
-    USE mo_run_config,         ONLY: dtime
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER ,  INTENT(in)        :: global_seconds_day     !< seconds passed on this day (global time)
+    REAL(wp),  INTENT(in)        :: dtime                  !< timestep
     REAL(wp),  INTENT(in)        :: lon                    !< longitude
     REAL(wp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
     REAL(wp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
     REAL(wp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER :: time_shift_in_hours
+    INTEGER  :: time_shift_in_hours
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_local_time_and_daytime_counter'
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! reset the daytime_counter if last timestep was midnight
-    IF (ABS(local_time_day_seconds - dtime) < eps8) THEN
+    IF (ABS(local_time_day_seconds - dtime) < eps1) THEN
       daytime_counter = 0.0_wp
     ENDIF
 

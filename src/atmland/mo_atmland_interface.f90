@@ -108,8 +108,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER :: iblk, ics, ice, nc, i, ic
-    INTEGER :: global_seconds_day
+    INTEGER  :: iblk, ics, ice, nc, i, ic
+    INTEGER  :: global_seconds_day
+    REAL(wp) :: dtime
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -158,10 +159,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
 
     model => Get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
@@ -486,7 +488,7 @@ CONTAINS
 
       ! Update local time and the daytime counter
       CALL update_local_time_and_daytime_counter( &
-        &     global_seconds_day, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+        &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
     END IF ! MODEL_QUINCY
 
   END SUBROUTINE update_atm2land

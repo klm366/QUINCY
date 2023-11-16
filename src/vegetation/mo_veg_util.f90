@@ -35,7 +35,7 @@ MODULE mo_veg_util
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
-  USE mo_jsb_math_constants,    ONLY: zero, eps8
+  USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -191,7 +191,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                                 :: dtime                !< timestep
+    REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -523,7 +523,7 @@ CONTAINS
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
     DO ic = 1, nc
-       IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
+       IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ! 1D

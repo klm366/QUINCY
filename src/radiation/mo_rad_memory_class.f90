@@ -149,7 +149,8 @@ MODULE mo_rad_memory_class
       & net_radiation                   !< surface net radiation [W m-2]
 
     TYPE(t_jsb_var_real2d)  :: &
-      & albedo                          !< total surface albedo [unitless]
+      & albedo,                &        !< total surface albedo [unitless]
+      & albedo_noon                     !< albedo at local solar noon, kept for 24h [unitless]
 
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_soil,                & !< radiation in VIS range absorbed by the soil [W m-2]
@@ -838,7 +839,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp )
-  
+
       CALL mem%Add_var('albedo', mem%albedo, &
         & hgrid, surface, &
         & t_cf('albedo', 'unitless', 'total surface albedo'), &
@@ -849,7 +850,18 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
+        CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
+        & hgrid, surface, &
+        & t_cf('albedo_noon', 'unitless', 'albedo at local solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
         & hgrid, surface, &
         & t_cf('arad_vis_soil', 'W m-2', 'radiation in VIS range absorbed by the soil'), &

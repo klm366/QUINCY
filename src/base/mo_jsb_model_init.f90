@@ -476,11 +476,11 @@ CONTAINS
 
       !-- set flux variables to zero
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")       ! ALL
+      CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
       CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
       ENDIF
-      CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
 
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN

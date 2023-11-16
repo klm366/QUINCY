@@ -1058,7 +1058,7 @@ CONTAINS
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
         global_seconds_day = get_secs_of_day(datetime_new)
         CALL update_local_time_and_daytime_counter( &
-          &     global_seconds_day, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+          &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
       END SELECT
 
       DEALLOCATE(evapo_act2pot)
