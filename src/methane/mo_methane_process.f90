@@ -101,14 +101,14 @@ CONTAINS
     END IF
 
     IF (is_wet) THEN
-      mxlay_above_wt = mxlay_above_rock
-      mxlay_acrotelm = 0
-    ELSE
       ! determine, in which layer water table is (remember: water table below surface is negative)
       mxlay_above_wt = find_layer(-water_table, mxlay_above_rock, layer_mid)
 
       ! determine, in which layer acrotelm ends
       mxlay_acrotelm = find_layer(acrotelm_height, mxlay_above_rock, layer_mid)
+    ELSE
+      mxlay_above_wt = mxlay_above_rock
+      mxlay_acrotelm = 0
     END IF
 
     ! determine relative pore volume, corrected by ice
