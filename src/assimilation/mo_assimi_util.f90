@@ -117,10 +117,10 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, ASSIMI_, PHENO_
+    dsl4jsb_Use_processes A2L_, ASSIMI_, Q_PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -134,7 +134,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -161,7 +161,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime_dacc
-    ! PHENO_
+    ! Q_PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -176,7 +176,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
@@ -203,8 +203,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)         ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)     ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)     ! out
-    ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! in
+    ! Q_PHENO_
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! in
 
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)

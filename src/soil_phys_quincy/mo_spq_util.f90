@@ -79,7 +79,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_math_constants,    ONLY: zero
 
     ! Use of process memories

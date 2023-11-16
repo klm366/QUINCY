@@ -1188,7 +1188,7 @@ CONTAINS
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
     USE mo_lnd_time_averages,             ONLY: mavg_period_tgrowth
-    USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,             ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------

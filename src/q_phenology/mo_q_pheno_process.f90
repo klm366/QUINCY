@@ -1,22 +1,22 @@
-!> QUINCY calculate vegetation phenology
+!> Summary: QUINCY calculate vegetation phenology
 !>
-!> ICON-Land
+!>#### ICON-Land
 !>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+!> Contact information: <https://icon-model.org>
 !>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
+!> See AUTHORS.TXT for a list of authors
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+!> ------------------------------------------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
 !>#### determine onset and end of the growing season across plant functional types (PFT)
 !>
 MODULE mo_q_pheno_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: true, false, test_false_true
@@ -34,9 +34,9 @@ CONTAINS
   ! ======================================================================================================= !
   !> update phenology - QUINCY
   !>   determine onset and end of the growing season for some PFT
-  !>
+  !> 
   !>   PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses
-  !>
+  !> 
   !>  @TODO
   !>  OBS: currently uncalibrated, in particular rain green phenology
   !>  Dev: Have more cost-benefit in decision to start/stop growing season
@@ -48,11 +48,11 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, Q_ASSIMI_, VEG_
+    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, ASSIMI_, VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(Q_ASSIMI_)
+    dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -61,12 +61,11 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
-    REAL(wp)                          :: dtime                  !< timestep length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_q_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(Q_ASSIMI_)
+    dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -75,7 +74,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
-    ! Q_ASSIMI_ 2D
+    ! ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
@@ -92,30 +91,27 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_PHENO_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0) RETURN !< run task only if the present tile is a pft
+    IF (tile%lcts(1)%lib_id == 0)                 RETURN  ! run task only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(Q_ASSIMI_)
+    dsl4jsb_Get_memory(ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
     ! Q_PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)               ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                          ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                  ! inout
-    ! Q_ASSIMI_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                            ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                    ! inout
+    ! ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)       ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_srf_tphen_mavg)            ! in
@@ -131,7 +127,6 @@ CONTAINS
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !>
     CALL calc_phenology(                     &
-      & dtime                              , &
       & lctlib%phenology_type              , &  ! lctlib
       & lctlib%beta_soil_flush             , &
       & lctlib%cn_leaf                     , &
@@ -155,13 +150,12 @@ CONTAINS
       & growth_req_p_tlabile_mavg(:)       , &
       & nd_dormance(:)                     , &
       & gdd(:)                             )    ! inout
-  END SUBROUTINE update_q_phenology
+  END SUBROUTINE update_q_phenology 
 
   ! ======================================================================================================= !
-  !> calculate phenology
-  !>
+  !> calculate phenology 
+  !> 
   ELEMENTAL SUBROUTINE calc_phenology(  &
-    & dtime                           , &
     & phenology_type                  , &
     & beta_soil_flush                 , &
     & cn_leaf                         , &
@@ -186,13 +180,12 @@ CONTAINS
     & nd_dormance                     , &
     & gdd )
     ! ----------------------------------------------------------------------------------------------------- !
-    USE mo_jsb_math_constants,      ONLY: one_day
+    USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),     INTENT(in)    :: dtime                            !< timestep length
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
     REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
     REAL(wp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter
@@ -235,11 +228,11 @@ CONTAINS
           growth_req_n_tlabile_mavg = 1._wp / cn_leaf
           growth_req_p_tlabile_mavg = 1._wp / np_leaf
         ENDIF
-      CASE (isummergreen)
+      CASE (isummergreen)     
         ! if GDD requirement is exceeded. The latter depends on the length of the
         !  dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
-        IF(gdd > hlp1) THEN
+        IF(gdd > hlp1) THEN 
            growing_season            = true
            growth_req_n_tlabile_mavg = 1._wp / cn_leaf
            growth_req_p_tlabile_mavg = 1._wp / np_leaf
@@ -258,19 +251,19 @@ CONTAINS
       SELECT CASE (phenology_type)
       CASE (ievergreen)
         ! nothing to do here
-      CASE (iraingreen)
+      CASE (iraingreen)       
         ! if soil moisture is below given threshold AND leaves have been out a given number of days
         IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. mean_leaf_age > min_leaf_age ) THEN
           growing_season = false
         ENDIF
-      CASE (isummergreen)
+      CASE (isummergreen)     
         ! if temperature are declining below a certain threshold AND
         !  leaves have been out a given number of days
         IF(t_air_week_mavg < t_air_month_mavg .AND. t_air_tphen_mavg < t_air_senescence .AND. &
           & mean_leaf_age > min_leaf_age) THEN
           growing_season = false
         ENDIF
-      CASE (iperennial)
+      CASE (iperennial)       
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
         IF((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
@@ -282,7 +275,7 @@ CONTAINS
 
     !>2.0 modify phenology counters
     !>
-
+    
     !>  2.1 gdd counter
     !>
     IF(t_air > gdd_t_air_threshold) THEN
@@ -301,7 +294,7 @@ CONTAINS
     ELSE
       nd_dormance = nd_dormance + dtime / one_day
     ENDIF
-  END SUBROUTINE calc_phenology
+  END SUBROUTINE calc_phenology 
 
 #endif
 END MODULE mo_q_pheno_process

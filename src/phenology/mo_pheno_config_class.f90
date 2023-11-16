@@ -44,11 +44,7 @@ CONTAINS
   !> read PHENO_ namelist and init configuration parameters
   !>
   SUBROUTINE Init_pheno_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
@@ -56,17 +52,12 @@ CONTAINS
     LOGICAL                     :: l_forestRegrowth
     CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /phenology_ctl/  &
-#else
     NAMELIST /jsb_pheno_nml/  &
-#endif
       & active,               &
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
-      & bc_filename,          &
-      & lai_site_specific
+      & bc_filename
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -78,18 +69,12 @@ CONTAINS
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
-    lai_site_specific   = 6.0_wp
     !first_call_phenology_this_day = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('phenology_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, phenology_ctl)
-#else
     nml_unit = position_nml('jsb_pheno_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_pheno_nml)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
@@ -97,7 +82,6 @@ CONTAINS
     config%scheme                     = TRIM(scheme)
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
-    config%lai_max                    = lai_site_specific
     CALL close_nml(nml_handler)
   END SUBROUTINE Init_pheno_config
 

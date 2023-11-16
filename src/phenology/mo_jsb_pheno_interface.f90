@@ -149,11 +149,11 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
-    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) /= 'climatology') THEN
+    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology') THEN
       CALL message(TRIM(routine), 'Vegetation tile has no PFTs, using climatology for LAI')
       CALL update_phenology_climatology(tile, options)
     ELSE
-      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach))
+      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme))
       CASE ('logrop')
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
@@ -856,7 +856,7 @@ CONTAINS
 
     ! Update foliage projected cover
     !
-    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology' &
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)

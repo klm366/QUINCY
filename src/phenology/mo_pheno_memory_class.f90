@@ -166,13 +166,12 @@ CONTAINS
 
     !! !$acc enter data pcreate(mem)
 
-    ! ----------------------------------------------------------------------------------------------------- !
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology') THEN   ! TODO
+      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
         ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
@@ -260,7 +259,7 @@ CONTAINS
         
       ! --------------------------------------------------------------------------------------------------- !
       ! logrop
-      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'logrop') THEN
+      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
           & hgrid, surface,                                                    &

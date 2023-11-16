@@ -45,9 +45,9 @@ MODULE mo_q_veg_interface
   USE mo_q_veg_growth,                ONLY: update_veg_growth
   USE mo_q_veg_update_pools,          ONLY: update_veg_pools
 
-  dsl4jsb_Use_processes VEG_, PHENO_, RAD_, SB_
+  dsl4jsb_Use_processes VEG_, Q_PHENO_, RAD_, SB_
   dsl4jsb_Use_memory(VEG_)
-  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(Q_PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SB_)
 
@@ -545,7 +545,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
@@ -562,7 +562,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
 
     ! VEG_ 2D
@@ -602,10 +602,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, fn_chl_cl                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_oth_cl                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl  , weighted_by_fract)
-    ! PHENO_
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai                       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai_cl                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, cumm_lai_cl               , weighted_by_fract)
+    ! Q_PHENO_
+    dsl4jsb_Aggregate_onChunk(Q_PHENO_, lai                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_PHENO_, lai_cl                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_PHENO_, cumm_lai_cl             , weighted_by_fract)
     ! RAD_
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl   , weighted_by_fract)

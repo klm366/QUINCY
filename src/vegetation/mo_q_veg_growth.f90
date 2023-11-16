@@ -56,7 +56,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration 
@@ -69,7 +69,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(SB_)
@@ -106,12 +106,12 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai
     ! A2L_ 2D
@@ -287,7 +287,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
@@ -301,9 +301,9 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                              ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                            ! in
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
@@ -1491,7 +1491,7 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, eps8
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_veg_constants          ! e.g. delta_n_leaf
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1676,7 +1676,7 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, &
       &                                   leaf2root_min_ratio, leaf2root_max_ratio
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------

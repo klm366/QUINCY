@@ -55,11 +55,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, PHENO_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -75,9 +75,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai
     ! VEG_ 2D
@@ -109,16 +109,16 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                        ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)           ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                      ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
@@ -339,7 +339,7 @@ CONTAINS
     & net_growth                  )
 
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
