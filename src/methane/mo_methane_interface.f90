@@ -104,11 +104,12 @@ CONTAINS
 
   END SUBROUTINE Register_methane_tasks
 
-  SUBROUTINE reset_chem_specie(specie)
+  SUBROUTINE reset_chem_specie(specie,dbg)
 
     USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
 
     TYPE (t_chem_ptrs), INTENT(inout) :: specie
+    LOGICAL, OPTIONAL,  INTENT(in)    :: dbg
 
     specie%diff_out    = 0._wp
     specie%prod_out    = 0._wp
@@ -119,15 +120,19 @@ CONTAINS
 !    IF (ASSOCIATED(specie%other_out)) THEN
 !      specie%other_out   = 0._wp
 !    ENDIF
-! >>> Debug
-    specie%prod_out_sl = 0._wp
-    specie%plant_out_sl= 0._wp
-    specie%oxid_out_sl = 0._wp
-! <<<
+    IF (PRESENT(dbg)) THEN
+      IF (dbg) THEN
+        specie%prod_out_sl = 0._wp
+        specie%plant_out_sl= 0._wp
+        specie%oxid_out_sl = 0._wp
+        specie%test2d      = 0._wp
+!        specie%test3d      = 0._wp
+      ENDIF
+    ENDIF
 
   END SUBROUTINE reset_chem_specie
 
-  SUBROUTINE update_chem_specie(dt,nly,i,frac,specie,diff,act_sl,prod_sl,plant_sl,oxid_sl,other_sl,to_other_i)
+  SUBROUTINE update_chem_specie(dt,nly,i,frac,specie,diff,act_sl,prod_sl,plant_sl,oxid_sl,dbg,other_sl,to_other_i)
 
     USE mo_ch4_memory_class, ONLY: t_chem_ptrs
 
@@ -141,6 +146,7 @@ CONTAINS
     REAL(wp),           INTENT(in)    :: prod_sl(:)
     REAL(wp),           INTENT(in)    :: plant_sl(:)
     REAL(wp),           INTENT(in)    :: oxid_sl(:)
+    LOGICAL,  OPTIONAL, INTENT(in)    :: dbg
     REAL(wp), OPTIONAL, INTENT(in)    :: other_sl(:)
     INTEGER,  OPTIONAL, INTENT(in)    :: to_other_i
 
@@ -162,16 +168,18 @@ CONTAINS
         IF (to_other_i /= 0) specie%total_out(i) = specie%total_out(i) + specie%other_out(i)
       ENDIF
     ENDIF
-! >>> Debug
-    DO j = 1, nly
-      specie%prod_out_sl (i,j) = prod_sl (j) * mul
-      specie%plant_out_sl(i,j) = plant_sl(j) * mul
-      specie%oxid_out_sl (i,j) = oxid_sl (j) * mul
-      IF (PRESENT(other_sl)) THEN
-        specie%other_out_sl(i,j) = other_sl(j) * mul
+    IF (PRESENT(dbg)) THEN
+      IF (dbg) THEN
+        DO j = 1, nly
+          specie%prod_out_sl (i,j) = prod_sl (j) * mul
+          specie%plant_out_sl(i,j) = plant_sl(j) * mul
+          specie%oxid_out_sl (i,j) = oxid_sl (j) * mul
+          IF (PRESENT(other_sl)) THEN
+            specie%other_out_sl(i,j) = other_sl(j) * mul
+          ENDIF
+        ENDDO
       ENDIF
-    ENDDO
-! <<<
+    ENDIF
 
   END SUBROUTINE update_chem_specie
 
@@ -293,7 +301,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     LOGICAL  :: lnew_day, lstart, lrestart
     INTEGER  :: hour, minute, sec
     LOGICAL  :: is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep
-    LOGICAL  :: lissue, lissue_tst
+    LOGICAL  :: lissue, lissue_tst, dbg
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i, lt
     INTEGER  :: iWetness, iWetness_st, iWetness_en
     REAL(wp) :: dt
@@ -324,11 +332,12 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     ice   = options%ice
     nc    = options%nc
     tspd  = timesteps_per_day(dt)
+    dbg   = dsl4jsb_Config(CH4_)%dbg_process
 
     lstart = is_time_experiment_start(options%current_datetime)
     lrestart = is_time_restart(options%current_datetime)
 
-    IF ((debug_on() .OR. (dsl4jsb_Config(CH4_)%dbg_process .AND. lstart)) .AND. iblk == 1) &
+    IF ((debug_on() .OR. (dbg .AND. lstart)) .AND. iblk == 1) &
       CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model  => Get_model(tile%owner_model_id)
@@ -522,40 +531,54 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_CO)
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_iso)
     dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
-    dsl4jsb_Get_var2D_onChunk(CH4_, layer_wt)
-    dsl4jsb_Get_var2D_onChunk(CH4_, test)
-! >>> Debug
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%other_out_sl) ! Ebullition
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%plant_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%plant_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%plant_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%plant_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%other_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%plant_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%prod_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%oxid_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%other_out_sl)
-    dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%plant_out_sl)
-! <<<
+!    dsl4jsb_Get_var2D_onChunk(CH4_, layer_wt)
+    IF (dbg) THEN
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%other_out_sl) ! Ebullition
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%plant_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%plant_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%plant_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%plant_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%other_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%plant_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%prod_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%oxid_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%other_out_sl)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%plant_out_sl)
+      dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_dry%test3d)
+      dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%test3d)
+      dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_dry%test3d)
+      dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_, CO2_wet%test3d)
+      dsl4jsb_Get_var2D_onChunk(CH4_,  O2_dry%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_dry%test3d)
+      dsl4jsb_Get_var2D_onChunk(CH4_,  O2_wet%test2d)
+      dsl4jsb_Get_var3D_onChunk(CH4_,  O2_wet%test3d)
+    ENDIF
 
-    CALL reset_chem_specie(CH4_wet)
-    CALL reset_chem_specie(CO2_wet)
-    CALL reset_chem_specie( O2_wet)
-    CALL reset_chem_specie(CH4_dry)
-    CALL reset_chem_specie(CO2_dry)
-    CALL reset_chem_specie( O2_dry)
+    IF (dbg) &
+      CH4_wet%test3d = CH4_wet%oxid_out_sl
 
-    IF (lstart .AND. (dsl4jsb_Config(CH4_)%dbg_process) .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
+    CALL reset_chem_specie(CH4_wet,dbg)
+    CALL reset_chem_specie(CO2_wet,dbg)
+    CALL reset_chem_specie( O2_wet,dbg)
+    CALL reset_chem_specie(CH4_dry,dbg)
+    CALL reset_chem_specie(CO2_dry,dbg)
+    CALL reset_chem_specie( O2_dry,dbg)
+
+    IF (lstart .AND. dbg .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
 
     IF (dsl4jsb_Config(CH4_)%GHG_from_atm) THEN
       IF (.FALSE.) THEN ! TODO: Some test for atmospheric CH4 concentration available
@@ -820,16 +843,29 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
 
             ! Fill global memory for output (fluxes in s-1)
             IF (is_Wet) THEN
+              IF (dbg) THEN
+                CH4_wet%test2d(i) = REAL(mxlay_above_wt,wp)
+                CH4_wet%test3d(i,:) = D_CH4(:)
+                CO2_wet%test3d(i,:) = D_CO2(:)
+                 O2_wet%test3d(i,:) = D_O2(:)
+              ENDIF
               frac = frac_inun_loc
-              CALL update_chem_specie(dt,nly,i,frac,CH4_wet,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,CH4_ebul_sl,1)
-              CALL update_chem_specie(dt,nly,i,frac,CO2_wet,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl)
-              CALL update_chem_specie(dt,nly,i,frac, O2_wet, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,O2_other_sl)
+              CALL update_chem_specie(dt,nly,i,frac,CH4_wet,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl, &
+                                      dbg,CH4_ebul_sl,1)
+              CALL update_chem_specie(dt,nly,i,frac,CO2_wet,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,i,frac, O2_wet, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
               CH4_prod_ratio_out_wet(i) = CH4_prod_ratio
             ELSE
+              IF (dbg) THEN
+                CH4_dry%test2d(i) = REAL(mxlay_above_wt,wp)
+                CH4_dry%test3d(i,:) = D_CH4(:)
+                CO2_dry%test3d(i,:) = D_CO2(:)
+                 O2_dry%test3d(i,:) = D_O2(:)
+              ENDIF
               frac = 1._wp-frac_inun_loc
-              CALL update_chem_specie(dt,nly,i,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl)
-              CALL update_chem_specie(dt,nly,i,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl)
-              CALL update_chem_specie(dt,nly,i,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,O2_other_sl)
+              CALL update_chem_specie(dt,nly,i,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,i,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,i,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
             ENDIF
 
             ! Peatlands updates densities differently
@@ -973,6 +1009,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(CH4_)
 
+    LOGICAL :: dbg
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_methane'
@@ -991,6 +1028,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_memory(CH4_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    dbg = dsl4jsb_Config(CH4_)%dbg_process
 
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_tot%out          , weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_tot%prod_out     , weighted_by_fract)
@@ -1086,30 +1124,35 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       dsl4jsb_Aggregate_onChunk(CH4_, CH4_out_herbivore, weighted_by_fract)
     ENDIF
-! >>> Debug
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%other_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%plant_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%plant_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%other_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%plant_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%other_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%plant_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%plant_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%prod_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%oxid_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%other_out_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%plant_out_sl, weighted_by_fract)
-! <<<
+    IF (dbg) THEN
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%other_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_wet%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%other_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%other_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CO2_dry%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%prod_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%oxid_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%other_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%plant_out_sl, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%test2d,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%test2d,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_dry%test3d,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%test3d,       weighted_by_fract)
+    ENDIF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_methane
