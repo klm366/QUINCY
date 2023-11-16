@@ -50,6 +50,8 @@ MODULE mo_ch4_memory_class
       & total_out,              &
       & total_initial,          & ! StW: Initial for ts or run? In latter case ic?
       & total_final
+    TYPE(t_jsb_var_real2d) ::   &
+      & test2d
 
     ! Per layer
     TYPE(t_jsb_var_real3d) ::   &
@@ -61,6 +63,10 @@ MODULE mo_ch4_memory_class
       & oxid_out_sl,            &
       & other_out_sl,           & ! Ebulition or "other"
       & plant_out_sl
+    TYPE(t_jsb_var_real3d) ::   &
+      & test3d
+
+    CHARACTER(len=8) :: specie_name
  
   END TYPE t_chem_specie
 
@@ -76,6 +82,8 @@ MODULE mo_ch4_memory_class
       & total_out,                         &
       & total_initial,                     & ! StW: Initial for ts or run? In latter case ic?
       & total_final
+    REAL(wp), DIMENSION(:), POINTER ::     &
+      test2d
 
     ! Per layer
     REAL(wp), DIMENSION(:,:), POINTER ::   &
@@ -87,6 +95,10 @@ MODULE mo_ch4_memory_class
       & oxid_out_sl,            &
       & other_out_sl,           & ! Ebulition or "other"
       & plant_out_sl
+    REAL(wp), DIMENSION(:,:), POINTER ::   &
+      test3d
+
+    CHARACTER(len=8) :: specie_name
 
   END TYPE t_chem_ptrs
 
@@ -125,8 +137,7 @@ MODULE mo_ch4_memory_class
       & CH4_out_herbivore,      & 
 !                               
       & anox_prod_in,           & ! StW: Production of what?
-      & oxic_prod_in ,&              ! StW: Production of what?
-     test
+      & oxic_prod_in              ! StW: Production of what?
 
     ! per layer
     TYPE(t_jsb_var_real3d) :: &
@@ -392,6 +403,7 @@ CONTAINS
       USE mo_jsb_grid,          ONLY: Get_vgrid
       USE mo_exception,         ONLY: message_text, message
       USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, TSTEP_INSTANT
+      dsl4jsb_Use_config(CH4_)
     
       CHARACTER(len=*),            INTENT(in)      :: specie_name
       TYPE (t_chem_specie),        INTENT(inout)   :: specie
@@ -401,11 +413,16 @@ CONTAINS
       TYPE(t_jsb_vgrid), POINTER  :: surface, layer               ! Vertical grids
       CHARACTER(len=256) :: str
       LOGICAL :: uother
+
+      dsl4jsb_Def_config(CH4_)
+      dsl4jsb_Get_config(CH4_)
     
       uother = .TRUE.; IF (PRESENT(use_other)) uother = use_other
     
       surface       => Get_vgrid('surface')
       layer         => Get_vgrid('soil_depth_water')
+
+      specie%specie_name = TRIM(specie_name)
     
       CALL mem%Add_var( specie_name//'_out', specie%out,                       &
         & hgrid, surface,                                                      &
@@ -457,29 +474,50 @@ CONTAINS
 !        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
 ! >>> Debug
-      CALL mem%Add_var( specie_name//'_prod_out_sl', specie%prod_out_sl,       &
-        & hgrid, layer,                                                        &
-        & t_cf(specie_name//'_prod_out_sl', 'mol m-2 s-1', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
+
+        CALL mem%Add_var( specie_name//'_prod_out_sl', specie%prod_out_sl,       &
+          & hgrid, layer,                                                        &
+          & t_cf(specie_name//'_prod_out_sl', 'mol m-2 s-1', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
+          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+        CALL mem%Add_var( specie_name//'_oxid_out_sl', specie%oxid_out_sl,       &
+          & hgrid, layer,                                                        &
+          & t_cf(specie_name//'_oxid_out_sl', 'mol m-2 s-1', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
+          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+        CALL mem%Add_var( specie_name//'_plant_out_sl', specie%plant_out_sl,     &
+          & hgrid, layer,                                                        &
+          & t_cf(specie_name//'_plant_out_sl', 'mol m-2 s-1', ''),               &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level = default_output_level,                                 &
+          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+        CALL mem%Add_var( specie_name//'_test3d', specie%test3d,                 &
+          & hgrid, layer,                                                        &
+          & t_cf(specie_name//'_test3d', '???', ''),                             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level = default_output_level,                                 &
+          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+        CALL mem%Add_var( specie_name//'_test2d', specie%test2d,                 &
+          & hgrid, surface,                                                      &
+          & t_cf(specie_name//'_test2d', '???', ''),                             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level = default_output_level,                                 &
+          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+      ENDIF
     
-      CALL mem%Add_var( specie_name//'_oxid_out_sl', specie%oxid_out_sl,       &
-        & hgrid, layer,                                                        &
-        & t_cf(specie_name//'_oxid_out_sl', 'mol m-2 s-1', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
-      CALL mem%Add_var( specie_name//'_plant_out_sl', specie%plant_out_sl,     &
-        & hgrid, layer,                                                        &
-        & t_cf(specie_name//'_plant_out_sl', 'mol m-2 s-1', ''),               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level = default_output_level,                                 &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 ! <<<
 
       IF (uother) THEN
@@ -497,13 +535,15 @@ CONTAINS
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
 ! >>> Debug
-        CALL mem%Add_var( TRIM(str)//'_sl', specie%other_out_sl,                 &
-          & hgrid, layer,                                                        &
-          & t_cf(TRIM(str)//'_sl', 'mol m-2 s-1', ''),                           &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
+          CALL mem%Add_var( TRIM(str)//'_sl', specie%other_out_sl,                 &
+            & hgrid, layer,                                                        &
+            & t_cf(TRIM(str)//'_sl', 'mol m-2 s-1', ''),                           &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+            & prefix, suffix,                                                      &
+            & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
+            & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        ENDIF
 ! <<<
       ENDIF
 
