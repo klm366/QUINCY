@@ -807,6 +807,11 @@ CONTAINS
   !>
   !> run ICON-Land for one timestep
   !>
+  ! Note: run_one_timestep does not call the full interface, however, it does call most of the routines
+  !       which are also called within the full interface. The main difference between the full interface and
+  !       run_one_timestep is where the A2L variables are assigned: in the interface these are passed from the
+  !       atmosphere and assigned by calling update_atm2land; here they are directly assined in the routine
+  !       that reads the external forcing / caluclates the timestep forcing. 
   SUBROUTINE run_one_timestep( &
     & model_id, &
     & nblks, &
@@ -843,7 +848,7 @@ CONTAINS
     TYPE(timedelta)         , POINTER    :: dtime_mtime         !< time delta as mtime variable (dtime, timestep length)
     TYPE(datetime)          , POINTER    :: datetime_old        !< date and time at the beginning of this time step
     TYPE(datetime)          , POINTER    :: datetime_old_old    !< date and time one time step before datetime_old
-    TYPE(datetime)          , POINTER    :: datetime_forcing    !<
+    TYPE(datetime)          , POINTER    :: datetime_forcing    !< TODO: not used can be deleted
 
     INTEGER                              :: nproma                         !< number of grid cells per chunk
     INTEGER                              :: iblk                           !< index of block loop
@@ -902,27 +907,31 @@ CONTAINS
     ! use forcing from external forcing, such as, observation based data (e.g., CRUJRA)
     !                                             or output from another model simulation
     ! see namelist 'jsb_control_nml' and 'mo_jsb_control:l_force_from_obs'
-    use_external_forcing = force_from_observations()
+    use_external_forcing = force_from_observations() !TODO: different issue: no option anymore, can be removed  
 
+    !TODO: l_shift_one_timestep also not used anymore?!
     IF (jsbach_is_restarted()) THEN
-      l_first_forcing_file = .FALSE.
+      l_first_forcing_file = .FALSE. ! default is true, just set to false upon restart
       l_shift_one_timestep = .FALSE.
     ELSE
       l_shift_one_timestep = .TRUE.
     END IF
 
-    CALL getPTStringFromSeconds(-dtime, dtime_string)
-    dtime_mtime      => newTimedelta(dtime_string)
-    datetime_old     => newDatetime(datetime_new)
-    datetime_old     =  datetime_new + dtime_mtime
-    datetime_old_old => newDatetime(datetime_old)
-    datetime_old_old =  datetime_old + dtime_mtime
-    CALL deallocateTimedelta(dtime_mtime)
+    ! Note: datetime_new is the timestep we use for computing
+    CALL getPTStringFromSeconds(-dtime, dtime_string) ! converts real dtime into a string (negative! timestep)
+    dtime_mtime      => newTimedelta(dtime_string)    ! timedelta is an object class in mtime 
+    datetime_old     => newDatetime(datetime_new)     ! datetime_old: new object, but with the same content 
+    datetime_old     =  datetime_new + dtime_mtime    ! i.e. one timestep before current dateime
+    datetime_old_old => newDatetime(datetime_old)     ! TODO: not used can be deleted
+    datetime_old_old =  datetime_old + dtime_mtime    ! TODO: not used can be deleted
+    CALL deallocateTimedelta(dtime_mtime) 
 
+    ! datetime_old is the beginning of the timestep
     IF (is_time_restart(datetime_old)) THEN
       l_first_step_in_restart = .TRUE.
     END IF
 
+    ! TODO: not used, whole IF can be deleted
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
       IF (forcing_options(model_id)%forcing_steps_per_day == 1  .AND. .NOT. use_external_forcing ) THEN
@@ -941,12 +950,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> start timestep
     !>
-    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_start_timestep(model_id, datetime_old, dtime) ! Note: datetime_old = beginning of the timestep
 
     model => get_model(model_id)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
 
+    ! in the interface called when running in coupled mode, iblk, ics and ice are provided from the atmosphere
+    ! here they are retrieved from the grid
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
     DO iblk = startblk, endblk
@@ -954,6 +965,7 @@ CONTAINS
       endidx  (iblk) = grid%Get_col_end(iblk)
     END DO
 
+    !TODO: this if-section will be transferd within another issue/MR
     CALL model%Get_top_tile(tile)
     IF (tile%contains_lake) THEN
       ! We need separate variables for the land and the lake tile and cannot use the box tile.
@@ -997,22 +1009,26 @@ CONTAINS
       dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
     END IF
 
+    ! TODO: use_external_forcing is the only option - i.e. if not required
     IF (use_external_forcing) THEN
 
+      ! get memory for variables used below
       dsl4jsb_Get_memory(A2L_)
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
+      ! lon and lat values are required for the weather generator
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
-      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
+      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle (required init)
+      ! Note: in ICON host adapter cos-zenith-angle is set to >=0 for ICON-Land
 
-      ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      ! Potentially required for humidity calculation if not provided with the forcing
       ALLOCATE(evapo_act2pot(nproma, nblks))
       IF (is_time_experiment_start(datetime_old)) THEN
         evapo_act2pot(:,:) = 1._wp
@@ -1021,15 +1037,17 @@ CONTAINS
           &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
       END IF
 
+      ! start timer only used for reading and calculating of forcing variables
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
       ! --------------------------------------------------------------------------------------------------- !
-      !> get variables (that are in the coupled simulation provided via the model interface by the host model)
-      !>   including dimensional data and data from external forcing, i.e., forcing input files
-      !>   see: 'mo_jsb_interface:interface_full'
-      !>
+      !> get forcing variables (and directly store these in the A2L memory) 
+      ! (when running in coupled mode, the same forcing variables are provided by the atmosphere and are
+      !  subsequently assigned via calling update_atm2land, which thus not need to be called when running standalone)
+
+      ! TODO: the if for lakes and drag+coefficient variables will be transfered in another MR/issue
       IF (model%config%use_lakes) THEN
-        CALL get_standalone_driver_variables( &
+        CALL get_standalone_driver_variables( & !TODO discussion on the routine name? (external forcing?) 
           ! in
           & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
           & .TRUE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                         &
@@ -1119,12 +1137,15 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
+      ! TODO: TBD it might be nice to have the local time as part of the grid and not only for QUINCY?!
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
 
-        ! Update local time and daytime counter
+        ! Update local time and the daytime_counter (daytime is determined using radiation)
+        ! (these variables are required in several "QUINCY" processes 
+        !  to determine local midnight or noon and to track variables when sw radiation is > 0)
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
@@ -1137,7 +1158,7 @@ CONTAINS
 
     END IF ! IF (use_external_forcing) THEN
 
-
+    ! the following routines are also called in the interface when running coupled
 !$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc) IF(nblks > 1)
     ! ----------------------------------------------------------------------------------------------------- !
     !> loop over the chunks of the block
