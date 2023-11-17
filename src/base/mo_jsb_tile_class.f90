@@ -892,6 +892,86 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
+#ifdef _CRAYFTN
+    ! ACCWA (Cray Fortran) : Use several small parallel regions to make GPU/CPU comparison work
+
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO j = ics, ice
+        var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE IF (no_children > 1) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO j = ics, ice
+        this%data_sum (j,iblk) = 0._wp
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      icount = 0
+      ichild = 0
+      DO i=1,no_children
+        IF ( var%child_idx(i) > 0 ) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+              & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          !$ACC END PARALLEL LOOP
+          icount = icount + 1
+          ichild = i
+        ELSE IF (var%l_aggregate_all) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          !$ACC END PARALLEL LOOP
+          icount = icount + 1
+          ichild = i
+        END IF
+      END DO
+      
+      ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
+        ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
+
+      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      !   ! print*, fract_sum
+      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
+      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      !     &          all_print=.TRUE.)
+      !   CALL finish(TRIM(routine),  '    ... this should not happen')
+      ! END IF
+
+      IF (icount == 1) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      ELSE IF (icount > 1) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+          ! ELSE
+          !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      ELSE
+        STOP 'Aggregate_weighted_by_fract_2d: This should not happen (icount=0)!'
+      END IF
+
+    END IF
+
+    !$ACC WAIT(1)
+
+#else
+
     !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
@@ -964,6 +1044,8 @@ CONTAINS
 
     !$ACC END PARALLEL
 
+#endif
+
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
@@ -983,7 +1065,7 @@ CONTAINS
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
 
-    INTEGER :: no_children, icount, ichild, i, iproc, ilev, j
+    INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
 
     CHARACTER(len=256) :: routine
 
@@ -1013,14 +1095,103 @@ CONTAINS
 
     tile_ptrs3d_cache => tile%ptrs3d_cache
 
+    nlev = SIZE(var%ptr,2)
+
     ! print*, routine//": working on var ", var%full_name
+
+#ifdef _CRAYFTN
+    ! ACCWA (Cray Fortran) : Use several small parallel regions to make GPU/CPU comparison work
+
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      DO ilev = 1, nlev
+        DO j = ics, ice
+          var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
+    ELSE IF (no_children > 1) THEN
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO j = ics, ice
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      icount = 0
+      ichild = 0
+      DO i=1,no_children
+        IF (var%child_idx(i) > 0) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          !$ACC END PARALLEL LOOP
+          icount = icount + 1
+          ichild = i
+        ELSE IF (var%l_aggregate_all) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          !$ACC END PARALLEL LOOP
+          icount = icount + 1
+          ichild = i
+        END IF
+      END DO
+
+      DO ilev = 1, nlev
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO j = ics, ice
+          this%data_sum (j,iblk) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
+
+        DO i=1,no_children
+          IF (var%child_idx(i) > 0) THEN
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+            DO j = ics, ice
+              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
+            END DO
+            !$ACC END PARALLEL LOOP
+          END IF
+        END DO
+
+        IF (icount == 1) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
+            END IF
+          END DO
+          !$ACC END PARALLEL LOOP
+        ELSE IF (icount > 1) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+            END IF
+          END DO
+          !$ACC END PARALLEL LOOP
+        ELSE
+          STOP 'Aggregate_weighted_by_fract_3d: This should not happen (icount=0)!'
+        END IF
+      END DO
+
+    END IF
+
+    !$ACC WAIT(1)
+
+#else
 
     !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
       !$ACC LOOP SEQ
-      DO ilev=1,SIZE(var%ptr,2)
+      DO ilev = 1, nlev
         !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
@@ -1055,7 +1226,7 @@ CONTAINS
       END DO
 
       !$ACC LOOP SEQ
-      DO ilev=1,SIZE(var%ptr,2)
+      DO ilev = 1, nlev
         !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           this%data_sum (j,iblk) = 0._wp
@@ -1094,6 +1265,8 @@ CONTAINS
     END IF
 
     !$ACC END PARALLEL
+
+#endif
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &

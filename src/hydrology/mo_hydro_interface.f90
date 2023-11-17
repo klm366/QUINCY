@@ -585,7 +585,7 @@ CONTAINS
     END IF
 
     IF (is_experiment_start) THEN ! Start of experiment
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         weq_snow(ic) = 0._wp
@@ -723,7 +723,7 @@ CONTAINS
         & )
 
       IF (l_compat401_config) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           snow_soil_dens(ic) = 330._wp
         END DO
