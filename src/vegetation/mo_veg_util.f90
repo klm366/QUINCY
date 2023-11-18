@@ -219,8 +219,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai 
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: n_fixation 
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
@@ -373,8 +373,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                        ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)

@@ -3,11 +3,11 @@
 !>#### ICON-Land
 !>
 !> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
 !> Contact information: <https://icon-model.org>
 !>
-!> See AUTHORS.TXT for a list of authors
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ------------------------------------------------------------------------
 !>
@@ -84,7 +84,6 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onDomain    :: growing_season
     dsl4jsb_Real2D_onDomain    :: lai_max
-    dsl4jsb_Real2D_onDomain    :: lai
     ! ---------------------------
     ! 0.4 Debug Option
     IF (debug_on()) CALL message(routine, 'Setting boundary conditions of pheno memory (quincy) for tile '// &
@@ -99,7 +98,6 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onDomain(Q_PHENO_, growing_season)
     dsl4jsb_Get_var2D_onDomain(Q_PHENO_, lai_max)
-    dsl4jsb_Get_var2D_onDomain(Q_PHENO_, lai)
 
     !> 1.0 init
     !>
@@ -123,8 +121,6 @@ CONTAINS
       ! lai_max
       ! for jsbach4 a lctlib parameter 'dsl4jsb_Lctlib_param(MaxLAI)' is available
       lai_max(:,:) = 6.0_wp
-      ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
-      lai(:,:)     = 1.0_wp
 #endif
       ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
       ! NOTE: false and true are of type REAL(wp)
@@ -136,7 +132,6 @@ CONTAINS
     ELSE
       ! default for non-PFT tiles
       lai_max(:,:)        = 1.0_wp
-      lai(:,:)            = 0.0_wp
       growing_season(:,:) = false
     ENDIF
   END SUBROUTINE q_pheno_init_bc

@@ -3,11 +3,11 @@
 !>#### ICON-Land
 !>
 !> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
 !> Contact information: <https://icon-model.org>
 !>
-!> See AUTHORS.TXT for a list of authors
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ------------------------------------------------------------------------
 !>

@@ -3,11 +3,11 @@
 !>#### ICON-Land
 !>
 !> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
 !> Contact information: <https://icon-model.org>
 !>
-!> See AUTHORS.TXT for a list of authors
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ------------------------------------------------------------------------
 !>
@@ -42,19 +42,10 @@ MODULE mo_q_pheno_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_q_pheno_memory
 
     TYPE(t_jsb_var_real2d) :: &
-      & lai                               !< actual leaf area index [m2 m-2]
-
-    TYPE(t_jsb_var_real3d) :: &
-      & lai_cl                            !< leaf area index per canopy layer [m2 m-2]
-
-    TYPE(t_jsb_var_real2d) :: &
-      & growing_season, &           !< logical: growing season for the plant [0 = FALSE / 1 = TRUE]
+      & growing_season, &           !< logical: growing season for the plant [0 = FALSE, 1 = TRUE]
       & gdd, &                      !< growing degree days above 5degC [K day]
       & nd_dormance, &              !< number of days since last growing season [# days]
-      & lai_max                     !< maximum lai - from site specific lai data [m2 m-2]
-
-    TYPE(t_jsb_var_real3d) :: &
-      & cumm_lai_cl                 !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
+      & lai_max                     !< maximum lai - from site specific (i.e. local) lai data [m2 m-2]
 
   CONTAINS
     PROCEDURE :: Init => Init_q_pheno_memory
@@ -86,7 +77,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
     INTEGER                     :: table                        ! ...
-    TYPE(t_grib2)               :: grib2_desc                   ! used for lai settings
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     table        = tables(1)
@@ -97,36 +87,7 @@ CONTAINS
 
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-      ! grib setting for: lai differentiation box tile and other tiles
-      ! this is done because ... (ask Reiner) TODO
-      IF (TRIM(mem%owner_tile_name) == 'box') THEN
-        grib2_desc = t_grib2(2,0,28, grib_bits)
-      ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
-      END IF
-        
-      CALL mem%Add_var('lai', mem%lai, &
-        & hgrid, surface, &
-        & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
-        & t_grib1(table, 255, grib_bits), &
-        & grib2_desc, &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-        
-      CALL mem%Add_var('lai_cl', mem%lai_cl, &
-        & hgrid, vgrid_canopy, &
-        & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('growing_season', mem%growing_season, &
         & hgrid, surface, &
         & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
@@ -163,17 +124,6 @@ CONTAINS
       CALL mem%Add_var('lai_max', mem%lai_max, &
         & hgrid, surface, &
         & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-        
-      CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
-        & hgrid, vgrid_canopy, &
-        & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

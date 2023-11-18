@@ -79,8 +79,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_lai
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
@@ -118,8 +118,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)           ! in
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                      ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
