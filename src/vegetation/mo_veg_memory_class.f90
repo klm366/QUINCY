@@ -96,6 +96,7 @@ MODULE mo_veg_memory_class
                                     height            , &            !< plant height [m]
                                     diameter          , &            !< plant diameter [m]
                                     dens_ind          , &            !< density of individuals [# m-2]
+                                    lai               , &            !< actual leaf area index [m2 m-2]
                                     target_cn_leaf    , &            !< target foliar C:N ratio [mol C mol-1 N]
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
@@ -116,7 +117,9 @@ MODULE mo_veg_memory_class
     ! basic plant 3D
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl          , &    !< fractions of root per layer [unitless]
-                                    delta_root_fraction_sl           !< change of fractions of root per layer [1/timestep]
+                                    delta_root_fraction_sl    , &    !< change of fractions of root per layer [1/timestep]
+                                    lai_cl                    , &    !< leaf area index per canopy layer [m2 m-2]
+                                    cumm_lai_cl                      !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
@@ -413,6 +416,7 @@ CONTAINS
     TYPE(t_veg_bgcm_with_components), POINTER :: veg_bgcm_components        !< bgc_material components
     TYPE(t_veg_bgcm_with_elements),   POINTER :: veg_bgcm_elements          !< bgc_material elements
     INTEGER                                   :: table                      !< ...
+    TYPE(t_grib2)                             :: grib2_desc                 !< used for lai settings
     CHARACTER(len=*), PARAMETER               :: routine = TRIM(modname)//':Init_veg_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
@@ -834,6 +838,25 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      ! grib setting for: lai differentiation box tile and other tiles
+      ! TODO this is done because ... (ask Reiner Schnur, MPI-M)
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+        
+      CALL mem%Add_var('lai', mem%lai, &
+        & hgrid, surface, &
+        & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & grib2_desc, &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
         & hgrid, surface, &
         & t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
@@ -1013,6 +1036,28 @@ CONTAINS
       CALL mem%Add_var('delta_root_fraction_sl', mem%delta_root_fraction_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('delta_root_fraction_sl', '', 'change in fractions of root per layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('lai_cl', mem%lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

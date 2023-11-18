@@ -56,7 +56,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, Q_PHENO_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, VEG_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
@@ -66,7 +66,6 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -87,7 +86,6 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
@@ -130,15 +128,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: w_snow_snl    
-    ! Q_PHENO_ 2D
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: lai
-    ! Q_PHENO_ 3D
-    dsl4jsb_Real3D_onChunk :: lai_cl
-    dsl4jsb_Real3D_onChunk :: cumm_lai_cl
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
     dsl4jsb_Real3D_onChunk :: fn_chl_cl 
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
+    dsl4jsb_Real3D_onChunk :: lai_cl
+    dsl4jsb_Real3D_onChunk :: cumm_lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -164,7 +161,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -210,16 +206,14 @@ CONTAINS
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
     ! ---------------------------
-    ! Q_PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                  ! in
-    ! Q_PHENO_ 3D
-    dsl4jsb_Get_var3D_onChunk(Q_PHENO_, lai_cl)               ! in
-    dsl4jsb_Get_var3D_onChunk(Q_PHENO_, cumm_lai_cl)          ! in
-    ! ---------------------------
+    ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)              ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 Snow and soil albedo

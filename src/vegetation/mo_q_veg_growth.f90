@@ -113,7 +113,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: q_air
@@ -160,6 +159,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
@@ -303,7 +303,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! in
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                            ! in
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
@@ -350,6 +349,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)           ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)           ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)                     !   inout
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)                    ! in

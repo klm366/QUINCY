@@ -57,7 +57,7 @@ CONTAINS
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
-    USE mo_jsb_process_class,      ONLY: A2L_, ASSIMI_, Q_PHENO_, VEG_, RAD_, SPQ_
+    USE mo_jsb_process_class,      ONLY: A2L_, ASSIMI_, VEG_, RAD_, SPQ_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -70,7 +70,6 @@ CONTAINS
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
@@ -96,7 +95,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -139,14 +137,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
-    ! Q_PHENO_ 2D
-    dsl4jsb_Real2D_onChunk      :: lai
-    ! Q_PHENO_ 3D
-    dsl4jsb_Real3D_onChunk      :: lai_cl
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tacclim_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
@@ -174,7 +171,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
@@ -212,11 +208,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                        ! in
-    dsl4jsb_Get_var3D_onChunk(Q_PHENO_, lai_cl)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tacclim_mavg)   ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! in

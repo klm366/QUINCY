@@ -132,10 +132,6 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season 
     dsl4jsb_Real2D_onChunk      :: lai_max
-    dsl4jsb_Real2D_onChunk      :: lai
-    ! Q_PHENO_ 3D
-    dsl4jsb_Real3D_onChunk      :: lai_cl
-    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 3D
@@ -151,6 +147,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp
@@ -217,6 +214,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -265,10 +264,6 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai)                        ! CASE "plant" & "land": out / other Cases: in
-    ! Q_PHENO_ 3D
-    dsl4jsb_Get_var3D_onChunk(Q_PHENO_, lai_cl)                     ! out
-    dsl4jsb_Get_var3D_onChunk(Q_PHENO_, cumm_lai_cl)                ! out
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! SPQ_ 3D
@@ -284,6 +279,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! CASE "plant" & "land": out / other Cases: in
     dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                  ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                           ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                            ! out
@@ -350,6 +346,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 set g1 according to canopy_conductance_scheme
