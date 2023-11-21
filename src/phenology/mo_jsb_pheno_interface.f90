@@ -960,7 +960,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: scaling (:,:)
     REAL(wp)               :: global_land_area
 
-
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
     dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in
