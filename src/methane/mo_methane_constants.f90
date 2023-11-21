@@ -33,7 +33,7 @@ MODULE mo_methane_constants
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_constants'
 
   ! Types and constants for specific chemical species
-  ! Diffusivity constants expects temperature in °C
+  ! Diffusivity constants expect temperature in °C
   TYPE t_specie_const
     CHARACTER (LEN=10)         :: specie_name  ! Name of chemical specie
     REAL(wp)                   :: molarMass_kg ! Molar mass of the speice [kg mol-1]
@@ -50,10 +50,17 @@ MODULE mo_methane_constants
   ! Name  molarMass_kg   henry_k_inv henry_const   D_air_0     D_air_1   D_water_0   D_water_1     D_water_2 D_water_scale
   TYPE (t_specie_const), PARAMETER :: CO2_consts = t_specie_const( &
     'CO2',molarMassCO2,      29.4_wp,  2400.0_wp, 0.1325_wp, 0.00090_wp, 0.9390_wp, 0.02671_wp, 0.0004095_wp,         1e-5 )
+!    'CO2',molarMassCO2,      29.4_wp,  2400.0_wp, 0.1105_wp, 0.00150_wp, 0.9550_wp, 0.02550_wp, 0.00050714_wp,        1e-5 )
+! air^2                                            0.1381_wp, 0.00100_wp, 1.0859e-6_wp
   TYPE (t_specie_const), PARAMETER :: CH4_consts = t_specie_const( &
     'CH4',amch4/1000.0_wp, 714.29_wp,  1600.0_wp, 0.1875_wp, 0.00130_wp, 0.9798_wp, 0.02986_wp, 0.0004381_wp,         1e-5 )
+!    'CH4',amch4/1000.0_wp, 714.29_wp,  1600.0_wp, 0.1489_wp, 0.00180_wp, 0.9531_wp, 0.02480_wp, 0.00042857_wp,        1e-5 )
+! air^2                                            0.1851_wp, 0.00120_wp, 1.4233e-6_wp
   TYPE (t_specie_const), PARAMETER :: O2_consts  = t_specie_const( &
     'O2', amo2 /1000.0_wp, 769.23_wp,  1500.0_wp, 0.1759_wp, 0.00117_wp, 1.1720_wp, 0.03443_wp, 0.0005048_wp,         1e-5 )
+!    'O2', amo2 /1000.0_wp, 769.23_wp,  1500.0_wp, 0.1759_wp, 0.00117_wp, 1.0700_wp, 0.01900_wp, 0.0014000_wp,         1e-5 )
+! https://www.engineeringtoolbox.com/air-diffusion-coefficient-gas-mixture-temperature-d_2010.html (air: CO2, CH4)
+! https://www.engineeringtoolbox.com/diffusion-coefficients-d_1404.html (water)
 
   ! All emission factors from Kaiser et al., 2012, doi:10.5194/bg-9-527-2012
   ! All in [g(specie)/kg(dry matter)]
