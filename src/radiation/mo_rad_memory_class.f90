@@ -217,7 +217,7 @@ MODULE mo_rad_memory_class
 
     TYPE(t_jsb_var_real2d)  :: &
       & albedo,                &        !< total surface albedo [unitless]
-      & albedo_noon                     !< albedo at local solar noon, kept for 24h [unitless]
+      & albedo_noon                     !< albedo at local solar noon, value is modified only every 24h [unitless]
 
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_soil,                & !< radiation in VIS range absorbed by the soil [W m-2]
