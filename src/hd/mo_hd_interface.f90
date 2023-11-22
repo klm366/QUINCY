@@ -320,6 +320,7 @@ CONTAINS
       & ztemp(:,:),           &
       & in_domain(:,:)          ! 1: cell in domain, 0: halo cell
     REAL(wp) :: &
+      & factor, &
       & cos_lat                 ! Cosines of latitudes of cell centers
 
     LOGICAL  :: debug_hd,use_bifurcated_rivers
@@ -415,7 +416,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      global_outflow = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      global_outflow = global_sum_array(ztemp)
 
       nneigh = hd__mem%nneigh
       blks = grid%get_blk_start()
@@ -511,7 +513,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      global_discharge       = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      global_discharge       = global_sum_array(ztemp)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
@@ -519,7 +522,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      global_internal_drain  = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      global_internal_drain  = global_sum_array(ztemp)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
@@ -527,7 +531,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      global_discharge_ocean = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      global_discharge_ocean = global_sum_array(ztemp)
 
       IF (debug_hd) THEN
         ! water conservation test
@@ -548,12 +553,13 @@ CONTAINS
       END IF
 
       ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
+      factor = (global_internal_drain + global_outflow_resid) / global_discharge_ocean
       IF (global_discharge_ocean > 0._wp) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             discharge_ocean(jc,blk) = discharge_ocean(jc,blk) + &
-              & (discharge_ocean(jc,blk) * (global_internal_drain+global_outflow_resid) / global_discharge_ocean)
+              & discharge_ocean(jc,blk) * factor
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -573,7 +579,8 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
-        global_discharge_ocean = global_sum_array(ztemp, lacc=.TRUE.)
+        !$ACC UPDATE HOST(ztemp) ASYNC(1)
+        global_discharge_ocean = global_sum_array(ztemp)
         WRITE (message_text,*) 'discharge to ocean now : ', global_discharge_ocean, ' m3/s'
         CALL message (routine, message_text)
       END IF
@@ -589,7 +596,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      global_discharge = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      global_discharge = global_sum_array(ztemp)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2) PRIVATE(cos_lat)
       DO blk = 1, nblks
@@ -599,7 +607,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      sum_weights = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      sum_weights = global_sum_array(ztemp)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2) &
       !$ACC   PRIVATE(cos_lat)
       DO blk = 1, nblks
@@ -776,7 +785,8 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
-        WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(ztemp, lacc=.TRUE.), ' m3/s'
+        !$ACC UPDATE HOST(ztemp) ASYNC(1)
+        WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(ztemp), ' m3/s'
         CALL message (TRIM(routine),message_text)
       END IF
       !$ACC EXIT DATA DELETE(in_domain, ztemp)
@@ -791,7 +801,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)
+    !$ACC UPDATE HOST(water_budget_old) ASYNC(1)
+    global_water_budget_old = global_sum_array(water_budget_old)
 
     ! re-calculate global land water budget
     !
@@ -806,7 +817,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_budget = global_sum_array(water_budget, lacc=.TRUE.)
+    !$ACC UPDATE HOST(water_budget) ASYNC(1)
+    global_water_budget = global_sum_array(water_budget)
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water budget:')
@@ -817,7 +829,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   overlandflow reservoir: ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   overlandflow reservoir: ', global_sum_array(ztemp), ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -826,7 +839,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   baseflow reservoir    : ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   baseflow reservoir    : ', global_sum_array(ztemp), ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -835,7 +849,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   riverflow reservoir   : ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   riverflow reservoir   : ', global_sum_array(ztemp), ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -844,7 +859,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   discharge             : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   discharge             : ', global_sum_array(ztemp)*steplen, ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-->          total budget : ', global_water_budget, ' m3'
       CALL message(routine, message_text)
@@ -862,7 +878,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_flux = global_sum_array(water_flux(:,:), lacc=.TRUE.)
+    !$ACC UPDATE HOST(water_flux) ASYNC(1)
+    global_water_flux = global_sum_array(water_flux(:,:))
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water fluxes during time interval:')
@@ -873,7 +890,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp)*steplen, ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -882,7 +900,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   drainage              : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   drainage              : ', global_sum_array(ztemp)*steplen, ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -891,7 +910,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   discharge_ocean (neg.): ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE(message_text,*) '-   discharge_ocean (neg.): ', global_sum_array(ztemp)*steplen, ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
       CALL message(routine, message_text)
@@ -905,7 +925,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(ztemp, lacc=.TRUE.), ' m3/s'
+      !$ACC UPDATE HOST(ztemp) ASYNC(1)
+      WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(ztemp), ' m3/s'
       CALL message (TRIM(routine),message_text)
     END IF
 
@@ -925,7 +946,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_error = global_sum_array(water_error, lacc=.TRUE.)
+    !$ACC UPDATE HOST(water_error) ASYNC(1)
+    global_water_error = global_sum_array(water_error)
 
     IF (debug_hd) THEN
       WRITE (message_text,*) 'Water budget imbalance during time step: ', global_water_error,' m3'
