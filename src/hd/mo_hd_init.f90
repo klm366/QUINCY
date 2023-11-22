@@ -162,6 +162,7 @@ CONTAINS
       ! find local idices of grid cells upstream
       ALLOCATE(dsl4jsb_var_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
       ALLOCATE(dsl4jsb_var_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      !$ACC ENTER DATA CREATE(dsl4jsb_var_ptr(HD_,nidx_upstream), dsl4jsb_var_ptr(HD_,bidx_upstream))
       dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
       dsl4jsb_var_ptr(HD_,bidx_upstream) = -1
 
@@ -189,6 +190,16 @@ CONTAINS
         END DO
       END DO
 
+      !$ACC UPDATE &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask), dsl4jsb_var2D_onDomain(HD_,nsplit)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_overlflow), dsl4jsb_var2D_onDomain(HD_,nres_overlflow)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_riverflow), dsl4jsb_var2D_onDomain(HD_,nres_riverflow)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_baseflow),  dsl4jsb_var2D_onDomain(HD_,nres_baseflow))  &
+      !$ACC   DEVICE(hd__mem%bidx_upstream%ptr, hd__mem%nidx_upstream%ptr) &
+      !$ACC   ASYNC(1)
+
+      !$ACC WAIT(1)
+
       DEALLOCATE(cells_up)
 
       CALL input_file%Close()
@@ -208,6 +219,12 @@ CONTAINS
 
       CALL input_file%Close()
 
+      !$ACC UPDATE &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask), dsl4jsb_var2D_onDomain(HD_,coast_ocean)) &
+      !$ACC   ASYNC(1)
+
+      !$ACC WAIT(1)
+
     CASE ('zero')
 
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
@@ -220,6 +237,12 @@ CONTAINS
       DEALLOCATE(cell_sea_land_mask)
       
       CALL input_file%Close()
+
+      !$ACC UPDATE &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask)) &
+      !$ACC   ASYNC(1)
+
+      !$ACC WAIT(1)
       
       CASE ('none')      
 
@@ -343,7 +366,14 @@ CONTAINS
         dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_b_max)
         dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_r_max)
 
-      END IF
+    END IF
+
+    !$ACC UPDATE &
+    !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HD_,overlflow_res), dsl4jsb_var3D_onDomain(HD_,baseflow_res)) &
+    !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HD_,riverflow_res)) &
+    !$ACC   ASYNC(1)
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE hd_init_ic
 

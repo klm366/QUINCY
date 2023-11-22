@@ -49,39 +49,63 @@ CONTAINS
     ! ---------------
 
     REAL(wp) :: &
-      & amod(nc),          &
+      & amod,              &
       & akdiv(nc),         &
       & inflow_cascade(nc)   !< inflow into each level of the cascade
 
     INTEGER :: res, nres_max
+    INTEGER :: ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_cascade'
 
-    WHERE (nres > 0)       !< land - without internal drainage cells
-      ! unit conversions: [day] -> [seconds]
-      amod(:) = retention(:) * rdaylen
-      akdiv(:) = 1._wp / (amod(:) + steplen) * steplen
-    ELSEWHERE              !< ocean and lakes
-      akdiv(:) = 0._wp
-    END WHERE
+    !$ACC DATA CREATE(akdiv, inflow_cascade)
 
-    ! conversions: [m3/s] -> [m3]
-    inflow_cascade(:) = inflow(:) * steplen
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) PRIVATE(amod)
+    DO ic = 1, nc
+      IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
+        ! unit conversions: [day] -> [seconds]
+        amod  = retention(ic) * rdaylen
+        akdiv(ic) = 1._wp / (amod + steplen) * steplen
+      ELSE                       ! ocean and lakes
+        akdiv(ic) = 0._wp
+      END IF
+      ! conversions: [m3/s] -> [m3]
+      inflow_cascade(ic) = inflow(ic) * steplen
+    END DO
+    !$ACC END PARALLEL LOOP
 
     nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+    !$ACC LOOP SEQ
     DO res = 1, nres_max
-      WHERE (res <= NINT(nres(:)))
-        res_content(:,res) = res_content(:,res) + inflow_cascade(:)
-        outflow(:) = res_content(:,res) * akdiv(:)
-        res_content(:,res) = res_content(:,res) - outflow(:)
-      ELSEWHERE
-        outflow(:) = inflow_cascade(:)
-      ENDWHERE
-      inflow_cascade(:) = outflow(:)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        IF (res <= NINT(nres(ic))) THEN
+          res_content(ic,res) = res_content(ic,res) + inflow_cascade(ic)
+          outflow(ic) = res_content(ic,res) * akdiv(ic)
+          res_content(ic,res) = res_content(ic,res) - outflow(ic)
+        ELSE
+          outflow(ic) = inflow_cascade(ic)
+        END IF
+        inflow_cascade(ic) = outflow(ic)
+      END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END LOOP
 
     ! conversions: [m3] -> [m3/s]
-    outflow(:) = outflow(:) / steplen
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic = 1, nc
+      outflow(ic) = outflow(ic) / steplen
+    END DO
+    !$ACC END LOOP
+
+    !$ACC END PARALLEL
+
+    !$ACC END DATA
+    !$ACC WAIT(1)
 
   END SUBROUTINE reservoir_cascade
 
