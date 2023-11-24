@@ -48,9 +48,13 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> main routine for running ICON-Land standalone using ICON infrastructure
+  !> main routine for running ICON-Land standalone using ICON infrastructure (without atmosphere)
   !>
-  !>   'jsbach_model()' is called from the ICON program `src/drivers/icon:icon` (ICON-MPIM repo)
+  !>  see master_model_nml 'model_name' in icon_master.namelist ('atmo' vs. 'jsbach')
+  !>
+  !>  either using a global grid or just one grid cell a.k.a. site-level
+  !>
+  !>  'jsbach_model()' is called from the ICON program `src/drivers/icon:icon`
   !>
   SUBROUTINE jsbach_model(jsb_namelist_filename, shr_namelist_filename)
 
@@ -116,7 +120,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -145,7 +149,13 @@ CONTAINS
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
+
+    !> set up the ICON infrastructure
+    !>
+
     ! ----------------------------------------------------------------------------------------------------- !
+    ! jsbach and master namlist filename
+    ! @TODO rename to "master_*"
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
     ! ----------------------------------------------------------------------------------------------------- !
@@ -194,79 +204,81 @@ CONTAINS
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
 
+    ! test global ICON var 'n_dom': number of domains when running nested-domain experiments (different grid resolutions)
+    ! ICON-Land: at the moment just one is possible
     IF (n_dom > 1) CALL finish(routine, 'Only one atmospheric domain allowed')
 
-    iequations = inh_atmosphere
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> Start of model configuration - ICON infrastructure used with ICON-Land
+    !>
+    !>   only 'CALL jsbach_setup_models()' is specific to ICON-Land
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 0.1 Initialize global registry of lon-lat grids
+    !> 1.0 model configuration ICON
+    !>
+    !>
+
+    !> 1.1 Initialize global registry of lon-lat grids
+    !>
+    !> ICON-Land does not use lon/lat regular grid, but it needs to be set up here anyway as part of ICON
+    !> it can be used for some output operations
     !>
     CALL lonlat_grids%init()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 0.2 If this is a resumed or warm-start run...
+    !> 1.2 If this is a re-started experiment
     !>
+    ! use the restart infrastructure of ICON
+    ! read attributes and namelists for all available domains from restart file
+    ! These namelist values will overwrite the model default,
+    !  and will later be overwritten if the user has specified something different for this integration.
     restartAttributes => NULL()
     IF (isRestart()) THEN
       CALL message('','Read restart file meta data ...')
-      ! Reads attributes and namelists for all available domains from restart file.
-      ! These namelist values will overwrite the model default, and will later be overwritten if the user has
-      ! specified something different for this integration.
       CALL read_restart_header(TRIM(get_my_process_name()))
     ENDIF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 1.0 read namelists
-    !>
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 1.1 read namelists required for the ICON infrastructure and fill the
+    !> 1.3 read namelists required for the ICON infrastructure and fill the
     !>     corresponding sections of the ICON configuration states
     !>
-    ! Create a new file in which all the namelist variables and their
-    ! actual values used in the model run will be stored.
+    ! create and open a new file ('*_output') in which all the namelist variables
+    ! and their actual values used in the model run will be stored
     IF (my_process_is_stdio()) CALL open_nml_output(TRIM(jsb_namelist_filename)//'_output')
 
+    ! read multiple namelists
+    ! partly needed only for ICON infrastructure
     CALL read_infrastructure_namelists_for_jsbach(TRIM(jsb_namelist_filename), TRIM(shr_namelist_filename))
-
-    ! The following can't be called from the previous subroutine since it's causing a circular dependency.
+    ! read output namelist (can't be called from the previous subroutine since it's causing a circular dependency)
     CALL read_name_list_output_namelists (TRIM(jsb_namelist_filename))
 
-    ! Close the file in which all the namelist variables and their
-    ! actual values were stored and write an annotated table of all namelist settings to a text file
+    ! close the above created '*_output' file
+    ! write a '*.log' file
     IF (my_process_is_stdio()) THEN
       CALL close_nml_output()
       CALL log_nml_settings(TRIM(jsb_namelist_filename)//".log")
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 1.2 Cross-check namelist setups
+    !> 1.4 Cross-check namelist the setup that controls the parallelisation config (ICON setup)
     !>
     CALL check_parallel_configuration()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 2.0 Set times and events
+    !> 1.5 Set times and events, e.g., when to write output and restart files (ICON setup infrastructure)
+    !>   specifically checking the parallel.nml settings
     !> 
     CALL compute_timestep_settings()
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
     CALL initEventManager(time_config%tc_exp_refdate)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 3.0 Call configure_run to finish filling the run_config state.
+    !> 1.6 Call ICON configure_run to finish filling the run_config state.
     !>
-    !>    This needs to be done very early (but anyway after atm_crosscheck)
-    !>    because some components of the state, e.g., num_lev, may be
-    !>    modified in this subroutine which affects the following CALLs.
+    !>    this needs to be done very early (but anyway after atm_crosscheck)
     !>
     CALL configure_run( )
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.0 intialization
-    !>
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.1 Initialize the mpi work groups
+    !> 1.7 set up processes that are exclusively used for restarts
     !>
     num_prefetch_proc = 0
     CALL restartWritingParameters(opt_dedicatedProcCount = dedicatedRestartProcs)
@@ -278,19 +290,25 @@ CONTAINS
     CALL update_nproma_on_device( my_process_is_work() )
 #endif
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.2 Initialize various timers
+    !> 1.8 Initialize the framework/infrastructure of timers
+    !>
+    !>    timers: functionality that gets the CPU-time of specific parts of the model (e.g. subroutines)
+    !>            which is written to logfile
+    !>    see mo_timer module and the 'ltimer' LOGICAL
+    !>    some actual timers are started below in this modul ('CALL timer_start()')
     !>
     IF (ltimer) CALL init_timer
+    
+    !> 1.8.1 start actual timer for total model runtime
+    !>
     IF (timers_level > 1) CALL timer_start(timer_model_init)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.3 initialize dynamic list of vertical axes
+    !> 1.9 initialize dynamic list of vertical axes (needed for vertical grids)
+    !>     is also relatet to cdi, i.e., the library used for cdo
     !>
     zaxisTypeList = t_zaxisTypeList()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 5.0 Setup the model in ICON-Land: read namelists, configure models for each domain
+    !> 1.10 Setup the model in ICON-Land: read namelists, configure models for each domain
     !>
     !>   @NOTE This has to be after (!) the ICON zaxes have been created in the above line but
     !>         before (!) the restart PEs are detached a few lines below since ICON-Land
@@ -299,15 +317,13 @@ CONTAINS
     CALL jsbach_setup_models(shr_namelist_filename)
     no_models = get_no_of_models()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 6.0 I/O initialization
+    !> 1.11 I/O initialization
     !>
-    ! This won't RETURN on dedicated restart PEs, starting their main loop instead.
+    ! 'restart processes' are "detached" from the timeloop and only called if the restart event is scheduled
     CALL detachRestartProcs(ltimer)
     CALL init_io_processes()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 7.0 Import patches, perform domain decomposition
+    !> 1.12 Import patches, perform domain decomposition
     !>
     !>   define the horizontal and vertical grids since they are aready
     !>   needed for some derived control parameters. This includes
@@ -318,16 +334,17 @@ CONTAINS
     IF (timers_level > 4) CALL timer_start(timer_domain_decomp)
     CALL build_decomposition(num_lev, nshift, is_ocean_decomposition = .false.)
     IF (timers_level > 4) CALL timer_stop(timer_domain_decomp)
-
+    ! ...
     p_patch(:)%ldom_active = .TRUE.
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 8.0 Construct interpolation state, compute interpolation coefficients.
+    !> 1.13 Construct interpolation state, compute interpolation coefficients.
     !>
     IF (timers_level > 4) CALL timer_start(timer_compute_coeffs)
     CALL configure_interpolation( n_dom, p_patch(1:)%level, &
                                   p_patch(1:)%geometry_info )
 
+    ! not actually used in ICON-Land but needed with ICON
+    ! (gridref refers to nested setups)
     CALL configure_gridref(n_dom, p_patch(1:)%geometry_info%mean_characteristic_length)
 
     ! Allocate array for interpolation state
@@ -337,83 +354,93 @@ CONTAINS
       CALL finish(routine, 'allocation for ptr_int_state failed')
     ENDIF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 Initialize icon_comm_lib
+    !> 1.14 Initialize icon_comm_lib
     !>
     CALL construct_icon_communication(p_patch, n_dom)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 10.0 Setup the information for the physical patches
+    !> 1.15 Setup the information for the physical patches
     !>
     CALL setup_phys_patches
-
     ! Constructing data for lon-lat interpolation
     ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
-
     CALL allocate_vct_atmo(p_patch(1)%nlevp1)
-
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
-
     CALL init_convect_tables ! necessary for FUNCTION qsat
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 11.0 setup and init external forcing
     !>
-    IF (force_from_observations()) CALL setup_forcing(no_models)  ! @TODO this might always be TRUE with icon-land standalone
+    !> Start of ICON-Land model configuration and init
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 2.0 model configuration and init of ICON-Land
+    !>
+    !>
+
+    !> 2.1 main setup of ICON-Land
+    !>
+    !> e.g. setup and init external forcing (e.g., observational data and model output)
+    !>
+    ! setup forcing (just setup some variables / vectors)
+    IF (force_from_observations()) CALL setup_forcing(no_models)  ! @TODO this might always be TRUE with icon-land standalone - delete IF(force_from_observations)
+    ! loop over ICON-Land models
     DO jg=1,no_models
       model => Get_model(jg)
+      ! collect information from ICON patches (info per grid cell) and add it to the ICON-Land grid structure
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
+      ! read usecase and lctlib, and setup usecase with tile structure
       CALL jsbach_setup_tiles(jg)
+      ! main ICON-Land model init function, incl. reading ic/bc files and setup task queue
       CALL jsbach_init(jg)
+      ! init forcing and actually read the forcing data
       IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime, dtime)
     END DO
     CALL jsbach_label_run(.TRUE.)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 12.0 restart a simulation
+    !> 2.2 restart a simulation: read model state from restart file(s)
     !>
     IF (isRestart()) THEN
-      !
-      ! This is a resumed integration. Read model state from restart file(s).
-      !
+      ! timer "reading restart files" start
       IF (timers_level > 4) CALL timer_start(timer_read_restart)
-      !
+      ! 'n_dom' used for nested simulations in ICON
+      ! (in ICON-Land site-level simulations, each site is one 'domain', @TODO better rename to n_sites then)
       DO jg = 1,n_dom
         IF (p_patch(jg)%ldom_active) THEN
           CALL read_restart_files( p_patch(jg), n_dom)
         END IF
-      END DO      !
+      END DO
       CALL message(TRIM(routine),'normal exit from read_restart_files')
-      !
+      ! timer "reading restart files" stop
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
-      !
+      ! overwriting some information from the ic/bc files
+      ! also considers land-cover change and other things (one could add)
       DO jg=1,no_models
         CALL jsbach_init_after_restart(jg)
       END DO
-
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 13.0 Prepare output
+    !> 2.3 Prepare output
+    !>
+    !>  ICON-Land does not use grib output, but is needed for ICON infrastructure
+    !>  configure I/O
     !>
     CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
     CALL configure_io()
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 13.1 Map the variable groups given in the output namelist onto the corresponding variable subsets:
-    !>
-    !>   @NOTE all add_vars must be finished before calling this routine.
-    !>
+    ! Map the variable groups given in the output namelist onto the corresponding variable subsets
+    !   Note: all add_vars must be finished before calling this routine (jsbach is already inited above)
+    !   each process has its own group (generated on the fly; e.g. BASIC is just a level of how many var one wants into this group)
     IF (output_mode%l_nml) THEN
+      ! look into namelist and init the groups
       CALL parse_variable_groups()
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 13.2 If async IO is in effect, init_name_list_output is a collective call
-    !>      with the IO procs and effectively starts async IO
+    !> 2.4 
     !>
+    !>
+    ! 'l_nml' is an option in the namelist: by default this is TRUE if (there is currently no alternative system for ICON-Land)
     IF (output_mode%l_nml) THEN
-      ! compute sim_start, sim_end
+      ! calculate sim_start, sim_end, ..
       sim_step_info%sim_start    = time_config%tc_exp_startdate
       sim_step_info%sim_end      = time_config%tc_exp_stopdate
       sim_step_info%run_start    = time_config%tc_startdate
@@ -423,22 +450,24 @@ CONTAINS
       sim_step_info%jstep0 = 0
 
       CALL getAttributesForRestarting(restartAttributes)
-      ! get start counter for time loop from restart file:
+      ! restart simulation: get start counter for time loop from restart file
       IF (restartAttributes%is_init) &
         & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
+      ! init the output system
       CALL init_name_list_output(sim_step_info)
       CALL create_mipz_level_selections(output_file)
+      ! let cdi know about the vertical axes
       CALL create_vertical_axes(output_file)
-
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 13.3 Initialize reset-Action, i.e. assign variables to action object
+    !> 2.5 Initialize the reset-Action
+    !>
+    !>  'action' is an ICON concept for something to be done, e.g., do output, calc mean (of output)
+    !>  'reset-Action' may be the action that resets the summarizing variables used for e.g. 'output mean'
     !>
     CALL reset_act%initialize(ACTION_RESET)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 13.4 Optional: detailed print-out of some variable info  !
+    !> 2.6 if set 'msg_level >= 15' print to logfile  for eaxch group what variables are included in this output group
     !>
     IF (my_process_is_stdio() .AND. (msg_level >= 15)) THEN
       DO jg=1,n_dom
@@ -446,41 +475,48 @@ CONTAINS
       END DO
     END IF
 
+    ! stop timer for model init
     IF (timers_level > 1) CALL timer_stop(timer_model_init)
 
     ! ----------------------------------------------------------------------------------------------------- !
+    !> 3.0 model configuration and run some routines also called again in the time loop
     !>
-    !> End of model initialization
     !>
-    ! ----------------------------------------------------------------------------------------------------- !
 
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 14.0 get and write out some of the initial values
+    !> 3.1 get and write out some of the initial values
     !>
+    ! get current timestep date
     mtime_current => time_config%tc_current_date
+    ! if this is the start of experiement and no restart:
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
-      ! ..
-      CALL update_statistics ! R: notwendig siehe Rechnertext
-      ! --
+      ! update statistics
+      CALL update_statistics
+      ! write initial values into output
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
       END IF
-    END IF ! not isRestart()
+    END IF
 
+    ! start timer: model runtime w/o model init
     IF (ltimer) CALL timer_start(timer_total)
 
-    ! calculate elapsed simulation time in seconds
+    ! calc the number of seconds since model simulatoin has started
+    ! no used by ICON-Land, but ICON infrastructure
+    ! @NOTE can be deleted - is just a local var, not used anymore
     sim_time = getElapsedSimTimeInSeconds(mtime_current)
 
-    ! allocate temporary variable for restarting purposes
+    ! allocate temporary variable for restart simulations
+    !   (restart system needs a copy of the output file - ICON infrastructure)
     IF (output_mode%l_nml) THEN
       ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
     ENDIF
 
-    mtime_old     => newDatetime(mtime_current) ! in
+    ! @NOTE can be deleted - is just a local var, not used anymore
+    mtime_old => newDatetime(mtime_current)
 
+    !> 3.2 init structure for restart system specific to jsbach a.k.a. ICON-Land
+    !>
     restartDescriptor => createRestartDescriptor("jsbach")
     jstep0 = 0
     CALL getAttributesForRestarting(restartAttributes)
@@ -489,13 +525,18 @@ CONTAINS
       CALL restartAttributes%get("jstep", jstep0)
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 14.1 for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
+    !> 3.3 for debug purposes print 'var lists'
     !>
-    IF  (msg_level >= 13) CALL vlr_print_vls(lshort=(msg_level < 20))
+    !>   for msg_level >= 13 short and for >= 20 long format
+    !>
+    IF (msg_level >= 13) THEN
+      CALL vlr_print_vls(lshort=(msg_level < 20))
+    END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 15.0 set events, group and the events
+    !> 3.4 init and configure events (for actions)
+    !>
+    !>  events: when actions may be done
+    !>          e.g., when output and restart may be done
     !>
     CALL message('','')
     eventStartDate => time_config%tc_exp_startdate
@@ -509,15 +550,15 @@ CONTAINS
     ELSE
       checkpointRefDate => time_config%tc_exp_startdate
       restartRefDate    => time_config%tc_exp_startdate
-    ENDIF
-    ! --- create an event group for checkpointing and restart
+    END IF
+    ! create an event group for checkpointing and restart
     checkpointEvents =  addEventGroup('checkpointEventGroup')
     checkpointEventGroup => getEventGroup(checkpointEvents)
-    ! --- --- create checkpointing event
+    ! create checkpointing event
     eventInterval  => time_config%tc_dt_checkpoint
     checkpointEvent => newEvent('checkpoint', checkpointRefDate, eventStartDate, eventEndDate, eventInterval, errno=error_status)
     IF (error_status /= NO_ERROR) THEN
-      ! give an elaborate error message:
+      ! give an elaborate error message (into logfile)
       CALL datetimeToString(checkpointRefDate, dt_string)
       WRITE (0,*) "event reference date: ",    dt_string
       CALL datetimeToString(eventStartDate,    dt_string)
@@ -528,13 +569,13 @@ CONTAINS
       WRITE (0,*) "event interval      : ",    td_string
       CALL mtime_strerror(error_status, errstring)
       CALL finish('perform_nh_timeloop', "event 'checkpoint': "//errstring)
-    ENDIF
+    END IF
     lret = addEventToEventGroup(checkpointEvent, checkpointEventGroup)
-    ! --- --- create restart event, ie. checkpoint + model stop
+    ! create restart event, ie. checkpoint + model stop
     eventInterval  => time_config%tc_dt_restart
     restartEvent => newEvent('restart', restartRefDate, eventStartDate, eventEndDate, eventInterval, errno=error_status)
     IF (error_status /= NO_ERROR) THEN
-      ! give an elaborate error message:
+      ! give an elaborate error message (into logfile)
       CALL datetimeToString(restartRefDate, dt_string)
       WRITE (0,*) "event reference date: ", dt_string
       CALL datetimeToString(eventStartDate, dt_string)
@@ -545,15 +586,16 @@ CONTAINS
       WRITE (0,*) "event interval      : ", td_string
       CALL mtime_strerror(error_status, errstring)
       CALL finish('perform_nh_timeloop', "event 'restart': "//errstring)
-    ENDIF
+    END IF
     lret = addEventToEventGroup(restartEvent, checkpointEventGroup)
+    ! printout information into logfile
     CALL printEventGroup(checkpointEvents)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 16.0 set time loop properties
+    !> 3.5 set time loop properties
     !>
+    ! get the length of the timestep: 'delta t' (e.g., 30 minutes)
     model_time_step => time_config%tc_dt_model
-
+    ! convert time information to string and printout to logfile
     CALL message('','')
     CALL datetimeToString(mtime_current, dstring)
     WRITE(message_text,'(a,a)') 'Start date of this run: ', dstring
@@ -563,34 +605,50 @@ CONTAINS
     CALL message('',message_text)
     CALL message('','')
 
-    jstep = jstep0+1
-
     ! ----------------------------------------------------------------------------------------------------- !
     !>
-    !> 17.0 time loop for running ICON-Land
+    !> Time loop
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 model time loop
+    !>
+    !>
+
+    !> 4.1 set loop counter to 1 (jstep is an ICON variable)
+    !>
+    !>    'jstep0 != zero' for restart simulations
+    !>
+    jstep = jstep0 + 1
+
+    !> 4.2 time loop for running ICON-Land
     !>
     TIME_LOOP: DO
-      ! optional memory loggin
+      ! optional memory loggin (probably messages about memory usage)
       CALL memory_log_add
 
-      !TODO Compute mtime_forcing
+      ! increase current timestep by 'model_time_step'
       mtime_current = mtime_current + model_time_step
 
       ! store state of output files for restarting purposes
+      ! (copy parts of output files into another structure used for restarts)
       IF (output_mode%l_nml .AND. jstep>=0 ) THEN
         DO i=1,SIZE(output_file)
           output_jfile(i) = get_current_jfile(output_file(i)%out_event)
         END DO
-      ENDIF
+      END IF
 
+      ! print out timing information to logfile
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
         lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
-      ENDIF
-      ! always print the first and the last time step
-      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
+      END IF
 
+      ! always print the first and the last time step
+      ! print out timing information to logfile independent of 'message level'
+      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
       IF (lprint_timestep) THEN
         WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
               &             'Time step: ', jstep, ' model time ',                                &
@@ -599,51 +657,48 @@ CONTAINS
               &             mtime_current%time%minute, ':', mtime_current%time%second,   '.',    &
               &             mtime_current%time%ms
         CALL message('',message_text)
-      ENDIF
+      END IF
 
-      ! set namelist output flag
+      ! set model output to TRUE/FALSE for this timestep
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.1 run ICON-Land for one timestep
+      !> 4.2.1 run ICON-Land for one timestep
       !>
       DO jg = 1,no_models
         CALL run_one_timestep( &
           & jg, &                   ! model
-          & p_patch(jg)%nblks_c, &  ! ..
+          & p_patch(jg)%nblks_c, &  ! the number of the block, i.e., tha last dimension of ICON-land variables
           & dtime, &                ! length of timestep in seconds
-          & mtime_current)          ! ..
+          & mtime_current)          ! instance of a TYPE with time information date & time & ...
       END DO
 
-      ! update accumulated values
+      ! update accumulated values, e.g., mean output value calculation
       CALL update_statistics
 
+      ! write output
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep)
-      ENDIF
+      END IF
 
-      ! re-initialize MAX/MIN fields with 'resetval'
-      !   @NOTE must be done AFTER output
+      ! re-initialize/re-set actions
+      !   NOTE must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
 
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.2 Write restart file
-      !>
-      !>  check whether time has come for writing restart file
-      !>
-      ! default is to assume we do not write a checkpoint/restart file
+      !> 4.2.2 Write restart file
+      !>   check whether time has come for writing restart file
+      !>   by default no restart file is written at the end of the experiment
       lwrite_checkpoint = .FALSE.
       ! if the model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
-        ! to clarify the decision tree we use shorter and more expressive names:
-        l_isStartdate    = (time_config%tc_startdate == mtime_current)
-        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
-        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
-        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
-        l_doWriteRestart = time_config%tc_write_restart
-        ! ...
+        ! set time related variable and events
+        l_isStartdate    = (time_config%tc_startdate == mtime_current)                        ! is start date of experiment
+        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)                     ! is stop date of teh complete experiment experiment, including all restarts
+        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)     ! is it time to write a restart file
+        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)  ! is it time to write a checkpoint data
+        l_doWriteRestart = time_config%tc_write_restart                                       ! if we want to write retsrat files at all
+        ! check if a checkpoint may be written (write restat file but do no model restart)
         IF ( &
-              !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
+              !  if time for checkpoint or restart has been reached
               &         (l_isRestart .OR. l_isCheckpoint)                     &
               &  .AND.                                                        &
               !  and the current date differs from the start date
@@ -655,76 +710,85 @@ CONTAINS
           lwrite_checkpoint = .TRUE.
         END IF
       END IF
-      ! ..
+      ! if a checkpoint may be written
       IF (lwrite_checkpoint) THEN
+        ! update patch (ICON infrastructure; grid information)
         DO jg=1,n_dom
           CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
         END DO
-        ! finally write restart file
+        ! write restart file
         CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
-      END IF  ! lwrite_checkpoint
-      ! ...
+      END IF
+      ! have we reached the experiment stop date of current restart job (== restart stops)
       IF (mtime_current >= time_config%tc_stopdate) THEN
         ! leave time loop
         EXIT TIME_LOOP
       END IF
-
       ! increase timestep by one
       jstep = jstep + 1
+
+      ! NOTE 'sim_time' can be deleted, not used here anymore
       ! step_in_forcing_file = step_in_forcing_file + 1
       sim_time = getElapsedSimTimeInSeconds(mtime_current)
     END DO TIME_LOOP
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 18.0  ... @TODO describe
+    !>
+    !> cleanup and finalization
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 5.0 cleanup and finalization (mostly ICON infrastructure)
+    !>
+    !>
+
+    !> cleanup restart descriptors
     !>
     CALL deleteRestartDescriptor(restartDescriptor)
 
-    ! ..
+    !> stop timer for total runtime
+    !>
     IF (ltimer) CALL timer_stop(timer_total)
 
-    ! ..
+    !> deallocate and destruct
+    !>
+    ! temporary output file used for averaging and so on
     IF (output_mode%l_nml) THEN
       DEALLOCATE(output_jfile, STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
-    ENDIF
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 19.0 deallocation of structure and variables
-    !>
-    ! @TODO CALL deallocateDatetime(mtime_forcing)
+    END IF
+    ! mtime_old instance of mtime TYPE
     CALL deallocateDatetime(mtime_old)
-
-    ! Deallocate global registry for lon-lat grids
+    ! global registry for lon-lat grids
     CALL lonlat_grids%finalize()
-
-    ! Destruct communication patterns
+    ! communication patterns
     CALL destruct_comm_patterns( p_patch, p_patch_local_parent )
-
-    ! Deallocate grid patches
+    ! grid patches
     CALL destruct_patches( p_patch )
-
-    ! ..
+    ! patch (ICON infrastructure for grid information)
     DEALLOCATE( p_patch, STAT=error_status )
-    IF (error_status/=SUCCESS) THEN
+    IF (error_status /= SUCCESS) THEN
       CALL finish(routine, 'deallocate for patch array failed')
-    ENDIF
+    END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 20.0 close memory logging files and finalize model
+    !> close memory logging files and finalize model
     !>
     CALL memory_log_terminate
     CALL destruct_icon_communication()
+
+    !> ICON-Land cleanup and finalize
+    !>
     CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 21.0 Delete variable lists
+    !> delete variable lists
     !>
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
-    ENDIF
+    END IF
 #ifdef HAVE_CDI_PIO
+    ! cdipo is a parallel version of cdi
     IF (pio_type == pio_type_cdipio) THEN
       prev_cdi_namespace = namespaceGetActive()
       CALL namespaceSetActive(nml_io_cdi_pio_namespace)
@@ -733,8 +797,7 @@ CONTAINS
     END IF
 #endif
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 22.0 finish message and print performance timers
+    !> write finish message and print runtime timers
     !>
     CALL message(routine, 'clean-up finished')
     IF (ltimer) CALL print_timer
@@ -744,7 +807,16 @@ CONTAINS
   !>
   !> run ICON-Land for one timestep
   !>
-  SUBROUTINE run_one_timestep(model_id, nblks, dtime, datetime_new)
+  ! Note: run_one_timestep does not call the full interface, however, it does call most of the routines
+  !       which are also called within the full interface. The main difference between the full interface and
+  !       run_one_timestep is where the A2L variables are assigned: in the interface these are passed from the
+  !       atmosphere and assigned by calling update_atm2land; here they are directly assined in the routine
+  !       that reads the external forcing / caluclates the timestep forcing. 
+  SUBROUTINE run_one_timestep( &
+    & model_id, &
+    & nblks, &
+    & dtime, &
+    & datetime_new)
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
@@ -754,7 +826,7 @@ CONTAINS
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver_variables
     USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
@@ -767,25 +839,27 @@ CONTAINS
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER,                INTENT(in)            :: model_id
-    INTEGER,                INTENT(in)            :: nblks
+    INTEGER,                INTENT(in)            :: model_id       !< model ID, number of the model or site
+    INTEGER,                INTENT(in)            :: nblks          !< number of the block
     REAL(wp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
     ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=max_timedelta_str_len) :: dtime_string     !< time delta as string
-    TYPE(timedelta)         , POINTER    :: dtime_mtime      !< time delta as mtime variable
-    TYPE(datetime)          , POINTER    :: datetime_old     !< date and time at the beginning of this time step
-    TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
-    TYPE(datetime)          , POINTER    :: datetime_forcing
+    CHARACTER(len=max_timedelta_str_len) :: dtime_string        !< time delta as string (dtime, timestep length)
+    TYPE(timedelta)         , POINTER    :: dtime_mtime         !< time delta as mtime variable (dtime, timestep length)
+    TYPE(datetime)          , POINTER    :: datetime_old        !< date and time at the beginning of this time step
+    TYPE(datetime)          , POINTER    :: datetime_old_old    !< date and time one time step before datetime_old
+    TYPE(datetime)          , POINTER    :: datetime_forcing    !< TODO: not used can be deleted
 
-    INTEGER  :: nproma
-    INTEGER  :: iblk                           !< index of block loop
-    INTEGER  :: startblk, endblk               !< start and end indices of block   loop
-    INTEGER  :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop
+    INTEGER                              :: nproma                         !< number of grid cells per chunk
+    INTEGER                              :: iblk                           !< index of block loop
+    INTEGER                              :: startblk, endblk               !< start and end indices of block   loop
+    INTEGER                              :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop, i.e., stat and end index of each block
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: land_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: lake_tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
@@ -813,16 +887,19 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
-    REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
+    REAL(wp), POINTER       :: lon(:,:)
+    REAL(wp), POINTER       :: lat(:,:)
+    REAL(wp), POINTER       :: coslat(:,:)
+    REAL(wp), POINTER       :: sinlat(:,:)
+    REAL(wp), ALLOCATABLE   :: evapo_act2pot(:,:) !< evaporation ratio: evapotranspirtaion / potential evaporation
 
-    LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
-    LOGICAL :: l_first_forcing_file    = .TRUE.
-    LOGICAL :: l_shift_one_timestep    = .TRUE.
-    LOGICAL :: l_first_step_in_restart = .FALSE.
+    LOGICAL :: use_external_forcing               !< use forcing from external forcing (e.g., observation based data)
+    LOGICAL :: l_first_forcing_file    = .TRUE.   !< first forcing file in the experiment
+    LOGICAL :: l_shift_one_timestep    = .TRUE.   !< TODO delete - not used anymore
+    LOGICAL :: l_first_step_in_restart = .FALSE.  !< first timestep after a restart was done TODO restructure, just use the function below, no local var needed
 
-    INTEGER :: nc, nt, it, ics, ice
-    INTEGER :: global_seconds_day
+    INTEGER :: nc, nt, it, ics, ice               !< dimensions
+    INTEGER :: global_seconds_day                 !< number of seconds since day has started - global time the model does use, probably at UTC
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -830,27 +907,31 @@ CONTAINS
     ! use forcing from external forcing, such as, observation based data (e.g., CRUJRA)
     !                                             or output from another model simulation
     ! see namelist 'jsb_control_nml' and 'mo_jsb_control:l_force_from_obs'
-    use_external_forcing = force_from_observations()
+    use_external_forcing = force_from_observations() !TODO: different issue: no option anymore, can be removed  
 
+    !TODO: l_shift_one_timestep also not used anymore?!
     IF (jsbach_is_restarted()) THEN
-      l_first_forcing_file = .FALSE.
+      l_first_forcing_file = .FALSE. ! default is true, just set to false upon restart
       l_shift_one_timestep = .FALSE.
     ELSE
       l_shift_one_timestep = .TRUE.
     END IF
 
-    CALL getPTStringFromSeconds(-dtime, dtime_string)
-    dtime_mtime      => newTimedelta(dtime_string)
-    datetime_old     => newDatetime(datetime_new)
-    datetime_old     =  datetime_new + dtime_mtime
-    datetime_old_old => newDatetime(datetime_old)
-    datetime_old_old =  datetime_old + dtime_mtime
-    CALL deallocateTimedelta(dtime_mtime)
+    ! Note: datetime_new is the timestep we use for computing
+    CALL getPTStringFromSeconds(-dtime, dtime_string) ! converts real dtime into a string (negative! timestep)
+    dtime_mtime      => newTimedelta(dtime_string)    ! timedelta is an object class in mtime 
+    datetime_old     => newDatetime(datetime_new)     ! datetime_old: new object, but with the same content 
+    datetime_old     =  datetime_new + dtime_mtime    ! i.e. one timestep before current dateime
+    datetime_old_old => newDatetime(datetime_old)     ! TODO: not used can be deleted
+    datetime_old_old =  datetime_old + dtime_mtime    ! TODO: not used can be deleted
+    CALL deallocateTimedelta(dtime_mtime) 
 
+    ! datetime_old is the beginning of the timestep
     IF (is_time_restart(datetime_old)) THEN
       l_first_step_in_restart = .TRUE.
     END IF
 
+    ! TODO: not used, whole IF can be deleted
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
       IF (forcing_options(model_id)%forcing_steps_per_day == 1  .AND. .NOT. use_external_forcing ) THEN
@@ -869,12 +950,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> start timestep
     !>
-    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_start_timestep(model_id, datetime_old, dtime) ! Note: datetime_old = beginning of the timestep
 
     model => get_model(model_id)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
 
+    ! in the interface called when running in coupled mode, iblk, ics and ice are provided from the atmosphere
+    ! here they are retrieved from the grid
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
     DO iblk = startblk, endblk
@@ -882,6 +965,7 @@ CONTAINS
       endidx  (iblk) = grid%Get_col_end(iblk)
     END DO
 
+    !TODO: this if-section will be transferd within another issue/MR
     CALL model%Get_top_tile(tile)
     IF (tile%contains_lake) THEN
       ! We need separate variables for the land and the lake tile and cannot use the box tile.
@@ -925,22 +1009,26 @@ CONTAINS
       dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
     END IF
 
+    ! TODO: use_external_forcing is the only option - i.e. if not required
     IF (use_external_forcing) THEN
 
+      ! get memory for variables used below
       dsl4jsb_Get_memory(A2L_)
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
+      ! lon and lat values are required for the weather generator
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
-      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
+      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle (required init)
+      ! Note: in ICON host adapter cos-zenith-angle is set to >=0 for ICON-Land
 
-      ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      ! Potentially required for humidity calculation if not provided with the forcing
       ALLOCATE(evapo_act2pot(nproma, nblks))
       IF (is_time_experiment_start(datetime_old)) THEN
         evapo_act2pot(:,:) = 1._wp
@@ -949,15 +1037,17 @@ CONTAINS
           &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
       END IF
 
+      ! start timer only used for reading and calculating of forcing variables
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
       ! --------------------------------------------------------------------------------------------------- !
-      !> get variables (that are in the coupled simulation provided via the model interface by the host model)
-      !>   including dimensional data and data from external forcing, i.e., forcing input files
-      !>   see: 'mo_jsb_interface:interface_full'
-      !> 
+      !> get forcing variables (and directly store these in the A2L memory) 
+      ! (when running in coupled mode, the same forcing variables are provided by the atmosphere and are
+      !  subsequently assigned via calling update_atm2land, which thus not need to be called when running standalone)
+
+      ! TODO: the if for lakes and drag+coefficient variables will be transfered in another MR/issue
       IF (model%config%use_lakes) THEN
-        CALL get_standalone_driver( &
+        CALL get_standalone_driver_variables( & !TODO discussion on the routine name? (external forcing?) 
           ! in
           & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
           & .TRUE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                         &
@@ -1006,7 +1096,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
           & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
       ELSE
-        CALL get_standalone_driver( &
+        CALL get_standalone_driver_variables( &
           ! in
           & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
           & .FALSE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                        &
@@ -1047,12 +1137,15 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
+      ! TODO: TBD it might be nice to have the local time as part of the grid and not only for QUINCY?!
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
 
-        ! Update local time and daytime counter
+        ! Update local time and the daytime_counter (daytime is determined using radiation)
+        ! (these variables are required in several "QUINCY" processes 
+        !  to determine local midnight or noon and to track variables when sw radiation is > 0)
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
@@ -1065,7 +1158,7 @@ CONTAINS
 
     END IF ! IF (use_external_forcing) THEN
 
-
+    ! the following routines are also called in the interface when running coupled
 !$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc) IF(nblks > 1)
     ! ----------------------------------------------------------------------------------------------------- !
     !> loop over the chunks of the block

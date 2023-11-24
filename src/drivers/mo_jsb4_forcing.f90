@@ -64,7 +64,7 @@ MODULE mo_jsb4_forcing
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
+  PUBLIC :: get_standalone_driver_variables, setup_forcing, init_forcing, finalize_external_forcing, &
     &       sat_specific_humidity, forcing_options, forcing_options_quincy
 
   REAL(wp), SAVE :: delta_time, time_step_len
@@ -232,7 +232,7 @@ CONTAINS
   !> 
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !> 
-  SUBROUTINE get_standalone_driver(                                                        &
+  SUBROUTINE get_standalone_driver_variables(                                                        &
     & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
     & current_datetime, next_datetime, use_lakes,                                          &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
@@ -316,7 +316,7 @@ CONTAINS
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:)
     REAL(wp), ALLOCATABLE :: help2(:,:)
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver_variables'
     ! ----------------------------------------------------------------------------------------------------- !
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
@@ -627,7 +627,7 @@ CONTAINS
     IF (use_lakes) THEN
       DEALLOCATE (pch_lake)
     END IF
-  END SUBROUTINE get_standalone_driver
+  END SUBROUTINE get_standalone_driver_variables
 
   ! ======================================================================================================= !
   !>

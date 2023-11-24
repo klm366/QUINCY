@@ -53,7 +53,7 @@ CONTAINS
   !> is called by host model (ICON) in a coupled simulation in './atm_phy_echam/mo_surface'
   !>
   !> @NOTE for a standalone simulation 'mo_jsbach_model:jsbach_model' is called 
-  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
+  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver_variables'
   !>
   SUBROUTINE interface_full( &
     & model_id,         &
@@ -424,7 +424,8 @@ CONTAINS
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
-    CALL model%Reset_tiles()
+    !       makes sure that everything is set back to the root tile and to bookkeeping defaults
+    CALL model%Reset_tiles() 
 
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
