@@ -35,7 +35,7 @@ MODULE mo_veg_util
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
-  USE mo_jsb_math_constants,    ONLY: zero, eps8
+  USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -166,13 +166,13 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     !------------------------------------------------------------------------------------------------------ !
-    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, SPQ_
+    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, Q_PHENO_, SPQ_
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -191,7 +191,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                                 :: dtime                !< timestep
+    REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -202,7 +202,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
@@ -217,10 +217,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai 
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: n_fixation 
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
@@ -350,7 +350,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
@@ -371,10 +371,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
@@ -523,7 +523,7 @@ CONTAINS
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
     DO ic = 1, nc
-       IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
+       IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ! 1D

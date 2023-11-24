@@ -29,11 +29,11 @@ MODULE mo_q_rad_interface
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
 
-  dsl4jsb_Use_processes RAD_, VEG_, A2L_, PHENO_
+  dsl4jsb_Use_processes RAD_, VEG_, A2L_, Q_PHENO_
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(Q_PHENO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -203,7 +203,7 @@ CONTAINS
   SUBROUTINE update_time_average_radiation_quincy(tile, options)
 
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -213,11 +213,11 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, VEG_, RAD_, PHENO_
+    dsl4jsb_Use_processes A2L_, VEG_, RAD_, Q_PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -230,7 +230,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
-    INTEGER                                 :: dtime                !< timestep
+    REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -238,13 +238,13 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
-    ! PHENO_
+    ! Q_PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
@@ -277,7 +277,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
 
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
 
@@ -288,8 +288,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
-    ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
+    ! Q_PHENO_
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in 
     ! 2D RAD_
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
@@ -341,7 +341,7 @@ CONTAINS
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
     DO ic = 1, nc
-      IF (ABS(local_time_day_seconds(ic) - dtime) < eps8) THEN
+      IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)

@@ -59,7 +59,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
@@ -74,13 +74,13 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
     USE mo_q_assimi_process,                ONLY: discrimination_ps
-    USE mo_pheno_constants,                 ONLY: ievergreen
+    USE mo_q_pheno_constants,               ONLY: ievergreen
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(ASSIMI_)    
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)        
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(RAD_)
@@ -115,7 +115,7 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(RAD_)
@@ -129,13 +129,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season 
     dsl4jsb_Real2D_onChunk      :: lai_max
-    dsl4jsb_Real2D_onChunk      :: lai
-    ! PHENO_ 3D
-    dsl4jsb_Real3D_onChunk      :: lai_cl
-    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 3D
@@ -151,6 +147,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp
@@ -217,6 +214,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -237,7 +236,7 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
@@ -262,13 +261,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)                      ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! CASE "plant" & "land": out / other Cases: in
-    ! PHENO_ 3D
-    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! out
-    dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)                  ! out
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! SPQ_ 3D
@@ -284,6 +279,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! CASE "plant" & "land": out / other Cases: in
     dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                  ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                           ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                            ! out
@@ -350,6 +346,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 set g1 according to canopy_conductance_scheme

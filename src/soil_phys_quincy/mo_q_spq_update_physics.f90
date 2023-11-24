@@ -53,7 +53,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SPQ_, PHENO_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SPQ_, VEG_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
@@ -63,7 +63,6 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -88,7 +87,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
@@ -169,10 +167,9 @@ CONTAINS
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
     dsl4jsb_Real2D_onChunk                :: net_radiation
-    ! PHENO_ 2D
-    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk                :: height
+    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -199,7 +196,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -281,9 +277,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)        ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in 
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in 
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
