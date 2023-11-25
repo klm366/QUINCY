@@ -1255,7 +1255,7 @@ CONTAINS
     DO ic = 1, nc
       infilt_over(ic) = wtr_exinfcap(ic) + wtr_exwsat(ic)
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
 #ifndef _OPENACC
     ! Check value range for soil moisture
@@ -1964,7 +1964,7 @@ CONTAINS
     bet(ic)  = matrix(ic,1,2)
     X(ic,1) = matrix(ic,1,4)/bet(ic)
   END DO
-  !$ACC END PARALLEL
+  !$ACC END PARALLEL LOOP
 
   !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
   !$ACC LOOP SEQ
