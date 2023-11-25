@@ -585,23 +585,19 @@ CONTAINS
     END IF
 
     IF (is_experiment_start) THEN ! Start of experiment
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         weq_snow(ic) = 0._wp
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
     !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp)
 
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & !< in
           & dtime,                           & !< in
@@ -628,12 +624,10 @@ CONTAINS
           snow_soil_dens(ic) = dens_snow
         END IF
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
     ELSE
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO  ic = 1, nc
           field_cap_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
@@ -657,8 +651,7 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max(:))
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         IF (tile%is_vegetation .OR. tile%is_land) THEN
           skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
@@ -676,7 +669,7 @@ CONTAINS
           trans_tmp(ic) = 0._wp
         END IF
       END DO
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
 
       CALL calc_surface_hydrology_land(   &
@@ -723,7 +716,7 @@ CONTAINS
         & )
 
       IF (l_compat401_config) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           snow_soil_dens(ic) = 330._wp
         END DO
@@ -734,19 +727,19 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     IF (tile%is_glacier) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         weq_snow(ic) = 0._wp
       END DO
       !$ACC END LOOP
     ELSE IF (tile%is_bare) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         weq_snow(ic) = weq_snow_soil(ic)
       END DO
       !$ACC END LOOP
     ELSE IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         weq_snow(ic) = weq_snow_soil(ic) + weq_snow_can(ic)
       END DO
@@ -917,8 +910,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is=1,nsoil
       DO ic=1,nc
         hyd_cond_sat_sl   (ic,is) = hyd_cond_sat(ic)
@@ -930,7 +922,7 @@ CONTAINS
         vol_p_wilt_sl     (ic,is) = vol_p_wilt(ic)
       END DO
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
@@ -946,8 +938,7 @@ CONTAINS
       ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
       ! Use different parameters for top layer and deeper layers
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         hyd_cond_sat_org(ic,1) = hyd_cond_sat_org_top
         vol_porosity_org(ic,1) = vol_porosity_org_top
@@ -957,8 +948,8 @@ CONTAINS
         vol_field_cap_org(ic,1) = vol_field_cap_org_top
         vol_p_wilt_org(ic,1) = vol_p_wilt_org_top
       END DO
-      !$ACC END LOOP
-      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC END PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is=2,nsoil
         DO ic=1,nc
           hyd_cond_sat_org(ic,is) = hyd_cond_sat_org_below
@@ -970,11 +961,12 @@ CONTAINS
           vol_p_wilt_org(ic,is) = vol_p_wilt_org_below
         END DO
       END DO
-      !$ACC END LOOP
+      !$ACC END PARALLEL LOOP
 
       ! Saturated hydraulic conductivity following percolation theory 
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is=1,nsoil
         DO ic=1,nc
@@ -1017,6 +1009,7 @@ CONTAINS
             &                       + fract_org_sl(ic,is) * vol_p_wilt_org(ic,is)
         END DO
       END DO
+      !$ACC END LOOP
       !$ACC END PARALLEL
 
       DEALLOCATE(hyd_cond_sat_org)
@@ -1162,7 +1155,8 @@ CONTAINS
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
-    !$ACC UPDATE DEVICE(l_fract, tile_fract)
+    !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
+    !$ACC WAIT(1)
 
     CALL calc_soil_hydrology( &
       ! in
@@ -1211,7 +1205,7 @@ CONTAINS
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
     !$ACC WAIT(1)
     !$ACC END DATA
 
@@ -1318,7 +1312,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       canopy_cond_unlimited(ic) = get_canopy_conductance( lai(ic), swpar_srf_down(ic) )
     END DO
@@ -1472,7 +1466,7 @@ CONTAINS
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is=1,nsoil
         DO ic=1,nc
           wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
@@ -1481,14 +1475,14 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
       ! Available liquid water in the root zone
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         wtr_rootzone_avail(ic) = wtr_rootzone(ic)
       END DO
@@ -1506,7 +1500,7 @@ CONTAINS
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
       END DO
@@ -1514,13 +1508,13 @@ CONTAINS
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = weq_rootzone_max(ic)
       END DO
@@ -1529,7 +1523,7 @@ CONTAINS
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       water_stress(ic) = &
         & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
@@ -1538,7 +1532,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
@@ -1549,6 +1543,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1665,7 +1660,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
       ! Compute (actual) canopy (stomatal) conductance under water stress.
@@ -1817,23 +1812,21 @@ CONTAINS
       END IF
 
       IF (model%config%use_tmx) THEN
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, heat_tcoef)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
         DO ic=1,nc
           q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
           heat_tcoef = ch(ic)                                   ! Transfer coefficient; TODO: distinguish wtr and ice?
           evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic)) ! Potential evaporation
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, heat_tcoef)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
         DO ic=1,nc
           q_air = q_acoef_wtr(ic) * qsat_lwtr(ic) + q_bcoef_wtr(ic) ! New moisture at lowest atmospheric level by back-substitution
           heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen)    ! Transfer coefficient
           evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic))     ! Potential evaporation
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -1847,42 +1840,37 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
         IF (model%config%use_tmx) THEN
-          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-          !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, heat_tcoef)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
           DO ic=1,nc
             q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
             heat_tcoef = ch(ic)                                   ! Transfer coefficient; TODO: distinguish between wtr and ice?
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic)) ! Potential evaporation
             evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
-          !$ACC END PARALLEL
+          !$ACC END PARALLEL LOOP
         ELSE
-          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-          !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, heat_tcoef)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
           DO ic=1,nc
             q_air = q_acoef_ice(ic) * qsat_lice(ic) + q_bcoef_ice(ic) ! New moisture at lowest atmospheric level by back-substitution
             heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen)    ! Transfer coefficient
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic))     ! Potential evaporation
             evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
-          !$ACC END PARALLEL
+          !$ACC END PARALLEL LOOP
         END IF
       ELSE
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           evapopot(ic) = evapo_wtr(ic)
         END DO
-        !$ACC END LOOP
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         evapotrans(ic) = evapopot(ic)
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
+
       !$ACC WAIT(1)
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
@@ -1906,8 +1894,8 @@ CONTAINS
       END IF
 
       IF (model%config%use_tmx) THEN
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
           q_air = q_bcoef(ic)  ! Old moisture at lowest atmospheric level
           heat_tcoef = ch(ic)  ! Transfer coefficient
@@ -1922,11 +1910,10 @@ CONTAINS
             transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)  ! Transpiration
           END IF
         END DO
-        !$ACC END LOOP
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
           q_air = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)       ! New moisture at lowest atmospheric level by back-substitution
           heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen)  ! Transfer coefficient
@@ -1941,8 +1928,7 @@ CONTAINS
             transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)  ! Transpiration
           END IF
         END DO
-        !$ACC END LOOP
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
 
     ELSE
@@ -2148,7 +2134,7 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           CALL calc_wskin_fractions_lice( &
             & weq_snow_lice(ic),          & ! in
@@ -2212,7 +2198,7 @@ CONTAINS
 
     !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       ! Maximum capacity of skin reservoir (soil + canopy)
       IF (tile%is_vegetation .OR. tile%is_land) THEN
@@ -2236,13 +2222,13 @@ CONTAINS
 
     ! Transfer coefficient
     IF (model%config%use_tmx) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         heat_tcoef(ic) = ch(ic)  ! TODO: distinguish between wtr and ice?
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)
       END DO
@@ -2273,7 +2259,6 @@ CONTAINS
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
     END IF
 
     IF (tile%is_bare) THEN
@@ -2296,9 +2281,9 @@ CONTAINS
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
     END IF
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE update_snow_and_skin_fraction
@@ -2442,8 +2427,7 @@ CONTAINS
 
     !$ACC DATA CREATE(tile_fract, tile_area)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR PRIVATE(weq_land_new)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(weq_land_new) ASYNC(1)
     DO ic=1,nc
       tile_fract(ic) = tile%fract(ics-1+ic,iblk)
       tile_area(ic)  = tile_fract(ic) * area(ic)
@@ -2503,10 +2487,9 @@ CONTAINS
       END IF
 #endif
     END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
-    !$ACC WAIT(1)
+    !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
