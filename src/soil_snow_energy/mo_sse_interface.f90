@@ -816,9 +816,9 @@ CONTAINS
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
-      !$ACC ENTER DATA PCREATE(fract_water, fract_ice)
+      !$ACC ENTER DATA CREATE(fract_water, fract_ice)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
           IF (soil_depth_sl(ic,is) > 0._wp) THEN
@@ -832,15 +832,16 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL DEFAULT(PRESENT)
       ALLOCATE(vol_heat_cap_tmp(nc,nsoil), vol_heat_cap_org_tmp(nc,nsoil))
-      !$ACC ENTER DATA PCREATE(vol_heat_cap_tmp, vol_heat_cap_org_tmp)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(1)
+      !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, vol_heat_cap_org_tmp)
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         vol_heat_cap_tmp    (ic,1) = vol_heat_cap(ic)
         vol_heat_cap_org_tmp(ic,1) = vol_hcap_org_top
       END DO
-      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC END PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 2, nsoil
         DO ic = 1, nc
           vol_heat_cap_tmp    (ic,is) = vol_heat_cap(ic)
@@ -849,7 +850,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
           vol_heat_cap_sl(ic,is) = calc_vol_heat_capacity(          &
@@ -869,7 +870,7 @@ CONTAINS
       !$ACC EXIT DATA DELETE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
           vol_heat_cap_sl(ic,is) = vol_heat_cap(ic)
@@ -882,17 +883,18 @@ CONTAINS
       
       ALLOCATE(heat_cond_tmp(nc,nsoil), vol_porosity_org_tmp(nc,nsoil), &
              & hcond_org_tmp(nc,nsoil), hcond_dry_org_tmp(nc,nsoil))
-      !$ACC ENTER DATA PCREATE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
+      !$ACC ENTER DATA CREATE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         heat_cond_tmp(ic,1)         = heat_cond(ic)
         vol_porosity_org_tmp(ic,1)  = vol_porosity_org_top
         hcond_org_tmp(ic,1)         = hcond_org_top
         hcond_dry_org_tmp(ic,1)     = hcond_dry_org_top
       END DO
+      !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 2, nsoil
         DO ic = 1, nc
           heat_cond_tmp(ic,is)        = heat_cond(ic)
@@ -901,8 +903,9 @@ CONTAINS
           hcond_dry_org_tmp(ic,is)    = hcond_dry_org_below
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
           heat_cond_sl (ic,is) = calc_thermal_conductivity( &
@@ -920,10 +923,12 @@ CONTAINS
             & )
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
+
       !$ACC EXIT DATA DELETE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp)
       DEALLOCATE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
           heat_cond_sl(ic,is) = heat_cond(ic)
@@ -938,7 +943,7 @@ CONTAINS
     END IF
 
     IF (model%config%l_compat401) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
       DO ic = 1, nc
         vol_heat_cap_snow(ic) = 634500._wp
         heat_cond_snow(ic) = 0.31_wp
