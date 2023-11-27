@@ -811,7 +811,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)

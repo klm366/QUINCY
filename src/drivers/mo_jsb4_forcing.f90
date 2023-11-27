@@ -824,9 +824,6 @@ CONTAINS
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
     DEALLOCATE(rel_humidity)
-    IF (use_lakes) THEN
-      DEALLOCATE (pch_lake)
-    END IF
   END SUBROUTINE get_standalone_driver
 
   END SUBROUTINE get_standalone_driver
