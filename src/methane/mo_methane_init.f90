@@ -105,35 +105,13 @@ CONTAINS
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
 
-    ! Get topmodel config
+    ! Get methane config
     dsl4jsb_Get_config(CH4_)
-
-!    ALLOCATE(                                           &
-!      & top_init_vars%cti_basin    (nproma, nblks    ), &
-!      & )
-!    IF (dsl4jsb_Config(CH4_)%inun_prescribed) ALLOCATE(top_init_vars%frac_inun_clim(nproma, nblks, 12))
-
-!    top_init_vars%cti_mean      (:,:) = missval
-!    IF (dsl4jsb_Config(CH4_)%inun_prescribed) top_init_vars%frac_inun_clim(:,:,:) = missval
 
     IF (.NOT. tile%Is_process_active(CH4_)) RETURN
 
     IF (debug_on() .OR. dsl4jsb_Config(CH4_)%dbg_process) &
       CALL message(TRIM(routine), 'Reading methane boundary conditions for tile '//TRIM(tile%name))
-
-!    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CH4_)%ic_filename), model%grid_id)
-
-!    ptr_2D => input_file%Read_2d(variable_name='cti_mean'     , fill_array=top_init_vars%cti_mean)
-
-!    CALL input_file%Close()
-
-!    IF (dsl4jsb_Config(CH4_)%inun_prescribed) THEN
-!      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CH4_)%bc_filename), model%grid_id)
-
-!      ptr_3D => input_file%Read_2d_time(variable_name='frac_inun', fill_array=top_init_vars%frac_inun_clim)
-
-!      CALL input_file%Close()
-!    ENDIF
 
   END SUBROUTINE methane_read_init_vars
 
@@ -152,27 +130,13 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! Get soil config
+    ! Get methane config
     dsl4jsb_Get_config(CH4_)
 
     IF (.NOT. tile%Is_process_active(CH4_)) RETURN
 
     IF (debug_on() .OR. dsl4jsb_Config(CH4_)%dbg_process) &
       CALL message(TRIM(routine), 'Setting methane boundary conditions for tile '//TRIM(tile%name))
-
-!    IF (dsl4jsb_Config(CH4_)%inun_prescribed) THEN
-
-!      ! Get soil memory of the tile
-!      dsl4jsb_Get_memory(CH4_)
-
-!      !
-!      dsl4jsb_memory(CH4_)%frac_inun_clim(:,:,:) = top_init_vars%frac_inun_clim(:,:,:)
-
-!      !$acc data present(dsl4jsb_var3D_onDomain(TOP_,frac_inun_clim))
-!      !$acc update device(dsl4jsb_var3D_onDomain(TOP_,frac_inun_clim))
-!      !$acc end data
-
-!    ENDIF
 
   END SUBROUTINE methane_init_bc
 

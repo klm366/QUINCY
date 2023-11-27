@@ -378,8 +378,11 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in)  :: surf
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':add_surface_layer'
+    INTEGER :: is
 
-    dst(2:SIZE(dst)) = src(1:SIZE(src))
+    DO is=2,SIZE(dst)
+      dst(is) = src(is-1)
+    ENDDO
     IF (PRESENT(surf)) THEN
       dst(1) = surf
     ELSE
@@ -396,9 +399,7 @@ CONTAINS
                           implicit_contrib, surf_GAS_conc, GAS_source, kHCC, diff_coeff, &
                           diff_coeff_surf, layer_thick, dens2conc, conc2dens,            &
                           GAS_dens, surf_GAS_flux, lissue)
-use mo_exception, only: message
-use mo_util, only: l2s=>logical2string, i2s=>int2string, r2s=>real2string
-use mo_mpi, only: p_barrier, p_pe
+
     INTEGER,  INTENT(in)    :: nstep              ! #diffusion timesteps per model timestep
     REAL(wp), INTENT(in)    :: dt                 ! Model time step [s]
     INTEGER,  INTENT(in)    :: mxlay_above_rock   ! layer number above bedrock
@@ -450,20 +451,7 @@ use mo_mpi, only: p_barrier, p_pe
     ! concentration / density conversions
     CALL add_surface_layer(GAS_dens(:)   * dens2conc(:),     GAS_conc,     surf_GAS_conc)
     CALL add_surface_layer(GAS_source(:) * dens2conc(:), src_GAS_conc_dts, 0._wp)
-!    call message(routine,'msg@ '// &
-!       r2s(src_GAS_conc_dts(1))//','// &
-!       r2s(src_GAS_conc_dts(2))//','// &
-!       r2s(src_GAS_conc_dts(3))//','// &
-!       r2s(src_GAS_conc_dts(4))//','// &
-!       r2s(src_GAS_conc_dts(5))//','// &
-!       r2s(src_GAS_conc_dts(6)),pe=23)
-!    call message(routine,'msgZ '// &
-!       r2s(GAS_conc(1))//','// &
-!       r2s(GAS_conc(2))//','// &
-!       r2s(GAS_conc(3))//','// &
-!       r2s(GAS_conc(4))//','// &
-!       r2s(GAS_conc(5))//','// &
-!       r2s(GAS_conc(6)),pe=23)
+
     ! totals for balance checks
     tot_dens_initial = SUM(GAS_dens  (1:mxlay_above_rock))
     tot_dens_source  = SUM(GAS_source(1:mxlay_above_rock))
@@ -471,27 +459,6 @@ use mo_mpi, only: p_barrier, p_pe
     CALL add_surface_layer(kHCC,kHCC_loc)
     CALL add_surface_layer(layer_thick,dz)
     CALL add_surface_layer(diff_coeff,diff_coeff_loc,diff_coeff_surf)
-!    call message(routine,'msgY '// &
-!       r2s(khCC_loc(1))//','// &
-!       r2s(khCC_loc(2))//','// &
-!       r2s(khCC_loc(3))//','// &
-!       r2s(khCC_loc(4))//','// &
-!       r2s(khCC_loc(5))//','// &
-!       r2s(khCC_loc(6)),pe=23)
-!    call message(routine,'msgX '// &
-!       r2s(dz(1))//','// &
-!       r2s(dz(2))//','// &
-!       r2s(dz(3))//','// &
-!       r2s(dz(4))//','// &
-!       r2s(dz(5))//','// &
-!       r2s(dz(6)),pe=23)
-!    call message(routine,'msgW '// &
-!       r2s(diff_coeff_loc(1))//','// &
-!       r2s(diff_coeff_loc(2))//','// &
-!       r2s(diff_coeff_loc(3))//','// &
-!       r2s(diff_coeff_loc(4))//','// &
-!       r2s(diff_coeff_loc(5))//','// &
-!       r2s(diff_coeff_loc(6)),pe=23)
 
     delta_time       = dt               / nStep_fac
     src_GAS_conc_dts = src_GAS_conc_dts / nStep_fac
@@ -502,13 +469,6 @@ use mo_mpi, only: p_barrier, p_pe
                                    kHCC_loc, diff_coeff_loc, dz, delta_time, GAS_conc, lissue_tst)
       lissue_loc = lissue_loc .OR. lissue_tst
     END DO
-!    call message(routine,'msgz '// &
-!       r2s(GAS_conc(1))//','// &
-!       r2s(GAS_conc(2))//','// &
-!       r2s(GAS_conc(3))//','// &
-!       r2s(GAS_conc(4))//','// &
-!       r2s(GAS_conc(5))//','// &
-!       r2s(GAS_conc(6)),pe=23)
 
     ! final balance and output flux
     ! negative densities might be possible --> reset to zero, difference will be added to surface flux
