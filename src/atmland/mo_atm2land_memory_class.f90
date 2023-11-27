@@ -64,6 +64,7 @@ MODULE mo_a2l_memory_class
       & fract_par_diffuse       , &  !< fraction of shortwave surface downward flux that is diffuse [fraction]
       & press_srf               , &  !< surface air pressure [Pa]
       & drag_srf                , &  !< total surface drag [unitless]
+      & richardson              , &  !< richardson number [unitless]
       & t_acoef                 , &  !< Richtmeyer-Morten coefficient A for temperature [unitless]
       & t_bcoef                 , &  !< Richtmeyer-Morten coefficient B for temperature [unitless]
       & q_acoef                 , &  !< Richtmeyer-Morten coefficient A for specific humidity [unitless]
@@ -373,6 +374,14 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'richardson', mem%richardson,                          &
+      & hgrid, surface,                                                      &
+      & t_cf('richardson number', '-', ''),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &

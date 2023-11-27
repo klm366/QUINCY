@@ -39,7 +39,7 @@ MODULE mo_jsb4_forcing
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, rdv
   USE mo_jsb_physical_constants, ONLY: grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
-    & tmelt, rd, amco2, amd, cpd, rvd1, cpvd1, von_karman, rd_o_cpd
+    & tmelt, rd, amco2, amd, rvd1
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
 
@@ -56,10 +56,6 @@ MODULE mo_jsb4_forcing
     & NF_NOERR                                           ! from netcdf.inc
 
   USE mo_jsb_class,              ONLY: get_model
-
-  dsl4jsb_Use_processes HYDRO_, A2L_
-  dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(A2L_)
 
   IMPLICIT NONE
   PRIVATE
@@ -234,17 +230,13 @@ CONTAINS
   !> 
   SUBROUTINE get_standalone_driver(                                                        &
     & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
-    & current_datetime, next_datetime, use_lakes,                                          &
+    & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
-    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
     & cos_zenith_angle,                                                                    &  ! in
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
-    & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &  ! out
-    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &  ! optional in
-    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &  ! optional out
-    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)                           ! optional out
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf                         &
+    & )
 
     INTEGER,  INTENT(IN)  :: model_id
     INTEGER,  INTENT(IN)  :: startblk
@@ -253,17 +245,11 @@ CONTAINS
     INTEGER,  INTENT(IN)  :: endidx(:)
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
-    LOGICAL,  INTENT(IN)  :: use_lakes
     REAL(wp), INTENT(IN)  :: elevation(:,:)
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)          ! In setups with lakes refering to the land tile
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)     !       ""
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)  !       ""
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)    !       ""
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)    !       ""
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
@@ -278,29 +264,6 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: pch(:,:)
-    ! Optional input for lakes
-    REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_q_air_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_qsat_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_h_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_m_srf_lake(:,:)
-    ! Optional output for lakes
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_ice(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic
@@ -310,8 +273,7 @@ CONTAINS
       &                      tmin_data(:,:), &
       &                      rad_uv_down(:,:), &
       &                      sat_spec_humidity(:,:), &
-      &                      rel_humidity(:,:), &
-      &                      pch_lake(:,:)
+      &                      rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:)
@@ -334,9 +296,6 @@ CONTAINS
       ALLOCATE(tmin_data(nproma, nblks))
       ALLOCATE(tmax_data(nproma, nblks))
     ENDIF
-    IF (use_lakes) THEN
-      ALLOCATE(pch_lake(nproma, nblks))
-    END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
 !$OMP PARALLEL
@@ -584,35 +543,7 @@ CONTAINS
     CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 compute remaining required input for jsb4 interface
-    !>
-    CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                  &
-      & t_air, press_srf, q_air, wind_air,                                                           &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc,         &
-      & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,              &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
-
-    IF (use_lakes) THEN
-      ! Note: pch_lake is only defined, as pch should not be overwritten. As pch is only used for
-      !       calculations on vegetated tiles, pch_lake is not needed.
-      CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                &
-        & t_air, press_srf, q_air, wind_air,                                                         &
-        & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake,       &
-        & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,            &
-        & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr, pch_lake)
-      ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
-      ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-!$OMP PARALLEL
-      drag_ice   (:,:) = drag_wtr   (:,:)
-      t_acoef_ice(:,:) = t_acoef_wtr(:,:)
-      t_bcoef_ice(:,:) = t_bcoef_wtr(:,:)
-      q_acoef_ice(:,:) = q_acoef_wtr(:,:)
-      q_bcoef_ice(:,:) = q_bcoef_wtr(:,:)
-!$OMP END PARALLEL
-    END IF
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 10.0 deallocate local variables
+    !> 9.0 deallocate local variables
     !>
     IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
       DEALLOCATE(tmin_data)
@@ -624,9 +555,6 @@ CONTAINS
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
     DEALLOCATE(rel_humidity)
-    IF (use_lakes) THEN
-      DEALLOCATE (pch_lake)
-    END IF
   END SUBROUTINE get_standalone_driver
 
   ! ======================================================================================================= !
@@ -1479,143 +1407,6 @@ CONTAINS
 
   END SUBROUTINE finalize_external_forcing
 
-  ! ======================================================================================================= !
-  !>
-  !> calculates the remaining input required for jsbach4
-  !>
-  SUBROUTINE get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx, &
-      & temp_air, pressure, qair, wind, &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
-      & height_wind, height_humidity, &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
-
-    INTEGER,  INTENT(IN)  :: startblk, endblk, startidx(:), endidx(:)
-    REAL(wp), INTENT(IN)  :: temp_air(:,:)
-    REAL(wp), INTENT(IN)  :: pressure(:,:)
-    REAL(wp), INTENT(IN)  :: qair(:,:)
-    REAL(wp), INTENT(IN)  :: wind(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
-    REAL(wp), INTENT(in)  :: height_wind, height_humidity
-
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: pch     (:,:)
-
-    INTEGER  :: ics, ice, iblk, ic, nblks, nc
-    REAL(wp) :: zcons9, zcons11, zcons12, zsigma
-    REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf(SIZE(temp_air,1))
-    REAL(wp) :: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
-
-    ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
-    zcons9 = 3._wp * cb
-    zcons11 = 3._wp * cb * cc
-    zcons12 = time_step_len * grav / rd
-    zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
-
-    nblks = SIZE(temp_air,2)
-    nc    = SIZE(temp_air,1)
-
-    ! Initializations needed for grid cells beyond icz
-!$OMP PARALLEL
-        drag_srf(:,:) = 0._wp
-        t_acoef (:,:) = 0._wp
-        t_bcoef (:,:) = 0._wp
-        q_acoef (:,:) = 0._wp
-        q_bcoef (:,:) = 0._wp
-        pch     (:,:) = 0._wp
-!$OMP END PARALLEL
-
-!$OMP PARALLEL DO PRIVATE(iblk, ics, ice, ic, air_pressure, zdu2, ztvd, ztvir, qsat_surf, ztvs, zg, zgh, zril, &
-!$OMP                     zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl)
-    DO iblk = startblk, endblk
-
-      ics = startidx(iblk)
-      ice = endidx  (iblk)
-
-      CALL sat_specific_humidity(t_srf_proc(ics:ice,iblk), pressure(ics:ice,iblk), qsat_surf(ics:ice))
-
-      DO ic = ics, ice
-
-        !------------------------------------------------------------------------------------
-        ! Approximation of cdrag
-        !------------------------------------------------------------------------------------
-        ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-        zdu2 = MAX(wind(ic,iblk)**2, 1._wp)
-
-        ! virtual potential air temperature (see mo_surface_boundary.f90)
-        ! according to Saucier, WJ Principles of Meteoroligical Analyses
-        ! tv = t * (1 + 0.61 * q )    ! virtual temperature
-        ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-        ! tvd = tair * (100000/p_pa)^rd_o_cps * (1 + rvd1 * qair) ! virtual potential temperature
-        air_pressure = zsigma * pressure(ic, iblk)
-        ztvd = ( temp_air(ic, iblk) * ( 100000._wp/air_pressure)**rd_o_cpd ) * ( 1._wp + rvd1 * qair(ic, iblk))
-        ztvir = temp_air(ic, iblk) * ( 1._wp + rvd1 * qair(ic, iblk) )
-
-        ! virtual potential surface temperature
-        ztvs = t_srf_proc(ic,iblk) * ( 100000._wp/pressure(ic,iblk))**rd_o_cpd * &
-          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic,iblk) * qsat_surf(ic) + ( 1._wp - fact_q_air_proc(ic,iblk) ) &
-          & * qair(ic,iblk)))
-
-        ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-        ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-        IF(height_wind > 0._wp .AND. height_humidity > 0._wp) THEN
-          zg  = height_wind * grav
-          zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
-        ELSE
-          zg = ztvir * rd * LOG(1._wp / zsigma)
-          zgh = zg
-        ENDIF
-
-        ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
-        ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-        zril = zg * ( ztvd - ztvs ) / ( zdu2 * (ztvd + ztvs)/2._wp )
-
-        ! Neutral drag coefficient for momentum and heat
-        zchnl = von_karman**2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic,iblk) )) &
-                  * LOG( ( grav * rough_m_srf_proc(ic,iblk) + zgh ) / (grav * rough_h_srf_proc(ic,iblk) )))
-
-        ! account for stable/unstable case: helper variables
-        zscfl = SQRT ( 1._wp + 5._wp * ABS(zril))
-        zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp &
-          & + zgh / (grav * rough_h_srf_proc(ic,iblk)))))
-
-        ! ignoring cloud water correction (see mo_surface_land.f90)
-        zcons = zcons12 * pressure(ic,iblk) / ( temp_air(ic,iblk) * (1._wp + rvd1 * qair(ic,iblk)))
-        zcfnchl  = zcons * SQRT(zdu2) * zchnl
-
-        ! Stable / Unstable case
-        IF ( zril .GT. 0._wp ) THEN
-          zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
-        ELSE
-          zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
-        END IF
-
-        drag_srf(ic,iblk) = zcfhl
-        pch(ic,iblk) = zcfhl / zcfnchl * zchnl
-
-        !---------------------------------------------------------------------------------------------------------------
-        ! Computation of Richtmeyr-Morton Coefficients
-        ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
-        !---------------------------------------------------------------------------------------------------------------
-        t_acoef(ic,iblk) = 0.0_wp
-        t_bcoef(ic,iblk) = cpd * (1 + cpvd1 * qair(ic,iblk)) * temp_air(ic,iblk) + zgh
-        q_acoef(ic,iblk) = 0.0_wp
-        q_bcoef(ic,iblk) = qair(ic,iblk)
-
-      END DO
-    ENDDO
-!$OMP END PARALLEL DO
-
-  END SUBROUTINE get_remaining_input_for_jsb4_interface
 
   ! ======================================================================================================= !
   !>
