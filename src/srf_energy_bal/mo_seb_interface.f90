@@ -196,13 +196,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -244,8 +250,10 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    dsl4jsb_Aggregate_onChunk(SEB_, t,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_old,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_eff,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
@@ -316,7 +324,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
@@ -332,7 +340,7 @@ CONTAINS
     l_snow_config   = dsl4jsb_Config(SSE_)%l_snow
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%contains_land) THEN
+    IF (tile%contains_soil .OR. tile%is_glacier) THEN
       dsl4jsb_Get_memory(SSE_)
     END IF
 
@@ -347,7 +355,7 @@ CONTAINS
     IF (tile%contains_lake) THEN
       ! No correction for lake tile
 
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%contains_soil .OR. tile%is_glacier) THEN
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
@@ -355,9 +363,11 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
       END IF
-      dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl) ! in
+      IF (.NOT. tile%is_glacier) THEN
+        dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl) ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl)   ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl)     ! in
+      END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$ACC DATA CREATE(heat_cap)
@@ -367,7 +377,7 @@ CONTAINS
           ! Correction for snowmelt
           t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic) * dtime * alf / hcap_grnd_old(ic)
 
-          IF (l_freeze_config) THEN
+          IF (l_freeze_config .AND. .NOT. tile%is_glacier) THEN
             heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
             IF (l_snow_config) THEN
               IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
@@ -379,6 +389,7 @@ CONTAINS
               IF (heat_cap(ic) > 0._wp) THEN
                 ! Correction for melting of ice in soil layers
                 t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
               END IF
             END IF
           END IF
@@ -449,13 +460,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_asselin_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -481,6 +498,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk , ics, ice
+    TYPE(t_jsb_model), POINTER :: model
 
     iblk = options%iblk
     ics  = options%ics
@@ -488,12 +506,17 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
+    IF (model%config%use_tmx) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -514,13 +537,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')

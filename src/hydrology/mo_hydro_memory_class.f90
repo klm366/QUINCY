@@ -422,6 +422,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp)
 
+    IF (model%config%use_tmx) THEN
+      CALL mem%Add_var( 'heating_snow_cpy_melt', mem%q_snocpymlt,                       &
+        & hgrid, surface,                                                               &
+        & t_cf('heating_snow_cpy_melt', 'W m-2', 'Heating due to snow melt on canopy'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & prefix, suffix,                                                               &
+        & lrestart=.FALSE.,                                                             &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    END IF
+
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -452,24 +462,24 @@ CONTAINS
         & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
-      CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                    &
-        & hgrid, surface,                                                        &
-        & t_cf('evapotrans_lnd', 'kg m-2 s-1',                                   &
-        &      'Evapotranspiration from land surface w/o lakes'),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & lrestart=.FALSE.,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                    &
+      CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
+        & hgrid, surface,                                                                                         &
+        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+        & prefix, suffix,                                                                                         &
+        & lrestart=.FALSE.,                                                                                       &
+        & loutput=.TRUE., output_level=BASIC,                                                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                          &
-        & hgrid, surface,                                                        &
-        & t_cf('q_snocpymlt', 'W m-2', 'Heating due to snow melt on canopy'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & lrestart=.FALSE.,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                    &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                                 &
+          & hgrid, surface,                                                               &
+          & t_cf('heating_snow_cpy_melt', 'W m-2', 'Heating due to snow melt on canopy'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+          & prefix, suffix,                                                               &
+          & lrestart=.FALSE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      END IF
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,201, grib_bits)

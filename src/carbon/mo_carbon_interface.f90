@@ -1607,11 +1607,10 @@ CONTAINS
     ics = options%ics
     ice = options%ice
 
-    ALLOCATE(C_flux_yday(nc))
+    ALLOCATE(C_flux_yday(grid%nproma))
 
     DO iblk = 1, grid%nblks
 
-      CALL model%Set_options(iblk=iblk)
       options%iblk = iblk
       IF (iblk == grid%nblks) THEN
         options%ice = grid%npromz
@@ -1619,15 +1618,16 @@ CONTAINS
         ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
       END IF
       options%nc = ice - ics + 1
+      nc = options%nc
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
 
       ! Do not test as long as carbon_conservation_test still carries the initialisation value
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
-      
+
         ! CO2 flux due to npp, soil respiration and herbivory
-        C_flux_yday(ics:ice) = &
+        C_flux_yday(1:nc) = &
           & - ((  dsl4jsb_var2D_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta)  &
           &     + dsl4jsb_var2D_onChunk(CARBON_, co2flux_soilresp_2_atm_ta)  &
           &     + dsl4jsb_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)      &
@@ -1635,12 +1635,12 @@ CONTAINS
 
         ! CO2 flux due to fire
         IF (model%processes(DISTURB_)%p%config%active) THEN
-          C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
+          C_flux_yday(1:nc) =  C_flux_yday(1:nc) &
             & - dsl4jsb_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta) * sec_per_day / molarMassCO2_kg
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(ics:ice)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(1:nc)
 
       ELSE
         carbon_conservation_test = 0._wp

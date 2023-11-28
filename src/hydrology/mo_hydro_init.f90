@@ -81,10 +81,10 @@ MODULE mo_hydro_init
 
   ! soil-matric potential (s. Beringer et al 2001)
   ! TODO rename/correct matrix -> matric
-  REAL(wp), PARAMETER ::  matrix_pot_sand = 0.04729_wp ! (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_silt = 0.45425_wp ! (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_clay = 0.633_wp   ! (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_oc = 0.12_wp      ! (type 12 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_sand = -0.04729_wp ! (type 1 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_silt = -0.45425_wp ! (type 5 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_clay = -0.633_wp   ! (type 10 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_oc = -0.12_wp      ! (type 12 in Beringer)
 
   ! factor to compensate profile of hyd_cond_sat with depth in TERRA
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp

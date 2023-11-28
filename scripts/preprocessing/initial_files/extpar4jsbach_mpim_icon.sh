@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 #_____________________________________________________________________________
 #SBATCH --job-name=extpar
 #SBATCH --partition=compute
@@ -11,58 +11,64 @@
 #SBATCH --output=extpar.o%j
 #SBATCH --error=extpar.e%j
 #_____________________________________________________________________________
-
+set -e
 ulimit -s 262144
 ulimit -c 0
 
-#icon_grid_file=icon_grid_0043_R02B04_G.nc
-icon_grid_file=icon_grid_0015_R02B09_G.nc
+echo "------------------------------------------------------------------------"
+echo "-- Running $0"
+echo "------------------------------------------------------------------------"
 
-icon_grid=$(echo $icon_grid_file | awk -F'[_.]' '{print $3 "_" $4 "_" $5}')
+icon_grid=${icon_grid:-/pool/data/ICON/grids/public/mpim/0043/icon_grid_0043_R02B04_G.nc}
 
 tile_mode=0
 urban_mode=0
 
-bindir=/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach/bin
+bindir=${extpar_dir:-/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach}/bin
+pydir=${extpar_dir:-/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach}/python
 
-workdir=/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach/work
+workdir=${work_dir:-/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach/work}
+extpar_file=${extpar_file:-icon_extpar__20230404.nc}
 
-#griddir=/pool/data/ICON/grids/public/mpim/0043
-griddir=/pool/data/ICON/grids/public/mpim/0015
 datadir=/work/mj0060/m212005/data/extpar-input-data
 
+clean_up=true
+cdo="cdo -s"
+
+if [[ ! -d ${workdir} ]] ; then
+  mkdir -p ${workdir}
+fi
+cd ${workdir}
+echo "$0: Working directory: $(pwd)"
+
+griddir=${icon_grid%/*}
+icon_grid_file=${icon_grid##*/}  # i.e. ${atmGridID}_${refinement}_G
+
 export OMP_NUM_THREADS=1
+export NETCDF_OUTPUT_FILETYPE=NETCDF4
 
-export PYTHONPATH=$PYTHONPATH:/work/mj0060/m212070/extpar4jsbach/python/lib
-
-today=$(date  +%Y%m%d)
+export PYTHONPATH=$PYTHONPATH:${pydir}/lib
 
 if [ "${tile_mode}" = 1 ]
 then
-    echo "TILE_MODE for EXTPAR is switched ON"
+    echo "$0: TILE_MODE for EXTPAR is switched ON"
 else
-    echo "TILE_MODE for EXTPAR is switched OFF"
+    echo "$0: TILE_MODE for EXTPAR is switched OFF"
 fi
 if [ "${urban_mode}" = 1 ]
 then
-    echo "URBAN_MODE for EXTPAR is switched ON"
+    echo "$0: URBAN_MODE for EXTPAR is switched ON"
 else
-    echo "URBAN_MODE for EXTPAR is switched OFF"
+    echo "$0: URBAN_MODE for EXTPAR is switched OFF"
 fi
 
 #nest_TAG=$(basename ${icon_grid_file} .nc | awk -F '_' '{print $5}' | cut -c 1)
 #nest_ID=$(basename ${icon_grid_file} .nc | awk -F '_' '{print $5}' | cut -c 3)
 #echo "Check to recognize nested domain with nest_TAG=${nest_TAG} and nest_ID=${nest_ID}"
 
-if [[ ! -d ${workdir} ]] ; then
-  mkdir -p ${workdir} 
-fi
-cd ${workdir}
-pwd
-
 binary_extpar_consistency_check=extpar_consistency_check.exe
 binary_aot=extpar_aot_to_buffer.exe
-binary_tclim=extpar_cru_to_buffer.py
+binary_cru=extpar_cru_to_buffer.py
 binary_lu=extpar_landuse_to_buffer.exe
 binary_topo=extpar_topo_to_buffer.exe
 binary_ndvi=extpar_ndvi_to_buffer.py
@@ -72,10 +78,10 @@ binary_alb=extpar_alb_to_buffer.py
 binary_era=extpar_era_to_buffer.py
 
 cat > INPUT_grid_org << EOF
-&GRID_DEF 
+&GRID_DEF
  igrid_type = 1,
  domain_def_namelist='INPUT_ICON_GRID'
-/ 
+/
 EOF
 
 cat > INPUT_ICON_GRID << EOF
@@ -86,22 +92,19 @@ cat > INPUT_ICON_GRID << EOF
 EOF
 
 if [ "${tile_mode}" = 1 ]
-then 
-    grib_output_filename="icon_extpar_${filename}_${today}_tiles.g2"
-    netcdf_output_filename="icon_extpar_${filename}_${today}_tiles.nc"
-    echo "Output file is $netcdf_output_filename"
+then
+    grib_output_filename="${extpar_file%.nc}_tiles.g2"
+    netcdf_output_filename="${extpar_file%.nc}_tiles.nc"
+    echo "$0: Output file is $netcdf_output_filename"
 else
-    grib_output_filename="icon_extpar_${filename}_${today}.g2"
-    netcdf_output_filename="icon_extpar_${filename}_${today}.nc"
-    echo "Output file is $netcdf_output_filename"
+    grib_output_filename="${extpar_file%.nc}.g2"
+    netcdf_output_filename="${extpar_file}"
+    echo "$0: Output file is $netcdf_output_filename"
 fi
 
-echo $netcdf_output_filename
-echo $grib_output_filename
-
-raw_data_alb='albedo/MODIS_alb.nc'
-raw_data_alnid='albedo/MODIS_alnid.nc'
-raw_data_aluvd='albedo/MODIS_aluvd.nc'
+raw_data_alb='MODIS_alb.nc'
+raw_data_alnid='MODIS_alnid.nc'
+raw_data_aluvd='MODIS_aluvd.nc'
 buffer_alb='albedo_buffer.nc'
 output_alb='albedo_icon.nc'
 
@@ -183,7 +186,7 @@ buffer_isa='ISA_BUFFER.nc'
 output_isa='ISA_extpar_ICON.nc'
 
 # this file is adapted from Flanner (2009)
-raw_data_ahf='AHF_2006_2.5min_latreverse.nc' 
+raw_data_ahf='AHF_2006_2.5min_latreverse.nc'
 
 # # AHF is redistributed at 25km scales according to NOAA ISA.
 # raw_data_ahf='AHF_2006_NOAAISAredistr.nc'
@@ -191,28 +194,27 @@ raw_data_ahf='AHF_2006_2.5min_latreverse.nc'
 buffer_ahf='AHF_BUFFER.nc'
 output_ahf='AHF_extpar_ICON.nc'
 
-# create input namelists 
+# create input namelists
 cat > INPUT_AOT << EOF
 &aerosol_raw_data
   raw_data_aot_path='${datadir}',
   raw_data_aot_filename='${raw_data_aot}'
-/  
+/
 &aerosol_io_extpar
   aot_buffer_file='${buffer_aot}'
 /
 EOF
 #---
-cat > INPUT_TCLIM << EOF
-&t_clim_raw_data
-  raw_data_t_clim_path='${datadir}',
-  raw_data_t_clim_filename='${raw_data_tclim_coarse}'
-/  
-
-&t_clim_io_extpar
-  t_clim_buffer_file='crutemp_climC_extpar_BUFFER.nc',
-  t_clim_output_file='crutemp_climC_extpar_ICON.nc'
-/  
+cat >> ${pydir}/lib/namelist.py << EOF
+input_tclim = {
+    'raw_data_t_clim_path': '${datadir}/cru/',
+    'raw_data_tclim_coarse': '${raw_data_tclim_coarse}',
+    'raw_data_tclim_fine': '${raw_data_tclim_fine}',
+    't_clim_buffer_file': 'crutemp_climC_extpar_BUFFER.nc',
+    'it_cl_type': 1
+}
 EOF
+
 #---
 cat > INPUT_LU << EOF
 &lu_raw_data
@@ -254,7 +256,7 @@ cat > INPUT_ORO << EOF
 EOF
 cat > INPUT_OROSMOOTH << EOF
 &orography_smoothing
-  lfilter_oro=.TRUE.
+  lfilter_oro=.FALSE.   ! Smoothing does not work for ICON grids
 /
 EOF
 #---
@@ -265,24 +267,25 @@ cat > INPUT_RADTOPO << EOF
 /
 EOF
 #---
-cat > INPUT_ERA << EOF
-&era_raw_data
-  iera_type=1
-/
-&era_io_extpar
-  era_buffer_file='${buffer_era}'
-/
+cat >> ${pydir}/lib/namelist.py << EOF
+input_era = {
+    'iera_type': 1,
+    'raw_data_era_path': '${datadir}/era/',
+    'raw_data_era_ORO': 'ERA5_ORO_1990.nc',
+    'raw_data_era_T2M': 'ERA5_T2M_1990_2019.nc',
+    'raw_data_era_SST': 'ERA5_SST_1990_2019.nc',
+    'raw_data_era_SD': 'ERA5_SD_1990_2019.nc',
+    'era_buffer_file': '${buffer_era}',
+}
 EOF
 #---
-cat > INPUT_NDVI << EOF
-&ndvi_raw_data
-  raw_data_ndvi_path='${datadir}',
-  raw_data_ndvi_filename='${raw_data_ndvi}'
-/  
-&ndvi_io_extpar
- ndvi_buffer_file='${buffer_ndvi}',
- ndvi_output_file='${output_ndvi}'
-/
+cat >> ${pydir}/lib/namelist.py << EOF
+input_ndvi = {
+    'raw_data_ndvi_path': '${datadir}/ndvi',
+    'raw_data_ndvi_filename': '${raw_data_ndvi}',
+    'ndvi_buffer_file': '${buffer_ndvi}',
+    'ndvi_output_file': '${output_ndvi}'
+}
 EOF
 #---
 cat > INPUT_SOIL << EOF
@@ -296,18 +299,17 @@ cat > INPUT_SOIL << EOF
 &soil_io_extpar
   soil_buffer_file='${buffer_soil}',
   soil_output_file_consistent='${output_soil}'
-/ 
+/
 &HWSD_index_files
  path_HWSD_index_files='${datadir}',
- lookup_table_HWSD='${raw_lookup_table_HWSD}', 
+ lookup_table_HWSD='${raw_lookup_table_HWSD}',
  HWSD_data='${raw_HWSD_data}',
  HWSD_data_deep='${raw_HWSD_data_deep}',
- HWSD_data_extpar='${raw_HWSD_data_extpar}'
 /
 EOF
 #---
 if [ "${urban_mode}" = 1 ]
-then 
+then
     cat > INPUT_ISA << EOF
 &isa_raw_data
    raw_data_isa_path='',
@@ -343,28 +345,16 @@ cat > INPUT_FLAKE << EOF
 EOF
 #   flake_output_file='${output_flake}'
 #---
-cat > INPUT_ALB << EOF
-&alb_raw_data
-  raw_data_alb_path='${datadir}',
-  raw_data_alb_filename='${raw_data_alb}'
-/
-&alnid_raw_data
-  raw_data_alb_path='${datadir}',
-  raw_data_alnid_filename='${raw_data_alnid}'
-/
-&aluvd_raw_data
-  raw_data_alb_path='${datadir}',
-  raw_data_aluvd_filename='${raw_data_aluvd}'
-/
-&alb_io_extpar
-  alb_buffer_file='${buffer_alb}',
-  alb_output_file='${output_alb}'
-/
-&alb_source_file     
-  alb_source='al'
-  alnid_source='alnid'
-  aluvd_source='aluvd'
-/
+cat >> ${pydir}/lib/namelist.py << EOF
+input_alb = {
+    'ialb_type': 1,
+    'raw_data_alb_path': '${datadir}/albedo/',
+    'raw_data_alb_filename': '${raw_data_alb}',
+    'raw_data_alnid_filename': '${raw_data_alnid}',
+    'raw_data_aluvd_filename': '${raw_data_aluvd}',
+    'alb_buffer_file': '${buffer_alb}',
+    'alb_output_file': '${output_alb}',
+}
 EOF
 #_______________________________________________________________________________
 # consistency check
@@ -376,7 +366,7 @@ cat > INPUT_CHECK << EOF
   land_sea_mask_file=""
   number_special_points=0
   tile_mode=${tile_mode}
-/  
+/
 EOF
 
 #---
@@ -384,48 +374,77 @@ cat > INPUT_TCLIM << EOF
 &t_clim_raw_data
   raw_data_t_clim_path='${datadir}',
   raw_data_t_clim_filename='${raw_data_tclim_fine}',
-/  
+/
 
 &t_clim_io_extpar
   t_clim_buffer_file='${buffer_tclim}',
   t_clim_output_file='${output_tclim}'
-/  
+/
 EOF
 if [ "${urban_mode}" = 1 ]
-then 
+then
     ${bindir}/${binary_ahf}
     ${bindir}/${binary_isa}
 fi
 
+set -x
 ${bindir}/${binary_topo}
 ${bindir}/${binary_soil}
 ${bindir}/${binary_alb}
 ${bindir}/${binary_ndvi}
 ${bindir}/${binary_flake}
 ${bindir}/${binary_lu}
-${bindir}/${binary_tclim}
+${bindir}/${binary_cru}
 ${bindir}/${binary_aot}
 ${bindir}/${binary_era}
+set +x
 
-# the consistency check requires the output of 
-#   ${binary_aot}, ${binary_tclim}, ${binary_lu}, ${binary_globe}, 
+# the consistency check requires the output of
+#   ${binary_aot}, ${binary_cru}, ${binary_lu}, ${binary_globe},
 #   ${binary_ndvi}, ${binary_soil} and ${binary_flake}
 
 cat > INPUT_TCLIM_FINAL << EOF
 &t_clim_raw_data
   raw_data_t_clim_path='${datadir}',
   raw_data_t_clim_filename='${raw_data_tclim_fine}',
-/  
+/
 
 &t_clim_io_extpar
   t_clim_buffer_file='crutemp_climF_extpar_BUFFER.nc',
   t_clim_output_file='crutemp_climC_extpar_BUFFER.nc'
-/  
+/
 EOF
-
 ${bindir}/${binary_extpar_consistency_check}
 
-exit
+# Final corrections for the Extpar output file
+#   - Use SOILTYPE_2 instead of SOILTYP (zero everywhere)
+#   - Set the ICON grid (clon and clat first removed to avoid conflict)
+${cdo} delvar,SOILTYP,clon,clat $workdir/${netcdf_output_filename} $workdir/${netcdf_output_filename}.tmp
+${cdo} chname,SOILTYP_2,SOILTYP $workdir/${netcdf_output_filename}.tmp $workdir/${netcdf_output_filename}.tmp2
+
+#    - Use the glacier fraction from ${binary_lu} output, as the glacier mask correction
+#      within the consistency check is not helpful in coupled setups, where the model land
+#      sea mask does not match FR_LAND.
+${cdo} setvar,ICE     -setlevel,0 -selvar,ICE_GLCC     glcc_landuse_BUFFER.nc ICE_GLCC.nc
+${cdo} setvar,FR_LAND -setlevel,0 -selvar,FR_LAND_GLCC glcc_landuse_BUFFER.nc FR_LAND_GLCC.nc
+${cdo} -O merge ICE_GLCC.nc FR_LAND_GLCC.nc  glcc_lu_vars.nc
+${cdo} replace ${netcdf_output_filename}.tmp2 glcc_lu_vars.nc ${netcdf_output_filename}.tmp3
+
+${cdo} setgrid,${griddir}/${icon_grid_file} $workdir/${netcdf_output_filename}.tmp3 \
+    ${extpar_dir}/${netcdf_output_filename}
+
+echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+echo "External parameters for ICON-Land model generated:"
+echo "      ${extpar_dir}/${netcdf_output_filename}"
+echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+
+# Clean up
+if [[ ${clean_up} == true ]]; then
+  cd ..
+  rm -fr $workdir
+fi
+
+exit 0
 
 #echo 'Generation of global NetCDF attributes' 
 #
@@ -474,16 +493,16 @@ exit
 #
 #/e/uhome/jhelmert/bin/nco-4.4.7/src/nco/ncbo -O $workdir/${netcdf_output_filename} ${testfile}  diff.nc; /e/uhome/jhelmert/bin/cdo_xce infov diff.nc
 #
-echo "Test of external parameters against version ${testfile} has been performed"
-echo "Difference to former version using cdo_xce infov diff.nc should be min,max,avg=0 for every parameter!"
+#echo "Test of external parameters against version ${testfile} has been performed"
+#echo "Difference to former version using cdo_xce infov diff.nc should be min,max,avg=0 for every parameter!"
 
-echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-echo "External parameters for refinement grid of ICON model generated in $workdir"
-echo "$testfile has been used as reference. Please check $workdir/diff.nc"
+#echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+#echo "External parameters for refinement grid of ICON model generated in $workdir"
+#echo "$testfile has been used as reference. Please check $workdir/diff.nc"
 
 #echo "Check consistency to former versions with ncdiff -O ${netcdf_output_filename} /e/uscratch/jhelmert/ICON_EXTPAR_20141202/icon_extpar_0026_R03B07_G_20141202.nc diff.nc; cdo infov diff.nc"
 
 #echo "For plotting results with bplot use: export ICON_COORDINATE_FILE=$griddir/$icon_grid_file"
 #echo "or modify ${HOME}/.profile_bplot  "
-echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+#echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 

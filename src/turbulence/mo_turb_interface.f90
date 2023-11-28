@@ -56,8 +56,21 @@ MODULE mo_turb_interface
   PRIVATE
 
   PUBLIC :: Register_turb_tasks !,t_turb_process
+  PUBLIC :: update_exchange_coefficients
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_interface'
+
+  !> Type definition for exchange_coefficients
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_exchange_coefficients
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_exchange_coefficients    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_exchange_coefficients !< Aggregates computed task variables
+  END TYPE tsk_exchange_coefficients
+
+  !> Constructor interface for exchange_coefficients task
+  INTERFACE tsk_exchange_coefficients
+    PROCEDURE Create_task_exchange_coefficients                        !< Constructor function for task
+  END INTERFACE tsk_exchange_coefficients
 
   !> Type definition for surface_roughness task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_roughness
@@ -87,6 +100,22 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for exchange_coefficients task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "tsk_exchange_coefficients"
+  !!
+  FUNCTION Create_task_exchange_coefficients(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_exchange_coefficients::return_ptr)
+    CALL return_ptr%Construct(name='exchange_coefficients', process_id=TURB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_exchange_coefficients
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_roughness task
@@ -131,10 +160,203 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
+    CALL this%Register_task(tsk_exchange_coefficients(model_id))
     CALL this%Register_task(tsk_surface_roughness(model_id))
     CALL this%Register_task(tsk_humidity_scaling(model_id))
 
-  END SUBROUTINE Register_Turb_Tasks
+  END SUBROUTINE Register_turb_Tasks
+
+  SUBROUTINE update_exchange_coefficients(tile, options)
+
+    USE mo_aes_thermo,  ONLY: potential_temperature ! Todo: use from mo_util_jsbach
+    USE mo_phy_schemes, ONLY: qsat_water, qsat_ice, sfc_exchange_coefficients
+      ! &                 exchange_coefficients, registered_exchange_coefficients_procedure
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_config(SEB_)
+
+    ! Declare process memories
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(SEB_)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: dz_srf
+    dsl4jsb_Real2D_onChunk :: press_srf
+    dsl4jsb_Real2D_onChunk :: rho_srf
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_air
+    dsl4jsb_Real2D_onChunk :: wind_air
+    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: qsat_star
+    dsl4jsb_Real2D_onChunk :: fract_lice
+    dsl4jsb_Real2D_onChunk :: kh
+    dsl4jsb_Real2D_onChunk :: km
+    dsl4jsb_Real2D_onChunk :: kh_neutral
+    dsl4jsb_Real2D_onChunk :: km_neutral
+    dsl4jsb_Real2D_onChunk :: ch
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER :: model
+
+    INTEGER  :: iblk, ics, ice, nc, ic
+    REAL(wp), DIMENSION(options%nc) :: &
+      & pot_temperature_srf, pot_temperature_air, qsat_srf
+    REAL(wp) :: qsat_lice
+    LOGICAL :: use_tmx
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_exchange_coefficients'
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    use_tmx = model%config%use_tmx
+
+    IF (.NOT. model%config%use_tmx) CALL finish(routine, 'can only be used with tmx')
+
+    dsl4jsb_Get_config(TURB_)
+    dsl4jsb_Get_config(SEB_)
+
+    ! Get process memories
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
+
+    ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(A2L_,   dz_srf)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   rho_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_air)       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  kh_neutral)      ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
+
+    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic = 1, nc
+      pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
+      pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
+      qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    IF (tile%is_lake .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) PRIVATE(qsat_lice)
+        DO ic = 1, nc
+          qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+          qsat_srf(ic) = (1._wp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
+        END DO
+        !$ACC END PARALLEL LOOP
+    END IF
+
+    ! CALL exchange_coefficients( &
+    !   & dz_srf(:),                                                 &
+    !   & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
+    !   & km(:), kh(:), km_neutral(:), kh_neutral(:)                                                      &
+    !   &)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic = 1, nc
+      ! CALL registered_exchange_coefficients_procedure( &
+      CALL sfc_exchange_coefficients( &
+        & dz_srf(ic), q_air(ic), pot_temperature_air(ic), wind_air(ic), rough_m(ic), pot_temperature_srf(ic), &
+        & qsat_srf(ic), km(ic), kh(ic), km_neutral(ic), kh_neutral(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic = 1, nc
+      IF (tile%fract(ics+ic-1,iblk) <= 0._wp) THEN
+        km(ic) = 0._wp
+        kh(ic) = 0._wp
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic = 1, nc
+      ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC WAIT(1)
+
+    !$ACC END DATA
+
+  END SUBROUTINE update_exchange_coefficients
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "exchange_coefficients"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_exchange_coefficients(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_memory(TURB_)
+
+    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m_star
+    dsl4jsb_Real2D_onChunk :: rough_h_star
+
+    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
+
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_exchange_coefficients'
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice
+
+    ! Get local variables from options argument
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Get_memory(TURB_)
+
+    dsl4jsb_Aggregate_onChunk(TURB_, kh,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, kh_neutral, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km_neutral, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, ch,         weighted_by_fract)
+
+  END SUBROUTINE aggregate_exchange_coefficients
 
   ! ================================================================================================================================
   !>
@@ -218,7 +440,7 @@ CONTAINS
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
   
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         rough_bare_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
         rough_snow_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
@@ -239,7 +461,7 @@ CONTAINS
 
           dsl4jsb_Get_var2D_onChunk(PHENO_, lai)              ! in
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
           DO ic = 1, nc
             rough_veg_star(ic) =                                                                           &
               & 1._wp / LOG(config_blending_height                                                        &
@@ -250,7 +472,7 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         ELSE
           lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
           DO ic = 1, nc
             rough_veg_star(ic) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness)**2
           END DO
@@ -258,7 +480,7 @@ CONTAINS
         ENDIF
 
         lctlib_ForestFlag = dsl4jsb_Lctlib_param(ForestFlag)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) = (1._wp - fract_fpc_max(ic)) * rough_bare_star(ic) + fract_fpc_max(ic) * rough_veg_star(ic)
   
@@ -280,7 +502,7 @@ CONTAINS
         ! rough_m and rough_m_star are taken from values from init
         !
         ! We don't have PFTs so use rough_m from ini file
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(ic)))**2 &
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
@@ -288,7 +510,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
   
       ELSE  ! bare or glacier tile
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) = rough_bare_star(ic)
           ! Modify roughness length heat for bare part by snow cover
@@ -299,14 +521,14 @@ CONTAINS
       END IF  ! vegetated or bare tile
 
       IF (tile%lcts(1)%lib_id /= 0 .OR. .NOT. tile%is_vegetation) THEN ! PFT or bare/glacier
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
         END DO
         !$ACC END PARALLEL LOOP
       END IF
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
       END DO
@@ -317,20 +539,20 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_memory(SEB_)
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) =            fract_lice(ic)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
             &               + (1._wp - fract_lice(ic)) / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         rough_h_star(ic) = rough_m_star(ic)
         rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
@@ -348,6 +570,8 @@ CONTAINS
     !   rough_h(ic) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(ic))))
     ! END DO
     ! $noACC END PARALLEL LOOP
+
+    !$ACC WAIT(1)
 
     !$ACC END DATA
 
@@ -412,7 +636,7 @@ CONTAINS
     config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
     config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic = 1, nc
       rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
       rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
@@ -462,6 +686,7 @@ CONTAINS
       & qsat_star,              &
       & canopy_cond_limited,    &
       & pch,                    &
+      & kh,                     &
       & wind_air,               &
       & q_air
 
@@ -479,7 +704,8 @@ CONTAINS
       fact_qair_soil(options%nc),  &
       zfract_fpc(options%nc),      &
       w_soil_wilt_fract_config
-    REAL(wp) :: rel_hum
+    REAL(wp) :: rel_hum,           &
+      ch_tmp(options%nc)
     LOGICAL :: &
       mask(options%nc)
 
@@ -505,7 +731,7 @@ CONTAINS
 
     !$ACC DATA &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
-    !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask)
+    !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask, ch_tmp)
 
     ! Get pointers to process configs and memory
     dsl4jsb_Get_memory(A2L_)
@@ -520,7 +746,21 @@ CONTAINS
     END IF
 
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(A2L_,   pch)                 ! in
+    IF (model%config%use_tmx) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_, kh)                 ! in
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic = 1, nc
+        ch_tmp(ic) = kh(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic = 1, nc
+        ch_tmp(:) = pch(:)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)               ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
@@ -550,26 +790,28 @@ CONTAINS
 
       w_soil_wilt_fract_config = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
       IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           mask(ic) = wtr_soil_sl(ic,1) > wtr_soil_pwp_sl(ic,1)
         END DO
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
           mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
         END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         IF (mask(ic)) THEN
           fact_qsat_veg(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) *  &
             & (fract_wet(ic) + ( 1._wp - fract_wet(ic)) /                  &
-            & (1._wp + pch(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic))))
+            & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic))))
           fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) *  &
             & (1._wp - fract_wet(ic)) /                     &
-            & (1._wp + pch(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic)))
+            & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic)))
         ELSE 
           fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
           fact_qsat_trans(ic) = 0._wp
@@ -577,14 +819,14 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         fact_qair_veg(ic) = fact_qsat_veg(ic)
         zfract_fpc(ic)    = fract_fpc(ic)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         fact_qsat_veg(ic)   = 0._wp
         fact_qsat_trans(ic) = 0._wp
@@ -595,7 +837,7 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         rel_hum = relative_humidity_soil(wtr_soil_sl(ic,1), wtr_soil_fc_sl(ic,1))
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
@@ -614,14 +856,14 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
     ELSE IF (tile%contains_glacier .OR. tile%is_lake) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         fact_qsat_soil(ic) = 1._wp
         fact_qair_soil(ic) = 1._wp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
         fact_qsat_soil(ic) = 0._wp
         fact_qair_soil(ic) = 0._wp
@@ -629,13 +871,15 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic = 1, nc
       fact_qsat_srf(ic) = zfract_fpc(ic) * fact_qsat_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qsat_soil(ic)
       fact_q_air(ic)    = zfract_fpc(ic) * fact_qair_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qair_soil(ic)
       fact_qsat_trans_srf(ic) = zfract_fpc(ic) * fact_qsat_trans(ic)
     END DO
     !$ACC END PARALLEL LOOP
+
+    !$ACC WAIT(1)
 
     !$ACC END DATA
 
