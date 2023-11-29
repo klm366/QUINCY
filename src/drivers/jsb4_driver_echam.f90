@@ -1,5 +1,6 @@
 !>
-!! @brief Contains the driver for jsbach standalone -> currently only and explicitly for use with Echam
+!! @brief Contains the driver for ICON-Land standalone using MPI-ESM/ECHAM infrastructure
+!!        for explic use with ECHAM
 !!        Initial version based on the jsbach3 driver 'jsbalone_driver'
 !!
 !! @author

@@ -159,7 +159,8 @@ MODULE mo_assimi_memory_class
     ! diagnostics
     TYPE(t_jsb_var_real3d)    :: &
       & jmax_cl                   , &  !< maximum rate of electron transport [micro-mol CO2 m-2 s-1]
-      & vcmax_cl                       !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
+      & vcmax_cl                  , &  !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
+      & chlfl_yield_cl                 !< steady-state chlorophyll fluorescence yield [unitless]
 
     ! averaging
     TYPE(t_jsb_var_real2d)    :: &
@@ -724,6 +725,17 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('chlfl_yield_cl', mem%chlfl_yield_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('chlfl_yield_cl', 'unitless', 'steady-state chlorophyll fluorescence yield'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('soa_tsoa_mavg', mem%soa_tsoa_mavg, &

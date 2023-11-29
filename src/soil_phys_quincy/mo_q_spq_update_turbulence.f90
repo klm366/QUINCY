@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
-MODULE mo_spq_update_turbulence
+MODULE mo_q_spq_update_turbulence
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -35,7 +35,7 @@ MODULE mo_spq_update_turbulence
   PRIVATE
   PUBLIC :: update_soil_turbulence
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_update_turbulence'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_spq_update_turbulence'
 
 CONTAINS
 
@@ -48,7 +48,7 @@ CONTAINS
   SUBROUTINE update_soil_turbulence(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
-    USE mo_jsb_process_class,      ONLY: A2L_, SPQ_, PHENO_, VEG_
+    USE mo_jsb_process_class,      ONLY: A2L_, SPQ_, VEG_
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -62,7 +62,6 @@ CONTAINS
     dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -83,7 +82,6 @@ CONTAINS
     dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
@@ -105,10 +103,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     dsl4jsb_Real3D_onChunk                :: w_snow_snl
     dsl4jsb_Real3D_onChunk                :: t_snow_snl
-    ! PHENO_
-    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_
     dsl4jsb_Real2D_onChunk                :: height 
+    dsl4jsb_Real2D_onChunk                :: lai
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -126,7 +123,6 @@ CONTAINS
     dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -148,9 +144,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_snow_snl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)            ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.8 correct height for bare soil effect on roughness
@@ -306,4 +301,4 @@ CONTAINS
     ga       = heat_transfer_coef(drag_srf, steplen, alpha) * wind_air
   END SUBROUTINE calc_drag_coefficient
 
-END MODULE mo_spq_update_turbulence
+END MODULE mo_q_spq_update_turbulence

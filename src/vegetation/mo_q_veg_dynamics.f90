@@ -25,7 +25,7 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2016-04-14)
 !!
-MODULE mo_veg_dynamics
+MODULE mo_q_veg_dynamics
 
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
@@ -42,7 +42,7 @@ MODULE mo_veg_dynamics
   PRIVATE
   PUBLIC :: update_veg_dynamics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_dynamics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_dynamics'
 
 CONTAINS
 
@@ -59,14 +59,14 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, RAD_, PHENO_, SPQ_
+    USE mo_jsb_process_class,     ONLY: VEG_, RAD_, Q_PHENO_, SPQ_
     USE mo_jsb4_forcing,          ONLY: forcing_options_quincy
     USE mo_veg_constants,         ONLY: ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -86,12 +86,12 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
@@ -122,7 +122,7 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -132,8 +132,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
     ! VEG_ 2D
@@ -646,4 +646,4 @@ CONTAINS
     delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
   END FUNCTION calc_delta_dens_ind
 
-END MODULE mo_veg_dynamics
+END MODULE mo_q_veg_dynamics

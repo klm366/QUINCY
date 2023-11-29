@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_assimi_process
+MODULE mo_jsb_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
@@ -23,7 +23,7 @@ MODULE mo_assimi_process
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
     &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_process'
 
 CONTAINS
 
@@ -837,4 +837,4 @@ CONTAINS
   END SUBROUTINE calc_NPPbuf
 
 #endif
-END MODULE mo_assimi_process
+END MODULE mo_jsb_assimi_process

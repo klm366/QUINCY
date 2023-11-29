@@ -27,7 +27,7 @@
 !! 2nd version by Jan Engel (20200618), add to jsbach4
 !! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
 !!
-MODULE mo_sb_interface
+MODULE mo_q_sb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -40,10 +40,10 @@ MODULE mo_sb_interface
   USE mo_jsb_process_class,           ONLY: t_jsb_process
 
   ! "Integrate" routines
-  USE mo_sb_rate_modifier,            ONLY: update_sb_rate_modifier
-  USE mo_sb_simple_model,             ONLY: update_sb_simple_model
-  USE mo_sb_jsm_main,                 ONLY: update_sb_jsm
-  USE mo_sb_update_pools,             ONLY: update_sb_pools
+  USE mo_q_sb_rate_modifier,          ONLY: update_sb_rate_modifier
+  USE mo_q_sb_ssm_main,               ONLY: update_sb_simple_model
+  USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm
+  USE mo_q_sb_update_pools,           ONLY: update_sb_pools
 
   dsl4jsb_Use_processes SB_, VEG_
   dsl4jsb_Use_config(SB_)
@@ -52,7 +52,7 @@ MODULE mo_sb_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_sb_tasks
+  PUBLIC :: Register_sb_tasks_quincy
 
   ! ======================================================================================================= !
   !>Type definition: reset_sb_fluxes task
@@ -150,14 +150,14 @@ MODULE mo_sb_interface
     PROCEDURE Create_task_update_time_average_soilbiogeochemistry         !< Constructor function for task
   END INTERFACE tsk_time_average_soilbiogeochemistry
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_sb_interface'
 
 CONTAINS
 
   ! ======================================================================================================= !
   !>Register tasks: SB_ process
   !>
-  SUBROUTINE Register_sb_tasks(this, model_id)
+  SUBROUTINE Register_sb_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
@@ -167,7 +167,7 @@ CONTAINS
     CALL this%Register_task(tsk_sb_jsm(model_id))
     CALL this%Register_task(tsk_sb_pools(model_id))
     CALL this%Register_task(tsk_time_average_soilbiogeochemistry(model_id))
-  END SUBROUTINE Register_sb_tasks
+  END SUBROUTINE Register_sb_tasks_quincy
 
   ! ======================================================================================================= !
   !>Constructor: reset_sb_fluxes task
@@ -595,4 +595,4 @@ CONTAINS
   END SUBROUTINE aggregate_time_average_soilbiogeochemistry
 
 #endif
-END MODULE mo_sb_interface
+END MODULE mo_q_sb_interface
