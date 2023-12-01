@@ -43,7 +43,7 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string
   USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, 
+  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants,
                                                      ! however like this it is consistent with JSBACH
   USE mo_orbit_solar,            ONLY: inquire_declination
 
@@ -569,7 +569,7 @@ CONTAINS
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
-                                        ! each atmospheric forcing time step that is read in      
+                                        ! each atmospheric forcing time step that is read in
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
@@ -977,7 +977,7 @@ CONTAINS
           CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-!            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+!            & TRIM(forcing_input_variable%expectedUnit), readUnit)
           CALL forcing_input_variable%input_file%Close()
         END IF
 
@@ -1045,7 +1045,7 @@ CONTAINS
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         ! CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
         CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-          & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+          & TRIM(forcing_input_variable%expectedUnit), readUnit)
         ! TODO: further assertions? e.g. that lon lat are correct?
 
         currentTimeStep = 1
@@ -1257,7 +1257,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: file_id
     CHARACTER(len=*),INTENT(IN) :: variable_name
     CHARACTER(len=*),INTENT(IN) :: expectedUnit
-    CHARACTER(len=*),INTENT(IN) :: readUnit
+    CHARACTER(len=*),INTENT(OUT) :: readUnit
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':test_unit'
 
