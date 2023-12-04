@@ -210,7 +210,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('CH4_air', 'mol m-3', ''),                                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=7.706281e-5_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
@@ -218,7 +218,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('CO2_air', 'mol m-3', ''),                                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=1.6349598227e-2_wp, isteptype=TSTEP_INSTANT )
 
@@ -226,7 +226,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('O2_air', 'mol m-3', ''),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=1.6349598227e-2_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
@@ -234,7 +234,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('mxlay_above_rock', '', ''),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -242,7 +242,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('tillers', '', ''),                                             & ! unit?
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.TRUE.,         & ! .FALSE.?
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -250,7 +250,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('CH4_prod_ratio_out_wet', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -258,7 +258,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('CH4_out_net', '', ''),                                         & ! unit?
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.TRUE.,                         &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -266,7 +266,7 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('CO2_out_net', '', ''),                                         & ! unit?
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.TRUE.,                         &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -275,7 +275,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('CH4_out_fire', '', ''),                                        & ! unit?
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -283,7 +283,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('fire_em_NO', 'kg m-2 s-1', ''),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
   
@@ -291,7 +291,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('fire_em_CO', 'kg m-2 s-1', ''),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
   
@@ -299,7 +299,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('fire_em_iso', 'g m-2 s-1', ''),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     ENDIF
@@ -309,7 +309,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('CH4_out_termite', '', ''),                                     & ! unit?
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
   
@@ -317,7 +317,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('termite_biomass', 'kg m-2', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     ENDIF
@@ -327,7 +327,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('CH4_out_herbivore', '', ''),                                   & ! unit?
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     ENDIF
@@ -336,7 +336,7 @@ CONTAINS
       & hgrid, soil_w,                                                       &
       & t_cf('root_dist_sl', '', ''),                                        & ! unit?
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
+      & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT ) ! By dynamic roots: TSTEP_INSTANT
 
@@ -373,7 +373,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_prod_out', 'mol m-2 s-1', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
@@ -381,7 +381,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_oxid_out', 'mol m-2 s-1', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
@@ -389,7 +389,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_diff_out', 'mol m-2 s-1', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -397,7 +397,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_plant_out', 'mol m-2 s-1', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level,                                 &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
@@ -405,7 +405,7 @@ CONTAINS
 !        & hgrid, surface,                                                      &
 !        & t_cf(specie_name//'_excess_transp', 'mol m-2 s-1', ''),              &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-!        & prefix, suffix,                                                      &
+!        & prefix, suffix, lrestart = .FALSE.,                                  &
 !        & output_level = FULL, l_aggregate_all=.TRUE.,                         &
 !        & lrestart = .FALSE.,                                                  &
 !        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
@@ -416,7 +416,7 @@ CONTAINS
           & hgrid, layer,                                                        &
           & t_cf(specie_name//'_prod_out_sl', 'mol m-2 s-1', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -424,7 +424,7 @@ CONTAINS
           & hgrid, layer,                                                        &
           & t_cf(specie_name//'_oxid_out_sl', 'mol m-2 s-1', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -432,7 +432,7 @@ CONTAINS
           & hgrid, layer,                                                        &
           & t_cf(specie_name//'_plant_out_sl', 'mol m-2 s-1', ''),               &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -440,7 +440,7 @@ CONTAINS
           & hgrid, layer,                                                        &
           & t_cf(specie_name//'_test3d', '???', ''),                             &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -448,7 +448,7 @@ CONTAINS
           & hgrid, surface,                                                      &
           & t_cf(specie_name//'_test2d', '???', ''),                             &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -464,7 +464,7 @@ CONTAINS
           & hgrid, surface,                                                      &
           & t_cf(TRIM(str), 'mol m-2 s-1', ''),                                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
@@ -473,7 +473,7 @@ CONTAINS
             & hgrid, layer,                                                        &
             & t_cf(TRIM(str)//'_sl', 'mol m-2 s-1', ''),                           &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-            & prefix, suffix,                                                      &
+            & prefix, suffix, lrestart = .FALSE.,                                  &
             & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
             & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
         ENDIF
@@ -483,7 +483,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_out', 'mol m-2 s-1', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
@@ -491,7 +491,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_initial', 'mol m-2', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
@@ -499,7 +499,7 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_final', 'mol m-2', ''),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
