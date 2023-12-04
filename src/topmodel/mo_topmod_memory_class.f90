@@ -158,7 +158,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_inun_pre', mem%frac_inun_pre,                    &
@@ -167,7 +167,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = FULL, l_aggregate_all = .FALSE.,                      &
+      & output_level = FULL, l_aggregate_all = .TRUE.,                       &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'wt_inun', mem%wt_inun,                                &
@@ -185,7 +185,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_liquid_top', mem%frac_liquid_top,                &
@@ -194,7 +194,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_liquid_top_uncorr', mem%frac_liquid_top_uncorr,  &
@@ -203,7 +203,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
@@ -213,7 +213,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
         & initval_r=1000.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_summ_year', mem%frac_inun_summ_year,        &
@@ -222,7 +222,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = FULL, l_aggregate_all = .TRUE.,                       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_sum_month', mem%frac_inun_sum_month,        &
@@ -231,7 +231,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = FULL, l_aggregate_all = .FALSE.,                      &
+        & output_level = FULL, l_aggregate_all = .TRUE.,                       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_mean_month', mem%frac_inun_mean_month,      &
@@ -240,7 +240,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_min_lt', mem%frac_inun_min_lt,              &
@@ -249,7 +249,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_summ_lt', mem%frac_inun_summ_lt,            &
@@ -258,7 +258,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'wt_inun_min_year', mem%wt_inun_min_year,              &
@@ -303,7 +303,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     ENDIF
@@ -316,7 +316,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = FULL, l_aggregate_all = .TRUE.,                       &
+        & output_level = FULL, l_aggregate_all = .FALSE.,                      &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'precip_mean_day', mem%precip_mean_day,                &
@@ -325,7 +325,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
+        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'aet', mem%aet,                                        &
@@ -334,7 +334,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
+        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'peat_water_flux', mem%peat_water_flux,                &
@@ -372,7 +372,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
-          & output_level = FULL, l_aggregate_all = .TRUE.,                       &
+          & output_level = FULL, l_aggregate_all = .FALSE.,                      &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'aet_mean_day', mem%aet_mean_day,                      &
@@ -381,7 +381,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
-          & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
+          & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'poaet_mean_day', mem%poaet_mean_day,                  &
