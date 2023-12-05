@@ -1,33 +1,20 @@
+!> Summary: QUINCY vegetation process config
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains structures and methods for veg config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04);
-!! replaces the previous SLM mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
-!! integration into SLM by Jan Engel, MPI BGC (20160401)
-!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### define vegetation config structure, read vegetation namelist and init configuration parameters
+!>
 MODULE mo_veg_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------

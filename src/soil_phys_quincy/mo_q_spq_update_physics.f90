@@ -1,31 +1,20 @@
+!> Summary: QUINCY soil-physics calculation
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_spq_physics
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20160104)
-!! Permafrost specific processes included (Fabrice Lacroix 04/11/2020)
-!! 
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate the task update_spq_physics, i.e., snow accumulation, soil hydrology, surface energy balance
+!>
 MODULE mo_q_spq_update_physics
 
   USE mo_kind,                  ONLY: wp
@@ -41,7 +30,7 @@ MODULE mo_q_spq_update_physics
 CONTAINS
 
   ! ======================================================================================================= !
-  !>update soil moisture and theta for the plant only model
+  !>update soil moisture and theta for the plant only model - NOTE update/improve docu
   !> 
   ! two cases considered:
   !   a) dynamic water uptake calculation

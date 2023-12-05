@@ -1,32 +1,20 @@
+!> Summary: QUINCY 'simple soil model' calculate soil-biogeochemical pools
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task sb_simple_model 
-!!
-!! @author
-!!  Silvia Caldararu, Soenke Zaehle 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
-!! Second version by Soenke Zaehle (20170331): added a 4 pool model 
-!! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### main routines for the SSM (simple soil model), calculating the soil biogeochemical pools
+!>
 MODULE mo_q_sb_ssm_main
 
   USE mo_kind,                    ONLY: wp
