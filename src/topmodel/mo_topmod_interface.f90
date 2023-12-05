@@ -192,7 +192,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_topmodel'
 
     IF (.NOT. tile%Is_process_calculated(TOP_)) RETURN
-    IF (.NOT. is_newday(options%current_datetime,options%dtime)) RETURN ! Topmodel process is updated only once per day
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     lstart     = is_time_experiment_start(options%current_datetime)
@@ -218,12 +217,6 @@ CONTAINS
 
     dsl4jsb_Get_Config(TOP_)
     dsl4jsb_Get_Config(SSE_)
-
-    ! Allocate local work arrays
-    !
-    ALLOCATE(t_soil          (nsoil))
-    ALLOCATE(wtr_soil        (nsoil))
-    ALLOCATE(ice_soil        (nsoil))
 
     ! Get reference to variables for current block
     !
@@ -255,8 +248,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TOP_, aet)
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top)
 
+    ! Allocate local work arrays
+    !
+    ALLOCATE(t_soil          (nsoil))
+    ALLOCATE(wtr_soil        (nsoil))
+    ALLOCATE(ice_soil        (nsoil))
+
     IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_topmodel)) call message(routine,'First instance of update_topmodel')
 
+    ! Get needed time state
+    lstart     = is_time_experiment_start(options%current_datetime)
+    lnew_year  = is_newyear (options%current_datetime,dtime)
+    lnew_month = is_newmonth(options%current_datetime,dtime)
+    lnew_day   = is_newday  (options%current_datetime,dtime)
+
+    ! These peat routines need to be updated every timestep
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
       ! Variables only available if lpeat
       dsl4jsb_Get_var2D_onChunk(TOP_, precip_sum_day)
@@ -273,7 +279,7 @@ CONTAINS
 
       CALL update_aet(tmelt,t_air,rad_srf_net,aet)
 
-! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
+      ! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
       CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
         & dsl4jsb_Config(TOP_)%peat_runoff_fac,            & ! Configuration parameters
         & dsl4jsb_Config(TOP_)%peat_runoff_exp,            &
@@ -283,7 +289,23 @@ CONTAINS
         & peat_water_volume(:), peat_water_table(:),       & ! In/out variables
         & peat_water_flux(:)                               &
       )
+
+      IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
+
+        CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                 &
+          &                      lnew_year,lnew_month,lnew_day,                            &
+          &                      mlen,ylen,tspd,                                           &
+          &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),            &
+          &                      rain(:),snow(:),  precip_sum_day (:),precip_mean_day (:), &
+          &                      aet(:),              aet_sum_day (:),   aet_mean_day (:), &
+          &                      poaet_mean_day(:), poaet_sum_year(:), poaet_mean_year(:), &
+          &                      poaet_lt(:)                                               &
+        )
+      ENDIF
+
     ENDIF
+
+    IF (.NOT. lnew_day) RETURN ! Topmodel process is updated only once per day
 
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
       IF (is_newmonth(options%current_datetime,dtime)) THEN
@@ -383,12 +405,7 @@ CONTAINS
 
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
-       ! Get needed time state
-      lstart     = is_time_experiment_start(options%current_datetime)
-      lnew_year  = is_newyear (options%current_datetime,dtime)
-      lnew_month = is_newmonth(options%current_datetime,dtime)
-      lnew_day   = is_newday  (options%current_datetime,dtime)
-      summer_state = -1
+     summer_state = -1
       ylen = 365 ! Only need to be correct if lnew_year
       mlen = 30  ! Only need to be correct if lnew_month
       CALL get_date_components(options%current_datetime,YEAR=year,MONTH=month)
@@ -423,20 +440,6 @@ CONTAINS
           &                          frac_permanent_wetland(:),                                     &
           &                          wt_inun(:), wt_inun_sum_month(:), wt_inun_mean_month(:),       &
           &                          wt_inun_min_year(:), wt_inun_min_lt(:)                         &
-        )
-      ENDIF
-
-      IF (dsl4jsb_Config(TOP_)%lpeat) THEN
-
-        CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                    &
-          &                      lnew_year,lnew_month,lnew_day,                               &
-          &                      mlen,ylen,tspd,                                              &
-          &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),               &
-          &                      rain(:),snow(:),precip_sum_day(:),precip_mean_day(:),        &
-          &                      aet(:),                                                      &
-          &                      aet_sum_day(:),aet_mean_day(:),                              &
-          &                      poaet_mean_day(:),                                           &
-          &                      poaet_sum_year(:),poaet_mean_year(:),poaet_lt(:)             &
         )
       ENDIF
 
