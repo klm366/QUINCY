@@ -47,18 +47,19 @@ CONTAINS
     REAL(wp), INTENT(out) :: aet                    ! Equilibrium evapotranspiration flux [kg m-2 s-1]
 
     ! Locals
-    REAL(wp) :: ctemp, gamma, lambda, s
+    REAL(wp) :: t_c, t_ref, gamma, lambda, s
 
     aet = 0._wp;
     IF (net_radiation > 0._wp) THEN
-      ctemp = temp_air - tmelt                        ! convert temperature to Celsius
+      t_c   = temp_air - tmelt                      ! convert temperature to Celsius
+      t_ref = t_c + 237.3_wp
 
-      gamma = (65.05_wp + ctemp * 0.064_wp)           ! psychrometer constant [Pa/K], adjusted for temperature
-      lambda = (2.495e6_wp - ctemp * 2380._wp)        ! latent heat of vaporization of water [J/kg], adjusted for temperature
+      gamma = (65.05_wp + t_c * 0.064_wp)           ! psychrometer constant [Pa/K], adjusted for temperature
+      lambda = (2.495e6_wp - t_c * 2380._wp)        ! latent heat of vaporization of water [J/kg], adjusted for temperature
 
-      s = 2.503e6_wp * EXP(17.269_wp * ctemp/(237.3_wp + ctemp))/((237.3_wp + ctemp)*(237.3_wp + ctemp)) ! saturated vapour pressure
+      s = 2.503e6_wp * EXP(17.269_wp * t_c/t_ref)/(t_ref*t_ref) ! saturated vapour pressure
 
-      aet = ((s/(s+gamma))/lambda) * net_radiation    ! equilibrium evapotranspiration
+      aet = ((s/(s+gamma))/lambda) * net_radiation  ! equilibrium evapotranspiration
 
     ENDIF
 
