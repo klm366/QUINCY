@@ -591,7 +591,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    ! IF (nc /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
+    IF (nc /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     model => Get_model(tile%owner_model_id)
 
@@ -977,7 +977,7 @@ CONTAINS
           t_lwtr(i) = t_lwtr_ptr(i)
         END DO
         !$ACC END PARALLEL LOOP
-      !$ACC END DATA
+        !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
         t_lwtr(:) = 0._wp

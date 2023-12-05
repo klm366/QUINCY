@@ -211,17 +211,17 @@ CONTAINS
     CASE ('zero')
 
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
-      
+
       ! coastal ocean cells
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
         & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
-      
+
       CALL input_file%Close()
-      
-      CASE ('none')      
+
+    CASE ('none')
 
     END SELECT
 
@@ -280,15 +280,15 @@ CONTAINS
       nblks  = grid%nblks
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
-      
+
       ! Overlandflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FLFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_o_max,           &
         & extdim_name='oresnum')
-      
-      
+
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -298,14 +298,14 @@ CONTAINS
            END DO
          END DO
       END DO
-      
+
       ! Baseflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FGMEM',                    &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_b_max,           &
         & extdim_name='bresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -315,14 +315,14 @@ CONTAINS
             END DO
           END DO
       END DO
-      
+
       ! Riverflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FRFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_r_max,           &
         & extdim_name='rresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)

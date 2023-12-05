@@ -64,7 +64,7 @@ CONTAINS
     INTEGER, INTENT(in) :: comp_id           ! yac component id
     INTEGER, INTENT(in) :: cell_point_ids(:) ! yac point is
     INTEGER, INTENT(in) :: grid_id           ! yac grid id
-    INTEGER, INTENT(in) :: n_patch_cells     ! number of cells (compute + halo) 
+    INTEGER, INTENT(in) :: n_patch_cells     ! number of cells (compute + halo)
                                             ! n_patch_cells is <= nproma*nblks
     ! Local variables
     !
@@ -136,9 +136,9 @@ CONTAINS
       & YAC_TIME_UNIT_ISO_FORMAT, &
       & yac_river_runoff_field_id )
 
-      DEALLOCATE(is_valid)
+    DEALLOCATE(is_valid)
 
-    END SUBROUTINE jsb_fdef_hd_fields
+  END SUBROUTINE jsb_fdef_hd_fields
 #endif
 
   SUBROUTINE interface_hd_ocean(tile, options)

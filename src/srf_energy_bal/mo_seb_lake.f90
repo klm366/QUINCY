@@ -86,8 +86,8 @@ CONTAINS
       & fract_lice,           &
       & depth_lice,           &
       & fract_snow_lice,      &
-      & w_snow_lice,          &
-      & w_snow,               &
+      & weq_snow_lice,        &
+      & weq_snow,             &
       & rad_net_lwtr,         &
       & rad_net_lice
 
@@ -160,7 +160,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)       ! out
 
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)          ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)        ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
@@ -177,7 +177,7 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)     ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)   ! inout
 
       dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)   ! in
       dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice) ! in
@@ -296,6 +296,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
+
         CALL calc_lake_ice_temp(                            &
           & t_lice(ic),                                     & ! inout
           & hcap_ice(ic),                                   & ! out
@@ -306,7 +307,7 @@ CONTAINS
           & latent_hflx_ice(ic),                            & !< in;
           & snow(ic),                                       & !< in; Snow fall
           & depth_lice(ic),                                 &
-          & w_snow_lice(ic),                                &
+          & weq_snow_lice(ic),                              &
           & fract_snow_lice(ic),                            &
           & min_ice_depth,                                  &
           & dtime)
@@ -337,7 +338,7 @@ CONTAINS
           qsat_star(ic) = (1._wp - fract_lice(ic)) * qsat_lwtr(ic) + fract_lice(ic) * qsat_lice(ic)
         END IF
         heat_cap(ic)  = (1._wp - fract_lice(ic)) * hcap_wtr(ic) + fract_lice(ic) * hcap_ice(ic)
-        w_snow(ic)    = fract_lice(ic) * w_snow_lice(ic)
+        weq_snow(ic)  = fract_lice(ic) * weq_snow_lice(ic)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -355,7 +356,7 @@ CONTAINS
           qsat_star(ic) = qsat_lwtr(ic)
         END IF
         heat_cap(ic) = hcap_wtr(ic)
-        w_snow(ic) = 0._wp
+        weq_snow(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
 

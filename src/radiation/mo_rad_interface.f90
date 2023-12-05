@@ -575,7 +575,7 @@ CONTAINS
       par(ic) = swpar_srf_down(ic)
 
       ! Compute direct fraction of PAR.
-      ! Ric  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
+      ! R: fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
       fract_par_direct(ic) = 1._wp - fract_par_diffuse(ic)
 
       B4_layer_above(ic) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
@@ -584,15 +584,15 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT
+    !$ACC WAIT(1)
 
     ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and
     ! lai_cl (leaf area index for each canopy layer)
     DO icanopy=1,ncanopy
         canopy_bound_lai_tmp = canopy_bound_lai(icanopy)
         canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
-       !NEC$ ivdep
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !NEC$ ivdep
         DO ic=1,nc
           CALL calc_par(                 &
             & ncanopy,                   & ! in
@@ -635,15 +635,16 @@ CONTAINS
     ! END DO
 
     ! Create faPAR
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC LOOP SEQ
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
-        faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
-                                                     ! whole canopy
+        ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
+        faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
@@ -661,9 +662,8 @@ CONTAINS
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
 
+    !$ACC WAIT(1)
     !$ACC END DATA
-
-    !$ACC WAIT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -789,7 +789,7 @@ CONTAINS
       & albedo_lwtr,           &
       & fract_lice,            &
       & t_lice,                &
-      & w_snow_lice,           &
+      & weq_snow_lice,         &
       & albedo_lice
 
     REAL(wp) :: &
@@ -946,17 +946,17 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)  ! in
-        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
+        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
-          CALL calc_alb_lice(  &
-            & l_day(ic),       & ! in
-            & t_lice(ic),      & ! in
-            & w_snow_lice(ic), & ! in
-            & albedo_lice(ic)  & ! inout
+          CALL calc_alb_lice(    &
+            & l_day(ic),         & ! in
+            & t_lice(ic),        & ! in
+            & weq_snow_lice(ic), & ! in
+            & albedo_lice(ic)    & ! inout
             & )
         END DO
         !$ACC END PARALLEL LOOP
@@ -1021,7 +1021,7 @@ CONTAINS
             & c_ag_sum_1(ic),                           & ! in
             !CBAL & c_slow(ic),                           & ! in
             & c_bg_sum(ic),                             & ! in
-            ! @todo on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
+            ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
             & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
             & alb_background(ic),                       & ! in

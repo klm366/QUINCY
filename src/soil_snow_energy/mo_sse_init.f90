@@ -65,11 +65,9 @@ MODULE mo_sse_init
       & fr_sand     (:,:  ) => Null(), &
       & fr_silt     (:,:  ) => Null(), &
       & fr_clay     (:,:  ) => Null(), &
-      & fr_oc       (:,:  ) => Null(), &
       & fr_sand_deep(:,:  ) => Null(), &
       & fr_silt_deep(:,:  ) => Null(), &
       & fr_clay_deep(:,:  ) => Null(), &
-      & fr_oc_deep  (:,:  ) => Null(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -110,20 +108,18 @@ CONTAINS
       & sse_init_vars%heat_cond     &
       & )
 
-    IF (ASSOCIATED(sse_init_vars%fao)) DEALLOCATE(sse_init_vars%fao)  
-    IF (ASSOCIATED(sse_init_vars%fr_sand)) DEALLOCATE(sse_init_vars%fr_sand)
-    IF (ASSOCIATED(sse_init_vars%fr_silt)) DEALLOCATE(sse_init_vars%fr_silt)
-    IF (ASSOCIATED(sse_init_vars%fr_clay)) DEALLOCATE(sse_init_vars%fr_clay)
-    IF (ASSOCIATED(sse_init_vars%fr_oc)) DEALLOCATE(sse_init_vars%fr_oc)
+    IF (ASSOCIATED(sse_init_vars%fao))          DEALLOCATE(sse_init_vars%fao)
+    IF (ASSOCIATED(sse_init_vars%fr_sand))      DEALLOCATE(sse_init_vars%fr_sand)
+    IF (ASSOCIATED(sse_init_vars%fr_silt))      DEALLOCATE(sse_init_vars%fr_silt)
+    IF (ASSOCIATED(sse_init_vars%fr_clay))      DEALLOCATE(sse_init_vars%fr_clay)
     IF (ASSOCIATED(sse_init_vars%fr_sand_deep)) DEALLOCATE(sse_init_vars%fr_sand_deep)
     IF (ASSOCIATED(sse_init_vars%fr_silt_deep)) DEALLOCATE(sse_init_vars%fr_silt_deep)
     IF (ASSOCIATED(sse_init_vars%fr_clay_deep)) DEALLOCATE(sse_init_vars%fr_clay_deep)
-    IF (ASSOCIATED(sse_init_vars%fr_oc_deep)) DEALLOCATE(sse_init_vars%fr_oc_deep)
 
-    IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
+    IF (ASSOCIATED(sse_init_vars%t_srf_mon))    DEALLOCATE(sse_init_vars%t_srf_mon)
 
-    IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
-    IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
+    IF (ASSOCIATED(sse_init_vars%ifs_tsoil))    DEALLOCATE(sse_init_vars%ifs_tsoil)
+    IF (ASSOCIATED(sse_init_vars%ifs_tskin))    DEALLOCATE(sse_init_vars%ifs_tskin)
 
   END SUBROUTINE sse_finalize_init_vars
       
@@ -132,7 +128,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
 
     REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
@@ -157,7 +152,6 @@ CONTAINS
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
 
     ALLOCATE(                                          &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
@@ -178,21 +172,17 @@ CONTAINS
         & sse_init_vars%fr_sand     (nproma, nblks    ), &
         & sse_init_vars%fr_silt     (nproma, nblks    ), &
         & sse_init_vars%fr_clay     (nproma, nblks    ), &
-        & sse_init_vars%fr_oc       (nproma, nblks    ), &
         & sse_init_vars%fr_sand_deep(nproma, nblks    ), &
         & sse_init_vars%fr_silt_deep(nproma, nblks    ), &
-        & sse_init_vars%fr_clay_deep(nproma, nblks    ), &
-        & sse_init_vars%fr_oc_deep  (nproma, nblks    )  &
+        & sse_init_vars%fr_clay_deep(nproma, nblks    )  &
         & )
 
       sse_init_vars%fr_sand     (:,:)   = missval
       sse_init_vars%fr_silt     (:,:)   = missval
       sse_init_vars%fr_clay     (:,:)   = missval
-      sse_init_vars%fr_oc       (:,:)   = missval
       sse_init_vars%fr_sand_deep(:,:)   = missval
       sse_init_vars%fr_silt_deep(:,:)   = missval
       sse_init_vars%fr_clay_deep(:,:)   = missval
-      sse_init_vars%fr_oc_deep  (:,:)   = missval
     END IF ! l_soil_texture
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
@@ -214,15 +204,6 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        ptr_2D => input_file%Read_2d(             &
-          & variable_name='FR_OC',                &
-          & fill_array = sse_init_vars%fr_oc)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-      ELSE
-        sse_init_vars%fr_oc=0._wp
-      END IF
-
       ptr_2D => input_file%Read_2d(             &
         & variable_name='SUB_FR_SAND',              &
         & fill_array = sse_init_vars%fr_sand_deep)
@@ -238,22 +219,11 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        ptr_2D => input_file%Read_2d(                 &
-          & variable_name='SUB_FR_OC',                &
-          & fill_array = sse_init_vars%fr_oc_deep)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-      ELSE
-        sse_init_vars%fr_oc_deep=0._wp
-      END IF
-
-
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
          heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
          sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
-         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
          sse_init_vars%vol_heat_cap(:,:))
 
       ! calculate soil heat conductivity incl. organic fraction
@@ -261,7 +231,6 @@ CONTAINS
          heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
          sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
-         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
          sse_init_vars%heat_cond(:,:))
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
@@ -444,12 +413,13 @@ CONTAINS
 
   SUBROUTINE init_soil_properties(tile)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi, ci, dens_snow_min
-    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
-      &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
+    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min, tmelt, alf, rhoh2o
+    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, &   ! vol_hcap_snow_min,
+      &                                  vol_hcap_org_top, vol_hcap_org_below, &
+      &                                  hcond_ice, hcond_snow, &         !, hcond_snow_min, hcond_org
+      &                                  hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below
+    USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
-    USE mo_hydro_util,             ONLY: get_water_in_root_zone
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     ! Local variables
@@ -468,8 +438,8 @@ CONTAINS
       & heat_cond_snow
     dsl4jsb_Real3D_onDomain :: &
       & soil_depth_sl, &
-      & w_soil_sl, &
-      & w_ice_sl, &
+      & wtr_soil_sl, &
+      & ice_soil_sl, &
       & t_soil_sl, &
       & matrix_pot_sl, &
       & bclapp_sl, &
@@ -484,7 +454,13 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: &
       & liquid_max,            &
       & fract_water,           &
-      & fract_ice
+      & fract_ice,             &
+      & vol_heat_cap_tmp,      &
+      & vol_heat_cap_org_tmp,  &
+      & heat_cond_tmp,         &
+      & vol_porosity_org_tmp,  &
+      & hcond_org_tmp,         &
+      & hcond_dry_org_tmp
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
@@ -544,8 +520,8 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
 
@@ -559,7 +535,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(liquid_max)
 
       IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) PRIVATE(ws_max_sl)
         DO is = 1, nsoil
           DO ib = 1, nblks
             DO ic = 1, nproma
@@ -591,19 +567,19 @@ CONTAINS
         DO ib = 1, nblks
           DO ic = 1, nproma
             heat_cap_sl = soil_e_dz(is) * vol_heat_cap(ic,ib)
-            w_ice_sl(ic,is,ib) = 0._wp
-            IF (t_soil_sl(ic,is,ib) < tmelt .AND. w_soil_sl(ic,is,ib) > liquid_max(ic,is,ib)) THEN
-              w_ice_sl(ic,is,ib) = MIN(w_soil_sl(ic,is,ib) - liquid_max(ic,is,ib),                            &
-                &                      heat_cap_sl * (tmelt - t_soil_sl(ic,is,ib)) / (alf * rhoh2o) &
-                &                     )
+            ice_soil_sl(ic,is,ib) = 0._wp
+            IF (t_soil_sl(ic,is,ib) < tmelt .AND. wtr_soil_sl(ic,is,ib) > liquid_max(ic,is,ib)) THEN
+              ice_soil_sl(ic,is,ib) = MIN(wtr_soil_sl(ic,is,ib) - liquid_max(ic,is,ib),                &
+                &                         heat_cap_sl * (tmelt - t_soil_sl(ic,is,ib)) / (alf * rhoh2o) &
+                &                        )
             END IF
-            w_soil_sl(ic,is,ib) = w_soil_sl(ic,is,ib) - w_ice_sl(ic,is,ib)
+            wtr_soil_sl(ic,is,ib) = wtr_soil_sl(ic,is,ib) - ice_soil_sl(ic,is,ib)
           END DO
         END DO
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + w_ice_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
+      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + ice_soil_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
       ! IF (TRIM(tile%name) == 'land') THEN
       !   dsl4jsb_var_ptr(SEB_,t)(:,:)        = t_soil_sl(:,1,:)
       !   dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
@@ -612,31 +588,9 @@ CONTAINS
       !$ACC EXIT DATA DELETE(liquid_max)
       DEALLOCATE(liquid_max)
 
-      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
-      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-      DO ib=1,nblks
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,ib),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,ib),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,ib),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  ib)   )
-      END DO
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
-      END WHERE
-
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel)) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column))
+      ! dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
+      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
 
     END IF
 
@@ -659,17 +613,32 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
-      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
-      !$ACC ENTER DATA CREATE(fract_water, fract_ice)
+    ALLOCATE(vol_heat_cap_tmp(nproma,nsoil,nblks), heat_cond_tmp(nproma,nsoil,nblks))
+    !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, heat_cond_tmp)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+    DO is = 1, nsoil
+      DO ib = 1, nblks
+        DO ic = 1, nproma
+          vol_heat_cap_tmp(ic,is,ib) = vol_heat_cap(ic,ib)
+          heat_cond_tmp   (ic,is,ib) = heat_cond(ic,ib)
+        END DO
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks), &
+        &      vol_heat_cap_org_tmp(nproma, nsoil, nblks))
+      !$ACC ENTER DATA CREATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
+
+      !$noACC UPDATE DEVICE(soil_depth_sl, wtr_soil_sl, ice_soil_sl)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
-      DO is = 1, nsoil
-        DO ib = 1, nblks
-          DO ic = 1, nproma
+      DO ic = 1, nproma
+        DO is = 1, nsoil
+          DO ib = 1, nblks
             IF (soil_depth_sl(ic,is,ib) > 0._wp) THEN
-              fract_water(ic,is,ib) = w_soil_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
-              fract_ice  (ic,is,ib) = w_ice_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
+              fract_water(ic,is,ib) = wtr_soil_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
+              fract_ice  (ic,is,ib) = ice_soil_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
             ELSE
               fract_water(ic,is,ib) = 0._wp
               fract_ice  (ic,is,ib) = 0._wp
@@ -679,34 +648,50 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC UPDATE HOST(fract_water, fract_ice)
-      
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      DO ib = 1, nblks
+        DO ic = 1, nproma
+           vol_heat_cap_org_tmp(ic,1,ib) = vol_hcap_org_top
+        END DO
+      END DO
+     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      DO is = 2, nsoil
+        DO ib = 1, nblks
+          DO ic = 1, nproma
+            vol_heat_cap_org_tmp(ic,is,ib) = vol_hcap_org_below
+          END DO
+        END DO
+      END DO
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
             vol_heat_cap_sl (ic,is,ib) = calc_vol_heat_capacity( &
-              &                                 vol_heat_cap     (ic,   ib)                                               , &
-              &                                 vol_porosity_sl  (ic,is,ib)                                               , &
-              &                                 fract_org_sl     (ic,is,ib)                                               , &
-              &                                 fract_water      (ic,is,ib)                                               , &
-              &                                 fract_ice        (ic,is,ib)                                               , &
-              &                                 soil_depth_sl    (ic,is,ib)                                               , &
-              &                                 soil_e_dz        (   is   )                                                 &
+              &                                 vol_heat_cap_tmp (ic,is,ib)      , &
+              &                                 vol_heat_cap_org_tmp(ic,is,ib)   , &
+              &                                 vol_porosity_sl  (ic,is,ib)      , &
+              &                                 fract_org_sl     (ic,is,ib)      , &
+              &                                 fract_water      (ic,is,ib)      , &
+              &                                 fract_ice        (ic,is,ib)      , &
+              &                                 soil_depth_sl    (ic,is,ib)      , &
+              &                                 soil_e_dz        (   is   )        &
               & )
           END DO
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC EXIT DATA DELETE(fract_water, fract_ice)
-      DEALLOCATE(fract_water, fract_ice)
+      !$ACC EXIT DATA DELETE(fract_water, fract_ice, vol_heat_cap_org_tmp)
+      DEALLOCATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
     ELSE
 
       !$ACC UPDATE DEVICE(vol_heat_cap)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
-          DO ib=1,nblks
-            DO ic = 1, nproma
-              vol_heat_cap_sl(ic,is,ib) = vol_heat_cap(ic,ib)
+        DO ib=1,nblks
+          DO ic = 1, nproma
+            vol_heat_cap_sl(ic,is,ib) = vol_heat_cap(ic,ib)
           END DO
         END DO
       END DO
@@ -714,24 +699,54 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
-      DO is = 1, nsoil
-        DO ib=1,nblks
+      ALLOCATE( &
+        & vol_porosity_org_tmp(nproma,nsoil,nblks), &
+        & hcond_org_tmp(nproma,nsoil,nblks),        &
+        & hcond_dry_org_tmp(nproma,nsoil,nblks))
+      !$ACC ENTER DATA CREATE(vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      DO ib = 1, nblks
+        DO ic = 1, nproma
+          vol_porosity_org_tmp(ic,1,ib) = vol_porosity_org_top
+          hcond_org_tmp(ic,1,ib)        = hcond_org_top
+          hcond_dry_org_tmp(ic,1,ib)    = hcond_dry_org_top
+        END DO
+      END DO
+     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      DO is = 2, nsoil
+        DO ib = 1, nblks
           DO ic = 1, nproma
-            heat_cond_sl (ic,is,ib) = calc_thermal_conductivity( &
-              &                                      heat_cond       (ic,   ib)                                                   , &
-              &                                      w_soil_sl       (ic,is,ib)                                                       , &
-              &                                      w_ice_sl        (ic,is,ib)                                                        , &
-              &                                      vol_porosity_sl (ic,is,ib)                                                 , &
-              &                                      vol_field_cap_sl(ic,is,ib)                                                , &
-              &                                      fract_org_sl    (ic,is,ib)                                                    , &
-              &                                      soil_depth_sl   (ic,is,ib)                                                   , &
-              &                                      soil_e_dz       (   is   )                                                     &
+            vol_porosity_org_tmp(ic,is,ib) = vol_porosity_org_below
+            hcond_org_tmp(ic,is,ib)        = hcond_org_below
+            hcond_dry_org_tmp(ic,is,ib)    = hcond_dry_org_below
+          END DO
+        END DO
+      END DO
+      
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      DO is = 2, nsoil
+        DO ib = 1, nblks
+          DO ic = 1, nproma
+            heat_cond_sl(ic,is,ib) = calc_thermal_conductivity( &
+              &                                  heat_cond_tmp       (ic,is,ib)   , &
+              &                                  wtr_soil_sl         (ic,is,ib)   , &
+              &                                  ice_soil_sl         (ic,is,ib)   , &
+              &                                  vol_porosity_sl     (ic,is,ib)   , &
+              &                                  vol_field_cap_sl    (ic,is,ib)   , &
+              &                                  fract_org_sl        (ic,is,ib)   , &
+              &                                  vol_porosity_org_tmp(ic,is,ib)   , &
+              &                                  hcond_org_tmp       (ic,is,ib)   , &
+              &                                  hcond_dry_org_tmp   (ic,is,ib)   , &
+              &                                  soil_depth_sl       (ic,is,ib)   , &
+              &                                  soil_e_dz           (   is   )     &
               & )
           END DO
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+      !$ACC EXIT DATA DELETE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
+      DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
