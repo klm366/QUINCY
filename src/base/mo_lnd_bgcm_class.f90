@@ -1,3 +1,21 @@
+!> Summary: define indices and helper functions for bgc material
+!>
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### define indices (enumerator) and helper functions for bgc material and their components
+!>
+
 !> Summary: Contains elem enum and soon common functions for bgc materials; to be integrated with current mo_jsb_pool_class
 !>
 !>### Contains enum and methods for bgc materials; to be integrated with current mo_jsb_pool_class
