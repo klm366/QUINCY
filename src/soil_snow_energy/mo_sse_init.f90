@@ -535,7 +535,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(liquid_max)
 
       IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) PRIVATE(ws_max_sl)
         DO is = 1, nsoil
           DO ib = 1, nblks
             DO ic = 1, nproma

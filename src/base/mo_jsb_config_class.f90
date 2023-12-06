@@ -133,7 +133,7 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
-    enforce_water_budget       = .TRUE.
+    enforce_water_budget       = .FALSE.
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
