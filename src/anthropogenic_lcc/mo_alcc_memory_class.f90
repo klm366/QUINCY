@@ -1,4 +1,4 @@
-!> Summary: alcc (anthropogenic lcc) memory class 
+!> Summary: alcc (anthropogenic lcc) memory class
 !>
 !>### Contains memory definitions for alcc
 !>
@@ -25,7 +25,7 @@ MODULE mo_alcc_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real3d
-  USE mo_jsb_varlist,            ONLY: FULL 
+  USE mo_jsb_varlist,            ONLY: FULL
 
   ! Use of processes in this module
   ! dsl4jsb_Use_processes ALCC_
@@ -42,7 +42,7 @@ MODULE mo_alcc_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
 
-    TYPE(t_jsb_var_real3d) :: cf_current_year 
+    TYPE(t_jsb_var_real3d) :: cf_current_year
     !< this years target cfs derived from annually read land use data file. [-]
 
   CONTAINS
@@ -76,7 +76,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     model => Get_model(model_id)
 
     table = tables(1)
@@ -97,7 +97,7 @@ CONTAINS
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-      
+
   END SUBROUTINE Init_alcc_memory
 
 #endif

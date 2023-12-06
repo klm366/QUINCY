@@ -45,7 +45,7 @@ MODULE mo_assimi_parameters
    & ER    = def_parameters,  & ! ACTIVATION ENERGY FOR DARK RESPIRATION [J / MOL]
    & EK    = def_parameters,  & ! = Q10=2 (Collatz et al. 1992)
    & FRDC3 = def_parameters,  & ! RATIO OF DARK RESPIRATION TO "PVM" AT 25C for C3
-   ! C4 PLANTS: 
+   ! C4 PLANTS:
    ! COLLATZ, G.J., M. RIBAS-CARBO AND J.A. BERRY, 1992.
    ! COUPLED PHOTOSYNTHESIS-STOMATAL CONDUCTANCE MODEL FOR LEAVES
    ! OF C4 PLANTS. AUST. J. PLANT PHYSIOL. 19, 519-538.
@@ -53,7 +53,7 @@ MODULE mo_assimi_parameters
    & ALC4  = def_parameters,  & ! EFFECTIVE QUANTUM EFFICIENCY
    & THETA = def_parameters,  & ! CURVATURE PARAMETER
    & minOfMaxCarboxrate = def_parameters, & ! Minimum of maximum carboxylation rate [10^(-6) mol/(m^2 s)].
-   ! C3 & C4 
+   ! C3 & C4
    & minStomaConductance = def_parameters, & ! Minimum stomatal conductance [mol H2O /(m^2 s) ??]
    ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air:
    & FCI1C3        = def_parameters, &     ! For C3 plants
@@ -66,23 +66,23 @@ MODULE mo_assimi_parameters
   !> 3.0 QUINCY specific parameters
   !>
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
-  REAL(wp), SAVE :: & 
+  REAL(wp), SAVE :: &
     ! Values from Niinemets 1997 (SC 01/16)
     & jmax2n = def_parameters, &           !< electron-transport limited carboxylation rate per micro-mol CO2 / mmol N in ET
     & vcmax2n = def_parameters, &          !< Rubisco limited carboxylation rate per micro-mol CO2 / mmol N in RUB
     ! PEP C limited carboxylation rate per micro-mol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
-    ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS 
+    ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS
     & pepc2n = def_parameters, &           !< PEP C limited carboxylation rate per micro-mol CO2 / mmol N in PEP C
-    ! Value from Friend et al. 2009 
+    ! Value from Friend et al. 2009
     ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
     & chl2n = def_parameters, &            !< micro-mol Chloroplast per mmol N (light harvesting complex)
     ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
-    & k1_fn_struc = def_parameters         !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
+    & k1_fn_struc = def_parameters         !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN)
 
   ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
   REAL(wp), SAVE :: &
-    & E0kc = def_parameters, &             !< Scaling constant for Kc (unitless) 
-    & E1kc = def_parameters, &             !< Activation energy of Kc (J mol-1) 
+    & E0kc = def_parameters, &             !< Scaling constant for Kc (unitless)
+    & E1kc = def_parameters, &             !< Activation energy of Kc (J mol-1)
     & E0ko = def_parameters, &             !< Scaling constant for Ko (unitless)
     & E1ko = def_parameters, &             !< Activation energy of Ko (J mol-1)
     & E0pcp = def_parameters, &            !< Scaling constant for the photosynthetic compensation point (unitless)
@@ -92,10 +92,10 @@ MODULE mo_assimi_parameters
     ! Temperature sensitivity of Electron transport
     & t_jmax_offset = def_parameters, &    !< Offset of the Tjmax~Tair relationship
     & t_jmax_slope = def_parameters, &     !< slope of the Tjmax~Tair relationship (candidate for PFT specific parameterisation?)
-    & t_jmax_opt_min = def_parameters, &   !< Minimum of optimum Tjmax 
+    & t_jmax_opt_min = def_parameters, &   !< Minimum of optimum Tjmax
     & t_jmax_opt_max = def_parameters, &   !< Maximum of optimum Tjmax
     ! Temperature sensitivity of PeP C4 photosynthesis
-    & Tref_pepc = def_parameters, &        !< Temperature sensitivity of PeP C4 photosynthesis 
+    & Tref_pepc = def_parameters, &        !< Temperature sensitivity of PeP C4 photosynthesis
     & Tbase_pepc = def_parameters          !< Temperature sensitivity of PeP C4 photosynthesis
 
   REAL(wp), SAVE :: &
@@ -113,23 +113,35 @@ MODULE mo_assimi_parameters
     & ci_max = def_parameters                !< saturating Ci in Pa C4 plants
 
   ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis), derived from Drake 2014, Radiocarbon, 56, 29-38
-  REAL(wp), SAVE :: &     
+  REAL(wp), SAVE :: &
     & discr_ps_a_C13 = def_parameters, &     !< discrimination of C13 due to stomatal diffusion
     & discr_ps_b_C13 = def_parameters, &     !< discrimination of C13 due to Rubisco
-    & discr_ps_c_C13 = def_parameters, &     !< discrimination of C13 due to PEP C 
+    & discr_ps_c_C13 = def_parameters, &     !< discrimination of C13 due to PEP C
     & discr_ps_a_C14 = def_parameters, &     !< discrimination of C14 due to stomatal diffusion
     & discr_ps_b_C14 = def_parameters, &     !< discrimination of C14 due to Rubisco
     & discr_ps_c_C14 = def_parameters, &     !< discrimination of C14 due to PEP C
     & discr_ps_phi   = def_parameters        !< leakage rate of bundle sheath cells; a typical value cf Hatch et al. 1995, Plant Phys. 108, 173-181
 
   ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
-  REAL(wp), SAVE :: &     
+  REAL(wp), SAVE :: &
     & ka = def_parameters, &                 !< Extinction coefficient for PAR on chlorophyll
     & kn = def_parameters                    !< extinction coefficient to describe decline of N within the canopy
 
   REAL(wp), SAVE :: &
     & soa_b = def_parameters, &              !< parameter in state of acclimation calculation used for evergreen forests
     & soa_t_s = def_parameters               !< parameter in state of acclimation calculation used  for evergreen forests
+
+  ! parameters for calculation of chlorophyll fluorescence
+  REAL(wp), SAVE:: &
+    & heat_dissipation_enrg_dep_param_1               = def_parameters, &   !< parameter for kn (energy dependent heat dissipation) calculation, source: drought dataset (Flexas 2002), for cotton kno=2.48 (Weiss and Berry 1987)
+    & heat_dissipation_enrg_dep_param_2               = def_parameters, &   !< parameter for kn calculation, source: drought dataset (Flexas 2002), for cotton alpha_kn=2.83 (Weiss and Berry 1987)
+    & heat_dissipation_enrg_dep_param_3               = def_parameters, &   !< parameter for kn calculation, source: drought dataset (Flexas 2002), for cotton beta_kn=0.114 (Weiss and Berry 1987)
+    & k_fluorescence_rate                             = def_parameters, &   !< rate coefficient of fluorescence
+    & thermal_dissipation_enrg_constitutive_max_rate  = def_parameters, &   !< maximum value for rate constant of energy constitutive thermal dissipation
+    & thermal_dissipation_enrg_constitutive_param_1   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
+    & thermal_dissipation_enrg_constitutive_param_2   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
+    & k_photochemistry_rate                           = def_parameters      !< rate coefficient for photochemistry    
+
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_parameters'
 
@@ -146,7 +158,7 @@ CONTAINS
     !> TODO
     !> for now all JSBACH parameters are considered constants
     !> when changing declaration from "REAL(wp), PARAMETER" to "REAL(wp), SAVE" simulation results change
-    
+
     ! C3 Plants:
     ALPHA         = 0.28_wp
     OX            = 0.21_wp
@@ -158,12 +170,12 @@ CONTAINS
     ER            = 45000._wp
     EK            = 50967._wp
     FRDC3         = 0.011_wp
-    ! C4 Plants: 
+    ! C4 Plants:
     FRDC4               = 0.031_wp
     ALC4                = 0.04_wp
     THETA               = 0.83_wp
     minOfMaxCarboxrate  = 1.0E-12_wp
-    ! C3 & C4 
+    ! C3 & C4
     minStomaConductance = 0.0_wp
     ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air:
     FCI1C3        = 0.87_wp
@@ -189,7 +201,7 @@ CONTAINS
     k1_fn_struc   = 71.4_wp * molar_mass_N / 1000000._wp  !< .. reference
 
     ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
-    E0kc            = 38.05_wp                          !< Bernacchi 2001 
+    E0kc            = 38.05_wp                          !< Bernacchi 2001
     E1kc            = 79430.0_wp                        !< Bernacchi 2001
     E0ko            = 20.3_wp                           !< Bernacchi 2001
     E1ko            = 36380.0_wp                        !< Bernacchi 2001
@@ -214,10 +226,10 @@ CONTAINS
     discr_ps_a_C13 = 4.4_wp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
     discr_ps_b_C13 = 27.0_wp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
     discr_ps_c_C13 = 5.7_wp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_a_C14 = 1.97_wp * discr_ps_a_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38     
-    discr_ps_b_C14 = 1.89_wp * discr_ps_b_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38     
-    discr_ps_c_C14 = 1.89_wp * discr_ps_c_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38     
-    discr_ps_phi   = 0.16_wp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38         
+    discr_ps_a_C14 = 1.97_wp * discr_ps_a_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_b_C14 = 1.89_wp * discr_ps_b_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_c_C14 = 1.89_wp * discr_ps_c_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_phi   = 0.16_wp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
 
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
     ka            = 0.005_wp                            !< .. reference
@@ -226,6 +238,17 @@ CONTAINS
     ! ...
     soa_b         = -0.5_wp                             !< .. reference
     soa_t_s       = 5.0_wp                              !< .. reference
+
+    ! parameters for chlorophyll fluorescence
+    heat_dissipation_enrg_dep_param_1               = 5.01_wp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_2               = 1.93_wp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_3               = 10.0_wp     !< Flexas 2002
+    k_fluorescence_rate                             = 0.05_wp     !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_max_rate  = 0.8738_wp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_1   = 0.0301_wp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_2   = 0.0773_wp   !< van der Tol 2014
+    k_photochemistry_rate                           = 4.0_wp      !< van der Tol 2014
+
   END SUBROUTINE init_assimi_parameters_quincy
 
 #endif

@@ -1,4 +1,22 @@
 !>
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
 !! @brief Initialization of the the assimilation memory.
 !!
 !! @author
@@ -36,11 +54,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':assimi_init'
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-  
+    
     ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
     ! CASE (MODEL_JSBACH)
-    ! 
+    !
     CASE (MODEL_QUINCY)
       CALL assimi_init_quincy(tile)
     END SELECT
@@ -48,7 +66,7 @@ CONTAINS
   
   ! ======================================================================================================= !
   !> Run assimilation init specific to MODEL_QUINCY
-  !>  
+  !>
   SUBROUTINE assimi_init_quincy(tile)
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_class,             ONLY: Get_model
@@ -140,7 +158,7 @@ CONTAINS
     beta_soil_gs_tfrac_mavg(:,:)      = 1.0_wp
     beta_soil_gs_tcnl_mavg(:,:)       = 1.0_wp
 
-    t_jmax_opt(:,:)                   = t_jmax_opt_min 
+    t_jmax_opt(:,:)                   = t_jmax_opt_min
   END SUBROUTINE assimi_init_quincy
 
 #endif

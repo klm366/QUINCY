@@ -101,6 +101,9 @@ macros = {
     'var2d_onchunk': [re.compile(
         r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
+    'var2d_onchunk_tile_name' : [re.compile(
+        r'dsl4jsb_var2D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\1__mem__\3%\2%ptr(ics:ice,iblk)'],
     'var3d_onchunk': [re.compile(
         r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],
@@ -146,6 +149,30 @@ macros = {
     'pool': [re.compile(
         r'dsl4jsb_pool *\((.*?)_ *, *(.*?) * *\)', re.IGNORECASE),
         r'\1__mem%pools%\2'],
+    'def_mt1l2d': [re.compile(
+        r'dsl4jsb_Def_mt1L2D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:)'],
+    'def_mt1l3d': [re.compile(
+        r'dsl4jsb_Def_mt1L3D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
+    'def_mt2l2d': [re.compile(
+        r'dsl4jsb_Def_mt2L2D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
+    'def_mt2l3d': [re.compile(
+        r'dsl4jsb_Def_mt2L3D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:,:)'],
+    'get_mt1l2d': [re.compile(
+        r'dsl4jsb_Get_mt1L2D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_1l_2d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt1l3d': [re.compile(
+        r'dsl4jsb_Get_mt1L3D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_1l_3d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt2l2d': [re.compile(
+        r'dsl4jsb_Get_mt2L2D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_2l_2d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt2l3d': [re.compile(
+        r'dsl4jsb_Get_mt2L3D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_2l_3d(\1, ics, ice, iblk, tile%name)'],
     'aggregate_onchunk': [re.compile(
         r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
         r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']

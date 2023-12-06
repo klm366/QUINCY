@@ -31,16 +31,16 @@ MODULE mo_assimi_constants
   !>
   REAL(wp), SAVE :: &
     ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)
-    & Dwv2co2_air  = Dwv / Dco2, &                      !< ratio of diffusion coefficient for H2O and CO2 in air 
-    ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380) 
-    & Dwv2co2_turb = (Dwv / Dco2) ** (2.0_wp / 3.0_wp)  !< ratio of diffusion coefficient for H2O and CO2 in turbulent air 
+    & Dwv2co2_air  = Dwv / Dco2, &                      !< ratio of diffusion coefficient for H2O and CO2 in air
+    ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380)
+    & Dwv2co2_turb = (Dwv / Dco2) ** (2.0_wp / 3.0_wp)  !< ratio of diffusion coefficient for H2O and CO2 in turbulent air
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
   ! TODO re-write as ENUM
   INTEGER, PARAMETER ::    &
     & ic3phot   = 1, &
-    & ic4phot   = 2  
+    & ic4phot   = 2
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_constants'
 

@@ -35,8 +35,8 @@ MODULE mo_fage_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_fage_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'fage'
-  
-  INTEGER, PARAMETER :: nr_of_active_cqts = 0   !< fage currently does not have any active cqts 
+
+  INTEGER, PARAMETER :: nr_of_active_cqts = 0   !< fage currently does not have any active cqts
   INTEGER, PARAMETER :: nr_of_passive_cqts = 5
 
 CONTAINS
@@ -58,7 +58,7 @@ CONTAINS
 
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: involved_child_tiles(:)
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     IF (.NOT. tile%Is_process_calculated(FAGE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')

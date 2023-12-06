@@ -17,6 +17,10 @@ MODULE mo_jsb_physical_constants
 
   USE mo_kind, ONLY: wp
 
+  ! most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
+  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90 :
+  !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
+  !   src/shared/mo_util_jsbach.f90         -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface
 
   IMPLICIT NONE
@@ -34,26 +38,19 @@ MODULE mo_jsb_physical_constants
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
     molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
 
-
-  ! moved here from mo_jsb4_forcing for consistency
-  REAL(wp), PARAMETER :: ckap = 0.4_wp      !< von Karmann constant for evaporation
-                                            !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
-  REAL(wp), PARAMETER :: zkappa = rd / cpd  !< specific gas constant for dry air / dry air specific heat at constant pressure
-
+  REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
 
   !! quincy - physical constants
-  ! most constants from host model (ECHAM/ICON) are defined in jsbach4_util_mods.f90
-  !   e.g. echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  !   ckap & zkappa are defined in drivers/mo_jsb4_forcing
-  !   cpvd1 is defined in mo_physical_constants_iface (pointing to vtmpc2 in mo_physical_constants.f90)
   REAL(wp), PARAMETER :: &
-    & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K) 
-    & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K) 
-    & r_gas_vapour = rv               ,  &      !< specific gas constant for water vapour (J / kg / K) 
-    & Dwv          = 0.0000242_wp     ,  &      !< diffusion coefficient for water vapour in air (m2 s-1) 
-    & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1) 
+    & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K)
+    & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K)
+    & r_gas_vapour = rv               ,  &      !< specific gas constant for water vapour (J / kg / K)
+    & Dwv          = 0.0000242_wp     ,  &      !< diffusion coefficient for water vapour in air (m2 s-1)
+    & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1)
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
+    & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+  REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
   ! molar masses
@@ -69,14 +66,14 @@ MODULE mo_jsb_physical_constants
   ! isotope standards
   REAL(wp), PARAMETER :: &
     & PDB_STANDARD_C13           = 0.0112372_wp                    , &  !< 13C/12C PDB standard
-    & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95*0.238 Bq/gC is the absolute specific activity of 
+    & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95*0.238 Bq/gC is the absolute specific activity of
                                                                           !< the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
     & ATM_STANDARD_N15           = 0.0036765_wp                    , &  !< 15N/14N atmospheric standard, Robinson 2001, TREE
     & AvogadroC                  = 6.022_wp * 1.e23_wp             , &  !< Avogadro Number
     & lambda_C14                 = 3.8332_wp * 1.e-12_wp           , &  !< decay constant of C14 (1/s)
-    & AvogadroC_times_lambda_C14 = 6.022_wp * 3.8332_wp * 1.e11_wp , &  !< Avogadro Number * decay constant of C14 to 
-                                                                          !< reduce the use of the very large/small AvogadroC/lambda_C14 
-    & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision) 
-    
+    & AvogadroC_times_lambda_C14 = 6.022_wp * 3.8332_wp * 1.e11_wp , &  !< Avogadro Number * decay constant of C14 to
+                                                                          !< reduce the use of the very large/small AvogadroC/lambda_C14
+    & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
+
 #endif
 END MODULE mo_jsb_physical_constants

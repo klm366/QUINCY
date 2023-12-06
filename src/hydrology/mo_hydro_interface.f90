@@ -920,7 +920,7 @@ CONTAINS
         vol_p_wilt_org(:,i) = vol_p_wilt_org_below
       END DO
 
-      ! Saturated hydraulic conductivity following percolation theory 
+      ! Saturated hydraulic conductivity following percolation theory
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
       ! @todo: add CLAW directives
 
@@ -1420,9 +1420,9 @@ CONTAINS
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:), 0._wp)
     ELSE
       wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
@@ -2295,7 +2295,7 @@ CONTAINS
 
     ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
     ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
-    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
+    wb_threshold(:) = 1.0e-11_wp * tile_area(:) * dtime
 
     !$claw acc parallel loop gang vector
     DO i=1,nc

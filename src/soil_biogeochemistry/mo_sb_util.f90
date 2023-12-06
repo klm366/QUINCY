@@ -24,26 +24,28 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (20170104)
+!! using bgcms by Julia Nabel (2023-04)
 !!
 MODULE mo_sb_util
 #ifndef __NO_JSBACH__
 
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
+  USE mo_kind,                  ONLY: wp
+  USE mo_jsb_control,           ONLY: debug_on
+  USE mo_exception,             ONLY: message, finish
+  USE mo_jsb_math_constants,    ONLY: zero
 
-  USE mo_kind,                        ONLY: wp
-  USE mo_jsb_control,                 ONLY: debug_on
-  USE mo_exception,                   ONLY: message, finish
+  USE mo_lnd_bgcm_idx
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
+  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
 
   IMPLICIT NONE
+  
   PRIVATE
   PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
 CONTAINS
-
 
   ! ======================================================================================================= !
   !>reset sb fluxes (to zero)
@@ -53,31 +55,29 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model, MODEL_JSBACH
-    USE mo_jsb_math_constants,    ONLY: zero
-    dsl4jsb_Use_processes SB_
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-    ! no need to get the allocatable pool structures here, as 'set zero' operates directly at the memory
-#else
-    dsl4jsb_Use_pools(SB_) t_sb_components_pool, t_sb_elements_pool
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),          POINTER       :: model
-    INTEGER                                   :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER   :: model                !< the model
+    TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_sb_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
+    dsl4jsb_Def_mt2L3D :: sb_formation_mt
+    dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    dsl4jsb_Def_mt2L3D :: sb_transport_mt
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss             
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation        
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport        
-    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     iblk  = options%iblk
     ics   = options%ics
@@ -87,41 +87,26 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    IF (model%config%model_scheme == MODEL_JSBACH) RETURN     ! only with QUINCY model
+    model         => Get_model(tile%owner_model_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    ! Get pools
-    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_loss,              sb_loss)
-    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_formation,         sb_formation)
-    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_transport,         sb_transport)
-    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
-    ! associate element-variables with chunk
-    CALL sb_loss%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL sb_formation%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL sb_transport%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL sb_mycorrhiza_export%Associate_chunk_var_ptr(ics, ice, iblk)
-#endif
+    ! ----------------------------------------------------------------------------------------------------- !
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !>1.0 pools
+    !>1.0 bgcm fluxes
     !>
-#ifdef __QUINCY_STANDALONE__
-    ! operate directly at the memory (no operator overload available)
-    ! t_slm_struct_sb_pool
-    CALL sb__mem%loss%init(zero)
-    CALL sb__mem%formation%init(zero)
-    CALL sb__mem%transport%init(zero)
-    ! t_slm_struct_sb_element
-    CALL sb__mem%mycorrhiza_export%init(zero)
-#else
-    CALL sb_loss%Set_to_scalar_on_chunk(zero)
-    CALL sb_formation%Set_to_scalar_on_chunk(zero)
-    CALL sb_transport%Set_to_scalar_on_chunk(zero)
-    CALL sb_mycorrhiza_export%Set_to_scalar_on_chunk(zero)
-#endif
+    ! set the bgcm matrices to zero
+    sb_formation_mt(:,:,:,:)       = zero
+    sb_loss_mt(:,:,:,:)            = zero
+    sb_transport_mt(:,:,:,:)       = zero
+    sb_mycorrhiza_export_mt(:,:,:) = zero
 
     !>2.0 variables
     !>
@@ -143,11 +128,9 @@ CONTAINS
     dsl4jsb_var2D_onChunk(SB_, leaching_dom_nitrogen15)        = zero
     dsl4jsb_var2D_onChunk(SB_, leaching_nh4_n15_solute)        = zero
     dsl4jsb_var2D_onChunk(SB_, leaching_no3_n15_solute)        = zero
-    dsl4jsb_var2D_onChunk(SB_, emission_nh3)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_noy)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2o)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2)                    = zero
-    dsl4jsb_var2D_onChunk(SB_, emission_nh3_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_noy_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2o_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2_n15)                = zero
@@ -200,6 +183,17 @@ CONTAINS
     dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_solute)         = zero
     dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_assoc)          = zero
     dsl4jsb_var3D_onChunk(SB_, transport_no3_n15_solute)         = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_nh4_solute_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_no3_solute_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_po4_solute_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_carbon_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_nitrogen_sl)     = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_phosphorus_sl)   = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_carbon13_sl)     = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_carbon14_sl)     = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_dom_nitrogen15_sl)   = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_nh4_n15_solute_sl)   = zero
+    dsl4jsb_var3D_onChunk(SB_, lateral_loss_no3_n15_solute_sl)   = zero
     dsl4jsb_var3D_onChunk(SB_, transport_noy)                    = zero
     dsl4jsb_var3D_onChunk(SB_, transport_n2o)                    = zero
     dsl4jsb_var3D_onChunk(SB_, transport_n2)                     = zero
@@ -238,31 +232,24 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-    dsl4slm_Use_memory_a_sb
-    USE mo_sb_memory_class,    ONLY: sb_mycorrhiza_export
-#else
-    dsl4jsb_Use_pools(SB_) t_sb_elements_pool
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
-    INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_soilbiogeochemistry'
+    TYPE(t_jsb_model),      POINTER   :: model                !< instance of the model
+    TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
+    TYPE(t_lctlib_element), POINTER   :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: iblk, ics, ice, nc   !< dimensions
+    CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
@@ -301,10 +288,6 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export,    sb_mycorrhiza_export)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff)                  ! in
@@ -328,22 +311,15 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)            ! out
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_STANDALONE__
-#define Get_sb_mycorrhiza_export
-#include "slm_pools_a_incl.f90"
-#undef Get_sb_mycorrhiza_export
-#endif
-
-
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    !> daytime averages - not used here
+
+    !>0.9 daytime averages - not used here
     !>
 
-    ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 moving averages
     !>
-    !>
-
     ! docu:
     ! calc_time_mavg(current average, new value, length of avg_period,  !
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
@@ -353,18 +329,18 @@ CONTAINS
     !>  1.1 tlabile (averages at the timescale of the labile pool)
     !> 
     myc_export_n_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tlabile_mavg_sl(:,:), &
-                                                       sb_mycorrhiza_export%nitrogen(:,:), mavg_period_tlabile) 
+      &                                                sb_mycorrhiza_export_mt(ixN,:,:), mavg_period_tlabile) 
     myc_export_p_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_p_tlabile_mavg_sl(:,:), &
-                                                       sb_mycorrhiza_export%phosphorus(:,:), mavg_period_tlabile)
+      &                                                sb_mycorrhiza_export_mt(ixP,:,:), mavg_period_tlabile)
 
     !>  1.2 lctlib tau_mycorrhiza
     !>
-    myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_c_tmyc_mavg_sl(:,:), &
-                                                    sb_mycorrhiza_export%carbon(:,:), & 
- 	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
-    myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tmyc_mavg_sl(:,:), &
-                                                    sb_mycorrhiza_export%nitrogen(:,:), & 
- 	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
+    myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_c_tmyc_mavg_sl(:,:),                &
+      &                                             sb_mycorrhiza_export_mt(ixC,:,:),        &
+                                                    lctlib%tau_mycorrhiza, avg_period_unit='year')
+    myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tmyc_mavg_sl(:,:),                &
+      &                                             sb_mycorrhiza_export_mt(ixN,:,:),        &
+                                                    lctlib%tau_mycorrhiza, avg_period_unit='year')
 
     !>  1.3 tmic (microbial community acclimation)
     !> 
@@ -388,15 +364,7 @@ CONTAINS
     enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
                                                   mavg_period_tenzyme)
 
-! not needed, because sb_mycorrhiza_export  not modified:
-! #ifdef __QUINCY_STANDALONE__
-! #define Passback_sb_mycorrhiza_export
-! #include "slm_pools_a_incl.f90"
-! #undef Passback_sb_mycorrhiza_export
-! #endif
-
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
-
 
 #endif
 END MODULE mo_sb_util

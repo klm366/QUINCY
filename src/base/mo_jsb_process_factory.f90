@@ -26,6 +26,7 @@ MODULE mo_jsb_process_factory
   USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
+  USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
@@ -41,7 +42,8 @@ MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
-  USE mo_rad_interface,        ONLY: Register_rad_tasks
+  USE mo_q_rad_interface,      ONLY: Register_rad_tasks_quincy
+  USE mo_jsb_rad_interface,    ONLY: Register_rad_tasks_jsbach
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
@@ -51,9 +53,12 @@ MODULE mo_jsb_process_factory
   USE mo_sse_config_class,     ONLY: t_sse_config
   USE mo_hydro_interface,      ONLY: Register_hydro_tasks
   USE mo_hydro_config_class,   ONLY: t_hydro_config
-  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
+  USE mo_q_assimi_interface,   ONLY: Register_assimi_tasks_quincy
+  USE mo_jsb_assimi_interface, ONLY: Register_assimi_tasks_jsbach
   USE mo_assimi_config_class,  ONLY: t_assimi_config
-  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
+  USE mo_q_pheno_interface,    ONLY: Register_q_pheno_tasks
+  USE mo_jsb_pheno_interface,  ONLY: Register_pheno_tasks
+  USE mo_q_pheno_config_class, ONLY: t_q_pheno_config
   USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
@@ -81,16 +86,17 @@ MODULE mo_jsb_process_factory
   USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
-  USE mo_veg_interface,         ONLY: Register_veg_tasks
+  USE mo_q_veg_interface,       ONLY: Register_veg_tasks_quincy
   USE mo_veg_config_class,      ONLY: t_veg_config
-  USE mo_sb_interface,          ONLY: Register_sb_tasks
+  USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
-  USE mo_spq_interface,         ONLY: Register_spq_tasks
+  USE mo_q_spq_interface,       ONLY: Register_spq_tasks_quincy
   USE mo_spq_config_class,      ONLY: t_spq_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    & Q_PHENO_
 
   IMPLICIT NONE
   PRIVATE
@@ -104,11 +110,18 @@ MODULE mo_jsb_process_factory
 
 CONTAINS
 
-  FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
+  FUNCTION Create_process( &
+    & iproc, &
+    & model_id, &
+    & namelist_filename, &
+    & model_scheme) RESULT(return_ptr)
+    
+    USE mo_jsb_model_class,     ONLY: MODEL_JSBACH, MODEL_QUINCY
 
-    INTEGER, INTENT(in) :: iproc
-    INTEGER, INTENT(in) :: model_id
-    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
+    INTEGER,          INTENT(in)  :: iproc
+    INTEGER,          INTENT(in)  :: model_id
+    CHARACTER(LEN=*), INTENT(in)  :: namelist_filename
+    INTEGER,          INTENT(in)  :: model_scheme
     CLASS(t_jsb_process), POINTER :: return_ptr
 
     ALLOCATE(t_jsb_process::return_ptr)
@@ -124,7 +137,12 @@ CONTAINS
     CASE (A2L_, L2A_)
       ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
     CASE (RAD_)
-      CALL Register_rad_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_rad_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_rad_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_rad_config::return_ptr%config)
     CASE (SEB_)
       CALL Register_seb_tasks(return_ptr, model_id)
@@ -139,11 +157,19 @@ CONTAINS
       CALL Register_hydro_tasks(return_ptr, model_id)
       ALLOCATE(t_hydro_config::return_ptr%config)
     CASE (ASSIMI_)
-      CALL Register_assimi_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_assimi_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_assimi_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_assimi_config::return_ptr%config)
     CASE (PHENO_)
       CALL Register_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_pheno_config::return_ptr%config)
+    CASE (Q_PHENO_)
+      CALL Register_q_pheno_tasks(return_ptr, model_id)
+      ALLOCATE(t_q_pheno_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       CALL Register_hd_tasks(return_ptr, model_id)
@@ -192,13 +218,13 @@ CONTAINS
       CALL Register_nlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_nlcc_config::return_ptr%config)
     CASE (VEG_)
-      CALL Register_veg_tasks(return_ptr, model_id)
+      CALL Register_veg_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
     CASE (SB_)
-      CALL Register_sb_tasks(return_ptr, model_id)
+      CALL Register_sb_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_sb_config::return_ptr%config)
     CASE (SPQ_)
-      CALL Register_spq_tasks(return_ptr, model_id)
+      CALL Register_spq_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_spq_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
@@ -214,6 +240,7 @@ CONTAINS
 
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
+    USE mo_jsb_model_class,      ONLY: MODEL_JSBACH, MODEL_QUINCY
     USE mo_a2l_memory_class,     ONLY: max_no_of_a2l_vars => max_no_of_vars
     USE mo_l2a_memory_class,     ONLY: max_no_of_l2a_vars => max_no_of_vars
     USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
@@ -222,6 +249,7 @@ CONTAINS
     USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
+    USE mo_q_pheno_memory_class, ONLY: max_no_of_q_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
@@ -266,6 +294,9 @@ CONTAINS
     CASE (PHENO_)
       ALLOCATE(t_pheno_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_pheno_vars
+    CASE (Q_PHENO_)
+      ALLOCATE(t_q_pheno_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_q_pheno_vars
     CASE (RAD_)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars

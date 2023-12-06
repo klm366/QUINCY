@@ -53,7 +53,7 @@ MODULE mo_pplcc_memory_class
       C3pft_area_gsum,        & ! global land area covered with C3 PFTs
       C4pft_area_gsum,        & ! global land area covered with C4 PFTs
       baresoil_area_gsum        ! global bare land area
-    
+
   CONTAINS
     PROCEDURE :: Init => Init_pplcc_memory
   END TYPE t_pplcc_memory

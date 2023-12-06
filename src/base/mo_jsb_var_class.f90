@@ -45,18 +45,15 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
-    INTEGER                       :: len_dim3 = -1
-      !< bookkeeping variable for quick access of the size of the third dimension (only /= -1 if there is one)
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
-    CHARACTER(len=:), ALLOCATABLE :: element_name              ! 
+    CHARACTER(len=:), ALLOCATABLE :: element_name              !
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
     INTEGER                       :: element_id                ! 
     INTEGER                       :: owner_model_id            ! 
     INTEGER                       :: owner_proc_id = -1        ! 
     INTEGER, ALLOCATABLE          :: owner_tile_path(:)        ! 
-    INTEGER, ALLOCATABLE          :: child_idx(:)              ! Position-numbers of same variable for for the child tiles 
-                                                               ! (according to mem%vars(:)).
-    !! TYPE(t_subset), POINTER     :: sub  <= not needed; because it is available via: sub = var%Get_subset() !!
+    INTEGER, ALLOCATABLE          :: child_idx(:)
+      !< Position-numbers of the same var (as this var) on the children of the current tile (i.e. within mem%vars(:) of that child).
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist
@@ -67,7 +64,7 @@ MODULE mo_jsb_var_class
   CONTAINS
     PROCEDURE :: Get_subset         => t_jsb_var_get_subset         ! get chunk and block information for the var and thread
     PROCEDURE :: force_finalization => t_jsb_var_force_finalization ! finalization after operator overload avoiding memory leaks
-    PROCEDURE(associate_pointers_iface), DEFERRED :: Associate_pointers 
+    PROCEDURE(associate_pointers_iface), DEFERRED :: Associate_pointers
   END TYPE t_jsb_var
 
   ABSTRACT INTERFACE
@@ -278,7 +275,7 @@ CONTAINS
 
     ! Do nothing for 1d variables
 
-    
+
   END SUBROUTINE t_jsb_var_real1d_associate_pointers
 
   SUBROUTINE t_jsb_var_real2d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
@@ -422,7 +419,7 @@ CONTAINS
   ! var_real2d = field1d(:)
   !   ON_CHUNK   field1d(:)
   !   ON_DOMAIN  / finish /
-  !-----------------------------------------------------------------------------------------------------  
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field1d_to_var_real2d(lhs, rhs)
 
     CLASS(t_jsb_var_real2d), INTENT(inout) :: lhs
@@ -447,7 +444,7 @@ CONTAINS
   ! var_real2d = field2d(:,:)
   !   ON_CHUNK   field2d(:,1)
   !   ON_DOMAIN  field2d(:,:)
-  !-----------------------------------------------------------------------------------------------------  
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field2d_to_var_real2d(lhs, rhs)
 
     CLASS(t_jsb_var_real2d), INTENT(inout) :: lhs
@@ -639,19 +636,19 @@ CONTAINS
   ! var_real2d(:,:) = scalar + var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Add_scalar_and_real2d(scalar, var2) RESULT(var3)
-  
+
     REAL(wp),                INTENT(in) :: scalar
     CLASS(t_jsb_var_real2d), INTENT(in) :: var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
-  
+
     TYPE(t_subset) :: sub
     INTEGER        :: ics, ice, iblk, nb, nc
-  
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_real2d'
-  
+
     sub = var2%Get_subset()
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-  
+
     var3%name             = var2%name
     var3%full_name        = var2%full_name
     var3%owner_proc_id    = var2%owner_proc_id
@@ -659,15 +656,15 @@ CONTAINS
     var3%owner_tile_path  = var2%owner_tile_path
     var3%missval          = var2%missval
     ALLOCATE(var3%ptr2d, source=var2%ptr2d)
-  
+
     IF (sub%type == ON_CHUNK) THEN
       var3%ptr2d(ics:ice,iblk) = scalar + var2%ptr2d(ics:ice,iblk)
     ELSE
       var3%ptr2d(:,:)          = scalar + var2%ptr2d(:,:)
     END IF
-  
+
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Add_scalar_and_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = var_real2d(:,iblk) + field1d
@@ -702,7 +699,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_real2d_and_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = field1d + var_real2d(:,iblk)
@@ -737,7 +734,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_field1d_and_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d + field2d
@@ -774,13 +771,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_real2d_and_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d + var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Add_real2d_and_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -807,7 +804,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Add_real2d_and_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -1100,7 +1097,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Subtract_real2d_minus_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d - field2d
@@ -1137,13 +1134,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Subtract_real2d_minus_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d - var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Subtract_real2d_minus_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -1170,7 +1167,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Subtract_real2d_minus_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -1426,7 +1423,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_real2d_with_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = field1d * var_real2d(:,iblk)
@@ -1461,7 +1458,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_field1d_with_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d * field2d
@@ -1498,7 +1495,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_real2d_with_field2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = field2d * var_real2d
@@ -1535,13 +1532,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_field2d_with_real2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d * var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Multiply_real2d_with_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -1568,7 +1565,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Multiply_real2d_with_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -1901,7 +1898,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Div_real2d_by_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d / field2d
@@ -1938,13 +1935,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Div_real2d_by_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d / var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Div_real2d_by_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -1971,7 +1968,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Div_real2d_by_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -2120,6 +2117,6 @@ CONTAINS
     var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Div_real3d_by_real3d
-  
+
 #endif
 END MODULE mo_jsb_var_class
