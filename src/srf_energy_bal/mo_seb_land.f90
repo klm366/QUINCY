@@ -254,6 +254,7 @@ CONTAINS
             DO ic=1,nc
               is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._wp
             END DO
+            !$ACC END PARALLEL LOOP
             EXIT
           END IF
         END DO
@@ -292,7 +293,8 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(t_air_in_Celcius)
     DO ic=1,nc
 
       ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
@@ -390,13 +392,13 @@ CONTAINS
     IF (use_tmx .AND. .NOT. lstart) THEN
       DO iter=1,dsl4jsb_Config(SEB_)%niter_tmx
         !$ACC WAIT(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
         END DO
         !$ACC END PARALLEL LOOP
         CALL update_exchange_coefficients(tile, options)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           CALL surface_temp_implicit( nc,                    & ! in
             MERGE(1._wp, tpfac1, use_tmx),                   & ! in
@@ -414,7 +416,8 @@ CONTAINS
     END IF
     !$ACC WAIT(1)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(soil_depth_sl_vol_porosity_sl_tmp)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(soil_depth_sl_vol_porosity_sl_tmp)
     DO ic=1,nc
 
       IF (is_ocean(ic) .OR. is_lake(ic)) THEN
@@ -500,7 +503,7 @@ CONTAINS
 #endif
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       t_eff4(ic) = t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))
     END DO
@@ -559,7 +562,7 @@ CONTAINS
     !pc16    = cpd * cpvd1
 
     !$noACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$noACC LOOP GANG VECTOR &
+    !$noACC LOOP GANG(STATIC: 1) VECTOR &
     !$noACC   PRIVATE(zcolin, zcohfl, zcoind, zicp, zca, zcs)
     ! DO ic=1,nc
       ! zicp = 1._wp / pcp(ic)
@@ -658,7 +661,7 @@ CONTAINS
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       IF (eps > 0._wp) THEN
         t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))

@@ -179,7 +179,7 @@ CONTAINS
       IF (.NOT. jsbach_runs_standalone()) & ! (TODO: doesn't work for standalone ... why?)
         & dsl4jsb_var2D_onDomain(TURB_,rough_h) = turb_init_vars%rough_m
 
-      !$ACC UPDATE &
+      !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h))
 

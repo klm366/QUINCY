@@ -320,14 +320,14 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -340,14 +340,14 @@ CONTAINS
           END IF
           child_no = this%path(this%level)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p)
+          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF
 
     END DO
-    !$ACC UPDATE DEVICE(this%mem)
+    !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
 
   END SUBROUTINE Init_tile
 
@@ -502,7 +502,7 @@ CONTAINS
         CALL this%Set_fraction(fract=return_pointer(:,:))
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
-        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm)
+        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
       END IF
 
       IF (TRIM(this%fract_varname) == '') THEN

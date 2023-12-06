@@ -509,10 +509,10 @@ CONTAINS
         END IF
       END IF
     END IF
-    !$ACC UPDATE DEVICE(new%levels) IF(present(levels))
-    !$ACC UPDATE DEVICE(new%lbounds) IF(present(lbounds))
-    !$ACC UPDATE DEVICE(new%ubounds) IF(present(ubounds))
-    !$ACC UPDATE DEVICE(new%dz) IF(present(dz))
+    !$ACC UPDATE DEVICE(new%levels) ASYNC(1) IF(present(levels))
+    !$ACC UPDATE DEVICE(new%lbounds) ASYNC(1) IF(present(lbounds))
+    !$ACC UPDATE DEVICE(new%ubounds) ASYNC(1) IF(present(ubounds))
+    !$ACC UPDATE DEVICE(new%dz) ASYNC(1) IF(present(dz))
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)

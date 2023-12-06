@@ -93,26 +93,30 @@ CONTAINS
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
       & root_depth (SIZE(ws,1))         !< Total depth of root_zone
 
-    INTEGER :: n, i, j
+    INTEGER :: n, nc, i, j
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_2d'
 
+    nc = SIZE(ws,1)
     n  = SIZE(dz,2)       ! Number of soil layers
 
     !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
-    !$ACC PARALLEL DEFAULT(PRESENT)
-    !$ACC LOOP GANG(STATIC:1) VECTOR
-    DO j = 1, SIZE(ws, 1)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO j = 1, nc
       root_depth(j) = 0._wp
         bottom(j)    = 0._wp
         bottom_m1(j) = 0._wp
         ws_root  (j) = 0._wp
     END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
     !$ACC LOOP SEQ
     DO i=1,n
       !$ACC LOOP GANG(STATIC:1) VECTOR
-      DO j = 1, SIZE(ws, 1)
+      DO j = 1, nc
         root_depth(j) = root_depth(j) + dz_root(j,i)
       END DO
     END DO
@@ -120,7 +124,7 @@ CONTAINS
     !$ACC LOOP SEQ
     DO i=1,n
       !$ACC LOOP GANG(STATIC:1) VECTOR
-      DO j = 1, SIZE(ws, 1)
+      DO j = 1, nc
           bottom(j)    = bottom(j) + dz(j,i)
           IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
             ws_root(j) = ws_root(j) + ws(j,i)
@@ -131,15 +135,17 @@ CONTAINS
         END DO
     END DO
 
+    !$ACC END PARALLEL
+
 #ifndef _OPENACC
-    DO j = 1, SIZE(ws, 1)
+    DO j = 1, nc
       IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
         CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
       END IF
     END DO
 #endif
 
-    !$ACC END PARALLEL
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE get_water_in_root_zone_2d

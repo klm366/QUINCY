@@ -422,7 +422,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -451,7 +451,7 @@ CONTAINS
 
       this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
       this%fract_max    (ics:ice, iblk) = fract_max(:)
-      !$ACC UPDATE DEVICE(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
     IF (PRESENT(fract_old)) THEN
@@ -459,7 +459,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
     IF (PRESENT(fract_max_old)) THEN
@@ -467,7 +467,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
-      !$ACC UPDATE DEVICE(this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
   END SUBROUTINE Set_fraction_1d
@@ -493,7 +493,7 @@ CONTAINS
 
         this%fract_old(:,:) = this%fract(:,:)
         this%fract    (:,:) = fract(:,:)
-        !$ACC UPDATE DEVICE(this%fract, this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract, this%fract_old) ASYNC(1)
 
         IF (ASSOCIATED(this%parent)) THEN
           SELECT TYPE (parent=>this%parent)
@@ -524,7 +524,7 @@ CONTAINS
       IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
         this%fract_max_old(:,:) = this%fract_max(:,:)
         this%fract_max    (:,:) = fract_max(:,:)
-        !$ACC UPDATE DEVICE(this%fract_max, this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max, this%fract_max_old) ASYNC(1)
       END IF
 
     END IF
@@ -535,7 +535,7 @@ CONTAINS
 
       IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
         this%fract_old(:,:) = fract_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract_old) ASYNC(1)
       END IF
 
     END IF
@@ -546,7 +546,7 @@ CONTAINS
 
       IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
         this%fract_max_old(:,:) = fract_max_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max_old) ASYNC(1)
       END IF
 
     END IF
@@ -789,7 +789,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:))
+      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:)) ASYNC(1)
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -830,7 +830,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(:,:,:))
+      !$ACC UPDATE DEVICE(this%fractions(:,:,:)) ASYNC(1)
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -896,13 +896,13 @@ CONTAINS
     ! ACCWA (Cray Fortran) : Use several small parallel regions to make GPU/CPU comparison work
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO j = ics, ice
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE IF (no_children > 1) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
         this%fract_sum(j,iblk) = 0._wp
@@ -913,7 +913,7 @@ CONTAINS
       ichild = 0
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
@@ -923,7 +923,7 @@ CONTAINS
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -945,7 +945,7 @@ CONTAINS
       ! END IF
 
       IF (icount == 1) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
@@ -953,7 +953,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE IF (icount > 1) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -968,19 +968,17 @@ CONTAINS
 
     END IF
 
-    !$ACC WAIT(1)
-
 #else
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
     ELSE IF (no_children > 1) THEN
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
         this%fract_sum(j,iblk) = 0._wp
@@ -991,7 +989,7 @@ CONTAINS
       !$ACC LOOP SEQ
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
@@ -1000,7 +998,7 @@ CONTAINS
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -1021,14 +1019,14 @@ CONTAINS
       ! END IF
 
       IF (icount == 1) THEN
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
         END DO
       ELSE IF (icount > 1) THEN
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1045,6 +1043,8 @@ CONTAINS
     !$ACC END PARALLEL
 
 #endif
+
+    !$ACC WAIT(1)
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -1104,7 +1104,7 @@ CONTAINS
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ilev = 1, nlev
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
@@ -1114,7 +1114,7 @@ CONTAINS
 
     ELSE IF (no_children > 1) THEN
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
       END DO
@@ -1123,7 +1123,7 @@ CONTAINS
       ichild = 0
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -1131,7 +1131,7 @@ CONTAINS
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -1142,7 +1142,7 @@ CONTAINS
       END DO
 
       DO ilev = 1, nlev
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO j = ics, ice
           this%data_sum (j,iblk) = 0._wp
         END DO
@@ -1150,7 +1150,7 @@ CONTAINS
 
         DO i=1,no_children
           IF (var%child_idx(i) > 0) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
@@ -1160,7 +1160,7 @@ CONTAINS
         END DO
 
         IF (icount == 1) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
@@ -1168,7 +1168,7 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
         ELSE IF (icount > 1) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1182,17 +1182,15 @@ CONTAINS
 
     END IF
 
-    !$ACC WAIT(1)
-
 #else
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
@@ -1200,7 +1198,7 @@ CONTAINS
 
     ELSE IF (no_children > 1) THEN
 
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
       END DO
@@ -1209,14 +1207,14 @@ CONTAINS
       !$ACC LOOP SEQ
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -1227,7 +1225,7 @@ CONTAINS
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           this%data_sum (j,iblk) = 0._wp
         END DO
@@ -1235,7 +1233,7 @@ CONTAINS
         !$ACC LOOP SEQ
         DO i=1,no_children
           IF (var%child_idx(i) > 0) THEN
-            !$ACC LOOP GANG VECTOR
+            !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
@@ -1244,14 +1242,14 @@ CONTAINS
         END DO
 
         IF (icount == 1) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
           END DO
         ELSE IF (icount > 1) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1267,6 +1265,8 @@ CONTAINS
     !$ACC END PARALLEL
 
 #endif
+
+    !$ACC WAIT(1)
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &

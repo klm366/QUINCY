@@ -580,7 +580,8 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
 
     IF (tile%contains_soil) THEN
@@ -640,7 +641,8 @@ CONTAINS
                                                          dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr  (HYDRO_,w_soil_sat_sl)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_,w_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_,w_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_,w_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_field_cap)) &
@@ -663,7 +665,8 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(HYDRO_, root_depth),                          & ! Total rooting depth
         & soil_w%dz(:))    ! Soil layer thicknesses
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl))
 
     END IF
@@ -759,7 +762,8 @@ CONTAINS
       ! Initial w_soil_overflown water
       dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_snow)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_snow)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_overflow))
       ! avoid compiler warnings about pointers not being dereferenced
@@ -792,7 +796,8 @@ CONTAINS
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
         & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
       
-      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
@@ -803,7 +808,7 @@ CONTAINS
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl)) ASYNC(1)
 
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
           CALL get_water_in_root_zone(                       &
@@ -812,7 +817,8 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
       END DO
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_column)) ASYNC(1)
+      !$ACC WAIT(1)
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       END WHERE
@@ -825,7 +831,8 @@ CONTAINS
       END WHERE
 
       
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
@@ -853,9 +860,11 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
       END DO
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_root)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_root)) &
       !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc)) &
       !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
+      !$ACC WAIT(1)
     END IF
 
   END SUBROUTINE hydro_init_ic
@@ -1013,7 +1022,8 @@ CONTAINS
       vol_p_wilt_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_p_wilt_sl     (:,:,:) + fract_org_sl(:,:,:) * vol_p_wilt_org
     END IF
 
-    !$ACC UPDATE DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl) &
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl) &
     !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl)
 
@@ -1088,7 +1098,7 @@ CONTAINS
         ! Limit ice content such that soil water + soil ice <= field capacity.
         w_ice_sl(:,:,:) = MAX(0._wp, MIN(w_ice_sl(:,:,:), w_soil_fc_sl(:,:,:) - w_soil_sl(:,:,:)))
 
-        !$ACC UPDATE DEVICE(w_soil_sl, w_ice_sl)
+        !$ACC UPDATE DEVICE(w_soil_sl, w_ice_sl) ASYNC(1)
       END IF
     END IF
 
@@ -1099,7 +1109,7 @@ CONTAINS
       root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
       root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
 
-      !$ACC UPDATE DEVICE(root_depth, root_depth_sl)
+      !$ACC UPDATE DEVICE(root_depth, root_depth_sl) ASYNC(1)
     END IF
 
   END SUBROUTINE hydro_sanitize_state

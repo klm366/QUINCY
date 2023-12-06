@@ -96,7 +96,7 @@ CONTAINS
 
   !   nc = SIZE(dz)
 
-  !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+  !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
   !   DO ic = 1, nc
   !     CALL registered_exchange_coefficients_procedure(                                &
   !       & dz(ic),                                                                     &
