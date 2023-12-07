@@ -500,6 +500,9 @@ CONTAINS
         CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
         CALL this%Set_fraction(fract=return_pointer(:,:))
+        CALL this%Get_fraction(fract=hgrid%lsf(:,:))
+        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
+        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm)
       END IF
 
       IF (TRIM(this%fract_varname) == '') THEN

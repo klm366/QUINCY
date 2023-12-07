@@ -43,9 +43,8 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string
   USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, 
+  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants,
                                                      ! however like this it is consistent with JSBACH
-  USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_base,               ONLY: jsbach
@@ -68,7 +67,7 @@ MODULE mo_jsb4_forcing
   PRIVATE
 
   PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing, &
-    &       sat_specific_humidity, forcing_options
+    &       forcing_options
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -413,7 +412,7 @@ CONTAINS
         ELSE
           ic = ice
         END IF
-        CALL sat_specific_humidity(ice, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
+        CALL sat_specific_humidity(t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       ! Get specific humidity
       IF (forcing_input%rel_humidity%frequency == TIMESTEP_ .OR. forcing_input%rel_humidity%frequency == SUBDAILY_) THEN
@@ -455,7 +454,7 @@ CONTAINS
         ELSE
           ic = ice
         END IF
-        CALL sat_specific_humidity(ic, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
+        CALL sat_specific_humidity(t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       q_air(:,:) = MIN(q_air(:,:),sat_spec_humidity(:,:))
     END SELECT
@@ -570,7 +569,7 @@ CONTAINS
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
-                                        ! each atmospheric forcing time step that is read in      
+                                        ! each atmospheric forcing time step that is read in
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
@@ -978,7 +977,7 @@ CONTAINS
           CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-!            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+!            & TRIM(forcing_input_variable%expectedUnit), readUnit)
           CALL forcing_input_variable%input_file%Close()
         END IF
 
@@ -1046,7 +1045,7 @@ CONTAINS
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         ! CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
         CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-          & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+          & TRIM(forcing_input_variable%expectedUnit), readUnit)
         ! TODO: further assertions? e.g. that lon lat are correct?
 
         currentTimeStep = 1
@@ -1258,7 +1257,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: file_id
     CHARACTER(len=*),INTENT(IN) :: variable_name
     CHARACTER(len=*),INTENT(IN) :: expectedUnit
-    CHARACTER(len=*),INTENT(IN) :: readUnit
+    CHARACTER(len=*),INTENT(OUT) :: readUnit
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':test_unit'
 
@@ -1394,7 +1393,7 @@ CONTAINS
       ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + vtmpc1 * qair(1:ic, iblk) )
 
       ! virtual potential surface temperature
-      CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
+      CALL sat_specific_humidity(t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
       ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
         & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
         & * qair(1:ic,iblk)))
@@ -1569,7 +1568,7 @@ CONTAINS
       pressure(:) = &
         & p0sl_bg * ( 1._wp - elevation(i)*gamma /(tmelt+tmp(:) + elevation(i)*gamma))**(grav/rd/gamma)
 
-      CALL sat_specific_humidity(time_steps_per_day, tmp(:) + tmelt, pressure(:), qsat(:)) ! present saturated qair
+      CALL sat_specific_humidity(tmp(:) + tmelt, pressure(:), qsat(:)) ! present saturated qair
 
       ! implied RH from minimum saturated specific humidity
       rh_test=SUM(MINVAL(qsat(:))/qsat(:))/nstep
@@ -1634,12 +1633,14 @@ CONTAINS
   !! @par History
   !! Copied from jsbach3: mo_atmosphere: sat_specific_humidity    by Julia Nabel (2016)
   !!
-  SUBROUTINE sat_specific_humidity(temp_dim, temp, pressure, qsat)
+  SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
+
+    USE mo_phy_schemes, ONLY: qsat_water
+
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
 
-    INTEGER,  INTENT(IN) :: temp_dim
     REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(:)
@@ -1647,29 +1648,16 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
     INTEGER :: i
-!    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants!
-    INTEGER  :: it(1:temp_dim)
-    REAL(wp) :: tluc(1:temp_dim)
 
-    !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
-    DO i = 1,temp_dim
-      IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
+    DO i = 1,SIZE(temp)
+      IF (temp(i) < 50._wp .OR. temp(i) > 400._wp) THEN
         WRITE (message_text,*) &
-          & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-          & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
+          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
         CALL finish(TRIM(routine), TRIM(message_text))
+      ELSE
+        qsat(i) = qsat_water(temp(i), pressure(i), use_convect_tables=.TRUE.)
       ENDIF
     ENDDO
-
-    ! vtmpc1 = 0.6077686814143877_wp"   ! copied from jsb3 ... however it is already calculated in mo_physical_constants as 0.607824693423?!
-    it = NINT(temp*1000._wp)
-    tluc = tlucua(it)
-
-    WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - vtmpc1*tluc)
-    ELSEWHERE
-      qsat = HUGE(1._wp)
-    END WHERE
 
   END SUBROUTINE sat_specific_humidity
 
@@ -1746,6 +1734,10 @@ CONTAINS
   ! significant diurnal cycle, h1 is set to 0.
   !vg<<
   FUNCTION vapour_pressure_from_evapor(nblks, ice, icz, evapo_ratio_mean, Tmin, Tair)
+
+    ! USE mo_phy_schemes, ONLY: sat_pres_water
+    USE mo_phy_schemes, ONLY: tlucua, jptlucu1, jptlucu2
+
     INTEGER,  INTENT(IN) :: nblks, ice, icz
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
     REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
@@ -1771,24 +1763,22 @@ CONTAINS
       END IF
       DO i = 1,ic
         !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
-        IF ((Tmin(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
-            & .OR. (Tmin(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
+        IF (Tmin(i,j) + tmelt < 50._wp .OR. Tmin(i,j) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
-            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-            & '- tmin temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+            & 'tmin temperature out of range: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
           CALL finish(TRIM(routine), TRIM(message_text))
         ENDIF
-        IF ((Tair(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
-            & .OR. (Tair(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
+        IF (Tair(i,j) + tmelt < 50._wp .OR. Tair(i,j) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
-            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-            & '- air temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+            & 'air temperature out of bounds: ', Tair(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
           CALL finish(TRIM(routine), TRIM(message_text))
         ENDIF
 
         !jsb3: rdv = eps
         evapo_sat_min = tlucua(INT(1000._wp * (Tmin(i,j) + tmelt)))/rdv ! saturation pressure at minimum temperature
         evapo_sat     = tlucua(INT(1000._wp * (Tair(i,j) + tmelt)))/rdv ! saturation pressure at actual temperature
+        ! evapo_sat_min = sat_pres_water(Tmin(i,j) + tmelt) ! saturation pressure at minimum temperature
+        ! evapo_sat     = sat_pres_water(Tair(i,j) + tmelt) ! saturation pressure at actual temperature
         e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(i,j))                               ! Eq. (2) from above
         vapour_pressure_from_evapor(i,j) = e0_vap + h1 * evapo_ratio_mean(i,j) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 

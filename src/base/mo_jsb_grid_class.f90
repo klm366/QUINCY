@@ -50,8 +50,8 @@ MODULE mo_jsb_grid_class
     REAL(wp), POINTER             :: coslon(:,:) => NULL()
     REAL(wp), POINTER             :: sinlon(:,:) => NULL()
     REAL(wp), POINTER             :: area(:,:) => NULL()
-    LOGICAL,  POINTER             :: lsm(:,:) => NULL()
-    REAL(wp), POINTER             :: lsf(:,:) => NULL()
+    LOGICAL,  ALLOCATABLE         :: lsm(:,:)
+    REAL(wp), ALLOCATABLE         :: lsf(:,:)
     INTEGER                       :: nblks = 1
     INTEGER                       :: nproma = 0
     INTEGER                       :: npromz = 0
@@ -163,7 +163,7 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
-    !$ACC ENTER DATA COPYIN(new%lat)
+    !$ACC ENTER DATA COPYIN(new%lat, new%lsf, new%lsm)
 
     grid => new
 
@@ -242,8 +242,8 @@ CONTAINS
 
     CALL message(routine, 'starting destruction of JSBACH grid instance.')
 
-    IF (ASSOCIATED(self%lsm)) DEALLOCATE(self%lsm)
-    IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
+    IF (ALLOCATED(self%lsm)) DEALLOCATE(self%lsm)
+    IF (ALLOCATED(self%lsf)) DEALLOCATE(self%lsf)
     IF (ASSOCIATED(self%lon)) DEALLOCATE(self%lon)
     IF (ASSOCIATED(self%lat)) DEALLOCATE(self%lat)
     IF (ASSOCIATED(self%coslat)) DEALLOCATE(self%coslat)

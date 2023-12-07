@@ -29,7 +29,8 @@ MODULE mo_interface_hd_ocean
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
-  USE mo_run_config,          ONLY: modelTimeStep
+  USE mo_time_config,         ONLY: time_config
+  USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
 #endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -78,6 +79,7 @@ CONTAINS
     INTEGER :: jb, jc
     INTEGER :: nproma, nblks
     LOGICAL,  ALLOCATABLE :: is_valid(:)
+    CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -99,6 +101,8 @@ CONTAINS
     grid  => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
+
+    CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
     ! Define the HD mask for YAC.
     ! It shall contain ocean coast points only for
