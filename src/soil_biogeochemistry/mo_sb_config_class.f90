@@ -25,7 +25,7 @@ MODULE mo_sb_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_sb_config, get_number_of_sb_compartments
+  PUBLIC :: t_sb_config, get_number_of_sb_compartments, simple_1d_compartments
   PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
   PUBLIC :: SB_PART_FUNGI_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
@@ -95,6 +95,9 @@ MODULE mo_sb_config_class
       & SB_PART_RESIDUE_ASSOC_IDX,    &  !< minerally associated microbial necromass
       & LAST_SB_PART_IDX                 !< last of this ENUM, used to determine the max number of compartments
   END ENUM
+
+  INTEGER, PARAMETER :: simple_1d_compartments(6) = [ SB_PART_SOLUBLE_LITTER_IDX, SB_PART_POLYMERIC_LITTER_IDX, &
+    & SB_PART_WOODY_LITTER_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX ]
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
