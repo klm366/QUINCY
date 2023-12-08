@@ -56,6 +56,7 @@ MODULE mo_hydro_init
       & root_depth     (:,:) => NULL(), &
       & weq_snow_soil  (:,:) => NULL(), &
       & fract_pond_max (:,:) => NULL(), &
+      & depth_pond_max (:,:) => NULL(), &
       & wtr_soil_sl  (:,:,:) => NULL(), &
       & fract_org_sl (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
@@ -111,6 +112,7 @@ CONTAINS
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%fract_org_sl    ,       &
       & hydro_init_vars%fract_pond_max  ,       &
+      & hydro_init_vars%depth_pond_max  ,       &
       & hydro_init_vars%weq_snow_soil)
 
     IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl))  DEALLOCATE(hydro_init_vars%wtr_soil_sl)
@@ -169,6 +171,7 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
       & hydro_init_vars%fract_pond_max  (nproma, nblks),       &
+      & hydro_init_vars%depth_pond_max  (nproma, nblks),       &
       & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
       & )
 
@@ -184,6 +187,7 @@ CONTAINS
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%fract_pond_max (:,:)   = missval
+      hydro_init_vars%depth_pond_max (:,:)   = missval
       hydro_init_vars%weq_snow_soil  (:,:)   = missval
 
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
@@ -317,20 +321,29 @@ CONTAINS
         END DO
       END IF
 
-      ! Maximum pond fraction
+      ! Read in maximum pond fraction and depth
       IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        IF (input_file%Has_var('fract_pond_max')) THEN
+        IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
+          ! Use depression area fraction as maximum pond fraction
           ptr_2D => input_file%Read_2d(                                 &
-            & variable_name='fract_pond_max',                           &
+            & variable_name='surf_depr_fract',                           &
             & fill_array=hydro_init_vars%fract_pond_max)
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+          ! Use depression area fraction as maximum pond fraction
+          ptr_2D => input_file%Read_2d(                                 &
+            & variable_name='surf_depr_depth',                           &
+            & fill_array=hydro_init_vars%depth_pond_max)
+          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
+          ! Set fields to negativ value to indicate they should be computed later
           hydro_init_vars%fract_pond_max(:,:) = -1._wp
-          CALL message(TRIM(routine), '*** Warning: fract_pond_max not found in bc file --> '// &
-            & 'will be computed using steepness values')
+          hydro_init_vars%depth_pond_max(:,:) = -1._wp
+          CALL message(TRIM(routine), '*** Warning: surf_depr_fract or surf_depr_depth not found in bc file --> '// &
+            & 'both will be computed based on steepness correlation')
         END IF
       ELSE
         hydro_init_vars%fract_pond_max(:,:) = 0._wp
+        hydro_init_vars%depth_pond_max(:,:) = 0._wp
       END IF
 
       CALL input_file%Close()
@@ -500,8 +513,9 @@ CONTAINS
 
       ! Maximum depth and extent of surface water ponds
       IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
-          ! No maximum pond fraction found in init file --> estimate from steepness
+        IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp .OR. &
+          & MAXVAL(hydro_init_vars%depth_pond_max(:,:)) < 0._wp) THEN
+          ! No maximum pond fraction or depth found in init file --> estimate from steepness
           ! This equation is based on curve fitting steepness data to the
           ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
@@ -509,8 +523,8 @@ CONTAINS
         ELSE
           ! Maximum pond fraction read from from init file
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:)
         END IF
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
       ELSE
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
