@@ -23,9 +23,6 @@ MODULE mo_interface_parflow
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
 #ifdef YAC_coupling
-#ifndef __NO_AES__
-  USE mo_aes_phy_memory,      ONLY: prm_field
-#endif
   USE mo_model_domain,        ONLY: t_patch
   USE mo_mpi,                 ONLY: p_pe_work, p_comm_work, p_sum
   USE mo_parallel_config,     ONLY: nproma
@@ -40,9 +37,10 @@ MODULE mo_interface_parflow
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
-  USE mo_run_config,          ONLY: iforcing, modelTimeStep
+  USE mo_run_config,          ONLY: iforcing
   USE mo_time_config,         ONLY: time_config
-  USE mtime,                  ONLY: datetimeToString, MAX_DATETIME_STR_LEN
+  USE mtime,                  ONLY: datetimeToString, MAX_DATETIME_STR_LEN, &
+       &                            timedeltaToString, MAX_TIMEDELTA_STR_LEN
 #endif
 
   USE mo_jsb_task_class,      ONLY: t_jsb_task_options
@@ -113,6 +111,7 @@ CONTAINS
 
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: startdatestring
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: stopdatestring
+    CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
     dsl4jsb_Def_config(HYDRO_)
 
@@ -135,6 +134,7 @@ CONTAINS
     ! Overwrite job start and end date with component data
     CALL datetimeToString(time_config%tc_startdate, startdatestring)
     CALL datetimeToString(time_config%tc_stopdate, stopdatestring)
+    CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
     CALL yac_fdef_datetime ( start_datetime = TRIM(startdatestring), &
          &                   end_datetime   = TRIM(stopdatestring)   )
@@ -255,8 +255,7 @@ CONTAINS
         !ICON_OMP_PARALLEL_DO PRIVATE(jb,jc) ICON_OMP_RUNTIME_SCHEDULE
         DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
-              !  slo: caution - lsmask includes alake, must be added to refetch pure lsm:
-              lsmnolake(jc, jb) = prm_field(1)%lsmask(jc,jb) + prm_field(1)%alake(jc,jb)
+              lsmnolake(jc, jb) = grid%lsf(jc,jb)
             ENDDO
         ENDDO
         !ICON_OMP_END_PARALLEL_DO
@@ -282,7 +281,7 @@ CONTAINS
             DO jc = 1, nproma
 
               IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
-                & .OR. ABS( prm_field(1)%clat(jc,jb) ) .GT. model%config%parflow_lat) THEN
+                & .OR. ABS( grid%lat(jc,jb) ) .GT. model%config%parflow_lat) THEN
                 ! ocean point (fraction of ocean is >0., lsmnolake .lt. 1.) is valid
                 ! or grid point outside the Parflow latitude belt
                 is_valid((jb-1)*nproma+jc) = .FALSE.

@@ -136,7 +136,7 @@ CONTAINS
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
     use_parflow                = .FALSE.
-    parflow_lat                = 0.35
+    parflow_lat                = 20.0
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
