@@ -1976,6 +1976,7 @@ CONTAINS
                                                         microbial_uptake_po4_sl       !< microbial immobilisation of PO4 [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
+    INTEGER                           :: ic, isoil      !< looping
     REAL(wp), DIMENSION(nc, nsoil_sb) :: hlp1, hlp2
     REAL(wp), DIMENSION(nc, nsoil_sb) :: transfer_c
     REAL(wp), DIMENSION(nc, nsoil_sb) :: f_uptake_nh4_sl
@@ -2068,38 +2069,43 @@ CONTAINS
  
     !> 1.4  limit plant uptake and denitrification to available NO3 minus transport losses 
     !!
-    WHERE(microbial_uptake_no3_sl(:,:) >= 0.0_wp)
-      hlp1(:,:) = microbial_uptake_no3_sl(:,:) + plant_uptake_no3_sl(:,:) + denitrification_n2(:,:) + mycorrhiza_uptake_no3_sl(:,:)
-      hlp2(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
-      WHERE(hlp2(:,:) < hlp1(:,:))
-        WHERE(hlp1(:,:) > eps8)
-          microbial_uptake_no3_sl(:,:)  = hlp2(:,:) * microbial_uptake_no3_sl(:,:) / hlp1(:,:) 
-          plant_uptake_no3_sl(:,:)      = hlp2(:,:) * plant_uptake_no3_sl(:,:) / hlp1(:,:)
-          denitrification_n2(:,:)       = hlp2(:,:) * denitrification_n2(:,:) / hlp1(:,:)
-          mycorrhiza_uptake_no3_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_sl(:,:) / hlp1(:,:)
-        ELSEWHERE
-          microbial_uptake_no3_sl(:,:)  = 0.0_wp
-          plant_uptake_no3_sl(:,:)      = 0.0_wp 
-          denitrification_n2(:,:)       = 0.0_wp 
-          mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-        ENDWHERE
-      ENDWHERE 
-    ELSEWHERE
-      hlp1(:,:) = plant_uptake_no3_sl(:,:) + denitrification_n2(:,:) + mycorrhiza_uptake_no3_sl(:,:)
-      hlp2(:,:) = no3_solute(:,:) + transport_no3_solute(:,:) - microbial_uptake_no3_sl(:,:)
-      WHERE(hlp2(:,:) < hlp1(:,:))
-        WHERE(hlp1(:,:) > eps8)
-          plant_uptake_no3_sl(:,:)      = hlp2(:,:) * plant_uptake_no3_sl(:,:) / hlp1(:,:)
-          denitrification_n2(:,:)       = hlp2(:,:) * denitrification_n2(:,:) / hlp1(:,:)
-          mycorrhiza_uptake_no3_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_sl(:,:) / hlp1(:,:)
-        ELSEWHERE
-          plant_uptake_no3_sl(:,:)      = 0.0_wp 
-          denitrification_n2(:,:)       = 0.0_wp 
-          mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-        ENDWHERE
-      ENDWHERE
-    ENDWHERE
-           
+    DO isoil = 1, nsoil_sb
+      DO ic = 1, nc
+        IF (microbial_uptake_no3_sl(ic,isoil) >= 0.0_wp) THEN
+          hlp1(ic,isoil) = microbial_uptake_no3_sl(ic,isoil) + plant_uptake_no3_sl(ic,isoil) + &
+                  denitrification_n2(ic,isoil) + mycorrhiza_uptake_no3_sl(ic,isoil)
+          hlp2(ic,isoil) = no3_solute(ic,isoil) + transport_no3_solute(ic,isoil)
+          IF (hlp2(ic,isoil) < hlp1(ic,isoil)) THEN
+            IF (hlp1(ic,isoil) > eps8) THEN
+              microbial_uptake_no3_sl(ic,isoil)  = hlp2(ic,isoil) * microbial_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              plant_uptake_no3_sl(ic,isoil)      = hlp2(ic,isoil) * plant_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              denitrification_n2(ic,isoil)       = hlp2(ic,isoil) * denitrification_n2(ic,isoil) / hlp1(ic,isoil)
+              mycorrhiza_uptake_no3_sl(ic,isoil) = hlp2(ic,isoil) * mycorrhiza_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+            ELSE
+              microbial_uptake_no3_sl(ic,isoil)  = 0.0_wp
+              plant_uptake_no3_sl(ic,isoil)      = 0.0_wp
+              denitrification_n2(ic,isoil)       = 0.0_wp
+              mycorrhiza_uptake_no3_sl(ic,isoil) = 0.0_wp
+            END IF
+          END IF
+        ELSE
+          hlp1(ic,isoil) = plant_uptake_no3_sl(ic,isoil) + denitrification_n2(ic,isoil) + mycorrhiza_uptake_no3_sl(ic,isoil)
+          hlp2(ic,isoil) = no3_solute(ic,isoil) + transport_no3_solute(ic,isoil) - microbial_uptake_no3_sl(ic,isoil)
+          IF (hlp2(ic,isoil) < hlp1(ic,isoil)) THEN
+            IF (hlp1(ic,isoil) > eps8) THEN
+              plant_uptake_no3_sl(ic,isoil)      = hlp2(ic,isoil) * plant_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              denitrification_n2(ic,isoil)       = hlp2(ic,isoil) * denitrification_n2(ic,isoil) / hlp1(ic,isoil)
+              mycorrhiza_uptake_no3_sl(ic,isoil) = hlp2(ic,isoil) * mycorrhiza_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+            ELSE
+              plant_uptake_no3_sl(ic,isoil)      = 0.0_wp
+              denitrification_n2(ic,isoil)       = 0.0_wp
+              mycorrhiza_uptake_no3_sl(ic,isoil) = 0.0_wp
+            END IF
+          END IF
+        END IF  !< microbial_uptake_no3_sl(ic,isoil) >= 0.0_wp
+      END DO    !< ic = 1, nc
+    END DO      !< isoil = 1, nsoil_sb
+
     !> 2.0 determine actual growth rate of fast SOM pool
     !!
    

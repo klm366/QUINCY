@@ -15,22 +15,6 @@
 !>
 !>#### define indices (enumerator) and helper functions for bgc material and their components
 !>
-
-!> Summary: Contains elem enum and soon common functions for bgc materials; to be integrated with current mo_jsb_pool_class
-!>
-!>### Contains enum and methods for bgc materials; to be integrated with current mo_jsb_pool_class
-!>
-!> Copyright (c) 2022 Julia Nabel
-!>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2022-12-14 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
 MODULE mo_lnd_bgcm_class
 #ifndef __NO_JSBACH__
 
