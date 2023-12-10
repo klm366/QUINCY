@@ -15,6 +15,7 @@
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,               ONLY: wp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message
@@ -35,9 +36,10 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
-    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
+    LOGICAL                        :: enforce_water_budget
+    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
-    LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
+    LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
@@ -52,6 +54,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
+    TYPE(t_jsb_model_config), POINTER :: model_config => NULL()
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
@@ -90,6 +93,7 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
+    LOGICAL                       :: enforce_water_budget
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
@@ -105,6 +109,7 @@ CONTAINS
       use_lakes, &
       use_glacier, &
       use_quincy, &
+      enforce_water_budget, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
@@ -128,6 +133,7 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
+    enforce_water_budget       = .FALSE.
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -157,6 +163,7 @@ CONTAINS
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%enforce_water_budget       = enforce_water_budget
     model_config%use_quincy                 = use_quincy
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
@@ -164,6 +171,14 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%relative_fractions_in_file = relative_fractions_in_file
+
+    IF (enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
+        & 'Set enforce_water_budget to .False. to run the model anyway.')
+    ELSE
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
+    END IF
+
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
 

@@ -478,10 +478,10 @@ CONTAINS
   ELEMENTAL PURE &
 #endif
   SUBROUTINE calc_alb_lice( &
-    & l_day,       &
-    & t,           &
-    & w_snow_lice, &
-    & alb_lice     &
+    & l_day,         &
+    & t,             &
+    & weq_snow_lice, &
+    & alb_lice       &
     & )
 
     !$ACC ROUTINE SEQ
@@ -495,7 +495,7 @@ CONTAINS
       & l_day
     REAL(wp), INTENT(in)    :: &
       & t,                     &
-      & w_snow_lice
+      & weq_snow_lice
     REAL(wp), INTENT(inout) :: &
       & alb_lice
 
@@ -510,7 +510,7 @@ CONTAINS
 
     t_upper_limit = tmelt - 1._wp
 
-    IF (w_snow_lice > 0.01_wp) THEN
+    IF (weq_snow_lice > 0.01_wp) THEN
       alb_min = AlbedoLakeSnowMin
       alb_max = AlbedoLakeSnowMax
     ELSE

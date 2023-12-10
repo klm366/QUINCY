@@ -166,14 +166,6 @@ CONTAINS
 
   END SUBROUTINE Register_turb_Tasks
 
-  ! ================================================================================================================================
-  !>
-  !! @brief Implementation of "update" for task "surface_roughness"
-  !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
   SUBROUTINE update_exchange_coefficients(tile, options)
 
     USE mo_aes_thermo,  ONLY: potential_temperature ! Todo: use from mo_util_jsbach
@@ -682,26 +674,26 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: &
-      & fract_fpc,            &
-      & fract_snow,           &
-      & fract_water,          &
-      & max_moist,            &
-      & w_soil_column,        &
-      & fact_q_air,           &
-      & fact_qsat_srf,        &
-      & fact_qsat_trans_srf,  &
-      & qsat_star,            &
-      & canopy_cond_limited,  &
-      & pch,                  &
-      & kh,                   &
-      & wind_air,             &
+    dsl4jsb_Real2D_onChunk ::   &
+      & fract_fpc,              &
+      & fract_snow,             &
+      & fract_wet,              &
+      & wtr_rootzone_avail_max, &
+      & wtr_rootzone_avail,     &
+      & fact_q_air,             &
+      & fact_qsat_srf,          &
+      & fact_qsat_trans_srf,    &
+      & qsat_star,              &
+      & canopy_cond_limited,    &
+      & pch,                    &
+      & kh,                     &
+      & wind_air,               &
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
-      & w_soil_sl,            &
-      & w_soil_fc_sl,         &
-      & w_soil_pwp_sl
+      & wtr_soil_sl,          &
+      & wtr_soil_fc_sl,       &
+      & wtr_soil_pwp_sl
 
     ! Local variables
     REAL(wp) ::                    &
@@ -776,13 +768,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_soil_column)       ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
     END IF
 
     ! ---------------------------
@@ -800,13 +792,13 @@ CONTAINS
       IF (model%config%l_compat401) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
-          mask(ic) = w_soil_sl(ic,1) > w_soil_pwp_sl(ic,1)
+          mask(ic) = wtr_soil_sl(ic,1) > wtr_soil_pwp_sl(ic,1)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
-          mask(ic) = w_soil_column(ic) > w_soil_wilt_fract_config * max_moist(ic)
+          mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
         END DO
         !$ACC END PARALLEL LOOP
       END IF
@@ -814,14 +806,14 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         IF (mask(ic)) THEN
-          fact_qsat_veg(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) *   &
-            & (fract_water(ic) + ( 1._wp - fract_water(ic)) /                &
+          fact_qsat_veg(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) *  &
+            & (fract_wet(ic) + ( 1._wp - fract_wet(ic)) /                  &
             & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic))))
-          fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) * &
-            & (1._wp - fract_water(ic)) /                  &
+          fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) *  &
+            & (1._wp - fract_wet(ic)) /                     &
             & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic)))
         ELSE 
-          fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_water(ic)
+          fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
           fact_qsat_trans(ic) = 0._wp
         END IF
       END DO
@@ -847,13 +839,13 @@ CONTAINS
     IF (tile%contains_soil) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(rel_hum)
       DO ic = 1, nc
-        rel_hum = relative_humidity_soil(w_soil_sl(ic,1), w_soil_fc_sl(ic,1))
+        rel_hum = relative_humidity_soil(wtr_soil_sl(ic,1), wtr_soil_fc_sl(ic,1))
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &
-            & (fract_water(ic) + (1._wp - fract_water(ic)) * rel_hum)
+            & (fract_wet(ic) + (1._wp - fract_wet(ic)) * rel_hum)
           fact_qair_soil(ic) = 1._wp
         ELSE
-          fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_water(ic)
+          fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
           fact_qair_soil(ic) = fact_qsat_soil(ic)
         END IF
         IF (q_air(ic) > qsat_star(ic)) THEN

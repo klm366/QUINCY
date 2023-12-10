@@ -316,7 +316,6 @@ CONTAINS
     INTEGER :: day_of_year
 
     REAL(wp), DIMENSION(options%nc) :: &
-      & w_soil_filling,                &
       & t_air_in_Celcius,              &
       & LaiMax_corrected,              &
       & veg_fract_correction_old,      &
@@ -342,7 +341,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: w_soil_rel
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: lat
     dsl4jsb_Real2D_onChunk :: heat_sum_SG
     dsl4jsb_Real2D_onChunk :: heat_sum_EG
@@ -415,8 +414,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !$ACC DATA &
-    !$ACC   CREATE(w_soil_filling, t_air_in_Celcius, LaiMax_corrected) &
+    !$ACC DATA CREATE(t_air_in_Celcius, LaiMax_corrected) &
     !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
 
     ! Set model
@@ -472,7 +470,7 @@ CONTAINS
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                  ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)        ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel)             ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_mean) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_min)  ! in
@@ -519,9 +517,6 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       t_air_in_Celcius(ic) = t_air(ic) - tmelt  ! convert Kelvin in Celcius
-      w_soil_filling(ic) = w_soil_rel(ic)  ! Initialization of w_soil_filling for crops and raingreen
-                                         ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
-                                         !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -739,7 +734,7 @@ CONTAINS
           & pseudo_soil_temp(ic),             & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
-          & w_soil_filling(ic),               & ! in
+          & wtr_rootzone_rel(ic),             & ! in
           & previous_day_temp_min(ic),        & ! in
           & previous_day_temp_max(ic),        & ! in
           & specificLeafArea_C_param,         & ! in
@@ -748,6 +743,7 @@ CONTAINS
           & growth_phase_CRP(ic),             & ! inout
           & lai(ic)                           & ! inout
           & )
+
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -760,11 +756,12 @@ CONTAINS
       DO ic = 1, nc
         CALL calc_raingreen_phenology(        &
           & timestep,                         & ! in
-          & w_soil_filling(ic),               & ! in
+          & wtr_rootzone_rel(ic),             & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
           & lai(ic)                           & ! inout
           & )
+
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -777,7 +774,7 @@ CONTAINS
         CALL calc_grass_phenology(            &
           & t_air_in_Celcius(ic),             & ! in
           & timestep,                         & ! in
-          & w_soil_filling(ic),               & ! in
+          & wtr_rootzone_rel(ic),             & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
           & lai(ic)                           & ! inout
