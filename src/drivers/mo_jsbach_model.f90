@@ -112,7 +112,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -137,7 +137,6 @@ CONTAINS
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
-    USE mo_dynamics_config,         ONLY: iequations
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
@@ -186,8 +185,6 @@ CONTAINS
     CALL message('', '')
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
-
-    iequations = inh_atmosphere
 
     ! Initialize global registry of lon-lat grids
     CALL lonlat_grids%init()
