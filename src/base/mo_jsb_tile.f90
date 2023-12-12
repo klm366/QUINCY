@@ -99,6 +99,7 @@ CONTAINS
 
     ! Allocate and initialize base structure (=state) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
+
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
       CALL return_ptr%Init_state(name, description, parent_tmp)
@@ -269,6 +270,8 @@ CONTAINS
 
     this%grid_id = grid_id
 
+    !$noACC ENTER DATA CREATE(this)
+
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
     !$ACC ENTER DATA CREATE(this%mem)
@@ -403,7 +406,8 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    !$ACC ENTER DATA COPYIN(this)
+    !$noACC ENTER DATA COPYIN(this)
+    !$noACC UPDATE DEVICE(this) ASYNC(1)
 
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -607,10 +611,13 @@ CONTAINS
       END SELECT
 
       mem => this%mem(iproc)%p
+      __acc_attach(mem)
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
-        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-          & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) THEN
+          ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+          !$ACC ENTER DATA CREATE(mem%vars(i)%p%child_idx)
+        END IF
         DO child_no=1,no_of_children
           IF (ASSOCIATED(mem%children(child_no)%p)) THEN
             mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
@@ -618,8 +625,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$ACC ENTER DATA COPYIN(mem%vars(i)%p%child_idx)
-        ! __acc_attach(mem%vars(i)%p%child_idx)
+        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx)
       END DO
 
     END DO

@@ -163,9 +163,9 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
-    !$ACC ENTER DATA COPYIN(new%lat, new%lsf, new%lsm)
 
     grid => new
+    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm)
 
     ! CALL message(routine, 'construction of JSBACH grid completed.')
 

@@ -634,7 +634,7 @@ CONTAINS
         &      vol_heat_cap_org_tmp(nproma, nsoil, nblks))
       !$ACC ENTER DATA CREATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO ic = 1, nproma
         DO is = 1, nsoil
           DO ib = 1, nblks

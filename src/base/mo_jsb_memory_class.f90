@@ -247,11 +247,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
+    !$noACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var) ASYNC(1)
+    !$noACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -398,12 +400,14 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$ACC ENTER DATA COPYIN(var)
+    !$noACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var) ASYNC(1)
     !$noACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
-    !__acc_attach(var%ptr2d)
+    __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
   END SUBROUTINE t_jsb_memory_add_var_r2d
@@ -564,11 +568,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
+    !$noACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var) ASYNC(1)
+    !$noACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -642,6 +648,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
@@ -662,6 +672,10 @@ CONTAINS
     INTEGER :: i !, iproc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice - ics + 1, &
       &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
@@ -687,6 +701,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     DO i=1,no_children
       this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
@@ -708,6 +726,10 @@ CONTAINS
     INTEGER :: i
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles
