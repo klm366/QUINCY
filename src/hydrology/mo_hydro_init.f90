@@ -324,15 +324,6 @@ CONTAINS
         & fill_array = hydro_init_vars%soil_depth)
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
-      ! Root depth [m]
-      ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
-      ptr_2D => input_file%Read_2d(   &
-        & variable_name='root_depth', &
-        & fill_array = hydro_init_vars%root_depth)
-        hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-        hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix:
-        !  (root depth in bc file is sometimes larger then soil depth)
-
       !> reads maps if not using the soil texture for calculating the soil properties
       !>
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
@@ -509,7 +500,19 @@ CONTAINS
         END DO
       END IF
 
-      ! close bc input file
+      ! Root depth [m]
+      ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
+      ptr_2D => input_file%Read_2d(   &
+        & variable_name='root_depth', &
+        & fill_array = hydro_init_vars%root_depth)
+        ! Make sure there is root depth equivalent to 0.2 m weq in all cells
+        !   that contain soil porosity data but no root depth
+        hydro_init_vars%root_depth = MERGE(ptr_2D, &
+          & MERGE(0.2_wp / hydro_init_vars%vol_porosity, 0._wp, hydro_init_vars%vol_porosity > 0._wp), &
+          & ptr_2D >= 0._wp)
+        ! Constrain root depth because in the bc file it is sometimes larger then soil depth
+        hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
+
       CALL input_file%Close()
     END IF ! l_soil_texture
 
@@ -699,12 +702,11 @@ CONTAINS
         & soil_w%dz(:))    ! Soil layer thicknesses
 
       ! Maximum root zone soil moisture
-      ! Note: weq_rootzone_max corresponds to the field capacity. It is however
-      !    not used as field capacity in a hydrological sense, but rather as maximum soil
-      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
-      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MERGE(                   &
-        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.2_wp, &
-        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth > 0._wp)
+      ! Note: weq_rootzone_max corresponds to a fully saturated soil (all pores are filled with
+      !   water or ice). The plant water stress computation later accounts for ice and field capacity.
+      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = &
+        & hydro_init_vars%vol_porosity * hydro_init_vars%root_depth
+      ! Constain rootzone capacity if upper limit is given to soil water capacity
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
@@ -839,6 +841,24 @@ CONTAINS
       ! update soil properties with organic layer fractions
       CALL init_soil_properties(tile)
 
+      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
+      ! water content should actually be zero. Therefore, make sure that soil water content is not larger than the maximum
+      ! soil water capacity.
+      ! Note: the volumetric porosity represents the maximum water capacity of the specific soil layer. Reduce
+      ! soil water and ice if this limit is exceeded.
+      IF (ANY(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)     + dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl) > &
+        &     dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl) * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl))) THEN
+        ! First limit soil water to maximum soil water capacity
+        dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = MAX(0._wp, &
+          & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl),     &
+          &     dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl) * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)))
+        ! Then limit soil ice to the remaining capacity (without soil water)
+        dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl) = MAX(0._wp, &
+          & MIN(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl),     &
+          &     dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl) * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) &
+          &     - dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)))
+      END IF
+
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) = MAX(0._wp,                                          &
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
@@ -850,15 +870,8 @@ CONTAINS
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_p_wilt_sl)    * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
 
-      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
-      ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
-
-      ! Note: wtr_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
-      !    filling of the specific soil layer.
-      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = MAX(0._wp, &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
-
       !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))      &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))   &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
@@ -867,9 +880,12 @@ CONTAINS
     IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
 
       ! Re-compute maximum root zone moisture based on soil parameters modified by organic fractions
+      ! Note: All plant related computations use weq_rootzone_max reduced by ice and supercooled water content,
+      !        which represents the unfrozen part of the soil.
+      !       This assumes that plants retract/extents their roots immediately if the soil freezes/thaws.
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max), 2)
           CALL get_amount_in_rootzone( &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, vol_porosity_sl)  (:,:,i) * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max) (:,  i)  )
@@ -885,7 +901,7 @@ CONTAINS
       END IF
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max))
 
-      ! Initialization of relative root zone soil moisture (ignoring ice).
+      ! Initialization of relative root zone soil moisture (only water, not ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
 
       ! wtr_rootzone calculated here is only used to calculate relative soil moisture for phenology.
@@ -896,22 +912,30 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)   (:,  i)  )
+          CALL get_amount_in_rootzone( &
+          & dsl4jsb_var_ptr(HYDRO_, ice_soil_sl)    (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, ice_rootzone)   (:,  i)  )
       END DO
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, ice_rootzone))
 
-      ! Make sure wtr_rootzone is smaller than weq_rootzone_max
-      ! Note: weq_rootzone_max corresponds to the maximum possible amount of water or ice in the root zone.
-      !    This concept is different from the hydrological understanding of field capacity and saturation.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
+      ! Make sure wtr_rootzone is smaller than weq_rootzone_max - ice_rootzone.
+      ! Note: this corresponds to the maximum possible amount of liquid water in the root zone.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > &
+        & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = MAX(0._wp, &
+        & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
       END WHERE
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
 
-      ! Initialization of wtr_rootzone_rel (completely ignoring ice)
-      !    It is re-calculated - considering ice - in update_water_stress.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
+      ! Initialization of wtr_rootzone_rel
+      !   This is re-calculated every time step in update_water_stress.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
+          &  dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / &
+          & (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE

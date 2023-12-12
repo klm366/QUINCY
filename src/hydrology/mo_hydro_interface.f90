@@ -434,7 +434,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_glac
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
-    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
@@ -448,7 +448,7 @@ CONTAINS
       & trans_tmp
     REAL(wp), DIMENSION(options%nc,nsoil) :: &
       & weq_soil_sl_tmp,    &
-      & field_cap_sl_tmp
+      & weq_sat_soil_sl_tmp
 
     INTEGER  :: iblk, ics, ice, nc, ic, is
     REAL(wp) :: dtime
@@ -576,7 +576,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_,      t_soil_sl)       ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)     ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_porosity_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)        ! inout
@@ -605,7 +605,7 @@ CONTAINS
     END IF
 
     !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-    !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp)
+    !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, weq_sat_soil_sl_tmp)
 
     !> calculate for glacier tile
     !>
@@ -646,13 +646,13 @@ CONTAINS
     !>
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-      ! calc water equalivalent in soil and field capacity
+      ! calc water equalivalent in soil and water content at saturation
       DO is = 1, nsoil
         DO  ic = 1, nc
-          field_cap_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+          weq_sat_soil_sl_tmp(ic,is) = vol_porosity_sl(ic,is) * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
           !       necessary. WHY?
-          IF (field_cap_sl_tmp(ic,is) > 0._wp) THEN
+          IF (weq_sat_soil_sl_tmp(ic,is) > 0._wp) THEN
             weq_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
           ELSE
             weq_soil_sl_tmp(ic,is) = 0._wp
@@ -666,7 +666,7 @@ CONTAINS
       CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone(:))
-      CALL get_amount_in_rootzone(field_cap_sl_tmp(:,:),                                                 &
+      CALL get_amount_in_rootzone(weq_sat_soil_sl_tmp(:,:),                                              &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max(:))
 
@@ -1199,7 +1199,6 @@ CONTAINS
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    & !< different ways to calculate soil parameters
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & !< how to avrg parameter over soil layers
-      & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               & !< plant 'wilting point' - needed to cover outdated code implementation with field capacity and wilting point
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & !< soil layer thickness
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     & !< root depth across soil layers
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
@@ -1417,6 +1416,9 @@ CONTAINS
     ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl        !< Volumetric soil porosity
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl       !< Volumetric soil field capacity
+    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl          !< Volumetric soil wilting point
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
     dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
@@ -1431,8 +1433,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
-    REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5)
+    REAL(wp) :: soil_fieldcap_fract(options%nc)      !< Root zone field capacity fraction
+    REAL(wp) :: soil_wiltp_fract(options%nc)         !< Root zone wilting point fraction
+    REAL(wp) :: wtr_rootzone_sat(options%nc)         !< Root zone Water content at saturation
+    REAL(wp) :: wtr_rootzone_fc(options%nc)          !< Root zone Water content at field capacity
+    REAL(wp) :: wtr_rootzone_pwp(options%nc)         !< Root zone Water content at wilting point
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1457,6 +1463,9 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_porosity_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_p_wilt_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
@@ -1473,11 +1482,20 @@ CONTAINS
 
     ! Get water stress
 
-    ! Calculate water content and field capacity in the root zone
-    ! @todo - do we need these?
-
-    config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
-    config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
+    ! Calculate upper and lower thresholds for water stress factor
+    CALL get_amount_in_rootzone(vol_porosity_sl(:,:) * soil_depth_sl(:,:),  &
+                             &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_sat(:))
+    CALL get_amount_in_rootzone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:),  &
+                             &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_fc(:))
+    CALL get_amount_in_rootzone(vol_p_wilt_sl(:,:) * soil_depth_sl(:,:),  &
+                             &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_pwp(:))
+    WHERE(wtr_rootzone_sat > 0._wp)
+      soil_fieldcap_fract(:) = wtr_rootzone_fc(:) / wtr_rootzone_sat(:)
+      soil_wiltp_fract(:)    = wtr_rootzone_pwp(:) / wtr_rootzone_sat(:)
+    ELSEWHERE
+      soil_fieldcap_fract(:) = 0._wp
+      soil_wiltp_fract(:)    = 0._wp
+    ENDWHERE
 
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min)
 
@@ -1551,13 +1569,14 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Calculate water stress
-    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+    ! Calculate water stress based on root zone water and the distributed wilting point and field capacity fields
+    ! Note, that this approach needs to be consistent with diagnose_evapotranspiration in the soil hydrology to
+    ! ensure water extraction for transpiration and water stress fit together.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       water_stress(ic) = &
         & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+            &                 soil_fieldcap_fract(ic), soil_wiltp_fract(ic))
     END DO
     !$ACC END PARALLEL LOOP
 

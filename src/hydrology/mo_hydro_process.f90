@@ -461,7 +461,7 @@ CONTAINS
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
     & soilhydmodel, interpol_mean,                                                       &
-    & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
+    & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
     & evapotrans_soil, transpiration,                                                    &
@@ -473,16 +473,14 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
       & nc, nsoil
-    INTEGER, INTENT(in) :: &
+    INTEGER, INTENT(in)  :: &
       & soilhydmodel, interpol_mean
-    REAL(wp), INTENT(in) :: &
-      & dtime, w_soil_wilt_fract
-    LOGICAL, INTENT(in) :: ltpe_closed
-    LOGICAL, INTENT(in) :: ltpe_open
+    REAL(wp), INTENT(in) :: dtime
+    LOGICAL, INTENT(in)  :: ltpe_closed
+    LOGICAL, INTENT(in)  :: ltpe_open
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! if tile fraction is > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
@@ -508,9 +506,6 @@ CONTAINS
     REAL(wp) ::              &
       & drain_lat_sl(nc,nsoil)  !< lateral drainage per soil layer
 
-    REAL(wp) ::              &
-      & hlp_2d(nc,nsoil)       ! helper array needed with openacc
-
     INTEGER :: ic, is
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
@@ -518,7 +513,7 @@ CONTAINS
 
     !$ACC DATA &
     !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m) &
-    !$ACC   CREATE(drain_lat_sl, hlp_2d)
+    !$ACC   CREATE(drain_lat_sl)
 
     !> 1.0 Calculation of soil saturation, field capacity and wilting point
     !>
@@ -526,23 +521,19 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     ! wtr_wsat_sl: max water that fits into soil layer
-    ! wtr_field_cap_sl: water field capacity
-    ! wtr_p_wilt_sl: wilting point
+    ! wtr_field_cap_sl: water content at field capacity
+    ! wtr_p_wilt_sl: water content at wilting point
     ! soil ice is not considered as it cannot move and hence is not considered
     DO is = 1, nsoil
       DO ic = 1, nc
-        ! Note: here we are calculating soil saturation (this does not correspond to weq_rootzone_max, which was
-        !    calculated from field capacity)
-        wtr_wsat_sl     (ic,is) = MAX(vol_porosity_sl (ic,is) * soil_depth_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)  ! -> diffusion
-        wtr_field_cap_sl(ic,is) = MAX(vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)  ! -> percolation
-        ! @todo: to be discussed: Does it make sense, to reduce water content at wilting point relative to the ice fraction?
+        wtr_wsat_sl(ic,is) = MAX(vol_porosity_sl (ic,is) * soil_depth_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)
         IF (vol_porosity_sl(ic,is) > 0._wp) THEN
-          wtr_p_wilt_sl(ic,is) = wtr_wsat_sl(ic,is) * vol_p_wilt_sl(ic,is) / vol_porosity_sl(ic,is)
+          wtr_field_cap_sl(ic,is) = wtr_wsat_sl(ic,is) * (vol_field_cap_sl(ic,is) / vol_porosity_sl(ic,is))
+          wtr_p_wilt_sl(ic,is)    = wtr_wsat_sl(ic,is) * (vol_p_wilt_sl(ic,is)    / vol_porosity_sl(ic,is))
         ELSE
-          wtr_p_wilt_sl(ic,is) = 0._wp
+          wtr_field_cap_sl(ic,is) = 0._wp
+          wtr_p_wilt_sl(ic,is)    = 0._wp
         END IF
-        ! helper array needed in function call below
-        hlp_2d(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
       END DO
     END DO
     !$ACC END PARALLEL
@@ -578,7 +569,7 @@ CONTAINS
 
     ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
-      &     w_soil_wilt_fract, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,         &
+      &     soil_depth_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,             &
       &     hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,       &
       &     bclapp_sl, matrix_pot_sl, pore_size_index_sl,                            &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
@@ -762,7 +753,7 @@ CONTAINS
   SUBROUTINE soilhyd(                                              &
     & nc, l_fract, lat, lon, nsoil, dtime,                         &
     & soilhydmodel, interpol_mean,                                 &
-    & w_soil_wilt_fract, dsoil,                                    &
+    & dsoil, wtr_p_wilt_sl,                                        &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,              &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,            &
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
@@ -780,8 +771,8 @@ CONTAINS
     INTEGER,  INTENT(in)            :: soilhydmodel               !< hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              !< lateral interpolation scheme
     REAL(wp), INTENT(IN)            :: dtime                      !< model time step legth [s]
-    REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 !< soil depth until bedrock within each layer [m]
+    REAL(wp), INTENT(IN)            :: wtr_p_wilt_sl(:,:)         !< wilting point of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      !< field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           !< saturation capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       !< hydraulic conductivity of saturated soil [m/s]
@@ -838,7 +829,7 @@ CONTAINS
     REAL(wp) :: wtr_transp_corr(nc)          !< uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             !< surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
-    REAL(wp) :: wtr_soil_mobile_sl(nc,nsoil) !< mobile soil water (needed with ACC)
+    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< immobile soil water (supercooled or below wilting point) (needed with ACC)
     REAL(wp) :: hlp1(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp4(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp2(nc)                     !< needed for ACC (avoid operations as routine arguments)
@@ -850,7 +841,7 @@ CONTAINS
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
     !$ACC   CREATE(wtr_rsdl_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
-    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_soil_mobile_sl, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_residual_sl, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
     !
@@ -951,16 +942,18 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
       DO ic = 1, nc
-        wtr_soil_mobile_sl(ic,is) = wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)
+        wtr_residual_sl(ic,is) = MIN(wtr_soil_sl(ic,is), MAX(wtr_soil_pot_scool_sl(ic,is), wtr_p_wilt_sl(ic,is)))
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
     !> improve function name @TODO
-    !>
-    CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
-      &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
-      &                      wtr_soil_mobile_sl, evapo_deficit, evapo_soil_sl1,              &
+    !>  Attention: the diagnostic for transpiration needs to be consistent with the water_stress
+    !>  computation. Next to assumptions about not accessible amounts of water (below wilting point
+    !>  or supercooled), this also comprises the treatment of soil ice.
+    CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, root_depth_sl,                    &
+      &                      dsoil, wtr_residual_sl, transpiration_in_m, evapo_soil_in_m,    &
+      &                      wtr_soil_sl, evapo_deficit, evapo_soil_sl1,                     &
       &                      transpiration_sl, deficit_sevap, deficit_trans)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1422,10 +1415,9 @@ CONTAINS
     & lat,                        &
     & lon,                        &
     & nsoil,                      &
-    & w_soil_wilt_fract,          &
     & droot,                      &
     & dsoil,                      &
-    & wtr_field_cap_sl,           &
+    & wtr_residual_sl,            &
     & transpiration_in_m,         & ! negative value
     & evapo_soil_in_m,            & ! negative value
     & wtr_soil_sl,                &
@@ -1441,10 +1433,9 @@ CONTAINS
     REAL(wp), INTENT(IN)     :: lat(:)                  ! Grid cell latitudes
     REAL(wp), INTENT(IN)     :: lon(:)                  ! Grid cell longitudes
     INTEGER,  INTENT(in)     :: nsoil                   ! number of soil layers
-    REAL(wp), INTENT(in)     :: w_soil_wilt_fract       ! fractional plant wilting point [/]
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
-    REAL(wp), INTENT(in)     :: wtr_field_cap_sl(:,:)   ! field capacity of the layer (reduced by ice)
+    REAL(wp), INTENT(in)     :: wtr_residual_sl(:,:)    ! immobile soil water (below wilting point or supercooled)
     REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
     REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
     REAL(wp), INTENT(in)     :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
@@ -1510,16 +1501,15 @@ CONTAINS
       deficit_trans(ic)  = 0._wp     ! water missing for transpiration due to limited soil water
 
     ! 1. Soil evaporation (mobile water only)
-    !   considers how much roots there are per layer, i.e., lowest layer with roots might not have root everywhere
     ! ---------------
 
-      IF (evapo_soil_in_m(ic) < 0._wp) THEN                             ! actual evaporation flux (not dew)
-        dummy_wtr_soil(ic,1) = dummy_wtr_soil(ic,1) + evapo_soil_in_m(ic) ! take water from uppermost soil layer
-        IF (dummy_wtr_soil(ic,1) < 0._wp) THEN                          ! if there is not enough mobile soil water
-          deficit_sevap(ic) = dummy_wtr_soil(ic,1)                       ! this is the amount of water missing
-          dummy_wtr_soil(ic,1) = 0._wp                                  ! soil moisture cannot be negative
+      IF (evapo_soil_in_m(ic) < 0._wp) THEN                                ! actual evaporation flux (not dew)
+        dummy_wtr_soil(ic,1) = dummy_wtr_soil(ic,1) + evapo_soil_in_m(ic)  ! take water from uppermost soil layer
+        IF (dummy_wtr_soil(ic,1) < wtr_residual_sl(ic,1)) THEN             ! if there is not enough mobile soil water
+          deficit_sevap(ic) = dummy_wtr_soil(ic,1) - wtr_residual_sl(ic,1) ! this is the amount of water missing
+          dummy_wtr_soil(ic,1) = wtr_residual_sl(ic,1)                     ! soil moisture cannot be less then residual
         END IF
-        evapo_soil_sl1(ic) = evapo_soil_in_m(ic) - deficit_sevap(ic)      ! reduce soil evaporation if top layer soil is too dry
+        evapo_soil_sl1(ic) = evapo_soil_in_m(ic) - deficit_sevap(ic)       ! reduce soil evaporation if top layer soil is too dry
       END IF
 
     !  2. Transpiration
@@ -1552,13 +1542,11 @@ CONTAINS
 
           ! water needed for transpiration from the current layer
           transpiration_sl(ic,is) = transpiration_in_m(ic) * droot(ic,is) / root_depth(ic)
-          ! test if the above "transpiration_sl" is possible
+          ! test if the above "transpiration_sl" is possible (i.e. that roots exist in this layer)
           IF (droot(ic,is) > 0._wp) THEN
 
             rootfract = droot(ic,is) / dsoil(ic,is) ! fraction of the soil layer that is within the root zone
-            ! @TODO at some point wtr_field_cap * w_soil_wilt_fract needs to be changed to the real wilting point moisture of the
-            !       specific plant growing on this tile
-            fixed = wtr_field_cap_sl(ic,is) * w_soil_wilt_fract * rootfract     ! amount of unavailable root zone water
+            fixed     = wtr_residual_sl(ic,is) * rootfract                      ! amount of unavailable root zone water
             ! check: if there is water and extract
             IF (dummy_wtr_soil(ic,is) * rootfract >= fixed) THEN                ! there is water in the root zone available
               remaining = dummy_wtr_soil(ic,is) * rootfract + transpiration_sl(ic,is) ! remaining water after transpiration
@@ -1602,10 +1590,10 @@ CONTAINS
       ! just use more water from soil layers that have roots, but still consider wilting point as limited
       ! i.e., consider plants growing more roots, but no feedback to plant root growth
       DO ic = 1, nc
-        IF (deficit_trans(ic) < 0._wp .AND. dummy_wtr_soil(ic,is) > wtr_field_cap_sl(ic,is) * w_soil_wilt_fract) THEN
+        IF (deficit_trans(ic) < 0._wp .AND. dummy_wtr_soil(ic,is) > wtr_residual_sl(ic,is)) THEN
           ! add water that can be still transpired to the transpiration to reduce the overall deficit
           remaining          = dummy_wtr_soil(ic,is) - &
-            & MAX(dummy_wtr_soil(ic,is) + deficit_trans(ic), wtr_field_cap_sl(ic,is) * w_soil_wilt_fract)
+            & MAX(dummy_wtr_soil(ic,is) + deficit_trans(ic), wtr_residual_sl(ic,is))
           deficit_trans(ic)      = deficit_trans(ic)      + remaining
           dummy_wtr_soil(ic,is)   = dummy_wtr_soil(ic,is)   - remaining
           transpiration_sl(ic,is) = transpiration_sl(ic,is) - remaining
@@ -1638,7 +1626,8 @@ CONTAINS
         &  .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'ET fluxes mismatch at ', &
           & lat(ic),'N and ',lon(ic),'E:',                                  NEW_LINE('a'), &
-          & 'Initial mobile soil water:          ', wtr_soil_sl(ic,:),      NEW_LINE('a'), &
+          & 'Initial total soil water:           ', wtr_soil_sl(ic,:),      NEW_LINE('a'), &
+          & 'Residual soil water:                ', wtr_residual_sl(ic,:),  NEW_LINE('a'), &
           & 'Expected soil evaporation:          ', evapo_soil_in_m(ic),    NEW_LINE('a'), &
           & 'Expected transpiration:             ', transpiration_in_m(ic), NEW_LINE('a'), &
           & 'Diagnosed soil evaporation :        ', evapo_soil_sl1(ic),     NEW_LINE('a'), &

@@ -678,8 +678,7 @@ CONTAINS
       & fract_fpc,              &
       & fract_snow,             &
       & fract_wet,              &
-      & wtr_rootzone_avail_max, &
-      & wtr_rootzone_avail,     &
+      & water_stress,           &
       & fact_q_air,             &
       & fact_qsat_srf,          &
       & fact_qsat_trans_srf,    &
@@ -702,8 +701,7 @@ CONTAINS
       fact_qsat_soil(options%nc),  &
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
-      zfract_fpc(options%nc),      &
-      w_soil_wilt_fract_config
+      zfract_fpc(options%nc)
     REAL(wp) :: rel_hum,           &
       ch_tmp(options%nc)
     LOGICAL :: &
@@ -770,8 +768,7 @@ CONTAINS
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  water_stress)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
@@ -788,7 +785,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
       END IF
 
-      w_soil_wilt_fract_config = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
       IF (model%config%l_compat401) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
@@ -798,7 +794,7 @@ CONTAINS
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic = 1, nc
-          mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
+          mask(ic) = water_stress(ic) >= 1._wp
         END DO
         !$ACC END PARALLEL LOOP
       END IF
