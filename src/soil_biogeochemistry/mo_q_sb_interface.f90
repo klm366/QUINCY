@@ -425,6 +425,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_no3_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_po4_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -459,8 +462,13 @@ CONTAINS
 
     ! @TODO  add missing variables for aggregation
 
+    ! SB_ 3D
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  
+
   END SUBROUTINE aggregate_sb_jsm
 
   ! ======================================================================================================= !
@@ -474,6 +482,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -489,8 +498,18 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(VEG_)
 
+    ! fluxes
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c14          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c14          , weighted_by_fract)
     ! 2D
+    dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
+    ! pools
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_nitrogen          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_phosphorus        , weighted_by_fract)
@@ -503,6 +522,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, n2o_n15                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, n2                           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, n2_n15                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, total_soil_n                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, total_soil_inorg_n           , weighted_by_fract)
+    ! pools
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_n              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_p              , weighted_by_fract)
@@ -521,6 +543,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c13     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c14     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_n15     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_woody_litter_c       , weighted_by_fract)
+
+    ! VEG_ fluxes
+    dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production_l2aveghlp  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,   biological_n_fixation_l2aveghlp     , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

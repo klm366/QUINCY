@@ -185,6 +185,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, albedo                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, net_radiation             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon               , weighted_by_fract)
     ! RAD_ 3D
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl            , weighted_by_fract)

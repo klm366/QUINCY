@@ -226,7 +226,7 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_can,                 & !< radiation in VIS range absorbed by the canopy [W m-2]
       & arad_nir_can,                 & !< radiation in NIR range absorbed by the canopy [W m-2]
-      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density [micro-mol m-2 s-1]
+      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density (a.k.a. faPAR) [micro-mol m-2 s-1]
       & rfr_ratio_boc,                & !< red to far-red ratio at the bottom of the canopy [unitless]
       & rfr_ratio_boc_tvegdyn_mavg      !< red to far-red ratio at the bottom of the canopy [unitless]
 
@@ -1317,12 +1317,12 @@ CONTAINS
   
       CALL mem%Add_var('appfd', mem%appfd, &
         & hgrid, surface, &
-        & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
+        & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density (faPAR)'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
