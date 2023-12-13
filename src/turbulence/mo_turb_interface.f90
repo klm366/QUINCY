@@ -757,7 +757,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
       DO ic = 1, nc
-        ch_tmp(:) = pch(:)
+        ch_tmp(ic) = pch(ic)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
