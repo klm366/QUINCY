@@ -821,7 +821,6 @@ CONTAINS
     REAL(wp) :: deficit_trans(nc)            !< transpiration that could not be extracted from the soil [m]
     REAL(wp) :: deficit_sevap(nc)            !< soil evaporation that could not be extracted from the soil [m]
     REAL(wp) :: remoist(nc)                  !< for TPE
-    REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        !< residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: weq_wsat_sl(nc,nsoil)        !< Maximum storage in each soil layer (porosity) (all of water, not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)   !< field capacity of the soil layer (not reduced by ice) [m]
     REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      !< wilting point - not reduced relative to soil ice fraction [m]
@@ -829,7 +828,7 @@ CONTAINS
     REAL(wp) :: wtr_transp_corr(nc)          !< uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             !< surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
-    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< immobile soil water (supercooled or below wilting point) (needed with ACC)
+    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< immobile soil water (supercooled or below wilting point) [m]
     REAL(wp) :: hlp1(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp4(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp2(nc)                     !< needed for ACC (avoid operations as routine arguments)
@@ -840,8 +839,8 @@ CONTAINS
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
-    !$ACC   CREATE(wtr_rsdl_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
-    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_residual_sl, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
+    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
     !
@@ -863,17 +862,16 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
 
-        !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
+        !> Calculation of soil water equivalent content at saturation, field capacity and wilting point
         !
         weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * dsoil(ic,is)
         weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
         weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
 
-        ! supercooled water in the soil should not be able to move vertically
-        ! @todo at some point p_wilt has to be renamed to something more appropriate, as it
-        !       basically describes immobile adhesion water which is not really the same
-        !       as the plant wilting point.
-        wtr_rsdl_sl(ic,is) = MIN(MAX(wtr_soil_pot_scool_sl(ic,is), weq_p_wilt_sl(ic,is)), wtr_soil_sl(ic,is))
+        !> Compute immobile water. Supercooled soil water and water below the wilting point
+        !>   should not be able to move vertically or be transpired.
+        wtr_residual_sl(ic,is) = MIN(wtr_soil_sl(ic,is), &
+          &                      MAX(wtr_soil_pot_scool_sl(ic,is), wtr_p_wilt_sl(ic,is)))
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -935,18 +933,6 @@ CONTAINS
           & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &   ! optional out
           )
 
-    !> Diagnose where we have to extract the water the already computed plant-transpiration-fluxes
-    !>  called: mobile water, i.e., only water in soil layers above wilting point
-    !>  is used for both: plant tranpiration and evapotranspiration ('diagnose_evapotrans()')
-    !>
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        wtr_residual_sl(ic,is) = MIN(wtr_soil_sl(ic,is), MAX(wtr_soil_pot_scool_sl(ic,is), wtr_p_wilt_sl(ic,is)))
-      END DO
-    END DO
-    !$ACC END PARALLEL LOOP
-
     !> improve function name @TODO
     !>  Attention: the diagnostic for transpiration needs to be consistent with the water_stress
     !>  computation. Next to assumptions about not accessible amounts of water (below wilting point
@@ -995,7 +981,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          ws_vol_sl(ic,is) = (wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)) / dsoil(ic,is)
+          ws_vol_sl(ic,is) = (wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is)) / dsoil(ic,is)
           transpiration_sl(ic,is) = transpiration_sl(ic,is) / dsoil(ic,is)
         END IF
         hlp1(ic,is) = 1._wp                           ! just need to have any values
@@ -1044,7 +1030,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_rsdl_sl(ic,is)
+          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_residual_sl(ic,is)
         END IF
       END DO
     END DO
@@ -2144,20 +2130,20 @@ CONTAINS
     REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !< diffusivity of the soil layer [m]            @TODO check units
     REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !< hydraulic condctivity at (upper) layer interface [m]
     REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !< diffusivity at (upper) layer interface [m]
-    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !< matric potential at actual soil state
+    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !< matric potential at actual soil state [m]
 
     ! local variables
     INTEGER  :: ic, is ! cell index and soil layer index
     REAL(wp) :: ck
     ! vol == volumetric
     ! range == part of the soil were water is moving
-    REAL(wp) :: ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil),     &
+    REAL(wp) :: wtr_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil),     &
              &  nvgn(nc,nsoil), mvgn(nc,nsoil), ws_rel_vol(nc,nsoil),         &
              &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), fc_vol(nc,nsoil), &
              &  pwp_vol(nc,nsoil), ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
     !$ACC DATA &
-    !$ACC   CREATE(ws_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
+    !$ACC   CREATE(wtr_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
     !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp, dt)
 
     ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
@@ -2176,14 +2162,14 @@ CONTAINS
 
         ! Convert to volumetric quantities
         IF (dsoil(ic,is) > 0._wp) THEN
-          ws_vol(ic,is)    =  wtr(ic,is)                      / dsoil(ic,is)
+          wtr_vol(ic,is)   =  wtr(ic,is)                      / dsoil(ic,is)
           ice_vol(ic,is)   =  ice(ic,is)                      / dsoil(ic,is)
           scool_vol(ic,is) =  MIN(wscools(ic,is), wtr(ic,is)) / dsoil(ic,is)
           wsat_vol(ic,is)  =  wsat(ic,is)                     / dsoil(ic,is)
           fc_vol(ic,is)    =  fc(ic,is)                       / dsoil(ic,is)
           pwp_vol(ic,is)   =  pwp(ic,is)                      / dsoil(ic,is)
         ELSE
-          ws_vol(ic,is)    =  0._wp
+          wtr_vol(ic,is)   =  0._wp
           ice_vol(ic,is)   =  0._wp
           scool_vol(ic,is) =  0._wp
           wsat_vol(ic,is)  =  0._wp
@@ -2277,7 +2263,7 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
-          ws_free_vol(ic,is)   = MAX(0._wp, ws_vol(ic,is) - scool_vol(ic,is))
+          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - scool_vol(ic,is))
           ws_range_vol(ic,is)  = wsat_vol(ic,is)
         END DO
       END DO
@@ -2287,7 +2273,7 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
-          ws_free_vol(ic,is)   = MAX(0._wp, ws_vol(ic,is) - MAX(scool_vol(ic,is), pwp_vol(ic,is)))
+          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - MAX(scool_vol(ic,is), pwp_vol(ic,is)))
           ws_range_vol(ic,is)  = fc_vol(ic,is) - pwp_vol(ic,is)
         END DO
       END DO
