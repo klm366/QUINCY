@@ -130,6 +130,8 @@ CONTAINS
     dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n15) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
     dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_p) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production_l2aveghlp) = zero  !< diagnostic variable for atmosphere
+    dsl4jsb_var2D_onChunk(VEG_, biological_n_fixation_l2aveghlp) = zero     !< diagnostic variable for atmosphere
     ! other variables
     dsl4jsb_var2D_onChunk(VEG_, delta_dens_ind) = zero                 !< ??
     dsl4jsb_var2D_onChunk(VEG_, unit_transpiration) = zero             !< ??

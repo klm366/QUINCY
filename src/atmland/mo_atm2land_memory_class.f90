@@ -550,6 +550,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = t_air_init)
 
       CALL mem%Add_var('q_air', mem%q_air, &
@@ -560,6 +561,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = q_air_init)
 
       CALL mem%Add_var('rain', mem%rain, &
@@ -570,6 +572,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('snow', mem%snow, &
@@ -580,6 +583,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('wind_air', mem%wind_air, &
@@ -620,6 +624,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = swvis_srf_down_init)
 
       CALL mem%Add_var('swnir_srf_down', mem%swnir_srf_down, &
@@ -630,6 +635,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = swnir_srf_down_init)
 
       CALL mem%Add_var('swpar_srf_down', mem%swpar_srf_down, &
@@ -888,6 +894,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('noy_deposition', mem%noy_deposition, &
@@ -898,6 +905,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nhx_n15_deposition', mem%nhx_n15_deposition, &
@@ -928,6 +936,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('local_time_day_seconds', mem%local_time_day_seconds, &
