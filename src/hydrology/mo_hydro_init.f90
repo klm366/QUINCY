@@ -221,6 +221,31 @@ CONTAINS
       & fill_array = hydro_init_vars%oro_stddev)
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
+    ! Read in maximum fraction and depth of local surface depressions
+    IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+      IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
+        ! Use depression area fraction as maximum pond fraction
+        ptr_2D => input_file%Read_2d(                                 &
+          & variable_name='surf_depr_fract',                           &
+          & fill_array=hydro_init_vars%fract_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        ! Use depression area fraction as maximum pond fraction
+        ptr_2D => input_file%Read_2d(                                 &
+          & variable_name='surf_depr_depth',                           &
+          & fill_array=hydro_init_vars%depth_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      ELSE
+        ! Set fields to negativ value to indicate they should be computed later
+        hydro_init_vars%fract_pond_max(:,:) = -1._wp
+        hydro_init_vars%depth_pond_max(:,:) = -1._wp
+        CALL message(TRIM(routine), '*** Warning: surf_depr_fract or surf_depr_depth not found in bc_sso file --> '// &
+          & 'both will be computed based on steepness correlation')
+      END IF
+    ELSE
+      hydro_init_vars%fract_pond_max(:,:) = 0._wp
+      hydro_init_vars%depth_pond_max(:,:) = 0._wp
+    END IF
+
     CALL input_file%Close()
 
     IF (tile%contains_soil) THEN
@@ -319,31 +344,6 @@ CONTAINS
             & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
           hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
-      END IF
-
-      ! Read in maximum pond fraction and depth
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
-          ! Use depression area fraction as maximum pond fraction
-          ptr_2D => input_file%Read_2d(                                 &
-            & variable_name='surf_depr_fract',                           &
-            & fill_array=hydro_init_vars%fract_pond_max)
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-          ! Use depression area fraction as maximum pond fraction
-          ptr_2D => input_file%Read_2d(                                 &
-            & variable_name='surf_depr_depth',                           &
-            & fill_array=hydro_init_vars%depth_pond_max)
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-        ELSE
-          ! Set fields to negativ value to indicate they should be computed later
-          hydro_init_vars%fract_pond_max(:,:) = -1._wp
-          hydro_init_vars%depth_pond_max(:,:) = -1._wp
-          CALL message(TRIM(routine), '*** Warning: surf_depr_fract or surf_depr_depth not found in bc file --> '// &
-            & 'both will be computed based on steepness correlation')
-        END IF
-      ELSE
-        hydro_init_vars%fract_pond_max(:,:) = 0._wp
-        hydro_init_vars%depth_pond_max(:,:) = 0._wp
       END IF
 
       CALL input_file%Close()
