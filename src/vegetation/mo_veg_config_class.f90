@@ -138,8 +138,8 @@ CONTAINS
     cohort_harvest_interval        = 80.0_wp
     veg_bnf_scheme                 = "dynamic"
     veg_dynamics_scheme            = "population"
-    biomass_alloc_scheme           = "fixed"
-    leaf_stoichom_scheme           = "fixed"
+    biomass_alloc_scheme           = "dynamic"
+    leaf_stoichom_scheme           = "dynamic"
     flag_dynamic_roots             = .TRUE.
     flag_dynroots_h2o_n_limit      = .FALSE.
 

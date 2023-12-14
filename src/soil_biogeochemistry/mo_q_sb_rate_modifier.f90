@@ -101,13 +101,15 @@ CONTAINS
     nc    = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SPQ_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! out

@@ -302,7 +302,7 @@ CONTAINS
 #endif
 
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
-    !>2.0 simple_sm - a simple four pool soil biogeochemical model
+    !>2.0 ssm - a simple four pool soil biogeochemical model
     !>
     CASE("simple_1d")
       CALL sb_init_simple_sm( &
@@ -366,7 +366,7 @@ CONTAINS
         & site_ID_spp1685 &                           ! optional in
 #endif
         & )
-    !>3.0 JSM - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
+    !>3.0 jsm - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
     !>
     CASE("jsm")
       CALL sb_init_jsm( &
@@ -440,6 +440,12 @@ CONTAINS
     CASE DEFAULT
       CALL finish(routine, 'Invalid setting of sb_model_scheme (simple_sm / jsm).')
     END SELECT  ! simple_sm | jsm
+
+    !> 3.0 set sb_pool bgcm to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      sb_pool_mt_domain(:,:,:,:,:) = 0.0_wp
+    END IF
 
   END SUBROUTINE sb_init
 

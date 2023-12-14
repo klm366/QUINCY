@@ -165,8 +165,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
@@ -437,7 +437,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'Invalid QUINCY model name. Use either land, plant, soil, canopy, test_canopy or test_radiation.')
     ENDSELECT
 
-    !>2.0 vegetation init for all QUINCY models
+    !> 2.0 set veg_pool bgcm to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      veg_pool_mt_domain(:,:,:,:) = 0.0_wp
+    END IF
+
+    !> 3.0 vegetation init for all QUINCY models
     !>
     ! plant variables
     dphi(:,:)                             = -1.0_wp * lctlib%phi_leaf_min

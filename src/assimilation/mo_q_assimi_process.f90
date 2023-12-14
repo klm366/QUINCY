@@ -145,12 +145,14 @@ CONTAINS
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)

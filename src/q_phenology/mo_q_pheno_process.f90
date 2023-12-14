@@ -93,11 +93,13 @@ CONTAINS
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_PHENO_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)                 RETURN  ! run task only if the present tile is a pft
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (tile%lcts(1)%lib_id == 0) RETURN !< run task only if the present tile is a pft
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
