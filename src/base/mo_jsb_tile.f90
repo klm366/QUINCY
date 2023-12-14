@@ -625,7 +625,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx)
+        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx) ASYNC(1)
       END DO
 
     END DO

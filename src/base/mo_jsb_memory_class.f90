@@ -251,9 +251,9 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$noACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var) ASYNC(1)
-    !$noACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
+    !$ACC ENTER DATA COPYIN(var)
+    !$noACC UPDATE DEVICE(var) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -404,9 +404,9 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$noACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var) ASYNC(1)
-    !$noACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
+    !$ACC ENTER DATA COPYIN(var)
+    !$noACC UPDATE DEVICE(var) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -572,9 +572,9 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$noACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var) ASYNC(1)
-    !$noACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
+    !$ACC ENTER DATA COPYIN(var)
+    !$noACC UPDATE DEVICE(var) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 

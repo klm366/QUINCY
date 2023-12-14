@@ -892,7 +892,8 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1) &
+    !$ACC   PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1019,7 +1020,8 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1) &
+    !$ACC   PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
