@@ -218,7 +218,6 @@ CONTAINS
     nc        = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
@@ -226,6 +225,9 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)

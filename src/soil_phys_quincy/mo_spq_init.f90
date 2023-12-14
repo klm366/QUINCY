@@ -127,8 +127,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
     lctlib         => model%lctlib(tile%lcts(1)%lib_id)
@@ -386,7 +386,7 @@ CONTAINS
       &                     + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:)) 
     w_soil_root_pot(:,:)    = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:, 1, :) 
 
-    !>  6.3 root fraction 
+    !>  6.3 root fraction
     !>    root_fraction_sl(:,:,:) is a variable of veg_mem and depends on the init of root_depth(:,:), see section 6.0
     !>
     ! by default use: fixed roots for QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
@@ -437,6 +437,12 @@ CONTAINS
         END DO
       END DO
     END IF  ! flag_dynamic_roots
+
+    !> 6.4 set root fraction to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      root_fraction_sl(:, :, :) = 0.0_wp
+    END IF
 
     !>7.0 soil water and ice pwp, fc and sat per layer depth
     !>

@@ -337,9 +337,12 @@ CONTAINS
     ! select lctlib file depending on the usecase
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
-    ! quincy model (8 PFT tiles)
+    ! quincy model with 8 PFT tiles
     CASE ('quincy_eight_pfts')
       lctlib_filename = 'lctlib_quincy_nlct8.def'
+    ! quincy model with 11 PFT tiles incl. bare soil
+    CASE ('quincy_11_pfts')
+      lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'

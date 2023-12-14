@@ -65,13 +65,13 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
+    model  => Get_model(tile%owner_model_id)
+
+    IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
-
-    ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -104,6 +104,8 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
@@ -115,6 +117,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER              :: model
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
     REAL(wp)                                :: dtime                !< timestep
@@ -161,7 +164,11 @@ CONTAINS
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)              RETURN  ! only if the present tile is a pft
+    IF (tile%lcts(1)%lib_id == 0) RETURN !< only if the present tile is a pft
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
