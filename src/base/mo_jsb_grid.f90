@@ -49,7 +49,7 @@ CONTAINS
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
 
-    !$ACC ENTER DATA PCREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
+    !$ACC ENTER DATA CREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
     !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
 
   END SUBROUTINE Register_grid

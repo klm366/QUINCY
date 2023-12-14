@@ -167,7 +167,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
-    INTEGER               :: iblk, n, nn !, nlen
+    INTEGER               :: iblk, n, nn, nlen
 
     n =options%nc ! only to avoid compiler warnings
 
@@ -196,14 +196,17 @@ CONTAINS
     buffer(:,:) = 0.0_wp
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
-      !IF (iblk /= grid%nblks) THEN
-      !  nlen = grid%nproma
-      !ELSE
-      !  nlen = grid%npromz
-      !END IF
-      DO n = 1, grid%nproma
+      IF (iblk /= grid%nblks) THEN
+       nlen = grid%nproma
+      ELSE
+       nlen = grid%npromz
+      END IF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) COPYOUT(buffer(nn+1:nn+nlen, 1:1))
+      DO n = 1, nlen
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC WAIT(1)
     END DO
 
     nbr_hor_cells = grid%ntotal

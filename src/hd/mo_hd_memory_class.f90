@@ -37,6 +37,11 @@ MODULE mo_hd_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
+  !> Type for integer array; there's no t_jsb_var_ for integers
+  TYPE t_int3d
+    INTEGER, POINTER :: ptr(:,:,:)
+  END TYPE t_int3d
+
   TYPE, EXTENDS(t_jsb_memory) :: t_hd_memory
 
     TYPE(t_jsb_var_real2d) :: &
@@ -61,11 +66,13 @@ MODULE mo_hd_memory_class
       outflow_count        !< count of outflows from a given cell - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
-      nidx_upstream,          &  !< 1st dim. of local index of grid cell upstream (nproma)
-      bidx_upstream,          &  !< 2nd dim. of local index of grid cell upstream (nblks)
       overlflow_res,          &  !< content of overland flow reservoir cascade
       baseflow_res,           &  !< content of baseflow reservoir cascade
       riverflow_res              !< content of groundflow reservoir cascade
+
+    TYPE(t_int3d) ::  &
+      nidx_upstream,         &
+      bidx_upstream
 
     ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) :: &
