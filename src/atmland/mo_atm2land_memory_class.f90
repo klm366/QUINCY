@@ -103,7 +103,7 @@ MODULE mo_a2l_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & ga                         !< aerodynamic conductance [m s-1]
 
-    ! Deposition
+    ! N & P deposition
     TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]

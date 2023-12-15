@@ -45,7 +45,7 @@ MODULE mo_jsb4_forcing
 
   ! jsb4
   USE mo_jsb_class,              ONLY: jsbach
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -56,6 +56,7 @@ MODULE mo_jsb4_forcing
     & NF_NOERR                                           ! from netcdf.inc
 
   USE mo_jsb_class,              ONLY: get_model
+  USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
 
   IMPLICIT NONE
   PRIVATE
@@ -229,16 +230,21 @@ CONTAINS
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !> 
   SUBROUTINE get_standalone_driver(                                                        &
-    & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
+    & model_id,                                                                            &  ! in
+    & model_scheme,                                                                        &    
+    & startblk, endblk, startidx, endidx,                                                  &
     & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
     & cos_zenith_angle,                                                                    &  ! in
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf                         &
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & p_deposition                                                                         &
     & )
 
     INTEGER,  INTENT(IN)  :: model_id
+    INTEGER,  INTENT(IN)  :: model_scheme
     INTEGER,  INTENT(IN)  :: startblk
     INTEGER,  INTENT(IN)  :: endblk
     INTEGER,  INTENT(IN)  :: startidx(:)
@@ -264,6 +270,11 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic
@@ -300,20 +311,28 @@ CONTAINS
 
 !$OMP PARALLEL
     ! @TODO set all OUT variables to zero here, and test for differences in simulation results
-    CO2_air(:,:)           = 0._wp
-    t_air(:,:)             = 0._wp
-    q_air(:,:)             = 0._wp
-    rain(:,:)              = 0._wp
-    snow(:,:)              = 0._wp
-    wind_air(:,:)          = 0._wp
-    wind_10m(:,:)          = 0._wp
-    lw_srf_down(:,:)       = 0._wp
-    swvis_srf_down(:,:)    = 0._wp
-    swnir_srf_down(:,:)    = 0._wp
-    swpar_srf_down(:,:)    = 0._wp
-    fract_par_diffuse(:,:) = 0._wp
-    press_srf(:,:)         = 0._wp
-    sat_spec_humidity(:,:) = 0._wp
+    CO2_air(:,:)            = 0._wp
+    t_air(:,:)              = 0._wp
+    q_air(:,:)              = 0._wp
+    rain(:,:)               = 0._wp
+    snow(:,:)               = 0._wp
+    wind_air(:,:)           = 0._wp
+    wind_10m(:,:)           = 0._wp
+    lw_srf_down(:,:)        = 0._wp
+    swvis_srf_down(:,:)     = 0._wp
+    swnir_srf_down(:,:)     = 0._wp
+    swpar_srf_down(:,:)     = 0._wp
+    fract_par_diffuse(:,:)  = 0._wp
+    press_srf(:,:)          = 0._wp
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      nhx_deposition(:,:)     = 0._wp
+      noy_deposition(:,:)     = 0._wp
+      nhx_n15_deposition(:,:) = 0._wp
+      noy_n15_deposition(:,:) = 0._wp
+      p_deposition(:,:)       = 0._wp
+    END SELECT
+    sat_spec_humidity(:,:)  = 0._wp
 !$OMP END PARALLEL
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -543,7 +562,29 @@ CONTAINS
     CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 deallocate local variables
+    !> 9.0 N & P deposition
+    !>
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      ! CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+      !   & forcing_input(model_id)%CO2_concentr, CO2_air)
+
+      !> deposition
+      !>
+      ! @NOTE just constant values (global defaults) for now
+      ! source: Sönke Zaehle
+      !   NHX_deposition     = NOY_deposition = 1 kg / ha / year -> 1/1000/14/365/24/3600100001000000 = 5.13_wp mu mol / m2 / s;
+      !   NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      !   P deposition       = N deposition / 14 [in g] -> P deposition = N deposition / 14 / 31 = 0.001_wp mu mol / m2 / s;
+      nhx_deposition(:,:)     = 5.13_wp
+      noy_deposition(:,:)     = nhx_deposition(:,:)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = nhx_n15_deposition(:,:)
+      p_deposition(:,:)       = 0.001_wp
+    END SELECT
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 10.0 deallocate local variables
     !>
     IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
       DEALLOCATE(tmin_data)
