@@ -612,7 +612,7 @@ CONTAINS
           IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
           tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
         END IF
-        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract)
+        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract) ASYNC(1)
       END DO
 
       CALL model%Goto_next_tile(tile)

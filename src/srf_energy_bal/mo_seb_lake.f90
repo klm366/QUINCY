@@ -317,7 +317,7 @@ CONTAINS
 
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
       s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd)
@@ -325,7 +325,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (config_l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
@@ -342,10 +342,11 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(hcap_ice)
       DEALLOCATE(hcap_ice)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         t(ic) = t_lwtr(ic)
         t_unfilt(ic) = t(ic)
@@ -360,6 +361,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(hflx_form_ice)
       DEALLOCATE(hflx_form_ice)
     END IF
@@ -692,8 +694,8 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(s_air, heat_tcoef)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(s_air, heat_tcoef)
     DO ic=1,nc
 
       IF (use_tmx) THEN
@@ -708,13 +710,13 @@ CONTAINS
       latent_hflx_wtr(ic) = alv * evapo_wtr(ic) ! Latent heat flux
 
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     ! ================================================================================================================================
     ! Surface fluxes for lake ice
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG(STATIC: 1) VECTOR PRIVATE(s_air, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR PRIVATE(s_air, heat_tcoef)
       DO ic=1,nc
 
         IF (use_tmx) THEN
@@ -736,7 +738,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         sensible_hflx(ic) = sensible_hflx_wtr(ic)
         latent_hflx  (ic) = latent_hflx_wtr  (ic)

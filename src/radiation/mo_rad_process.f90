@@ -77,8 +77,7 @@ CONTAINS
 
     nc = SIZE(swvis_down)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
     DO ic=1,nc
 
@@ -99,7 +98,7 @@ CONTAINS
       IF (PRESENT(lw_net))    lw_net(ic)    = zlw_net
 
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_radiation_surface_net
 

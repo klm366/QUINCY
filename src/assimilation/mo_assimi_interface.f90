@@ -403,7 +403,7 @@ CONTAINS
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
       DO i=1,ncanopy
         !$ACC LOOP GANG VECTOR
@@ -553,7 +553,7 @@ CONTAINS
     ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
     DO icanopy=1,ncanopy
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
         & C4Flag,                      &
@@ -572,13 +572,13 @@ CONTAINS
     END DO
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -705,9 +705,8 @@ CONTAINS
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     !$ACC DATA CREATE(ratio_lim_over_unlim)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !$ACC LOOP GANG(STATIC: 1) VECTOR &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
       q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)      
@@ -718,10 +717,11 @@ CONTAINS
                                  )
       ratio_lim_over_unlim(ic) = canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
     END DO
-    !$ACC END LOOP
+    !$ACC END PARALLEL LOOP
 
     ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
     ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
       !$ACC LOOP VECTOR
@@ -732,10 +732,10 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END LOOP
-
     !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
     !$ACC END DATA
-    !$ACC WAIT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -932,12 +932,7 @@ CONTAINS
     !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    !$ACC DATA &
-    !$ACC   PRESENT(dark_respiration_ca(:), dark_respiration_cl(:,:), gross_assimilation_cl(:,:)) &
-    !$ACC   PRESENT(lai_cl(:,:), veg_fract_correction(:), dark_respiration(:), gross_assimilation_ca(:)) &
-    !$ACC   PRESENT(fract_fpc_max(:), gross_assimilation(:))
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       ! convert from leaf area of layer to canopy ground area
       gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
@@ -955,22 +950,17 @@ CONTAINS
       ! convert from canopy area to tile box area
       dark_respiration(ic) =  dark_respiration_ca(ic)  * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
-    !$ACC END PARALLEL
-    !$ACC END DATA
-
+    !$ACC END PARALLEL LOOP
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
-    !$ACC DATA PRESENT(day_npp_sum(:), npp_pot_rate_ca(:))
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
     END DO
-    !$ACC END PARALLEL
-    !$ACC END DATA
+    !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

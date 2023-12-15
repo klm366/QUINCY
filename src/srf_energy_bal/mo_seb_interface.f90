@@ -370,8 +370,8 @@ CONTAINS
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$ACC DATA CREATE(heat_cap)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        !$ACC DATA CREATE(heat_cap) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
 
           ! Correction for snowmelt
@@ -396,6 +396,7 @@ CONTAINS
 
         END DO
         !$ACC END PARALLEL LOOP
+        !$ACC WAIT(1)
         !$ACC END DATA
       END IF
 

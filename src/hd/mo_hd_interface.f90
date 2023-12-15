@@ -958,7 +958,6 @@ CONTAINS
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water fluxes during time interval:')
-      !$noACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(area, tile_fract) GANG VECTOR ASYNC(1) COLLAPSE(2)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
@@ -968,7 +967,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
       CALL message(routine, message_text)
-      !$noACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(area, tile_fract) GANG VECTOR ASYNC(1) COLLAPSE(2)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma

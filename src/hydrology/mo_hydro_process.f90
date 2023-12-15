@@ -142,7 +142,6 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2 = 1.87E5_wp     ! [Ks]
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
-    !$noACC DECLARE COPYIN(zc1, zc2, zc3)
 
     nc = SIZE(snowmelt_soil)
 
@@ -603,7 +602,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
