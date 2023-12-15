@@ -823,14 +823,11 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_hydrology
-  !
-  ! ================================================================================================================================
+
+  ! ====================================================================================================== !
   !>
-  !! @brief Implementation of "update" for task "soil_properties"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> @brief Implementation of "update" for task "soil_properties"
+  !>
   SUBROUTINE update_soil_properties(tile, options)
 
     USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
@@ -932,6 +929,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    ! init soil-layer parameters from input file
     DO is=1,nsoil
       DO ic=1,nc
         hyd_cond_sat_sl   (ic,is) = hyd_cond_sat(ic)
@@ -945,6 +943,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! init parameter variables
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
@@ -959,6 +958,7 @@ CONTAINS
       ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
       ! Use different parameters for top layer and deeper layers
+      ! input files include data (only for) top soil-layer and the below layers
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         hyd_cond_sat_org(ic,1) = hyd_cond_sat_org_top
@@ -984,24 +984,27 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! Saturated hydraulic conductivity following percolation theory 
-      ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
+      ! calculate saturated hydraulic conductivity, if above threshold 
+      ! this is not calculate during init
+      ! following percolation theory, see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is=1,nsoil
         DO ic=1,nc
+          ! if connected flow pathways exist that consist purely of organic material
           IF (fract_org_sl(ic,is) > thresh_org) THEN
-            ! Connected flow pathways consisting of organic material only exist
             N_perc = (1._wp - thresh_org)**(-beta_perc)
+            ! conected to organic material
             fract_perc(ic,is)  = MIN(1._wp, N_perc * fract_org_sl(ic,is) * (fract_org_sl(ic,is)-thresh_org)**beta_perc)
+            ! unconnected to organic material
             fract_uncon(ic,is) = 1._wp - fract_perc(ic,is)
-          ELSE
-            ! No connected organic matter pathways exist, and flow passes mineral and organic soil components in series
+          ELSE  ! no connected organic matter pathways exist,
+                ! and flow passes mineral and organic soil components in series
             fract_perc(ic,is)  = 0._wp
             fract_uncon(ic,is) = 1._wp
           END IF
-
+          ! update hydraulic conductivity, if organic material is available at all
           IF (fract_org_sl(ic,is) > 0._wp) THEN
             hyd_cond_sat_uncon(ic,is) = fract_uncon(ic,is)                                           &
               &                       * ( (1._wp - fract_org_sl(ic,is)) / hyd_cond_sat_sl(ic,is)     &
@@ -1014,6 +1017,7 @@ CONTAINS
       !$ACC END LOOP
 
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      ! re-calculate the layered soil-parameters weighted based on organic material content
       DO is=1,nsoil
         DO ic=1,nc
           vol_porosity_sl   (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_porosity_sl   (ic,is) &
@@ -1742,14 +1746,12 @@ CONTAINS
 
   END SUBROUTINE aggregate_canopy_cond_stressed
 
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
   !>
-  !! @brief Implementation of "update" for task "evaporation"
-  !! Task "update_evaporation" calculates evapo(transpi)ration
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "update" for task "evaporation"
+  !> Task "update_evaporation" 
+  !>   calculate potential evaporation and evapotranspiration
+  !>
   SUBROUTINE update_evaporation(tile, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
@@ -1827,8 +1829,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans) ! out
 
+    ! if tile is lake
     IF (tile%contains_lake) THEN
-
       dsl4jsb_Get_var2D_onChunk(SEB_,     qsat_lwtr)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)    ! out
       IF (model%config%use_tmx) THEN
@@ -1836,19 +1838,23 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
       ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in ('a' coefficient of equation a*x +b)
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in ('b' coefficient of equation a*x +b)
         dsl4jsb_Get_var2D_onChunk(A2L_,  drag_wtr)      ! in
       END IF
 
+      ! calc evapopot
+      ! calc potential evaporation over water (evapo_wtr)
+      ! explicit coupling with atmosphere ('tmx scheme': turbulent mixing scheme)
       IF (model%config%use_tmx) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
         DO ic=1,nc
           q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
           heat_tcoef = ch(ic)                                   ! Transfer coefficient; TODO: distinguish wtr and ice?
-          evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic)) ! Potential evaporation
+          evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic)) ! calc potential evaporation above water
         END DO
         !$ACC END PARALLEL LOOP
+      ! implicit coupling with atmosphere (vertical diffusion scheme)
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
         DO ic=1,nc
@@ -1859,6 +1865,9 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
+      ! if ice on lakes
+      ! calc potential evaporation over ice (evapo_ice)
+      ! calc evapopot from potential evaporatin over water and ice
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         IF (.NOT. model%config%use_tmx) THEN
           dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
@@ -1869,6 +1878,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
+        ! explicit coupling with atmosphere ('tmx scheme': turbulent mixing scheme)
         IF (model%config%use_tmx) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
           DO ic=1,nc
@@ -1878,6 +1888,7 @@ CONTAINS
             evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
           !$ACC END PARALLEL LOOP
+        ! implicit coupling with atmosphere (vertical diffusion scheme)
         ELSE
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR PRIVATE(q_air, heat_tcoef) ASYNC(1)
           DO ic=1,nc
@@ -1888,6 +1899,8 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
         END IF
+      ! if no ice
+      ! evapopot(ic) = evapo_wtr(ic)
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
@@ -1903,6 +1916,9 @@ CONTAINS
 
       !$ACC WAIT(1)
 
+    ! tile is soil or glacier
+    ! diagnose which parts of gridcell are wet / dry
+    ! and calc transpiration for parts of gridcell with vegetation
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
 
       dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)             ! in
@@ -1923,61 +1939,61 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
       END IF
 
+      ! calc potenatial evaporation and evapotranspiration based on based on air moisture and surface moisture
+      !   i.e., calc from effective air moisture (q_air_eff) and surface saturation humidity (qsat_srf_eff)
+      ! explicit coupling with atmosphere ('tmx scheme': turbulent mixing scheme)
       IF (model%config%use_tmx) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
         !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
-          q_air = q_bcoef(ic)  ! Old moisture at lowest atmospheric level
-          heat_tcoef = ch(ic)  ! Transfer coefficient
-
-          ! Compute effective air moisture and surface saturation humidity
-          q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
-          qsat_srf_eff   = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))
-          evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  ! Evapotranspiration
-          evapotrans(ic)     = evapotrans_lnd(ic)
-          evapopot(ic)       = heat_tcoef * (q_air     - qsat_star(ic)) ! Potential evaporation
+          q_air              = q_bcoef(ic)                              !< Old moisture at lowest atmospheric level
+          heat_tcoef         = ch(ic)                                   !< Transfer coefficient
+          q_air_eff          = q_effective( 0._wp, q_air, 1._wp, 0._wp) !< 
+          qsat_srf_eff       = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))  !< 
+          evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  !< Evapotranspiration
+          evapotrans(ic)     = evapotrans_lnd(ic)                       !< 
+          evapopot(ic)       = heat_tcoef * (q_air     - qsat_star(ic)) !< Potential evaporation
+          ! calc transpiration if vegetation exists
           IF (tile%contains_vegetation) THEN
-            transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)  ! Transpiration
+            ! fact_qsat_trans_srf: proportion of (pot. evaporation) what vegetation transpirates
+            !   depends on vegetation water stress
+            !   calc in TURB_ 'humidity scaling' task
+            transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)  !< Transpiration
           END IF
         END DO
         !$ACC END PARALLEL LOOP
+      ! implicit coupling with atmosphere (vertical diffusion scheme)
+      !   essentially the same docu as above :)
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
         !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
-          q_air = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)       ! New moisture at lowest atmospheric level by back-substitution
-          heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen)  ! Transfer coefficient
-
-          ! Compute effective air moisture and surface saturation humidity
-          q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
-          qsat_srf_eff   = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))
-          evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  ! Evapotranspiration
-          evapotrans(ic)     = evapotrans_lnd(ic)
-          evapopot(ic)       = heat_tcoef * (q_air     - qsat_star(ic)) ! Potential evaporation
+          q_air               = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)  !< New moisture at lowest atmospheric level by back-substitution
+          heat_tcoef          = heat_transfer_coef(drag_srf(ic), steplen)  !< Transfer coefficient
+          q_air_eff           = q_effective( 0._wp, q_air, 1._wp, 0._wp)   !<
+          qsat_srf_eff        = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic)) !<
+          evapotrans_lnd(ic)  = heat_tcoef * (q_air_eff - qsat_srf_eff)    !< Evapotranspiration
+          evapotrans(ic)      = evapotrans_lnd(ic)                         !<
+          evapopot(ic)        = heat_tcoef * (q_air     - qsat_star(ic))   !< Potential evaporation
           IF (tile%contains_vegetation) THEN
-            transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)  ! Transpiration
+            transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)    !< Transpiration
           END IF
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-
+    ! error catching
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
     !$ACC WAIT(1)
-
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
-
   END SUBROUTINE update_evaporation
-  !
-  ! -------------------------------------------------------------------------------------------------------
+
+  ! ====================================================================================================== !
   !>
-  !! Implementation of "aggregate" for task "evaporation"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "aggregate" for task "evaporation"
+  !>
   SUBROUTINE aggregate_evaporation(tile, options)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -2019,14 +2035,12 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_evaporation
-  !
+
+  ! ====================================================================================================== !
   !>
-  !! @brief Implementation of "update" for task "snow_and_ice_hydrology"
-  !! Task "update_snow_hydrology" calculates the new snow depth and fraction
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "update" for task "snow_and_ice_hydrology"
+  !> Task "update_snow_hydrology" calculates the new snow depth and fraction
+  !>
   SUBROUTINE update_snow_and_ice_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
