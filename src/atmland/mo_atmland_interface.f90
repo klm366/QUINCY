@@ -371,6 +371,21 @@ CONTAINS
         CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
       END IF
     END IF
+    IF (PRESENT(nhx_deposition)) THEN
+      nhx_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, nhx_deposition)
+    END IF
+    IF (PRESENT(noy_deposition)) THEN
+      noy_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, noy_deposition)
+    END IF
+    IF (PRESENT(nhx_n15_deposition)) THEN
+      nhx_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, nhx_n15_deposition)
+    END IF
+    IF (PRESENT(noy_n15_deposition)) THEN
+      noy_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, noy_n15_deposition)
+    END IF
+    IF (PRESENT(p_deposition)) THEN
+      p_deposition_ptr        => dsl4jsb_var2D_onChunk(A2L_, p_deposition)
+    END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
     END IF
@@ -554,6 +569,38 @@ CONTAINS
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+      END DO
+    END IF
+    !> MODEL_QUINCY
+    !>
+    IF (PRESENT(nhx_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        nhx_deposition_ptr(i) = nhx_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(noy_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        noy_deposition_ptr(i) = noy_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(nhx_n15_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        nhx_n15_deposition_ptr(i) = nhx_n15_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(noy_n15_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        noy_n15_deposition_ptr(i) = noy_n15_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(p_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        p_deposition_ptr(i) = p_deposition(i)
       END DO
     END IF
 
