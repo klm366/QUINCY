@@ -29,7 +29,8 @@ MODULE mo_hydro_constants
     & Upstream_        = 1,                &
     & Arithmetic_      = 2,                &
     ! Temporary identifiers used for the pond dynamics scheme
-    & Quad_            = 1
+    & Quad_            = 1,                &
+    & Tanh_            = 2
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction

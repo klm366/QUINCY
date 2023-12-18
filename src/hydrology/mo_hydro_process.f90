@@ -1525,7 +1525,8 @@ CONTAINS
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_constants,        ONLY: Quad_
+    USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
@@ -1583,6 +1584,9 @@ CONTAINS
     IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
       & pond_dynamics_scheme == Quad_) THEN
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
+    ELSE IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
+      & pond_dynamics_scheme == Tanh_) THEN
+      fract_pond = MIN(1._wp, TANH(pi * (weq_pond / weq_pond_max))) * fract_pond_max
     ELSE
       fract_pond = 0._wp
     END IF
@@ -1640,7 +1644,8 @@ CONTAINS
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_constants,        ONLY: Quad_
+    USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
@@ -1691,6 +1696,9 @@ CONTAINS
     IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
       & pond_dynamics_scheme == Quad_) THEN
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
+    ELSE IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
+      & pond_dynamics_scheme == Tanh_) THEN
+      fract_pond = MIN(1._wp, TANH(pi * (weq_pond / weq_pond_max))) * fract_pond_max
     ELSE
       fract_pond = 0._wp
     END IF

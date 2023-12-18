@@ -56,7 +56,7 @@ MODULE mo_hydro_config_class
       & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
                                 !! 'upstream' (default) or 'arithmetic' mean
       & pond_dynamics           !< Choice of pond dynamics scheme (i.e. depth-area scaling)
-                                !! Q-Arctic (default)
+                                !! quadratic (default), tanh
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -74,7 +74,7 @@ CONTAINS
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_, Quad_
+      &                              Upstream_, Arithmetic_, Quad_, Tanh_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -225,6 +225,9 @@ CONTAINS
     CASE("quadratic")
       config%pond_dynamics = Quad_
       CALL message(TRIM(routine), 'Pond dynamics scheme uses quadratic scaling')
+    CASE("tanh")
+      config%pond_dynamics = Tanh_
+      CALL message(TRIM(routine), 'Pond dynamics scheme uses tanh scaling')
     CASE default
       CALL finish(TRIM(routine), 'Pond dynamics scheme '//TRIM(pond_dynamics)//' not implemented')
     END SELECT
