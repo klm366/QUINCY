@@ -1920,6 +1920,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_wet_fraction'
 
     INTEGER  :: iblk, ics, ice
+    INTEGER  :: pond_dynamics_scheme
     REAL(wp) :: dtime, steplen, alpha, config_w_skin_max
     !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
@@ -1976,6 +1977,8 @@ CONTAINS
 
     ! Use simple scalar for GPU
     config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
+
+    pond_dynamics_scheme = dsl4jsb_Config(HYDRO_)%pond_dynamics
 
     !$claw acc enter data pcreate(skinres_max, skinres_canopy_max)
     !$claw expand parallel update
@@ -2074,6 +2077,7 @@ CONTAINS
         & skinres_max(:),            & ! in
         & weq_pond_max(:),           & ! in
         & fract_pond_max(:),         & ! in
+        & pond_dynamics_scheme,      & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
         & press_srf(:),              & ! in
@@ -2104,6 +2108,7 @@ CONTAINS
         & skinres_max,                & ! in
         & weq_pond_max(:),            & ! in
         & fract_pond_max(:),          & ! in
+        & pond_dynamics_scheme,       & ! in
         & oro_stddev(:),              & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in

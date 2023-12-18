@@ -53,8 +53,10 @@ MODULE mo_hydro_config_class
     INTEGER               ::  &
       & soilhydmodel,         & !< Choice of soil hydrological model:
                                 !! 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean           !< Interpolation scheme, to optain K & D at layer interface:
+      & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
                                 !! 'upstream' (default) or 'arithmetic' mean
+      & pond_dynamics           !< Choice of pond dynamics scheme (i.e. depth-area scaling)
+                                !! Q-Arctic (default)
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -72,7 +74,7 @@ CONTAINS
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_
+      &                              Upstream_, Arithmetic_, Quad_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -80,7 +82,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
+    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics
     LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
@@ -101,7 +103,8 @@ CONTAINS
       & l_infil_subzero,            &
       & l_ponds,                    &
       & soilhydmodel,               &
-      & interpol_mean
+      & interpol_mean,              &
+      & pond_dynamics
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -134,6 +137,7 @@ CONTAINS
     l_ponds                = .FALSE.
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
+    pond_dynamics          = "quadratic"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -215,6 +219,14 @@ CONTAINS
       CALL message(TRIM(routine), 'Soil diffusivity/conductivity interpolation uses arithmetic means')
     CASE default
       CALL finish(TRIM(routine), 'Soil diffusivity/conductivity interpolation method '//TRIM(interpol_mean)//' not implemented')
+    END SELECT
+
+    SELECT CASE(TRIM(tolower(pond_dynamics)))
+    CASE("quadratic")
+      config%pond_dynamics = Quad_
+      CALL message(TRIM(routine), 'Pond dynamics scheme uses quadratic scaling')
+    CASE default
+      CALL finish(TRIM(routine), 'Pond dynamics scheme '//TRIM(pond_dynamics)//' not implemented')
     END SELECT
 
     CALL close_nml(nml_handler)

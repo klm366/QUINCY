@@ -27,7 +27,9 @@ MODULE mo_hydro_constants
     & VanGenuchten_    = 3,                &
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
-    & Arithmetic_      = 2
+    & Arithmetic_      = 2,                &
+    ! Temporary identifiers used for the pond dynamics scheme
+    & Quad_            = 1
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction

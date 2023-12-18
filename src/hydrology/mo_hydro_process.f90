@@ -1506,6 +1506,7 @@ CONTAINS
     & skinres_max,                               & ! in
     & weq_pond_max,                              & ! in
     & fract_pond_max,                            & ! in
+    & pond_dynamics_scheme,                      & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
     & press_srf,                                 & ! in
@@ -1524,11 +1525,14 @@ CONTAINS
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_hydro_constants,        ONLY: Quad_
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
       & steplen,            &
       & alpha
+
+    INTEGER, INTENT(in)  :: pond_dynamics_scheme
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1576,7 +1580,8 @@ CONTAINS
                                fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
 
     ! Update pond fraction
-    IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp)) THEN
+    IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
+      & pond_dynamics_scheme == Quad_) THEN
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
     ELSE
       fract_pond = 0._wp
@@ -1618,6 +1623,7 @@ CONTAINS
     & skinres_max,                                & ! in
     & weq_pond_max,                               & ! in
     & fract_pond_max,                             & ! in
+    & pond_dynamics_scheme,                       & ! in
     & oro_stddev,                                 & ! in
     & t_srf,                                      & ! in
     & press_srf,                                  & ! in
@@ -1634,11 +1640,14 @@ CONTAINS
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_hydro_constants,        ONLY: Quad_
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
       & steplen,            &
       & alpha
+
+    INTEGER, INTENT(in)  :: pond_dynamics_scheme
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1679,7 +1688,8 @@ CONTAINS
     fract_snow_soil = Get_snow_fract_noforest(weq_snow_soil, oro_stddev) ! snow on soil below forest
 
     ! Update pond fraction
-    IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp)) THEN
+    IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
+      & pond_dynamics_scheme == Quad_) THEN
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
     ELSE
       fract_pond = 0._wp
