@@ -411,6 +411,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: pond_freeze
     dsl4jsb_Real2D_onChunk :: pond_melt
+    dsl4jsb_Real2D_onChunk :: wtr_pond_infl
+    dsl4jsb_Real2D_onChunk :: wtr_pond_outfl
+    dsl4jsb_Real2D_onChunk :: wtr_pond_ovrfl
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -561,6 +564,9 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_pond)     ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_freeze)    ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)      ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_infl)  ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_outfl) ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_ovrfl) ! out
       END IF
     END IF
 
@@ -684,6 +690,9 @@ CONTAINS
         & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & !< Amount of water freezing within ponds [kg m-2 s-1]
         & pond_melt(:),                   & !< Amount of ice melting within ponds [kg m-2 s-1]
+        & wtr_pond_infl(:),               & !< Amount of water entering ponds [kg m-2 s-1]
+        & wtr_pond_outfl(:),              & !< Amount of water leaving ponds [kg m-2 s-1]
+        & wtr_pond_ovrfl(:),              & !< Amount of water overflowing due to maximum pond storage [kg m-2 s-1]
         & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin, snow and pond reservoirs [kg m-2 s-1]
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
@@ -772,6 +781,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_freeze,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_melt,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_infl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_outfl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_ovrfl,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -85,6 +85,7 @@ CONTAINS
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
+    & wtr_pond_infl, wtr_pond_outfl, wtr_pond_ovrfl,                &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & water_to_soil, evapo_deficit, infilt, runoff)
 
@@ -107,7 +108,8 @@ CONTAINS
       & wtr_pond(:), ice_pond(:)
     REAL(wp), INTENT(out)   ::                                              &
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
-      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
+      & pond_melt(:), wtr_pond_infl(:), wtr_pond_outfl(:), wtr_pond_ovrfl(:), &
+      & evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
       & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
       & infilt(:), runoff(:)
     !$claw end model-data
@@ -400,8 +402,11 @@ CONTAINS
 
     evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
     evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
-    evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
+    evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
+    wtr_pond_infl(:)   = wtr_pond_inflow(:)      * rhoh2o / dtime
+    wtr_pond_outfl(:)  = wtr_pond_outflow(:)     * rhoh2o / dtime
+    wtr_pond_ovrfl(:)  = wtr_pond_overflow(:)    * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
