@@ -81,7 +81,7 @@ CONTAINS
     & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
     & fract_pond_max, fract_snow, fract_skin, fract_pond,           &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil,                     &
+    & weq_rootzone, weq_rootzone_max, weq_soil, soil_sat_deficit,   &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
@@ -102,7 +102,7 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
-      & weq_rootzone_max(:), weq_soil(:)
+      & weq_rootzone_max(:), weq_soil(:), soil_sat_deficit(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -145,8 +145,7 @@ CONTAINS
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
       & weq_pond(nc),             & !< total pond water storage (liquid + ice) [m]
-      & pond_change_pot(nc),      & !< amount of water that could potentially be frozen or thawed [m]
-      & pond_flowlag(nc)            !< Lateral water flow lag for ponds [timesteps]
+      & pond_change_pot(nc)         !< amount of water that could potentially be frozen or thawed [m]
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -154,10 +153,6 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       ! [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
-
-    ! These parameters are used for lateral pond flow in the WEED scheme and could
-    ! become part of the namelist if needed
-    REAL(wp), PARAMETER :: baselag = 200.0_wp * 86400.0 !< Baselag for lateral outflow [s]
 
     !$claw sca
 
@@ -361,15 +356,15 @@ CONTAINS
       ! and infiltration scheme. The following pond flow scheme is based on the WEED
       ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
       ! with the ARNO runoff scheme.
-
-      ! Compute pond outflow lag based on a base lag of 200 days and the relative steepness
-      ! These parameters could become part of the namelist if needed
-      pond_flowlag(:) = MIN(baselag / dtime, MAX(1.0_wp, &
-        &  (1.0_wp - steepness(:)**(0.25_wp)) * (baselag / dtime)))
-      ! Compute lateral inflow and outflow for ponds
-      wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond_max(:)
-      wtr_pond_outflow(:) = (wtr_pond(:) + wtr_pond_inflow(:)) &
-        &                 / (MAX(0.01_wp, 1._wp - fract_pond(:)) * pond_flowlag(:))
+      !
+      ! Compute lateral inflow into ponds, expected to originate
+      ! from the whole grid cell and flow towards the depressions.
+      wtr_pond_inflow(:)  = water_to_soil(:)
+      ! As ponds form in depressions, no lateral outflow is assumed but
+      ! rather infiltration into the soil. As only part of the cell is covered
+      ! by ponds, the saturation deficit is scaled accordingly.
+      wtr_pond_outflow(:) = MIN(wtr_pond(:) + wtr_pond_inflow(:), &
+        & soil_sat_deficit(:) * fract_pond(:))
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
 
@@ -556,7 +551,8 @@ CONTAINS
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
     & fract_pond_max, evapotrans_soil, transpiration,                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, evapo_deficit,   &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_outfl,                &
+    & tpe_overflow, evapo_deficit,                                                       &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
       drain_lat, wtr_soilhyd_res                                                         &
@@ -581,7 +577,7 @@ CONTAINS
       & lat, lon,                                       &
       & fract_pond_max, evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_outfl
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -691,6 +687,8 @@ CONTAINS
     WHERE (fract_pond_max(:) > EPSILON(1._wp))
       ! Infiltration overflow goes into ponds water storage
       wtr_pond(:) = wtr_pond(:) + infilt_over(:)
+      ! Pond outflow diagnostic needs to be reduced accordingly
+      wtr_pond_outfl(:) = MAX(0._wp, wtr_pond_outfl(:) - (infilt_over(:) * rhoh2o / dtime))
     ELSEWHERE
       ! Infitration overflow goes into surface runoff
       runoff(:)    = runoff(:) + infilt_over(:)

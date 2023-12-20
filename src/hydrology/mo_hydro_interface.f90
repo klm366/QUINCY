@@ -448,12 +448,15 @@ CONTAINS
       & weq_soil,           &
       & trans_tmp
 
+    REAL(wp), ALLOCATABLE :: soil_sat_deficit(:,:)          ! fraction of the soil with connected organic pathways
+
     LOGICAL  :: lstart
     LOGICAL  :: ltpe_closed
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, nsoil
     REAL(wp) :: dtime, w_skin_max_config
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
@@ -468,6 +471,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    soil_w => Get_vgrid('soil_depth_water')
+    nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -629,6 +634,7 @@ CONTAINS
       END IF
     ELSE
       ! Compute actual and maximum total rootzone moisture as well as the total water amount in the soil (liquid + ice)
+      ! and free pore space in the uppermost soil layer
       CALL get_amount_in_rootzone( &
         &  dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl),    &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
@@ -639,6 +645,10 @@ CONTAINS
         &  weq_rootzone_max)
       weq_soil(:) = SUM(dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) &
         &             + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl), dim=2)
+      ALLOCATE(soil_sat_deficit(nc,nsoil))
+      soil_sat_deficit(:,:) = MAX(0._wp, &
+        &   (dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl)) &
+        & - (dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl)     + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl)  ))
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
         trans_tmp(:) = transpiration(:)
@@ -677,6 +687,7 @@ CONTAINS
         & weq_rootzone(:),                & !< total rootzone water content [m]
         & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
         & weq_soil(:),                    & !< total column soil moisture [m]
+        & soil_sat_deficit(:,1),          & !< Saturation deficit of the uppermost soil layer [m]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
@@ -710,6 +721,8 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_10 tile_name=tile%name
         snow_soil_dens(:) = 330._wp
       END IF
+
+      DEALLOCATE(soil_sat_deficit)
 
     END IF
 
@@ -1144,6 +1157,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_outfl    ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
@@ -1206,6 +1220,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_outfl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
