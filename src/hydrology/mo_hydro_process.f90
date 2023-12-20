@@ -153,6 +153,7 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       ! [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
+    REAL(wp), PARAMETER :: k_sat_clay=8.50E-8_wp ! saturated hydraulic conductivity for clay (Terra model) [m s-1]
 
     !$claw sca
 
@@ -361,10 +362,17 @@ CONTAINS
       ! from the whole grid cell and flow towards the depressions.
       wtr_pond_inflow(:)  = water_to_soil(:)
       ! As ponds form in depressions, no lateral outflow is assumed but
-      ! rather infiltration into the soil. As only part of the cell is covered
-      ! by ponds, the saturation deficit is scaled accordingly.
-      wtr_pond_outflow(:) = MIN(wtr_pond(:) + wtr_pond_inflow(:), &
-        & soil_sat_deficit(:) * fract_pond(:))
+      ! rather infiltration into the soil. Here we use several assumptions:
+      ! - as only part of the cell is covered by ponds, the saturation deficit is scaled accordingly.
+      ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
+      !   limitation
+      ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
+      WHERE(ice_pond(:) > 0._wp)
+        wtr_pond_outflow(:) = 0._wp
+      ELSEWHERE
+        wtr_pond_outflow(:) = MIN(wtr_pond(:) + 0.5_wp * wtr_pond_inflow(:), &
+          & MIN(k_sat_clay * dtime, soil_sat_deficit(:)) * fract_pond(:)**2)
+      ENDWHERE
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
 
