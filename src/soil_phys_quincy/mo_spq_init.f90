@@ -22,6 +22,7 @@ MODULE mo_spq_init
   USE mo_exception,               ONLY: message_text, finish, message
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
+  USE mo_jsb_process_class,       ONLY: SPQ_, VEG_
 
 #ifdef __QUINCY_STANDALONE__
   USE mo_qs_process_init_util,    ONLY: init_spq_soil_properties_spp1685_sites
@@ -31,20 +32,54 @@ MODULE mo_spq_init
   PRIVATE
   PUBLIC :: spq_init
 
+  TYPE t_spq_init_vars
+    REAL(wp), POINTER ::                &
+      & soil_sand               (:,:) => NULL(), &
+      & soil_silt               (:,:) => NULL(), &
+      & soil_clay               (:,:) => NULL(), &
+      & soil_sat_water_content  (:,:) => NULL(), &
+      & soil_bulk_density       (:,:) => NULL()
+  END TYPE t_spq_init_vars
+
+  TYPE(t_spq_init_vars) :: spq_init_vars
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_init'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !>Intialize SPQ_ process
+  !> Intialize SPQ_ process
   !>
   SUBROUTINE spq_init(tile)
+
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':spq_init'
+
+    ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL spq_read_init_vars(tile)
+    END IF
+
+    CALL spq_init_ic_bc(tile)
+
+    IF (tile%Is_last_process_tile(SPQ_)) THEN
+      CALL spq_finalize_init_vars()
+    END IF
+
+  END SUBROUTINE spq_init
+
+  ! ======================================================================================================= !
+  !> Intialize SPQ_ process from ic and bc input files
+  !>
+  SUBROUTINE spq_init_ic_bc(tile)
     USE mo_jsb_class,              ONLY: Get_model
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_quincy_model_config,    ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
-    USE mo_jsb_process_class,      ONLY: SPQ_, VEG_
     USE mo_jsb_grid_class,         ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_grid, Get_vgrid
     USE mo_util,                   ONLY: soil_depth_to_layers_2d
@@ -81,7 +116,7 @@ CONTAINS
     CHARACTER(len=3)                        :: site_ID_spp1685
     INTEGER                                 :: isoil, ic, iblk
     INTEGER                                 :: nproma, nblks
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':spq_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':spq_init_ic_bc'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_config(VEG_)
@@ -197,7 +232,7 @@ CONTAINS
     !>0.9 snow init
     !>
     t_snow_snl(:,:,:) = Tzero 
-    
+
     !>1.0 Total soil depth until bedrock
     !>
     ! QUINCY soil_depth for one site (read from namelist)
@@ -254,12 +289,12 @@ CONTAINS
     
     !>  4.1 init with one site-specific value for all soil layers
     !>
-    bulk_dens_sl(:,:,:)   = dsl4jsb_Config(SPQ_)%bulk_density 
+    bulk_dens_sl(:,:,:)   = SPREAD(spq_init_vars%soil_bulk_density(:,:), DIM = 2, ncopies = nsoil_sb)
     heat_capa_sl(:,:,:)   = soil_heat_cap
     therm_cond_sl(:,:,:)  = soil_therm_cond
-    sand_sl(:,:,:)        = dsl4jsb_Config(SPQ_)%soil_sand
-    silt_sl(:,:,:)        = dsl4jsb_Config(SPQ_)%soil_silt
-    clay_sl(:,:,:)        = dsl4jsb_Config(SPQ_)%soil_clay
+    sand_sl(:,:,:)        = SPREAD(spq_init_vars%soil_sand(:,:), DIM = 2, ncopies = nsoil_sb)
+    silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_sb)
+    clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_sb)
     volume_min_sl(:,:,:)  = 1._wp
     t_soil_sl(:,:,:)      = 273.15_wp
     t_srf_old(:,:)        = 273.15_wp
@@ -291,7 +326,7 @@ CONTAINS
     !
     ! for more details see ticket #560
     !  
-    ! using the modified *_spq_init_sl soil texture for "saxton functions here in spq_init" only
+    ! using the modified *_spq_init_sl soil texture for "saxton functions here in spq_init_ic_bc" only
     sand_spq_init_sl(:,:,:) = sand_sl(:,:,:)
     clay_spq_init_sl(:,:,:) = clay_sl(:,:,:)
     silt_spq_init_sl(:,:,:) = silt_sl(:,:,:)
@@ -356,14 +391,14 @@ CONTAINS
       DO isoil = 1,nsoil_sb
         hlp1(:, isoil, iblk) = soil_lay_width_sl(:, isoil, iblk) * (theta_fc_sl(:, isoil, iblk) - theta_pwp_sl(:, isoil, iblk))
         soil_awc(:, iblk) = soil_awc(:, iblk) + hlp1(:, isoil, iblk)
-        WHERE (soil_awc(:, iblk) < (dsl4jsb_Config(SPQ_)%soil_awc_prescribe / 1000._wp)) 
+        WHERE (soil_awc(:, iblk) < (spq_init_vars%soil_sat_water_content(:, iblk) / 1000._wp)) 
           root_depth(:, iblk)      = root_depth(:, iblk) + soil_lay_width_sl(:, isoil, iblk)
           w_soil_root_pwp(:, iblk) = w_soil_root_pwp(:, iblk) + theta_pwp_sl(:, isoil, iblk) &
             &                        * soil_lay_width_sl(:, isoil, iblk)
           w_soil_root_fc(:, iblk)  = w_soil_root_fc(:, iblk) + theta_fc_sl(:, isoil, iblk) &
             &                        * soil_lay_width_sl(:, isoil, iblk)
         ELSEWHERE
-          hlp2(:, iblk)            = MAX(0._wp, dsl4jsb_Config(SPQ_)%soil_awc_prescribe &
+          hlp2(:, iblk)            = MAX(0._wp, spq_init_vars%soil_sat_water_content(:, iblk) &
             &                        / 1000._wp - soil_awc(:, iblk) + hlp1(:, isoil, iblk))
           root_depth(:, iblk)      = root_depth(:, iblk) + hlp2(:, iblk) &
             &                        / (theta_fc_sl(:, isoil, iblk) - theta_pwp_sl(:, isoil, iblk))
@@ -383,9 +418,9 @@ CONTAINS
     !>
     w_soil_root_theta(:,:)  = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
     w_soil_root(:,:)        = w_soil_root_pwp(:,:) &
-      &                     + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:)) 
+      &                     + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
     w_soil_root_pot(:,:)    = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:, 1, :) 
-
+    
     !>  6.3 root fraction
     !>    root_fraction_sl(:,:,:) is a variable of veg_mem and depends on the init of root_depth(:,:), see section 6.0
     !>
@@ -485,14 +520,131 @@ CONTAINS
     DEALLOCATE(clay_spq_init_sl)
     DEALLOCATE(silt_spq_init_sl)
 
-  END SUBROUTINE spq_init
+  END SUBROUTINE spq_init_ic_bc
+
+  ! ======================================================================================================= !
+  !> de-allocate SPQ_ init vars
+  !>
+  SUBROUTINE spq_finalize_init_vars
+    DEALLOCATE( &
+      & spq_init_vars%soil_sand, &
+      & spq_init_vars%soil_silt, &
+      & spq_init_vars%soil_clay, &
+      & spq_init_vars%soil_sat_water_content, &
+      & spq_init_vars%soil_bulk_density)
+  END SUBROUTINE spq_finalize_init_vars
+
+  ! ======================================================================================================= !
+  !> read SPQ_ init vars from input file
+  !>
+  SUBROUTINE spq_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(SPQ_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SPQ_)
+
+    REAL(wp), POINTER           :: ptr_2D(:, :)
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_input_file)          :: input_file
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':spq_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE( &
+      & spq_init_vars%soil_sand               (nproma, nblks),       &
+      & spq_init_vars%soil_silt               (nproma, nblks),       &
+      & spq_init_vars%soil_clay               (nproma, nblks),       &
+      & spq_init_vars%soil_sat_water_content  (nproma, nblks),       &
+      & spq_init_vars%soil_bulk_density       (nproma, nblks)        &
+      & )
+
+    spq_init_vars%soil_sand              (:,:) = missval
+    spq_init_vars%soil_silt              (:,:) = missval
+    spq_init_vars%soil_clay              (:,:) = missval
+    spq_init_vars%soil_sat_water_content (:,:) = missval
+    spq_init_vars%soil_bulk_density      (:,:) = missval
+
+    dsl4jsb_Get_config(SPQ_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SPQ_)%bc_quincy_soil_filename), model%grid_id)
+
+
+    !> sand
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='SNDPPT',    &
+      & fill_array = spq_init_vars%soil_sand)
+    ! convert from % to [0,1]
+    spq_init_vars%soil_sand(:,:) = spq_init_vars%soil_sand(:,:) / 100.0_wp
+    spq_init_vars%soil_sand(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.3_wp, ptr_2D > 0.0_wp))
+
+    !> silt
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='SLTPPT',    &
+      & fill_array = spq_init_vars%soil_silt)
+    ! convert from % to [0,1]
+    spq_init_vars%soil_silt(:,:) = spq_init_vars%soil_silt(:,:) / 100.0_wp
+    spq_init_vars%soil_silt(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.4_wp, ptr_2D > 0.0_wp))
+
+    !> clay
+    !>
+    spq_init_vars%soil_clay(:,:) = MIN(1.0_wp, 1.0_wp - spq_init_vars%soil_sand(:,:) + spq_init_vars%soil_silt(:,:))
+
+    !> bulk density
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='BLDFIE',    &
+      & fill_array = spq_init_vars%soil_bulk_density)
+    spq_init_vars%soil_bulk_density(:,:) = MERGE(ptr_2D, 1000.0_wp, ptr_2D > 0.0_wp)
+
+    !> saturated water content (awc)
+    !>
+    ! values in bc file are negative, but need to be positive
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='AWCtS',     &
+      & fill_array = spq_init_vars%soil_sat_water_content)
+    ! multiply with -1 to get positive values
+    spq_init_vars%soil_sat_water_content(:,:) = -1.0_wp * spq_init_vars%soil_sat_water_content(:,:)
+    ! replace values larger than 2000 with 300
+    ! that would cover missing values (e.g. grid cells over ocean with value 9999, after multiplication with -1)
+    spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 300.0_wp, ptr_2D < 2000.0_wp)
+    ! replace values larger than 800 with 800
+    spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 800.0_wp, ptr_2D < 800.0_wp)
+    ! replace values less than 10 with 10
+    spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 10.0_wp, ptr_2D > 10.0_wp)
+
+    CALL input_file%Close()
+  END SUBROUTINE spq_read_init_vars
 
   ! ======================================================================================================= !
   !>ensure a certain minimum proportion for sand, clay and silt
   !> 
   !> Saxton equations with too small soil-texture fractions may lead to unrealistic percolation rates and soil water potentials
   !>
-  !> using these modified soil texture for "saxton functions in spq_init" only
+  !> using these modified soil texture for "saxton functions in spq_init_ic_bc" only
   !>
   SUBROUTINE calc_soil_texture_saxton_compatible( &
     & nproma, &
@@ -600,7 +752,9 @@ CONTAINS
     clay_sl(:,:) = clay_sl(:,:) - (sand_sl(:,:) + silt_sl(:,:))
 
     !>  1.2 output any changes in soil texture to stdout or log
+    !>      only for QS QUINCY standalone
     !>
+#ifdef __QUINCY_STANDALONE__
     IF (ABS(SUM(sand_sl(:,:) - sand_original_sl(:,:))) > eps8) THEN
       CALL message(TRIM(routine), ' Modified the soil texture sand input for saxton calculation.')
       print*,TRIM(routine), " Modified the soil texture sand input for saxton calculation: ", sand_sl(:,:) - sand_original_sl(:,:)
@@ -613,6 +767,7 @@ CONTAINS
       CALL message(TRIM(routine), ' Modified the soil texture silt input for saxton calculation.')
       print*,TRIM(routine), " Modified the soil texture silt input for saxton calculation: ", silt_sl(:,:) - silt_original_sl(:,:)
     ENDIF
+#endif
   END SUBROUTINE calc_soil_texture_saxton_compatible
 
 #endif

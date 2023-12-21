@@ -75,6 +75,8 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
     
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -120,7 +122,9 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=filename_max) :: ic_filename
+    CHARACTER(len=filename_max) :: bc_filename
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
@@ -153,6 +157,7 @@ CONTAINS
                       active                    , &
                       ic_filename               , &
                       bc_filename               , &
+                      bc_quincy_soil_filename   , &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
@@ -186,6 +191,7 @@ CONTAINS
     active                      = .TRUE.
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
+    bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
@@ -203,7 +209,7 @@ CONTAINS
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     soil_ph                     = 6.5_wp 
-    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?!
+    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
     soil_p_labile               = 50._wp
     soil_p_slow                 = 70._wp
     soil_p_occluded             = 150._wp
@@ -220,13 +226,13 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_sb_nml)
 #endif
 
-    config%active                    = active
-    config%ic_filename               = ic_filename
-    config%bc_filename               = bc_filename
-
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
+    config%active                          = active
+    config%ic_filename                     = ic_filename
+    config%bc_filename                     = bc_filename
+    config%bc_quincy_soil_filename         = bc_quincy_soil_filename
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)

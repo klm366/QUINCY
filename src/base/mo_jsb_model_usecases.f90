@@ -595,16 +595,17 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
+    !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   Q_PHENO_,   VEG_,      SB_,       SPQ_/), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-      & fract_varname='fract_veg')
+      & fract_varname='equal')
 
     ! create PFT tiles 1:npft
     DO i = 1,npft
-      ! via contructor of t_jsb_tile
+      ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
        &                     TRIM(pft_longnames(i)), &
        &                     lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
@@ -711,16 +712,17 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
+    !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   Q_PHENO_,   VEG_,      SB_,       SPQ_/), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-      & fract_varname='fract_veg')
+      & fract_varname='equal')
 
     ! create PFT tiles 1:npft
     DO i = 1,npft
-      ! via contructor of t_jsb_tile
+      ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
        &                     TRIM(pft_longnames(i)), &
        &                     lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
