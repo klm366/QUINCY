@@ -46,7 +46,8 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)                    :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)                    :: bulk_density   
-    CHARACTER(len=filename_max) :: bc_sso_filename      !< For elevation and oro_stddev 
+    CHARACTER(len=filename_max) :: bc_sso_filename          !< elevation and oro_stddev 
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
@@ -106,6 +107,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_sso_filename
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
     INTEGER                     :: nsnow
@@ -124,6 +126,7 @@ CONTAINS
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
+                          bc_quincy_soil_filename , &
                           flag_snow               , &
                           nsoil_energy            , &
                           nsoil_water             , &
@@ -159,6 +162,7 @@ CONTAINS
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
+    bc_quincy_soil_filename       = 'bc_quincy_soil.nc'
     flag_snow                     = .TRUE.
     nsoil_energy                  = 15
     nsoil_water                   = 15
@@ -238,6 +242,7 @@ CONTAINS
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename
+    config%bc_quincy_soil_filename   = bc_quincy_soil_filename
     config%flag_snow                 = flag_snow
     config%nsoil_energy              = nsoil_energy     ! depreciated feature, but needed for now, see ticket #521
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
