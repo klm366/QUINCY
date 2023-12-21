@@ -989,6 +989,13 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    CHARACTER(NF_MAX_NAME) :: forcing_dep_file_prefix          !! Prefix for files with NHx, NOy and P deposition data
+    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
+    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
+    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
+    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
+    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -1441,9 +1448,10 @@ CONTAINS
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
-    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_)  .AND. (frequency /= SUBDAILY_)) &
-      &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
-      &  'daily, subdaily or timestep frequency, please check program flow')
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
+        &  'daily, subdaily or timestep frequency, please check program flow.')
+    ENDIF
 
     ! TODO: test in case of lresume
 
