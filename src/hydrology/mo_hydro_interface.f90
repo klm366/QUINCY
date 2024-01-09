@@ -382,7 +382,7 @@ CONTAINS
   SUBROUTINE update_surface_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: dens_snow
+    USE mo_jsb_physical_constants, ONLY: dens_snow, rhoh2o
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -501,7 +501,7 @@ CONTAINS
         drainage(ic) = 0._wp
         w_snow(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
-        water_to_parflow(ic) = runoff(ic)
+        water_to_parflow(ic) = runoff(ic) / rhoh2o ! kg m-2 s-1 -> m/s
       END DO
       !$ACC END PARALLEL LOOP
       IF (model%config%use_tmx) THEN
@@ -604,7 +604,7 @@ CONTAINS
         drainage(ic) = 0._wp
         w_snow_soil(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
-        water_to_parflow(ic) = runoff(ic)
+        water_to_parflow(ic) = runoff(ic) / rhoh2o ! kg m-2 s-1 -> m/s
         IF (l_compat401_config) THEN
           snow_soil_dens(ic) = 330._wp
         ELSE
@@ -665,9 +665,12 @@ CONTAINS
         & evapo_skin(:),                 & !< out
         & evapo_snow(:),                 & !< out
         & water_excess(:),               & !< out
-        & evapo_deficit(:),              & !< out
-        & water_to_parflow(:)            & !< out
+        & evapo_deficit(:)               & !< out
         & )
+
+      DO ic=1,nc
+        water_to_parflow(ic) = water_excess(ic) / dtime ! m -> m/s
+      END DO
 
       IF (l_compat401_config) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
@@ -943,6 +946,8 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_interface_parflow,      ONLY: lyac_very_1st_get, is_valid_parflow, parflow_buffer
+    USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -956,6 +961,7 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
@@ -975,6 +981,8 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil, is
     REAL(wp), POINTER :: dz(:)
+    LOGICAL, POINTER :: is_valid_onChunk(:)
+    REAL(wp), POINTER :: parflow_buffer_onChunk(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1001,6 +1009,8 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
     dz => soil_w%dz(:)
+    IF (ALLOCATED(is_valid_parflow)) is_valid_onChunk => is_valid_parflow(ics:ice, iblk)
+    IF (ALLOCATED(parflow_buffer)) parflow_buffer_onChunk => parflow_buffer(ics:ice, :, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1017,6 +1027,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -1058,7 +1069,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
+      &                                w_soil_sl     (:,:), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_ice_sl          ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
       ! out
@@ -1067,8 +1078,26 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, ws_negative       ) &
+      & dsl4jsb_var2D_onChunk (HYDRO_, ws_negative       ), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow) &
       & )
+
+    ! If running with ParFlow, copy the values from the ParFlow buffer
+    ! (but only within the ParFlow coverage)
+    ! and do not overwrite soil water with zeros at the first time step
+    IF (ALLOCATED(is_valid_parflow) .AND. .NOT. lyac_very_1st_get) THEN
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (is_valid_onChunk(ic)) THEN
+            w_soil_sl(ic,is) = parflow_buffer_onChunk(ic,is)
+          END IF
+        END DO
+      END DO
+    END IF
+
+    ! Recalculate w_soil_column
+    CALL get_water_in_root_zone(w_soil_sl(:,:), dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column))
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
     DO ic = 1, nc
@@ -1132,6 +1161,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ws_negative,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_to_parflow, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

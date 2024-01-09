@@ -65,7 +65,7 @@ MODULE mo_hydro_memory_class
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain,       & !< internal drain
-      & water_to_parflow        !< water to Parflow
+      & water_to_parflow        !< water to Parflow    
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
@@ -125,8 +125,9 @@ MODULE mo_hydro_memory_class
       & w_soil_sat_sl,        & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
       & w_soil_fc_sl,         & !< Water content of soil layers at field capacity
                                 !! (derived from volumetric field capacity)                                 [m]
-      & w_soil_pwp_sl           !< Water content of soil layers at permanent wilting point
+      & w_soil_pwp_sl,        & !< Water content of soil layers at permanent wilting point
                                 !! (derived from vol. perm wilt point)                                      [m]
+      & evapotrans_to_parflow   !< Evapotranspiration to Parflow                                            [m/s]
 
     ! Additional variables for PFT lct_type
 
@@ -351,9 +352,18 @@ CONTAINS
 
     CALL mem%Add_var( 'water_to_parflow', mem%water_to_parflow,              &
       & hgrid, surface,                                                      &
-      & t_cf('water_to_parflow', 'kg m-2 s-1', 'water_to_parflow'),          &
+      & t_cf('water_to_parflow', 'm s-1', 'water to parflow'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & loutput=.TRUE.,                                                      &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'evapotrans_to_parflow', mem%evapotrans_to_parflow,     &
+      & hgrid, soil_w,                                                        &
+      & t_cf('evapotrans_to_parflow', 'm s-1', 'evapotrans to parflow'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'water_flux', mem%water_flux,                                  &

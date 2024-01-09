@@ -1,10 +1,10 @@
 !>
-!! @brief Interface between HD and the ocean, through a coupler
+!! @brief Interface between JSBACH hydrology and ParFlow using YAC
 !!
-!! @author Veronika Gayler (MPI-M)
+!! @author Jan Weinkaemmerer (FZ Juelich)
 !!
 !! @par Revision History
-!! First version by Veronika Gayler (2013-06-29)
+!! 
 
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -20,8 +20,8 @@ MODULE mo_interface_parflow
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-  USE mo_jsb_grid,            ONLY: Get_grid
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
 #ifdef YAC_coupling
   USE mo_model_domain,        ONLY: t_patch
   USE mo_mpi,                 ONLY: p_pe_work, p_comm_work, p_sum
@@ -33,7 +33,7 @@ MODULE mo_interface_parflow
        &                            yac_fdef_points, yac_fset_global_index, &
        &                            yac_fset_core_mask, yac_fdef_mask,      &
        &                            yac_fdef_field_mask, yac_fenddef,       &
-       &                            yac_fput, &
+       &                            yac_fput, yac_fget, &
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
@@ -56,14 +56,20 @@ MODULE mo_interface_parflow
   PUBLIC :: construct_parflow_coupling
 #endif
   PUBLIC :: interface_parflow
-  PUBLIC :: nbr_inner_cells, mask_checksum, yac_water_to_parflow_field_id
+  PUBLIC :: lyac_very_1st_get, nbr_inner_cells, mask_checksum, field_id, &
+       & is_valid_parflow, parflow_buffer
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_parflow'
 
-  INTEGER :: yac_water_to_parflow_field_id
+  INTEGER :: no_of_fields = 2
+
+  INTEGER, ALLOCATABLE :: field_id(:)
+  LOGICAL, ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
+  REAL(wp), ALLOCATABLE, TARGET :: parflow_buffer(:,:,:)
 
   INTEGER, SAVE :: nbr_inner_cells
   INTEGER, SAVE :: mask_checksum = -1
+  LOGICAL, SAVE :: lyac_very_1st_get = .TRUE.
 
 CONTAINS
 
@@ -72,15 +78,16 @@ CONTAINS
 
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
-    USE mo_jsb_grid_class,     ONLY: t_jsb_grid
-    USE mo_jsb_grid,           ONLY: Get_grid
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
 
     INTEGER, INTENT(in) :: model_id
     
     ! Local variables
 
-    TYPE(t_jsb_grid),  POINTER    :: grid
     TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER    :: grid
+    TYPE(t_jsb_vgrid), POINTER    :: soil_w
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
@@ -97,6 +104,7 @@ CONTAINS
     INTEGER :: cell_mask_ids(1)
     INTEGER :: jb, jc, nn
     INTEGER :: nblks
+    INTEGER :: nsoil
     INTEGER :: nbr_vertices_per_cell
 
     REAL(wp), ALLOCATABLE :: buffer_lon(:)
@@ -113,6 +121,9 @@ CONTAINS
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: stopdatestring
     CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
+    CHARACTER(len=40), ALLOCATABLE :: field_name(:)
+    INTEGER :: collection_size(no_of_fields)
+
     dsl4jsb_Def_config(HYDRO_)
 
     model => Get_model(model_id)
@@ -123,6 +134,9 @@ CONTAINS
     CALL model%Get_top_tile(tile)
 
     grid => Get_grid(model%grid_id)
+
+    soil_w => Get_vgrid('soil_depth_water')
+    nsoil = soil_w%n_levels
 
     ! YAC initialization steps
 
@@ -225,6 +239,7 @@ CONTAINS
       & grid_id )
 
     ALLOCATE(is_valid(nproma*patch_horz%nblks_c))
+    ALLOCATE(is_valid_parflow(nproma,patch_horz%nblks_c))
 
     nbr_inner_cells = 0
 !ICON_OMP_PARALLEL_DO PRIVATE(jc) REDUCTION(+:nbr_inner_cells) ICON_OMP_RUNTIME_SCHEDULE
@@ -242,6 +257,16 @@ CONTAINS
       & is_valid,             &
       & YAC_LOCATION_CELL,    &
       & grid_id )
+
+    ALLOCATE(field_name(no_of_fields))
+    ALLOCATE(field_id(no_of_fields))
+    ALLOCATE(parflow_buffer(nproma,nsoil,patch_horz%nblks_c))
+
+    field_name(1)             = "water_to_parflow"
+    collection_size(1)        = nsoil
+
+    field_name(2)             = "soil_water"
+    collection_size(2)        = nsoil
 
     ! Define the mask for YAC
 
@@ -280,14 +305,17 @@ CONTAINS
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
 
-              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
-                & .OR. ABS( grid%lat(jc,jb) ) .GT. model%config%parflow_lat) THEN
+              !IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
+              !  & .OR. ABS( grid%lat(jc,jb) ) .GT. model%config%parflow_lat ) THEN
+              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) ) THEN
                 ! ocean point (fraction of ocean is >0., lsmnolake .lt. 1.) is valid
                 ! or grid point outside the Parflow latitude belt
                 is_valid((jb-1)*nproma+jc) = .FALSE.
+                is_valid_parflow(jc,jb) = .FALSE.
               ELSE
                 ! land point (fraction of land is one, no sea water, lsmnolake=1.) is undef
                 is_valid((jb-1)*nproma+jc) = .TRUE.
+                is_valid_parflow(jc,jb) = .TRUE.
               ENDIF
 
             ENDDO
@@ -295,8 +323,11 @@ CONTAINS
           !ICON_OMP_END_PARALLEL_DO
         ELSE
           !ICON_OMP_PARALLEL_DO PRIVATE(jb, jc, nn) ICON_OMP_RUNTIME_SCHEDULE
-          DO jc = 1, patch_horz%nblks_c * nproma
-            is_valid(jc) = .FALSE.
+          DO jb = 1, patch_horz%nblks_c
+            DO jc = 1, nproma
+              is_valid((jb-1)*nproma+jc) = .FALSE.
+              is_valid_parflow(jc,jb) = .FALSE.
+            ENDDO
           ENDDO
           !ICON_OMP_END_PARALLEL_DO
         ENDIF
@@ -307,6 +338,13 @@ CONTAINS
 
     END SELECT
 
+    ! DO jb = 1, patch_horz%nblks_c
+    !   DO jc = 1, nproma
+    !     is_valid((jb-1)*nproma+jc) = .TRUE.
+    !     is_valid_parflow(jc,jb) = .TRUE.
+    !   ENDDO
+    ! ENDDO
+
     CALL yac_fdef_mask (          &
       & grid_id,                  &
       & patch_horz%n_patch_cells, &
@@ -314,18 +352,20 @@ CONTAINS
       & is_valid,                 &
       & cell_mask_ids(1) )
 
-    CALL yac_fsync_def()
+    CALL yac_fsync_def ()
 
-    CALL yac_fdef_field_mask ( &
-      & 'water_to_parflow',    &
-      & comp_id,               &
-      & cell_point_ids,        &
-      & cell_mask_ids(1),      &
-      & 1,                     &
-      & 1,                     &
-      & modelTimeStep,         &
-      & YAC_TIME_UNIT_ISO_FORMAT, &
-      & yac_water_to_parflow_field_id )
+    DO jc = 1, no_of_fields
+      CALL yac_fdef_field_mask (       &
+        & TRIM(field_name(jc)),        &
+        & comp_id,                     &
+        & cell_point_ids,              &
+        & cell_mask_ids(1),            & 
+        & 1,                           &
+        & collection_size(jc),         &
+        & modelTimeStep,               &
+        & YAC_TIME_UNIT_ISO_FORMAT,    &
+        & field_id(jc) )
+    ENDDO
 
     ! End of YAC initialization steps
 
@@ -335,7 +375,7 @@ CONTAINS
 
     ! End definition of coupling fields and search
 
-    CALL yac_fenddef ( )
+    CALL yac_fenddef ()
 
   END SUBROUTINE construct_parflow_coupling
 #endif
@@ -347,26 +387,27 @@ CONTAINS
 
     ! Local variables
 
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*),  PARAMETER :: routine = modname//':interface_parflow'
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: water_to_parflow
+    dsl4jsb_Real3D_onDomain :: evapotrans_to_parflow
 
     ! Local variables
 
     LOGICAL               :: write_coupler_restart
     INTEGER               :: nbr_hor_cells
     REAL(wp), ALLOCATABLE :: buffer(:,:)
-    INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
     INTEGER               :: iblk, n, nn !, nlen
+    INTEGER               :: nsoil, is
 
     n = options%nc ! only to avoid compiler warnings
 
@@ -380,17 +421,21 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
+    soil_w => Get_vgrid('soil_depth_water')
+    nsoil = soil_w%n_levels
+
     ! Get reference to variables in memory
     dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, water_to_parflow) ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, water_to_parflow)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, evapotrans_to_parflow)
 
     ! Send water_to_parflow
     ! --------------------
 
     write_coupler_restart = .FALSE.
 
-    ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
+    ALLOCATE(buffer(grid%nproma * grid%nblks, nsoil))
     buffer(:,:) = 0.0_wp
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
@@ -400,22 +445,49 @@ CONTAINS
       !  nlen = grid%npromz
       !END IF
       DO n = 1, grid%nproma
-        buffer(nn+n,1) = water_to_parflow(n,iblk)
+        buffer(nn+n,1) = water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk)
+      END DO
+    END DO
+    DO is = 2, nsoil
+      DO iblk = 1, grid%nblks
+        nn = (iblk - 1) * grid%nproma
+        DO n = 1, grid%nproma
+          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk)
+        END DO
       END DO
     END DO
 
     nbr_hor_cells = grid%ntotal
-    collection_size = 1
-    nbr_pointsets   = 1
-    nbr_subdomains  = 1
 #ifdef YAC_coupling
-    CALL yac_fput(yac_water_to_parflow_field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
+    CALL yac_fput(field_id(1), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
     IF ( info == YAC_ACTION_PUT_FOR_RESTART ) write_coupler_restart = .TRUE.
 #endif
 
     IF ( write_coupler_restart ) THEN
        CALL message(TRIM(routine), 'YAC says it is put for restart')
-    ENDIF
+    END IF
+
+    ! Receive soil_water
+    ! --------------------
+
+    buffer(:,:) = 0.0_wp
+
+#ifdef YAC_coupling
+    CALL yac_fget(field_id(2), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
+
+    IF ( info > 0 ) THEN
+      DO is = 1, nsoil
+        DO iblk = 1, grid%nblks
+          nn = (iblk - 1) * grid%nproma
+          DO n = 1, grid%nproma
+            parflow_buffer(n,is,iblk) = buffer(nn+n,is)
+          END DO
+        END DO
+      END DO
+
+      lyac_very_1st_get = .FALSE.
+    END IF
+#endif
 
     DEALLOCATE(buffer)
 

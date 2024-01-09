@@ -95,7 +95,7 @@ CONTAINS
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
     & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
     & q_snocpymlt, snow_accum, snow_melt_soil,                     &
-    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit, water_to_parflow)
+    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -110,7 +110,7 @@ CONTAINS
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out), DIMENSION(:)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
-      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit, water_to_parflow
+      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
     !
     !  local variables
     !
@@ -160,7 +160,6 @@ CONTAINS
       evapo_snow(ic) = 0._wp
       water_to_soil(ic) = 0._wp
       evapo_deficit(ic) = 0._wp
-      water_to_parflow(ic) = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -264,9 +263,6 @@ CONTAINS
       END IF
       evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m  ! Evaporation from ground
 
-      ! Positive and negative values of evaporation and transpiration are added to water_to_parflow
-      water_to_parflow(ic) = water_to_soil(ic) + evapotrans_soil_in_m
-
       ! positive values of evaporation and transpiration (dew) are added to water_to_soil
       ! negative fluxes change soil moisture later in calc_soil_hydrology
       IF (evapo_soil_in_m > 0._wp)    water_to_soil(ic) = water_to_soil(ic) + evapo_soil_in_m
@@ -293,7 +289,6 @@ CONTAINS
       evapotrans_soil(ic) = evapotrans_soil_in_m * rhoh2o / delta_time
       evapo_skin(ic)      = evapo_skin_in_m      * rhoh2o / delta_time
       evapo_snow(ic)      = sfract_srf(ic) * evapopot(ic)
-      water_to_parflow(ic) = water_to_parflow(ic) * rhoh2o / delta_time
 
     END DO
     !$ACC END LOOP
@@ -459,7 +454,7 @@ CONTAINS
     ! inout
     & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
-    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage, ws_negative                                               &
+    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage, ws_negative, evapotrans_to_parflow                        &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -490,7 +485,7 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & ws_negative
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & wsat_l, field_cap_l, p_wilt_l
+      & wsat_l, field_cap_l, p_wilt_l, evapotrans_to_parflow
 
     ! Local variables
     REAL(wp) ::                       &
@@ -511,8 +506,9 @@ CONTAINS
       & ws_incl_ice(nidx),   & ! soil moisture including ice [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
     
-    REAL(wp) ::                    &
-      & vfc_times_sd_l(nidx,nsoil)   ! vol_field_cap_l * soil_depth_l needed to compute ws_max
+    REAL(wp) ::                     &
+      & vfc_times_sd_l(nidx,nsoil), & ! vol_field_cap_l * soil_depth_l needed to compute ws_max
+      & ws_l_last(nidx,nsoil)
 
     INTEGER :: jl, i
 
@@ -643,9 +639,23 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    ! Save the current ws_l
+    DO i = 1, nidx
+      DO jl = 1, nsoil
+        ws_l_last(i,jl) = ws_l(i,jl)
+      END DO
+    END DO
+
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
          field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
+
+    ! Calculate evapotrans_to_parflow
+    DO i = 1, nidx
+      DO jl = 1, nsoil
+        evapotrans_to_parflow(i,jl) = (ws_l(i,jl) - ws_l_last(i,jl)) / delta_time ! m -> m/s
+      END DO
+    END DO
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
@@ -1380,9 +1390,9 @@ CONTAINS
       max2d(:) = MAXLOC(ws_l(:,:) - field_cap_l(:,:))
       WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
          ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL warning ('digest_evapotrans', message_text)
-      ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
+      !CALL finish ('digest_evapotrans', message_text)
+      CALL warning ('digest_evapotrans', message_text)
+      ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
     END IF
 #endif
 
