@@ -878,9 +878,6 @@ CONTAINS
 
     IF (tile%is_lake .OR. tile%is_glacier) RETURN
 
-    !$ACC DATA CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
-    !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
-
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -937,6 +934,10 @@ CONTAINS
       ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways
       ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
       ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
+
+      !$ACC DATA &
+      !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
+      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
 
       ! Use different parameters for top layer and deeper layers
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1013,6 +1014,9 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
+      !$ACC WAIT(1)
+      !$ACC END DATA
+
       DEALLOCATE(hyd_cond_sat_org)
       DEALLOCATE(vol_porosity_org)
       DEALLOCATE(bclapp_org)
@@ -1025,9 +1029,6 @@ CONTAINS
       DEALLOCATE(fract_uncon)
       DEALLOCATE(hyd_cond_sat_uncon)
     END IF
-
-    !$ACC WAIT(1)
-    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
