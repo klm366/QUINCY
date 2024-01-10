@@ -1,12 +1,20 @@
+!> vegetation constants (QUINCY)
 !>
-!! @brief Contains constants for the vegetation process
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (2016-07-21)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### declare and define vegetation constants
+!>
 MODULE mo_veg_constants
 #ifndef __NO_JSBACH__
 

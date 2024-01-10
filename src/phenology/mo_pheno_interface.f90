@@ -1,18 +1,16 @@
+!> Contains the interfaces to the phenlogy processes
 !>
-!! @brief Contains the interfaces to the phenlogy processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added optional functionality: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_process.pp-jsb.f90"
@@ -212,7 +210,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the phenology state
+  !> Implementation to update the phenology state
   !! Task "phenology" calculates the phenology state of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -284,7 +282,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'LOGROP' phenology scheme
+  !> Implementation of 'LOGROP' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -802,7 +800,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'climatology' phenology scheme
+  !> Implementation of 'climatology' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.

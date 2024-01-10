@@ -1,12 +1,20 @@
+!> calculate vegetation respiration (QUINCY)
 !>
-!! @brief Contains the routines for the plant respiration 
-!!
-!! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2016-02-17)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate vegetation maintenance-respiration considering, e.g., temperature and acclimation
+!>
 MODULE mo_veg_respiration
 #ifndef __NO_JSBACH__
 

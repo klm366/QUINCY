@@ -1,30 +1,20 @@
+!> Module to read and convert external forcing data 
 !>
-!! @brief Module to read and convert external forcing data (expects annual files with year in filename)
-!! -- current implementation only for daily, timestep or constant data
-!!    (for using monthly data see e.g. jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133))
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!  This module contains substantial contributions by the Max Planck Institute for Biogeochemistry, Jena.
-!!
-!! @par Revision History
-!  Initial version in JSBACH3 by Christian Reick, Thomas Raddatz (prior to 2010)
-!  Substantial contributions by Gregor Schuermann, Nuno Carvalhais, Soenke Zaehle (2010-2015)
-!! Initial version for JSBACH4 by Julia Nabel (2016-02)
-!!   From jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133) - mo_jsbalone_forcing.f90
-!!   -- adopted most of the options which were provided in the jsbach3 namelist (e.g. different sw-schemes incl. using clouds)
-!!   -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
-!!      several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
-!!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
-!! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- r8893  by Julia Nabel (2017-07)
-!!
-!! Added the compatibility with ICON-A         by Rainer Schneck (2020-01-21)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> expects annual files with year in filename
+!>
+!> current implementation only for daily, timestep or constant data
+!>
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
@@ -199,10 +189,7 @@ MODULE mo_jsb4_forcing
 CONTAINS
 
   !>
-  !! @brief provides the variables required for jsb4 interface calls in this timestep based on (namelist defined) external forcing
-  !!
-  !! @par History
-  !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
+  !> provides the variables required for jsb4 interface calls in this timestep based on (namelist defined) external forcing
   !!
   SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, icz, nblks, &
     & current_datetime, next_datetime, sinlat, coslat, lon, evapo_act2pot_proc,            &
@@ -549,11 +536,7 @@ CONTAINS
 
 
   !>
-  !! @brief init reading forcing data (read namelist, set options...)
-  !!
-  !! @par History
-  !! Copied first version from jsbach3 mo_jsbalone_forcing     by Julia Nabel
-  !! -- after r304: removed all currently not required options
+  !! init reading forcing data (read namelist, set options...)
   !!
   SUBROUTINE init_forcing(model_id, dtime, steplen)
 
@@ -896,10 +879,7 @@ CONTAINS
   END SUBROUTINE init_forcing
 
   !>
-  !! @brief Provides forcing data for const, timestep or daily forcing (reads data from netcdf if required)
-  !!
-  !! @par History
-  !! First version by Julia Nabel (14.01.16)
+  !! Provides forcing data for const, timestep or daily forcing (reads data from netcdf if required)
   !!
   SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
     &                                  forcing_input_variable, current_forcing_array)
@@ -1154,10 +1134,8 @@ CONTAINS
   END SUBROUTINE get_data_and_update_field
 
   !>
-  !! @brief sets given values for input_variable_type fields in forcing_input
+  !! sets given values for input_variable_type fields in forcing_input
   !!
-  !! @par History
-  !! Based on jsbach3 mo_jsbalone_forcing init_variable_access    by Julia Nabel
   SUBROUTINE init_forcing_input_variable(variable_name, forcing_frequ_keyword, forcing_ocean_value, &
     & forcing_file_prefix, expected_unit, constantValue, forcing_input_variable)
 
@@ -1183,10 +1161,7 @@ CONTAINS
   END SUBROUTINE init_forcing_input_variable
 
   !>
-  !! @brief assigns forcing frequency keyword to integer constant
-  !!
-  !! @par History
-  !! Based on jsbach3 mo_jsbalone_forcing init_variable_access by Julia Nabel (2016-01-14)
+  !! assigns forcing frequency keyword to integer constant
   !!
   INTEGER FUNCTION frequency_key_to_constant_val(variable_name, forcing_frequ_keyword)
 
@@ -1218,10 +1193,7 @@ CONTAINS
   END FUNCTION frequency_key_to_constant_val
 
   !>
-  !! @brief gets the length and the content of the time dimension
-  !!
-  !! @par History
-  !! First version by Julia Nabel (2016-02-25)
+  !! gets the length and the content of the time dimension
   !!
   SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
 
@@ -1245,10 +1217,7 @@ CONTAINS
   END SUBROUTINE get_time_dimension
 
   !>
-  !! @brief tests if the read unit equals the expected unit (with some exception tests)
-  !!
-  !! @par History
-  !! First version by Julia Nabel (2016-02-25)
+  !! tests if the read unit equals the expected unit (with some exception tests)
   !!
   !! TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
   !!
@@ -1320,10 +1289,7 @@ CONTAINS
   END SUBROUTINE finalize_external_forcing
 
   !>
-  !! @brief calculates the remaining input required for jsbach4
-  !!
-  !! @par History
-  !! Copied required parts from jsbach3: mo_jsbalone: update_driving and adapted for jsb4   by Julia Nabel
+  !! calculates the remaining input required for jsbach4
   !!
   SUBROUTINE get_remaining_input_for_jsb4_interface(nblks, ice, icz, temp_air, pressure, qair, wind, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
@@ -1449,10 +1415,7 @@ CONTAINS
   END SUBROUTINE get_remaining_input_for_jsb4_interface
 
   !>
-  !! @brief converts daily relative humidity to specific humidity considering the daily course of temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: spec_humidity_from_rel_humidity and adapted for jsb4 input   by Julia Nabel
+  !! converts daily relative humidity to specific humidity considering the daily course of temperature
   !!
   SUBROUTINE spec_humidity_from_rel_humidity(ice, sinlat, coslat, rel_humidity, Tmin, Tmax, elevation, qair)
     ! This subroutine converts daily relative humidity to specific humidity considering the daily course of temperature
@@ -1628,10 +1591,7 @@ CONTAINS
   END SUBROUTINE spec_humidity_from_rel_humidity
 
   !>
-  !! @brief Returns saturation specific humidity for given temperature and pressure
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_atmosphere: sat_specific_humidity    by Julia Nabel (2016)
+  !! Returns saturation specific humidity for given temperature and pressure
   !!
   SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
 
@@ -1662,10 +1622,8 @@ CONTAINS
   END SUBROUTINE sat_specific_humidity
 
   !>
-  !! @brief Returns saturation specific humidity for given air and vapour pressure
+  !! Returns saturation specific humidity for given air and vapour pressure
   !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: specific_humidity    by Julia Nabel
   !
   ! === specific_humidity() =======================================================================================================
   !
@@ -1698,10 +1656,7 @@ CONTAINS
   END FUNCTION fun_specific_humidity
 
   !>
-  !! @brief computes vapor pressure from actual and potential evapotranspiration
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: vapour_pressure_from_evapor    by Julia Nabel
+  !! computes vapor pressure from actual and potential evapotranspiration
   !
   ! === vapour_pressure_from_evapor() =============================================================================================
   !
@@ -1788,10 +1743,7 @@ CONTAINS
 
 
   !>
-  !! @brief sets all not land (i.e. not notsea ;)) cells to the given constant
-  !!
-  !! @par History
-  !! First version    by Julia Nabel (20.01.16)
+  !! sets all not land (i.e. not notsea ;)) cells to the given constant
   !
   !   Some external forcing is only defined for land cells.
   !   If the external forcing is only defined for land cells is specified by the namelist option
@@ -1829,10 +1781,7 @@ CONTAINS
   END SUBROUTINE set_ocean_cells
 
   !>
-  !! @brief estimate timestep temperature from daily min- and max temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: instantly_from_daily_temp_2 and adapted for 2D arrays    by Julia Nabel
+  !! estimate timestep temperature from daily min- and max temperature
   !
   ! --- instantly_from_daily_temp_2() --------------------------------------------------------------------------------------
   !
@@ -1992,10 +1941,7 @@ CONTAINS
   END SUBROUTINE INSTANTLY_FROM_DAILY_TEMP_2
 
   !>
-  !! @brief calculate bottom pressure from air temperature and elevation
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: bottom pressure and only slightly adapted for jsb4 context    by Julia Nabel
+  !! calculate bottom pressure from air temperature and elevation
   !
   ! === bottom pressure() =======================================================================================================
   !
@@ -2038,10 +1984,7 @@ CONTAINS
   END FUNCTION bottom_pressure
 
   !>
-  !! @brief split precipitation in snow and rain depending on mean air temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: snow_and_rain_from_precip    by Julia Nabel
+  !! split precipitation in snow and rain depending on mean air temperature
   !
   ! === snow_and_rain_from_precip() ==============================================================================================
   !
@@ -2072,12 +2015,9 @@ CONTAINS
   END SUBROUTINE snow_and_rain_from_precip
 
   !>
-  !! @brief computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
+  !! computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
   !! ATTENTION: TR: there maybe considerable deviations in the daily sum of insolation if daily data is used and
   !! if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3: mo_jsbalone_forcing: shortwave_from_direct_shortwave (+ comment parts from shortwave_from_fpar_orig)
   !
   ! For timestep data the observed radiation is used directly;
   ! in daily version, the instantaneous flux at noon required to calculate irradiation at any
@@ -2252,10 +2192,7 @@ CONTAINS
   END SUBROUTINE shortwave_from_direct_shortwave
 
   !>
-  !! @brief computes longwave from observed longwave and diural course associated with air temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: longwave_from_daily_longwave    by Julia Nabel
+  !! computes longwave from observed longwave and diural course associated with air temperature
   !
   ! === longwave_from_daily_longwave() ====================================================================================
   !

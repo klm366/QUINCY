@@ -1,13 +1,16 @@
+!> module to determine the phenological state of a plant 
 !>
-!! @brief module to determine the phenological state of a plant 
-!!
-!! @author
-!!  Sönke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2016-04-11)
-!! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 

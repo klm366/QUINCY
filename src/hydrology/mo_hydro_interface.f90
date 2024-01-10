@@ -1,16 +1,16 @@
+!> Contains the interfaces to the hydro processes
 !>
-!! @brief Contains the interfaces to the hydro processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-10-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/hydrology/mo_hydro_process.pp-jsb.f90"
@@ -374,7 +374,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface_hydrology"
+  !> Implementation of "update" for task "surface_hydrology"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -756,7 +756,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "soil_properties"
+  !> Implementation of "update" for task "soil_properties"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -928,7 +928,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "soil_hydrology"
+  !> Implementation of "update" for task "soil_hydrology"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1132,7 +1132,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_unstressed"
+  !> Implementation of "update" for task "canopy_cond_unstressed"
   !! Task "update_canopy_cond_unstressed" calculates canopy conductance without water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1227,7 +1227,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "water_stress"
+  !> Implementation of "update" for task "water_stress"
   !! Task "update_water_stress" calculates water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1420,7 +1420,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !> Implementation of "update" for task "canopy_cond_stressed"
   !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1537,7 +1537,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "evaporation"
+  !> Implementation of "update" for task "evaporation"
   !! Task "update_evaporation" calculates evapo(transpi)ration
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1820,7 +1820,7 @@ CONTAINS
   END SUBROUTINE aggregate_evaporation
   !
   !>
-  !! @brief Implementation of "update" for task "snow_and_ice_hydrology"
+  !> Implementation of "update" for task "snow_and_ice_hydrology"
   !! Task "update_snow_hydrology" calculates the new snow depth and fraction
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1876,7 +1876,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
-  !! @brief Implementation of "update" for task "snow_and_skin_fraction"
+  !> Implementation of "update" for task "snow_and_skin_fraction"
   !! Task "update_snow_and_skin_fraction" calculates the new snow and wet skin fractions
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
