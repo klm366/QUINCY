@@ -118,6 +118,7 @@ MODULE mo_hydro_memory_class
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
       & evapo_pond,           & !< Evaporation from pond reservoir w/o snow and skin evaporation            [kg m-2 s-1]
+      & cond_pond,            & !< Condensation over Ponds                                                  [kg m-2 s-1]
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
@@ -793,6 +794,14 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('evapo_pond', 'kg m-2 s-1',                                     &
         &      'Evaporation from ponds (w/o snow and skin res.'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'cond_pond', mem%cond_pond,                            &
+        & hgrid, surface,                                                      &
+        & t_cf('cond_pond', 'kg m-2 s-1', 'Condensation over pond areas'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &

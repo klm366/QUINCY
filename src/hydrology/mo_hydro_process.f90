@@ -87,7 +87,7 @@ CONTAINS
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & wtr_pond_infl, wtr_pond_outfl, wtr_pond_ovrfl,                &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & water_to_soil, evapo_deficit, infilt, runoff)
+    & cond_pond, water_to_soil, evapo_deficit, infilt, runoff)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -109,8 +109,8 @@ CONTAINS
     REAL(wp), INTENT(out)   ::                                              &
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), wtr_pond_infl(:), wtr_pond_outfl(:), wtr_pond_ovrfl(:), &
-      & evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
-      & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
+      & evapotrans_soil(:), evapo_skin(:), evapo_snow(:),                   &
+      & evapo_pond(:), cond_pond(:), water_to_soil(:), evapo_deficit(:),    &
       & infilt(:), runoff(:)
     !$claw end model-data
     !
@@ -125,6 +125,7 @@ CONTAINS
       & evapo_soil_in_m(nc),      & !< amount of ground evaporation within time step [m]
       & evapo_skin_in_m(nc),      & !< amount of evaporation from skin reservoir within time step [m]
       & evapo_pond_in_m(nc),      & !< amount of evaporation from pond reservoir within time step [m]
+      & cond_pond_in_m(nc),       & !< amount of condensation over pond reservoir within time step [m]
       & transpiration_in_m(nc),   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m(nc),      & !< amount of sublimation from snow within time step [m]
       & snowmelt_can(nc),         & !< snow melt from canopy [m]
@@ -285,14 +286,22 @@ CONTAINS
     !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
     evapo_skin_in_m(:) = wtr_skin(:) - (wtr_skin_pre_rain(:) + rain_to_skinres(:))
 
-    ! Limit pond evaporation to the available pond weq
-    evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
+    ! Separate pond potential ET into evaporation and condensation
+    WHERE(evapo_pond_pot_in_m(:) <= 0._wp)
+      ! Limit pond evaporation to the available pond weq
+      evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
+      cond_pond_in_m(:)  = 0._wp
+    ELSEWHERE
+      evapo_pond_in_m(:) = 0._wp
+      cond_pond_in_m(:)  = evapo_pond_pot_in_m(:)
+    ENDWHERE
+
     ! Only evaporate from ponds if demand cannot be fullfilled from skin reservoir and transpiration
     evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:), &
       & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
 
     ! Update evaporation required from the soil
-    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
+    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - (evapo_pond_in_m(:) + cond_pond_in_m(:))
     WHERE (weq_soil(:) + evapotrans_soil_in_m(:) < 0._wp)
       ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
       evapo_pond_in_m(:)      = MAX(-(wtr_pond(:) + ice_pond(:)), &
@@ -301,9 +310,9 @@ CONTAINS
     END WHERE
     evapo_soil_in_m(:) = evapotrans_soil_in_m(:) - transpiration_in_m(:)
 
-    ! Add dew to liquid pond storage or evaporate pond water
-    WHERE (evapo_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
-      wtr_pond(:) = wtr_pond(:) + evapo_pond_in_m(:)
+    ! Add dew to liquid pond storage or evaporate pond water/ice
+    WHERE (cond_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
+      wtr_pond(:) = wtr_pond(:) + (evapo_pond_in_m(:) + cond_pond_in_m(:))
     ELSE WHERE (-evapo_pond_in_m(:) < wtr_pond(:) + ice_pond(:))
       ice_pond(:) = ice_pond(:) + (evapo_pond_in_m(:) + wtr_pond(:))
       wtr_pond(:) = 0._wp
@@ -406,6 +415,7 @@ CONTAINS
     evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
     evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
+    cond_pond(:)       = cond_pond_in_m(:)       * rhoh2o / dtime
     wtr_pond_infl(:)   = wtr_pond_inflow(:)      * rhoh2o / dtime
     wtr_pond_outfl(:)  = wtr_pond_outflow(:)     * rhoh2o / dtime
     wtr_pond_ovrfl(:)  = wtr_pond_overflow(:)    * rhoh2o / dtime

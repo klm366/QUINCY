@@ -429,6 +429,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: evapo_pond
+    dsl4jsb_Real2D_onChunk :: cond_pond
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
@@ -567,6 +568,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)       ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   ice_pond)       ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_pond)     ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   cond_pond)      ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_freeze)    ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)      ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_infl)  ! out
@@ -708,6 +710,7 @@ CONTAINS
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
         & evapo_pond(:),                  & !< evaporation from ponds [kg m-2 s-1]
+        & cond_pond(:),                   & !< condensation over ponds [kg m-2 s-1]
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
@@ -785,6 +788,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_pond,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, cond_pond,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
