@@ -459,7 +459,7 @@ CONTAINS
         ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
           & 0.3_wp / ( 0.5_wp + dsl4jsb_var_ptr(HYDRO_, steepness)**0.4_wp)
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.1_wp
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.1_wp * dsl4jsb_var_ptr(HYDRO_, fract_pond_max)
         WRITE (message_text,*) 'Computed pond characteristics range between: ',       NEW_LINE('a'), &
           &  'Max. pond fraction: ', MINVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), ' <=> ',       &
           &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), NEW_LINE('a'), &
@@ -467,7 +467,7 @@ CONTAINS
           &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, weq_pond_max))
         CALL message(TRIM(routine), message_text)
       ELSE
-        ! Maximum pond fraction and depth read from from init file
+        ! Maximum pond fraction and cell average depth read from from init file
         !   Note, surface depressions are given es negativ value in the data, but represent
         !   a storage on top of the soil --> need to be converted to positive value!
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)

@@ -376,14 +376,13 @@ CONTAINS
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
 
-      ! If pond water or ice storage exceeds the maximum allowed pond content, add
-      ! overflow to water_to_soil
-      ! @todo this represents forced pond melt --> energy balance?
-      wtr_pond_overflow(:) = MAX(0._wp, wtr_pond(:) + ice_pond(:) - weq_pond_max(:))
-      weq_pond(:)          = wtr_pond(:) + ice_pond(:)
-      WHERE (wtr_pond_overflow(:) > 0._wp)
-        wtr_pond(:) = wtr_pond(:) * (weq_pond_max(:) / weq_pond(:))
-        ice_pond(:) = ice_pond(:) * (weq_pond_max(:) / weq_pond(:))
+      ! If pond water (+ ice storage) exceeds the maximum allowed pond content, compute
+      ! overflow to be added to water_to_soil
+      WHERE(wtr_pond(:) + ice_pond(:) > weq_pond_max(:))
+        wtr_pond_overflow(:) = MAX(0._wp, wtr_pond(:) + ice_pond(:) - weq_pond_max(:))
+        wtr_pond(:)          = MAX(0._wp, weq_pond_max(:) - ice_pond(:))
+      ELSEWHERE
+        wtr_pond_overflow(:) = 0._wp
       ENDWHERE
 
       ! Update amount of water available for runoff and infiltration
@@ -557,10 +556,10 @@ CONTAINS
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
-    & fract_pond_max, evapotrans_soil, transpiration,                                    &
+    & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_outfl,                &
-    & tpe_overflow, evapo_deficit,                                                       &
+    & wtr_pond_ovrfl, tpe_overflow, evapo_deficit,                                       &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
       drain_lat, wtr_soilhyd_res                                                         &
@@ -583,9 +582,10 @@ CONTAINS
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                                       &
-      & fract_pond_max, evapotrans_soil, transpiration
+      & fract_pond_max, evapotrans_soil, transpiration, &
+      & ice_pond, weq_pond_max
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_outfl
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_outfl, wtr_pond_ovrfl
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -597,7 +597,8 @@ CONTAINS
     ! Local variables
     REAL(wp) ::                       &
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
-      & transpiration_in_m(nc)          !< transpiration within time step [m]
+      & transpiration_in_m(nc),       & !< transpiration within time step [m]
+      & wtr_pond_corr(nc)               !< correction term for ponds fluxes due to saturated soils [m]
 
     REAL(wp) ::              &
       & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
@@ -692,13 +693,21 @@ CONTAINS
     ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
-    WHERE (fract_pond_max(:) > EPSILON(1._wp))
-      ! Infiltration overflow goes into ponds water storage
-      wtr_pond(:) = wtr_pond(:) + infilt_over(:)
-      ! Pond outflow diagnostic needs to be reduced accordingly
-      wtr_pond_outfl(:) = MAX(0._wp, wtr_pond_outfl(:) - (infilt_over(:) * rhoh2o / dtime))
+
+    ! Infiltration overflow goes into ponds water storage or runoff
+    WHERE (fract_pond_max(:) > EPSILON(1._wp) .AND. infilt_over(:) > 0._wp)
+      ! Pond state and outflow diagnostics need to be corrected accordingly
+      ! Add infiltration overflow to pond storage and reduce infiltration from ponds
+      wtr_pond_corr(:)  = MIN(MAX(0._wp, weq_pond_max(:) - wtr_pond(:) - ice_pond(:)), infilt_over(:))
+      wtr_pond(:)       = wtr_pond(:) + wtr_pond_corr(:)
+      wtr_pond_outfl(:) = MAX(0._wp, wtr_pond_outfl(:) - (wtr_pond_corr(:) * rhoh2o / dtime))
+      ! Check for remaining overflow and add to pond overflow and surface runoff
+      wtr_pond_corr(:)  = MAX(0._wp, infilt_over(:) - wtr_pond_corr(:))
+      wtr_pond_ovrfl(:) = MAX(0._wp, wtr_pond_ovrfl(:) + (wtr_pond_corr(:) * rhoh2o / dtime))
+      runoff(:)         = runoff(:) + wtr_pond_corr(:)
+
+    ! Without ponds, all infitration overflow goes directly into surface runoff
     ELSEWHERE
-      ! Infitration overflow goes into surface runoff
       runoff(:)    = runoff(:) + infilt_over(:)
     END WHERE
 
