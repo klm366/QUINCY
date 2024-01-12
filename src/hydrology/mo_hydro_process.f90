@@ -116,6 +116,9 @@ CONTAINS
     !
     !  local variables
     !
+    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
+    INTEGER             :: i
+    REAL(wp)            :: temp(10,nc)
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -170,6 +173,9 @@ CONTAINS
     wtr_pond_outflow(:)  = 0._wp
     water_to_soil(:)     = 0._wp
     evapo_deficit(:)     = 0._wp
+
+    temp(:,:)            = 0._wp
+    temp(1,:)            = wtr_pond(:) + ice_pond(:)
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
@@ -419,6 +425,22 @@ CONTAINS
     wtr_pond_infl(:)   = wtr_pond_inflow(:)      * rhoh2o / dtime
     wtr_pond_outfl(:)  = wtr_pond_outflow(:)     * rhoh2o / dtime
     wtr_pond_ovrfl(:)  = wtr_pond_overflow(:)    * rhoh2o / dtime
+
+    ! Temporary sanity checks for ponds
+    temp(2,:)            = wtr_pond(:) + ice_pond(:)
+    DO i = 1, nc
+      IF (wtr_pond_overflow(i) - wtr_pond_inflow(i) - cond_pond_in_m(i) > 1.0E-10_wp) THEN
+        WRITE (message_text_long,*) '*** Pond overflow error: ', &
+          &  wtr_pond_overflow(i) - wtr_pond_inflow(i) -cond_pond_in_m(i), NEW_LINE('a'), &
+          &  'Pond stor (start): ', temp(1,i),               NEW_LINE('a'), &
+          &  'Pond stor (end):   ', temp(2,i),               NEW_LINE('a'), &
+          &  'Max pond stor:     ', weq_pond_max(i),         NEW_LINE('a'), &
+          &  'Pond inflow:       ', wtr_pond_inflow(i),      NEW_LINE('a'), &
+          &  'Pond condensation: ', cond_pond_in_m(i),       NEW_LINE('a'), &
+          &  'Pond overflow:     ', wtr_pond_overflow(i)
+        CALL finish('calc_surface_hydrology_land', message_text_long)
+      END IF
+    END DO
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -713,8 +735,11 @@ CONTAINS
       wtr_pond_outfl(:) = MAX(0._wp, wtr_pond_outfl(:) - (wtr_pond_corr(:) * rhoh2o / dtime))
       ! Check for remaining overflow and add to pond overflow and surface runoff
       wtr_pond_corr(:)  = MAX(0._wp, infilt_over(:) - wtr_pond_corr(:))
-      wtr_pond_ovrfl(:) = MAX(0._wp, wtr_pond_ovrfl(:) + (wtr_pond_corr(:) * rhoh2o / dtime))
       runoff(:)         = runoff(:) + wtr_pond_corr(:)
+      ! For some reason, diagnosing this as pond overflow results in pond_overflow > pond_inflow
+      ! which appears strange. Is this a time lag effect? Or infiltration from the non-pond fraction,
+      ! then it should be accounted as both, inflow and overflow.
+      ! wtr_pond_ovrfl(:) = MAX(0._wp, wtr_pond_ovrfl(:) + (wtr_pond_corr(:) * rhoh2o / dtime))
 
     ! Without ponds, all infitration overflow goes directly into surface runoff
     ELSEWHERE
