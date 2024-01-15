@@ -494,7 +494,6 @@ CONTAINS
     REAL(wp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
     REAL(wp) :: fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl    ! optimal N fractions
     REAL(wp) :: m_rub, m_et, m_pepc                            ! specific PS rates
-    LOGICAL  :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':optimise_canopy_n_fractions'
 
 
@@ -502,10 +501,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-    !> 0.9 init local var
-    !>
-    l_day = .FALSE.
 
     ! run this routine only if there are leaves at this canopy layer
     ! this routine is called in a loop over all canopy layers (DO icanopy = 1,ncanopy)
@@ -532,7 +527,6 @@ CONTAINS
                                  t_jmax_omega                  , &
                                  ps_pathway                    , &  ! lctlib
                                  canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
-                                 l_day                         , &  ! in
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
@@ -582,7 +576,6 @@ CONTAINS
       CALL calc_photosynthesis( &
                gmin, g0, g1, t_jmax_omega, ps_pathway, &
                canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-               l_day, & ! in
                t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
                beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -619,7 +612,6 @@ CONTAINS
         CALL calc_photosynthesis( &
                  gmin, g0, g1, t_jmax_omega, ps_pathway, &
                  canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-                 l_day, & ! in
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
                  beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -961,7 +953,6 @@ CONTAINS
                                                           hlp0, hlp1, hlp2          , &   ! calc_photosynthesis dummy output
                                                           hlp3, hlp4                      ! calc_photosynthesis dummy output
                                                                                                 
-    LOGICAL, DIMENSION(nc)                             :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     INTEGER                                            :: icanopy !< looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
@@ -980,7 +971,6 @@ CONTAINS
     fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
     fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
     beta_sinklim_local        = 1._wp
-    l_day(:)                  = .FALSE.
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -1056,7 +1046,6 @@ CONTAINS
                                     lctlib_t_jmax_omega             , &
                                     lctlib_ps_pathway               , &
                                     canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
-                                    l_day(:)                        , & ! in
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -1251,7 +1240,6 @@ CONTAINS
     REAL(wp)                                              :: hlp2, hlp3, hlp4         ! calc_photosynthesis dummy output
     REAL(wp)                                              :: direction
     REAL(wp), DIMENSION(nc)                               :: beta_sinklim_ps_local
-    LOGICAL, DIMENSION(nc)                                :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     INTEGER                                               :: icanopy, dd, ic      ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1272,7 +1260,6 @@ CONTAINS
     fn_chl_new_cl(:,:)   = fn_chl_cl(:,:)
     fn_et_new_cl(:,:)    = fn_et_cl(:,:)
     fn_rub_new_cl(:,:)   = fn_rub_cl(:,:)
-    l_day(:)             = .FALSE.
 
 
     !> 1.0 ...
@@ -1358,7 +1345,6 @@ CONTAINS
                        lctlib_t_jmax_omega                       , &
                        lctlib_ps_pathway                         , &
                        canopy_cond_scheme                        , &  ! ASSIMI_ config (medlyn/ballberry)
-                       l_day(ic)                                 , & ! in
                        t_air_tcnl_mavg(ic)                       , &  ! in
                        press_srf_tcnl_mavg(ic)                   , &
                        co2_mixing_ratio_tcnl_mavg(ic)            , &
