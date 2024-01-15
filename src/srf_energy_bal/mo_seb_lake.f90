@@ -46,8 +46,9 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy, update_drag
     USe mo_jsb_physical_constants, ONLY: cpd
+    USE mo_jsb4_forcing,           ONLY: forcing_options
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -55,6 +56,7 @@ CONTAINS
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -89,15 +91,32 @@ CONTAINS
       & weq_snow_lice,        &
       & weq_snow,             &
       & rad_net_lwtr,         &
-      & rad_net_lice
+      & rad_net_lice,         &
+      & t_air,                &
+      & q_air,                &
+      & wind_air,             &
+      & drag_wtr,             &
+      & t_acoef_wtr,          &
+      & t_bcoef_wtr,          &
+      & q_acoef_wtr,          &
+      & q_bcoef_wtr,          &
+      & drag_ice,             &
+      & t_acoef_ice,          &
+      & t_bcoef_ice,          &
+      & q_acoef_ice,          &
+      & q_bcoef_ice
 
     ! Local variables
-    REAL(wp) ::                     &
-      & hcap_wtr(options%nc),       &
-      & zero(options%nc),           &
-      ! & lhflx_tmp(options%nc),      &
-      & lhflx_tmp,      &
-      & hflx_tmp(options%nc)
+    REAL(wp), DIMENSION(options%nc) :: &
+      & hcap_wtr,           &
+      & zero,               &
+      & hflx_tmp,           &
+      & fact_q_air,         &
+      & fact_qsat_srf,      &
+      & rough_h_srf,        &
+      & rough_m_srf,        &
+      & pch_wtr
+
     REAL(wp), ALLOCATABLE :: &
       hcap_ice(:)
 
@@ -108,8 +127,9 @@ CONTAINS
     LOGICAL :: config_l_ice_on_lakes, use_tmx, jsb_standalone
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, steplen
     REAL(wp) ::         &
+      & lhflx_tmp,      &
       & ml_depth,       & !< Depth of lake mixed layer
       & min_ice_depth,  & !< Minimum ice thickness to start ice formation
       & min_fract_lice, &
@@ -124,6 +144,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
+    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%contains_lake) RETURN
 
@@ -143,6 +164,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! out
@@ -159,11 +181,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)       ! out
 
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)        ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)          ! OUT if standalone
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_wtr)       ! OUT if standalone
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_wtr)       ! OUT if standalone
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_wtr)       ! OUT if standalone
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_wtr)       ! OUT if standalone
 
     IF (config_l_ice_on_lakes) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_, snow)              ! in
@@ -184,6 +214,12 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)      ! in
 
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_ice)          ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_ice)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_ice)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_ice)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_ice)       ! OUT if standalone
+
       ALLOCATE(hcap_ice(nc))
       !$ACC ENTER DATA CREATE(hcap_ice)
     ELSE
@@ -191,7 +227,9 @@ CONTAINS
       !$ACC ENTER DATA CREATE(hflx_form_ice)
     END IF
 
-    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
+    !$ACC DATA &
+    !$ACC   CREATE(hcap_wtr, zero, hflx_tmp) &
+    !$ACC   CREATE(hcap_ice, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
@@ -213,6 +251,39 @@ CONTAINS
     !$ACC WAIT(1)
 
     jsb_standalone = jsbach_runs_standalone()
+
+    ! Compute surface drag and exchange coefficients for the offline model
+    IF (jsb_standalone) THEN
+      !$ACC DATA &
+      !$ACC   CREATE(fact_q_air, fact_qsat_srf, rough_h_srf, rough_m_srf, pch_wtr)
+
+      ! Get surface temperature, humidity and roughness for lake tile
+      fact_q_air(:)    = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+      fact_qsat_srf(:) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
+      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
+      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+
+      ! Update drag and exchange coefficients for lake surface based on external forcing data
+      CALL update_drag( &
+      ! INTENT in
+      & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+      & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+      & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+      ! INTENT out
+      & drag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
+
+      IF (config_l_ice_on_lakes) THEN
+        ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
+        ! provide separate exchange coefficients for water and ice. Both are set to identical values.
+        drag_ice(:)    = drag_wtr(:)
+        t_acoef_ice(:) = t_acoef_wtr(:)
+        t_bcoef_ice(:) = t_bcoef_wtr(:)
+        q_acoef_ice(:) = q_acoef_wtr(:)
+        q_bcoef_ice(:) = q_bcoef_wtr(:)
+      END IF
+      !$ACC END DATA
+    END IF
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -295,7 +366,8 @@ CONTAINS
 
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+      !$ACC   PRIVATE(lhflx_tmp)
       DO ic=1,nc
         lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
 
