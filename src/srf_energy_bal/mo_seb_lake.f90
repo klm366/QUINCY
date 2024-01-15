@@ -199,7 +199,7 @@ CONTAINS
       hcap_wtr        (ic) = 0._wp
       l_ice_formation (ic) = .FALSE.
       l_ice_melting   (ic) = .FALSE.
-      hflx_tmp(ic) = rad_net_lwtr(ic) + latent_hflx_wtr(ic) + sensible_hflx_wtr(ic) 
+      hflx_tmp(ic) = rad_net_lwtr(ic) + latent_hflx_wtr(ic) + sensible_hflx_wtr(ic)
       IF (config_l_ice_on_lakes) THEN
         hcap_ice      (ic) = 0._wp
         l_ice         (ic) = fract_lice(ic) > 0.5_wp
@@ -272,7 +272,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
-    
+
       ! Calculate new water temperature for the case of complete ice melting
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
@@ -632,7 +632,7 @@ CONTAINS
       & heat_tcoef    !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -644,6 +644,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -704,8 +705,8 @@ CONTAINS
         sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic)) * cvd / cpd ! Sensible energy flux
       ELSE
         s_air = t_acoef_wtr(ic) * s_lwtr(ic) + t_bcoef_wtr(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
-        heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen)    ! Transfer coefficient
-        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic)) ! Sensible heat flux
+        heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
+        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible heat flux
       END IF
       latent_hflx_wtr(ic) = alv * evapo_wtr(ic) ! Latent heat flux
 
@@ -724,9 +725,9 @@ CONTAINS
           heat_tcoef = ch(ic) ! Transfer coefficient; TODO: distinguish between wtr and ice?
           sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic)) * cvd / cpd ! Sensible energy flux
         ELSE
-          s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)        ! New dry static energy at lowest atmospheric level by backsubstitution
-          heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen)        ! Transfer coefficient
-          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic)) ! Sensible heat flux
+          s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
+          heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient
+          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible heat flux
         END IF
         latent_hflx_ice(ic) = als * evapo_ice(ic) ! Latent heat flux
 

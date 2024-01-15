@@ -51,6 +51,7 @@ MODULE mo_a2l_memory_class
       press_srf          , &
       rho_srf            , &
       drag_srf           , &
+      richardson         , &  !< richardson number [unitless]
       t_acoef            , &
       t_bcoef            , &
       q_acoef            , &
@@ -299,8 +300,17 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )  
+        & initval_r=0.0_wp )
       END IF
+
+    CALL mem%Add_var( 'richardson', mem%richardson,                          &
+      & hgrid, surface,                                                      &
+      & t_cf('richardson number', '-', ''),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=FULL,                                                   &
+      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
       & hgrid, surface,                                                      &
@@ -409,6 +419,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_bcoef_wtr', mem%q_bcoef_wtr,                        &

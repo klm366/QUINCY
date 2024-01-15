@@ -146,7 +146,7 @@ CONTAINS
     LOGICAL  :: l_snow_config, l_freeze_config, l_supercool_config, use_tmx
 
     INTEGER  :: iblk, ics, ice, nc, ic, i, iter
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
@@ -161,6 +161,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -365,7 +366,7 @@ CONTAINS
       IF (use_tmx) THEN
         heat_tcoef(ic) = ch(ic)
       ELSE
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
       END IF
 
       t2s_conv(ic) = s_old(ic) / t_old(ic)
@@ -374,16 +375,16 @@ CONTAINS
       IF (lstart) THEN
         s_star(ic) = s_old(ic)
       ELSE
-        CALL surface_temp_implicit(                           & ! in
-          MERGE(1._wp, tpfac1, use_tmx),                      & ! in
-          steplen,                                            & ! in
-          t2s_conv(ic),                                       & ! in
-          t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-          s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
-          rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
-          fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-          fract_snow(ic), heat_cap(ic),                       & ! in
-          & s_star(ic))                                         ! out
+        CALL surface_temp_implicit(                             & ! in
+          & alpha,                                              & ! in
+          & steplen,                                            & ! in
+          & t2s_conv(ic),                                       & ! in
+          & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+          & s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
+          & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+          & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+          & fract_snow(ic), heat_cap(ic),                       & ! in
+          & s_star(ic))                                           ! out
       END IF
 
     END DO
@@ -401,7 +402,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           CALL surface_temp_implicit(                           & ! in
-            MERGE(1._wp, tpfac1, use_tmx),                      & ! in
+            alpha,                                              & ! in
             steplen,                                            & ! in
             t2s_conv(ic),                                       & ! in
             t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
@@ -517,14 +518,13 @@ CONTAINS
       t_eff4(ic) = t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))
     END DO
     !$ACC END PARALLEL LOOP
-
     !$ACC WAIT(1)
 
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_surface_energy_land 
+  END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(alpha, steplen,     &
     &            pcp,                                  &
@@ -719,7 +719,7 @@ CONTAINS
       & heat_tcoef      !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -731,6 +731,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -749,7 +750,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)             ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
 
@@ -771,13 +772,13 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
 
-      s_air(ic) = t_acoef(ic) * s_star   (ic) + t_bcoef(ic)
+      s_air(ic) = t_acoef(ic) * s_star(ic) + t_bcoef(ic)
 
       IF (use_tmx) THEN
         sensible_hflx(ic) = ch(ic) * (s_air(ic) - s_star(ic)) * cvd / cpd ! Sensible heat flux
       ELSE
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)    ! Transfer coefficient
-        sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic)) ! Sensible heat flux
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha) ! Transfer coefficient
+        sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic))     ! Sensible heat flux
       END IF
 
       ! Compute latent heat flux
@@ -804,7 +805,6 @@ CONTAINS
     & is_newday,                                    & ! Input
     & l_start,                                      & ! Input
     & t_air_in_Celcius,                             & ! Input
-    ! & dtime,                                        & ! Input
     & time_steps_per_day,                           & ! Input
     & previous_day_temp_mean,                       & ! InOut
     & day_temp_sum,                                 & ! InOut
@@ -823,13 +823,12 @@ CONTAINS
     LOGICAL,   intent(in)    :: is_newday
     LOGICAL,   intent(in)    :: l_start
 
-    REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
-                                !dtime
+    REAL(wp),  intent(in)    :: t_air_in_Celcius ! air temperature at current time step in lowest atmospheric layer in Celcius
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
-                                previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
+    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! Intent(in) because if it is not calculated new, it should remain
+                                previous_day_temp_min,  & ! as before. Without (in) it would be NaN in the output.
                                 previous_day_temp_max
 
     REAL(wp),  intent(inout) :: day_temp_sum,           &

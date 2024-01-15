@@ -17,6 +17,10 @@ MODULE mo_jsb_physical_constants
 
   USE mo_kind, ONLY: wp
 
+  ! Most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
+  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90:
+  !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
+  !   src/shared/mo_util_jsbach.f90         -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface
 
   IMPLICIT NONE

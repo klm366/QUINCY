@@ -475,7 +475,6 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
       & nc, nsoil

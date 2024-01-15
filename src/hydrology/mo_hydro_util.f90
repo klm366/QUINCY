@@ -47,7 +47,7 @@ CONTAINS
 
     INTEGER :: nsoil, is
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_1d'
 
     !$ACC ROUTINE SEQ
 

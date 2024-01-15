@@ -464,7 +464,7 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m] 
+    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
 
     !------------------------------------------------------------------
     !  local Variables
@@ -495,7 +495,7 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    
+
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
@@ -521,26 +521,24 @@ CONTAINS
 
     IF (.NOT. lstart) THEN
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-
       ! uppermost layer
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
         t_soil_sl(jl,1) = t_unfilt(jl)
       END DO
-      !$ACC END LOOP
+      !$ACC END PARALLEL LOOP
 
       ! deeper layers
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
       DO jk = 1, nsoil-1
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        !$ACC LOOP GANG VECTOR
         DO jl=1,nidx
           t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil_sl(jl,jk)
         END DO
         !$ACC END LOOP
       END DO
       !$ACC END LOOP
-
       !$ACC END PARALLEL
 
       ! Phase change calculations
@@ -556,7 +554,7 @@ CONTAINS
                 & matrix_pot(jl,jk), &
                 & bclapp    (jl,jk)  &
                 & )
-            END DO 
+            END DO
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
@@ -564,7 +562,7 @@ CONTAINS
           DO jk=1,nsoil
             DO jl=1,nidx
               liquid_max(jl,jk) = 0._wp
-            END DO 
+            END DO
           END DO
           !$ACC END PARALLEL LOOP
         END IF
@@ -576,16 +574,10 @@ CONTAINS
               frozen(jl,jk) = MIN(ws(jl,jk) - liquid_max(jl,jk), &
                 &               heat_cap(jl,jk) * (tmelt - t_soil_sl(jl,jk)) / (alf * rhoh2o) &
                 &              )
-              ! ws (jl,jk) = ws (jl,jk) - frozen(jl,jk)
-              ! ice(jl,jk) = ice(jl,jk) + frozen(jl,jk)
-              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) + frozen(jl,jk) * alf * rhoh2o / heat_cap(jl,jk)
             ELSE IF (t_soil_sl(jl,jk) > tmelt .AND. ice(jl,jk) > 0._wp) THEN
               melt(jl,jk) = MIN(ice(jl,jk), heat_cap(jl,jk) * (t_soil_sl(jl,jk) - tmelt) / (alf * rhoi))
-              ! ws (jl,jk) = ws (jl,jk) + melt(jl,jk)
-              ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
-              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
             END IF
-          END DO 
+          END DO
         END DO
         !$ACC END PARALLEL LOOP
 
@@ -639,7 +631,6 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
-
 
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
@@ -855,28 +846,10 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
     DO jl=1,nidx
-      ! itop_prev = itop_old(jl)
       itop_new = itop(jl)
-      ! t_snow_acoef(jl,1:itop_new-1) = 0._wp
-      ! t_snow_bcoef(jl,1:itop_new-1) = 0._wp
       !$ACC LOOP SEQ
       DO jk = 1, itop_new - 1
         t_snow      (jl,jk) = 0._wp
-      ! DO jk=itop_new,nsnow                                     ! At least one snow layer present
-      !   IF (itop_new < itop_prev .AND. jk < itop_prev) THEN    ! New snow layer
-      !     IF (itop_prev == nsnow+1) THEN                       ! No snow layers present in previous time step
-      !       t_snow_acoef(jl,jk) = t_soil_acoef(jl)             ! so we use coefficients and old temperature from top soil layer
-      !       t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
-      !       t_snow      (jl,jk) = t_soil_sl1(jl)
-      !     ELSE                                                 ! Use values from previous top snow layer
-      !       t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_prev)
-      !       t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_prev)
-      !       t_snow      (jl,jk) = t_snow      (jl,itop_prev)
-      !     END IF
-      !   ! ELSE                                                 ! Snow layer was present before
-      !   !   ! Nothing to do
-      !   END IF
-      ! END DO
       END DO
       !$ACC END LOOP
     END DO
@@ -921,7 +894,7 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
-      
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
         ! New temperature for top soil layer (t_unfilt where there was or is no snow)
@@ -934,7 +907,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
     END IF
-
 
     !
     !------------------------------------------------------------------------------------------------
@@ -991,9 +963,6 @@ CONTAINS
           z1(jl) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_snow_bcoef(jl,jk)))
           t_snow_acoef(jl,jk-1) = (t_snow(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_snow_acoef(jl,jk)) * z1(jl)
           t_snow_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl)
-        ! ELSE WHERE
-        !   t_snow_acoef(:,nsnow) = 0._wp
-        !   t_snow_bcoef(:,nsnow) = 0._wp
         END IF
       END DO
       !$ACC END LOOP
