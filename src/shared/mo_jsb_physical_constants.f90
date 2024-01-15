@@ -38,8 +38,9 @@ MODULE mo_jsb_physical_constants
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
     molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
 
-  !! quincy
-  ! physical constants
+  REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
+
+  !! quincy - physical constants
   REAL(wp), PARAMETER :: &
     r_gas        = 8.3144_wp        ,  &      !< universal gas constant (J / mol / K) 
     r_gas_dryair = 287.058_wp       ,  &      !< specific gas constant for dry air (J / kg / K) 
