@@ -27,7 +27,7 @@ MODULE mo_seb_land
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
@@ -148,7 +148,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic, i, iter
     REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
-    LOGICAL  :: l_is_newday
+    LOGICAL  :: l_is_newday, jsb_standalone
     INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
@@ -327,6 +327,7 @@ CONTAINS
     l_snow_config          = dsl4jsb_Config(SSE_)%l_snow
     l_freeze_config        = dsl4jsb_Config(SSE_)%l_freeze
     l_supercool_config     = dsl4jsb_Config(SSE_)%l_supercool
+    jsb_standalone         = jsbach_runs_standalone()
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -360,7 +361,7 @@ CONTAINS
       ! Old dry static energy
       s_old(ic) = surface_dry_static_energy( &
         & t_old(ic), &
-        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd)
+        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd, jsb_standalone)
 
       ! Transfer coefficient
       IF (use_tmx) THEN
@@ -429,7 +430,7 @@ CONTAINS
       END IF
 
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-      IF (use_tmx) THEN
+      IF (use_tmx .OR. jsb_standalone) THEN
         t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
       ELSE
         t_unfilt(ic) = ( tpfac2 * s_star(ic) + tpfac3 * s_old(ic) ) / t2s_conv(ic)

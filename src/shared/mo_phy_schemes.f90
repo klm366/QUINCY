@@ -24,7 +24,7 @@ MODULE mo_phy_schemes
   PRIVATE
 
   PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, qsat, &
-    & tlucua, jptlucu1, jptlucu2, &
+    & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
     & sfc_exchange_coefficients
@@ -195,7 +195,7 @@ CONTAINS
   !! 
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf, cpd_or_cvd)
+  REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf, cpd_or_cvd, jsb_standalone)
 
     !$ACC ROUTINE SEQ
 
@@ -207,8 +207,16 @@ CONTAINS
       & qsat_srf,                   & !< Surface saturation specific humidity
       & cpd_or_cvd
 
-    ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
-    surface_dry_static_energy = t_srf * cpd_or_cvd
+    LOGICAL, INTENT(in) :: &
+      & jsb_standalone
+
+    IF (jsb_standalone) THEN
+      ! Todo: Check if this formulation is valid. We re-implement it here, as it was used up to now in
+      !       jsbach:dev, and we do not want to change the model behavior with this merge.
+      surface_dry_static_energy = t_srf * cpd_or_cvd * ( 1._wp + cpvd1 * qsat_srf)
+    ELSE
+      surface_dry_static_energy = t_srf * cpd_or_cvd
+    END IF
 
   END FUNCTION surface_dry_static_energy
 

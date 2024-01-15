@@ -24,7 +24,7 @@ MODULE mo_seb_lake
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
   dsl4jsb_Use_processes SEB_, TURB_, RAD_, HYDRO_, A2L_
   dsl4jsb_Use_config(SEB_)
@@ -105,7 +105,7 @@ CONTAINS
       & l_ice(options%nc),           & ! Indicator for ice cover
       & l_ice_formation(options%nc), &
       & l_ice_melting(options%nc)
-    LOGICAL :: config_l_ice_on_lakes, use_tmx
+    LOGICAL :: config_l_ice_on_lakes, use_tmx, jsb_standalone
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
@@ -211,6 +211,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
     !$ACC WAIT(1)
+
+    jsb_standalone = jsbach_runs_standalone()
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -320,7 +322,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
-      s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd)
+      s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd, jsb_standalone)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -330,7 +332,7 @@ CONTAINS
         qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
         t_unfilt(ic)  = t(ic)
-        s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd)
+        s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd, jsb_standalone)
         IF (use_tmx) THEN
           s_star(ic) = (1._wp - fract_lice(ic)) * s_lwtr(ic)    + fract_lice(ic) * s_lice(ic)
           t_rad4(ic) = (1._wp - fract_lice(ic)) * t_lwtr(ic)**4 + fract_lice(ic) * t_lice(ic)**4
