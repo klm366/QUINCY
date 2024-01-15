@@ -68,7 +68,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy             !< Vertical grid
     INTEGER                               :: ncanopy                  !< number of canopy layers
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
-    LOGICAL,  DIMENSION(options%nc)       :: l_day                    !< day/night (calc as in RAD_)
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp), DIMENSION(options%nc)       :: ga, hlp1, hlp2, hlp3     !< dummy variables
     INTEGER                               :: iblk, ics, ice, nc, ic   !< dimensions
@@ -241,14 +240,6 @@ CONTAINS
 
     !>2.0 calculate photosynthesis per layer
     !>
-    ! get information about day/nigth (same way as in RAD_)
-#ifdef __QUINCY_STANDALONE__
-    ! init, simply to give it a value
-    l_day(:) = .FALSE.     ! day
-#else
-    !$claw expand
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-#endif
     ! calc photosynthesis
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(                                     &
@@ -258,7 +249,6 @@ CONTAINS
         & lctlib%t_jmax_omega                                     , &
         & lctlib%ps_pathway                                       , &
         & TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , & ! config
-        & l_day(:)                                                , & ! in
         & t_air(:)                                                , & ! in
         & press_srf(:)                                            , &
         & co2_mixing_ratio(:)                                     , &
@@ -366,7 +356,6 @@ CONTAINS
                                             t_jmax_omega        , &
                                             ps_pathway          , &
                                             canopy_cond_scheme  , &
-                                            l_day               , &
                                             t_air               , &
                                             press_srf           , &
                                             co2_mixing_ratio    , &
@@ -414,7 +403,6 @@ CONTAINS
                                           t_jmax_omega            !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
   CHARACTER(len=*),         INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
-  LOGICAL,                  INTENT(IN) :: l_day                   !< TRUE = day | FALSE = night
   REAL(wp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
@@ -497,14 +485,11 @@ CONTAINS
     maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(t_air, temp_acclim) * &
                       leaf_nitrogen_cl
 
-
-    !> @par IF: initialise output for no-light condition
-    !! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
-#ifdef __QUINCY_STANDALONE__
-    IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
-#else
-    IF (.NOT. l_day) THEN
-#endif
+    !> calculate photosynthesis only if light is available at this canopy layer
+    !>
+    !> else: initialise output for no-light condition
+    !>
+    IF (ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
       ag_cl    = 0.0_wp
       an_cl    = ag_cl - maint_resp_cl
       gs_cl    = MAX(gmin,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
@@ -512,7 +497,6 @@ CONTAINS
       m_et   = 0.0_wp
       m_rub  = 0.0_wp
       m_pepc = 0.0_wp
-    !> @par ELSE: calculate photosynthesis only if it's day
     ELSE
       !> Michaelis-Menten constant of Rubisco for CO2 (Pa)
       kc  = exp(E0kc - E1kc/rtck) * ppm2Pa
@@ -713,18 +697,13 @@ CONTAINS
         iterate =  iterate + 1
       END DO  ! closing: [DO WHILE (iterate < ps_it_max .AND. dan_cl > eps4 ) ]
       !> END DO WHILE
-    ENDIF     ! closing: IF (.NOT. l_day) THEN
+    ENDIF     ! light / no light condition
     ! for output purposes, convert ci to ppm
     ci_cl = ci_cl / ppm2Pa
 
     ! ChlF (chlorophyll fluorescence yield) calculation
     ! if light levels above eps8
-    ! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
-#ifdef __QUINCY_STANDALONE__
     IF (ppfd_sunlit_cl + ppfd_shaded_cl > eps8) THEN
-#else
-    IF (l_day) THEN
-#endif
       ! sunlit area fluorescence
       IF (fleaf_sunlit_cl > eps8) THEN
         CALL calc_chlorophyll_fluorescence_yield(frac_tot_sunlit, t_air, chlfl_yield)
