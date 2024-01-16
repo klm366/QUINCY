@@ -1,12 +1,16 @@
+!> functions needed to calculate variables affecting the atm-land interface 
 !>
-!! @brief functions needed to calculate variables affecting the atm-land interface 
-!!
-!! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2015-12-19)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_atmland_util
 #ifndef __NO_JSBACH__
 

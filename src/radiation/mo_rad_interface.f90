@@ -1,16 +1,16 @@
+!> Contains the interfaces to the radiation processes
 !>
-!! @brief Contains the interfaces to the radiation processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-04-14)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/radiation/mo_rad_process.pp-jsb.f90"
@@ -198,7 +198,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the surface radiation
+  !> Implementation to update the surface radiation
   !! Task "surface_radiation" calculates the net radiations at the surface.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -441,7 +441,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the photosynthetically active radiation
+  !> Implementation to update the photosynthetically active radiation
   !! Task "radiation_par" calculates PAR and APAR.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -696,7 +696,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the albedo
+  !> Implementation to update the albedo
   !! Task "albedo" calculates several albedos.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.

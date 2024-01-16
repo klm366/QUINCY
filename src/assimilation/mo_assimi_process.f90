@@ -1,17 +1,16 @@
+!> Contains the routines for the assimilation processes
 !>
-!! @brief Contains the routines for the assimilation processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
@@ -804,11 +803,7 @@ CONTAINS
   !
   ! ===============================================================================================================================
   !>
-  !! @brief   Compute running average of NPP for NLCC process
-  !!
-  !! @par Revision History
-  !!   Routine based on the former JSBACH3 routine update_climbuf
-  !!   Adapted for JSBACH4 in August 2020 by T. Raddatz
+  !>   Compute running average of NPP for NLCC process
   !!
 
   PURE ELEMENTAL SUBROUTINE calc_NPPbuf (lstart, init_running_means, new_year, delta_time, NPP, &

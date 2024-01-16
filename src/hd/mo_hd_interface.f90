@@ -1,14 +1,15 @@
-!> Summary: Contains the interfaces to the HD model
+!> Contains the interfaces to the HD model
 !>
-!> @author
-!>  Veronika Gayler, MPI-M Hamburg
+!> ICON-Land
 !>
-!> @par Revision History
-!> First version by Veronika Gayler (2013-04-20)
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"

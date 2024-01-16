@@ -1,16 +1,16 @@
+!> Contains the interfaces to the assimi process
 !>
-!! @brief Contains the interfaces to the assimi process
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-30)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/assimilation/mo_assimi_process.pp-jsb.f90"
@@ -316,7 +316,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to calculate the height scaling factors of plant enzyms for assimilation
+  !> Implementation to calculate the height scaling factors of plant enzyms for assimilation
   !! Task "assimi" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -459,7 +459,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of task canopy_cond_unstressed
+  !> Implementation of task canopy_cond_unstressed
   !! Task "canopy_cond_unstressed" calculates the carbon assimilation of plants and canopy conductance without water stress.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -628,7 +628,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !> Implementation of "update" for task "canopy_cond_stressed"
   !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -780,7 +780,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of assimilation for water-limited conditions
+  !> Implementation of assimilation for water-limited conditions
   !! Task "assimilation" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1166,7 +1166,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of NPP buffer
+  !> Implementation of NPP buffer
   !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the NLCC process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.

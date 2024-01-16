@@ -1,16 +1,16 @@
+!> Interface between HD and the ocean, through a coupler
 !>
-!! @brief Interface between HD and the ocean, through a coupler
-!!
-!! @author Veronika Gayler (MPI-M)
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2013-06-29)
-
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
@@ -29,7 +29,8 @@ MODULE mo_interface_hd_ocean
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
-  USE mo_run_config,          ONLY: modelTimeStep
+  USE mo_time_config,         ONLY: time_config
+  USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
 #endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -78,6 +79,7 @@ CONTAINS
     INTEGER :: jb, jc
     INTEGER :: nproma, nblks
     LOGICAL,  ALLOCATABLE :: is_valid(:)
+    CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -99,6 +101,8 @@ CONTAINS
     grid  => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
+
+    CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
     ! Define the HD mask for YAC.
     ! It shall contain ocean coast points only for

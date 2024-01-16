@@ -1,18 +1,17 @@
-!> Summary: tcq (test conserved quantities) memory initialisation
+!> tcq (test conserved quantities) memory initialisation
 !>
-!>### Initialization of tcq (test conserved quantities) variables
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-03-09)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Initialization of tcq (test conserved quantities) variables
 !>
 MODULE mo_tcq_init
 #ifndef __NO_JSBACH__

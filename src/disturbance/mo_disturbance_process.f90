@@ -1,17 +1,16 @@
+!> Contains the routines for the disturb processes
 !>
-!! @brief Contains the routines for the disturb processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
@@ -147,10 +146,7 @@ CONTAINS
   !    I made some changes because the dimensions (vector lenghts) were unnecessary
   !    cryptic. We could even skip "nc" if we would change the DO loop below...
   !>
-  !! @brief Returns saturation specific humidity for given temperature and pressure
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_atmosphere: sat_specific_humidity    by Julia Nabel (2016)
+  !! Returns saturation specific humidity for given temperature and pressure
   !!
   SUBROUTINE sat_specific_humidity(nc, temp, pressure, qsat)
 

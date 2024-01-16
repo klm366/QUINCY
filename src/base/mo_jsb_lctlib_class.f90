@@ -1,20 +1,22 @@
+!> Contains function to read the landcover library file
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 !>
 !! This module provides the data from the landcover library file, which contains additional information on the
 !! landcover data used in a particular run of JSBACH.
 !! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
 !! keyword "LCT_FILE".
 !!
-!! Authors: Reiner Schnur, 7/2003
-!!          Christian H. Reick, 8/2003
-!!
-!! @par Revision History
-!! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast

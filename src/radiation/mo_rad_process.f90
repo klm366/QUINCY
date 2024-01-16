@@ -1,17 +1,16 @@
+!> Contains the routines for the radiation processes
 !>
-!! @brief Contains the routines for the radiation processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-04-27)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
@@ -1132,9 +1131,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> calculate shortwave radiation budget of the tile
   !! 
-  !! @TODO the below information is a direct copy from QUINCY code and might be outdated
+  !! TODO the below information is a direct copy from QUINCY code and might be outdated
   !!
-  !! @par info on routine
+  !! info on routine
   !!  This routine has been adapted from ADFs implementation of the radiation calculations
   !!  by Spitters, C J T. 1986. \n Separating the Diffuse and Direct Component of Global Radiation
   !!  and Its Implications for Modeling Canopy Photosynthesis .2. Calculation of Canopy Photosynthesis.
@@ -1145,12 +1144,12 @@ CONTAINS
   !!  - The routine has been adjusted to a two-stream approximation scheme by adding the upward flux 
   !!  from soil reflection \n
   !!  - The routine has been adjusted to account for canopy clumping (Campbell & Norman 1998) \n
-  !! @todo: calc_sw_srf_net does not account non-leaf surfaces
+  !! todo: calc_sw_srf_net does not account non-leaf surfaces
   !! 
-  !! @par Spitters Eq. 12 is wrong
+  !! Spitters Eq. 12 is wrong
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
   !! 
-  !! @par canopy clumping factor
+  !! canopy clumping factor
   !!  to disable clumping set lctlib(:)%omega_clumping = 1.0_wp
   !! 
   !-----------------------------------------------------------------------------------------------------
@@ -1284,7 +1283,7 @@ CONTAINS
     temp1  = SQRT(radf3b)
     temp2  = 2.0_wp * (1.0_wp - temp1)/(1.0_wp + temp1)
    
-    !> @par IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
+    !> IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
     DO ichunk = 1,nc
       IF(l_day(ichunk)) THEN
     
@@ -1293,7 +1292,7 @@ CONTAINS
         !> Downwelling diffuse radiation 
         irad_dif_down(ichunk) = sw_fdiffuse(ichunk) * sw_srf_down(ichunk)
 
-        !> @par IF lai > eps8
+        !> IF lai > eps8
         IF(lai(ichunk) > eps8) THEN
 
           !> Eq.1  Fraction of radiation reflected by green closed canopy (fraction)
@@ -1337,13 +1336,13 @@ CONTAINS
       ENDIF
     ENDDO
 
-    !> @par loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
+    !> loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
     DO icanopy = 1,ncanopy
-      !> @par IF leaf area index of canopy layer > eps8: Integrate absorbed radiation over actually existing canopy layers
+      !> IF leaf area index of canopy layer > eps8: Integrate absorbed radiation over actually existing canopy layers
       DO ichunk = 1,nc
         IF(l_day(ichunk) .AND. lai_cl(ichunk,icanopy) > eps8) THEN
         
-          !> @par IF radf2 <= eps8
+          !> IF radf2 <= eps8
           IF(radf2(ichunk) <= eps8) THEN ! case of only diffuse radiation
             !> Eq.10 Mean radiation penetrating foliage at lc 
             arad_shaded_cl(ichunk,icanopy)    = radf1(ichunk) * exp(-kdf(ichunk) * cumm_lai_cl(ichunk,icanopy)) + &    ! eq 10
@@ -1352,7 +1351,7 @@ CONTAINS
             !> radiation penetrating foliage from below for albedo cacumm_lai_cl(icanopy)ulation
             arad_shaded_up_cl(ichunk,icanopy) = radf5(ichunk) * exp(-kdf(ichunk) * &
                                                   (MAX(lai(ichunk)-cumm_lai_cl(ichunk,icanopy),0.0_wp)))
-          !> @par ELSE Case of direct and diffuse radiation
+          !> ELSE Case of direct and diffuse radiation
           ELSE
             !> Sunlit foliage at cumm_lai_cl(icanopy) (fraction)
             !! kbl: Extinction coefficient for radiation over black leaves in canopy
@@ -1375,7 +1374,7 @@ CONTAINS
             !! sum of diffuse and direct radiation
             arad_sunlit_cl(ichunk,icanopy) = arad_shaded_cl(ichunk,icanopy) + radf3(ichunk)
             !> correct for snow-covered canopy
-            !! @TODO Jan would argue that only sunlit leaves can be covered by snow
+            !! TODO Jan would argue that only sunlit leaves can be covered by snow
             arad_sunlit_cl(ichunk,icanopy) = arad_sunlit_cl(ichunk,icanopy) - &
                                              arad_sunlit_cl(ichunk,icanopy) * fract_snow_can(ichunk)
           ENDIF
@@ -1389,9 +1388,9 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !> @par IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
+    !> IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
     WHERE(l_day(:))
-       !> @par IF lai > eps8
+       !> IF lai > eps8
        WHERE(lai(:) > eps8)
           !> albedo of the canopy, as seen from the top of the canopy
           !! inferred from the difference between top and bottom of the 
@@ -1399,7 +1398,7 @@ CONTAINS
           alb_can(:) = 1.0_wp - (irad_dif_down_bc(:) + irad_dir_down_bc(:) + (arad_can(:) - arad_can_up(:))) / & 
                                 (irad_dir_down(:) + irad_dif_down(:)) 
           !> correct for snow-covered canopy
-          !! @TODO should the snow-covered canopy also be considered here (i.e., a 2nd time) ?
+          !! TODO should the snow-covered canopy also be considered here (i.e., a 2nd time) ?
           alb_can(:) = fract_snow_can(:) * alb_snow(:) + (1.0_wp - fract_snow_can(:)) * alb_can(:)
 
           !> total upward shortwave radiation flux at the top of the canopy:
@@ -1420,7 +1419,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> quincy helper routine
   !! 
-  !! @par info on routine
+  !! info on routine
   !!  code needed in addition to calling the calc_sw_srf_net() for vis/nir
   !!  copy of the original code in update_radiation() sections 4.0 to 7.0 of the quincy model
   !!

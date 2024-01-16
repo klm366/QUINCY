@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #_____________________________________________________________________________
 # Script to construct for a given ICON grid file initial fields and boundary conditions
 # for the land model JSBACH4+ and the ICON atmosphere by interpolating existing files

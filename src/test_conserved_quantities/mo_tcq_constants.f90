@@ -1,15 +1,15 @@
-!> Summary: constants for the tcq process (test conserved quantities)
+!> constants for the tcq process (test conserved quantities)
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> ICON-Land
 !>
-!>#### Revision History
-!> First version   by Julia Nabel (2021-06-02)
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_tcq_constants
 #ifndef __NO_JSBACH__

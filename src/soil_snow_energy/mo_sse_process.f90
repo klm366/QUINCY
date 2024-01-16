@@ -1,17 +1,16 @@
+!> Contains the routines for the soil and snow energy processes
 !>
-!! @brief Contains the routines for the soil and snow energy processes
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_process
 #ifndef __NO_JSBACH__
 
@@ -30,7 +29,7 @@ MODULE mo_sse_process
 CONTAINS
 
   !!
-  ! @brief      Calculates the volumetric heat capacity of soil (de Vries, 1963)
+  ! !>      Calculates the volumetric heat capacity of soil (de Vries, 1963)
   !
   ! @param [in]  vol_heat_cap_soil_dry_mineral  Heat capacity of dry mineral soil solid
   ! @param [in]  porosity                       Volumetric soil porosity
@@ -81,7 +80,7 @@ CONTAINS
   END FUNCTION calc_vol_heat_capacity
 
   !!
-  ! @brief      Calculates the soil thermal conductivity after Johansen 1977.
+  ! !>      Calculates the soil thermal conductivity after Johansen 1977.
   !
   ! @param      heat_cond_soil_mineral  The heat condition soil mineral
   ! @param      water                   The water
@@ -333,7 +332,7 @@ CONTAINS
   END SUBROUTINE init_soil_temperature
 
   !
-  ! @brief      Calculates the soil temperature.
+  ! !>      Calculates the soil temperature.
   !
   ! @param      nidx          The nidx
   ! @param      nsoil         The nsoil

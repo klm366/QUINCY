@@ -1,19 +1,20 @@
-!> Summary: interface to the tlcc process (test land cover change)
+!> interface to the tlcc process (test land cover change)
 !>
-!>### Contains the interfaces to the tlcc process which is a small test land cover change process moving just a bit of area
+!> ICON-Land
 !>
-!> Note: this test lcc process can be seen as example for lcc process implementations
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-02 - present)
+!>#### Contains the interfaces to the tlcc process
 !>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Note: this test lcc process is a small test land cover change process moving just a bit of area
+!>       and can be seen as example for lcc process implementations
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
