@@ -366,8 +366,7 @@ CONTAINS
 
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-      !$ACC   PRIVATE(lhflx_tmp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
 
