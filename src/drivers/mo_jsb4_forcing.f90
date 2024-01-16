@@ -42,11 +42,12 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io_netcdf_iface,    ONLY:                 &
-    & nf, nf_get_vara_double,                          & ! former nf_check
-    & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid,       & ! from netcdf.inc
-    & NF_MAX_NAME, nf_get_att_text, nf_get_att_double, & ! from netcdf.inc
-    & NF_NOERR                                           ! from netcdf.inc
+  USE mo_jsb_io_netcdf_iface,    ONLY:           &
+    & nf, nf_get_vara_double,                    &
+    & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, &
+    & NF_MAX_NAME, nf_get_att_text,              &
+    & nf_get_att_double => nfx_get_att,          &
+    & NF_NOERR
 
   USE mo_jsb_class,              ONLY: get_model
 
