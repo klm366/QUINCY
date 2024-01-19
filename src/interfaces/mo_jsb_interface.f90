@@ -290,11 +290,11 @@ CONTAINS
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
       ! For QUINCY
-      & nhx_deposition     = nhx_deposition(:),     &
-      & noy_deposition     = noy_deposition(:),     &
-      & nhx_n15_deposition = nhx_n15_deposition(:), &
-      & noy_n15_deposition = noy_n15_deposition(:), &
-      & p_deposition       = p_deposition(:),       &
+      & nhx_deposition     = nhx_deposition,        &
+      & noy_deposition     = noy_deposition,        &
+      & nhx_n15_deposition = nhx_n15_deposition,    &
+      & noy_n15_deposition = noy_n15_deposition,    &
+      & p_deposition       = p_deposition,          &
       ! For lakes
       & DEBUG_VAR          = DEBUG_VAR,             &
       & drag_wtr           = drag_wtr,              &
