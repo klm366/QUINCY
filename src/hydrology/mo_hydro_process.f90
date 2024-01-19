@@ -374,8 +374,9 @@ CONTAINS
       ! with the ARNO runoff scheme.
       !
       ! Compute lateral inflow into ponds, expected to originate
-      ! from the whole grid cell and flow towards the depressions.
-      wtr_pond_inflow(:)  = water_to_soil(:)
+      ! from the whole grid cell and flow towards the depressions. Thus, most of the
+      ! available water is expected to end up in ponds
+      wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond(:)**(1.0_wp/3.0_wp)
       ! As ponds form in depressions, no lateral outflow is assumed but
       ! rather infiltration into the soil. Here we use several assumptions:
       ! - as only part of the cell is covered by ponds, the saturation deficit is scaled accordingly.
@@ -386,7 +387,7 @@ CONTAINS
         wtr_pond_outflow(:) = 0._wp
       ELSEWHERE
         wtr_pond_outflow(:) = MIN(wtr_pond(:) + 0.5_wp * wtr_pond_inflow(:), &
-          & MIN(k_sat_clay * dtime, soil_sat_deficit(:)) * fract_pond(:)**2)
+          & MIN(k_sat_clay * dtime, soil_sat_deficit(:)) * fract_pond(:))
       ENDWHERE
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
@@ -1581,7 +1582,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_jsb_math_constants,     ONLY: pi
-    USE mo_hydro_constants,        ONLY: Quad_, Tanh_
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
@@ -1641,7 +1642,7 @@ CONTAINS
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
     ELSE IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
       & pond_dynamics_scheme == Tanh_) THEN
-      fract_pond = MIN(1._wp, TANH(pi * (weq_pond / weq_pond_max))) * fract_pond_max
+      fract_pond = MIN(1._wp, (TANH(pi * (weq_pond / weq_pond_max)))**(oro_stddev/oro_crit)) * fract_pond_max
     ELSE
       fract_pond = 0._wp
     END IF
@@ -1700,7 +1701,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_jsb_math_constants,     ONLY: pi
-    USE mo_hydro_constants,        ONLY: Quad_, Tanh_
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
@@ -1753,7 +1754,7 @@ CONTAINS
       fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp) * fract_pond_max
     ELSE IF (weq_pond_max > EPSILON(1.0_wp) .AND. weq_pond > EPSILON(1.0_wp) .AND. &
       & pond_dynamics_scheme == Tanh_) THEN
-      fract_pond = MIN(1._wp, TANH(pi * (weq_pond / weq_pond_max))) * fract_pond_max
+      fract_pond = MIN(1._wp, (TANH(pi * (weq_pond / weq_pond_max)))**(oro_stddev/oro_crit)) * fract_pond_max
     ELSE
       fract_pond = 0._wp
     END IF
