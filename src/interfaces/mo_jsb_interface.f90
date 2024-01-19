@@ -1037,4 +1037,3 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_get_var
-
