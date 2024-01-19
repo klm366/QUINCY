@@ -1297,12 +1297,11 @@ CONTAINS
   !
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_unstressed"
-  !! Task "update_canopy_cond_unstressed" calculates canopy conductance without water stress
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> @brief Implementation of "update" for task "canopy_cond_unstressed"
+  !> calculates canopy conductance without water stress
+  !> 
+  !> is needed to calc the canopy conductance with water stress
+  !>
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
     ! ---------------------------
     ! Variables
@@ -1356,11 +1355,8 @@ CONTAINS
   !
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "canopy_cond_unstressed"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "aggregate" for task "canopy_cond_unstressed"
+  !>
   SUBROUTINE aggregate_canopy_cond_unstressed(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1392,12 +1388,9 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "water_stress"
-  !! Task "update_water_stress" calculates water stress
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "update" for task "water_stress"
+  !>   calculates water stress
+  !>
   SUBROUTINE update_water_stress(tile, options)
     ! ---------------------------
     ! Variables
@@ -1431,12 +1424,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available liquid water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available liquid water content in root zone
     dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
-    dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: water_stress           !< factor [0,1] used to calc the stressed canopy conductance
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
-    REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
-    REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5)
+    REAL(wp) :: config_w_soil_crit_fract                !< upper level of soil moisture at which water stress is at min == 1
+    REAL(wp) :: config_w_soil_wilt_fract                !< below this wilting point the water stress is at max == 0
+    REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5) !< scool == super cooled
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1485,7 +1479,8 @@ CONTAINS
 
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min)
 
-    ! Calculate actual plant available water
+    ! Calculate actual plant available water (in the root zone)
+    !   calc: wtr_rootzone_avail
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
     !   below the wilting point is not subtracted, so calling it available water might be misleading.
 
@@ -1503,6 +1498,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is=1,nsoil
         DO ic=1,nc
+          ! 'wtr_soil_pot_scool_sl_min' is idential with the actual wtr_soil_scool_sl
           wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
         END DO
       END DO
@@ -1523,7 +1519,9 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Calculate maximum plant available water
+    ! Calculate maximum plant available water, i.e., the potential available water (in root zone)
+    !   excluding: frozen and supercooled water
+    !   calc: wtr_rootzone_avail_max
     !   As in the the available water calculation above, water below the wilting point is not
     !   subtracted.
     ! pdv: Here also the question is how to treat the potential rootzone soil moisture
@@ -1555,7 +1553,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Calculate water stress
+    ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
@@ -1565,7 +1563,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! Calculate relative soil moisture (used in LoGro-P Phenology)
+    ! Calculate relative soil moisture
+    !   (used in LoGro-P Phenology)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
@@ -1586,11 +1585,8 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "water_stress"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "aggregate" for task "water_stress"
+  !>
   SUBROUTINE aggregate_water_stress(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1631,12 +1627,11 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
-  !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Implementation of "update" for task "canopy_cond_stressed"
+  !>    calculates canopy conductance under water stress
+  !>
+  !>   'canopy_cond_unstressed' must run prior to this function
+  !>
   SUBROUTINE update_canopy_cond_stressed(tile, options)
     ! ---------------------------
     ! Variables
@@ -1694,6 +1689,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
 
+    ! calc 'q_air_gt_qsat_tmp' LOGICAL == TRUE if q_air is greater than qsat
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
@@ -2386,6 +2382,13 @@ CONTAINS
 
   END SUBROUTINE aggregate_snow_and_skin_fraction
 
+  !> ensure the amounts of incomming (from the atmosphere, rain and snow) 
+  !>   and outgoing water (drainage, evapotranspiration, runoff) is consistent
+  !> 
+  !> also includes skin, soil and surface water
+  !> 
+  !> output is only diagnostic and error values
+  !> 
   SUBROUTINE update_water_balance( tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -2420,7 +2423,7 @@ CONTAINS
       & ice_soil_sl
 
     REAL(wp), POINTER :: &
-      & area(:), lat(:), lon(:)
+      & area(:), lat(:), lon(:)   !< for checking where a errors occurs if any
 
     ! Locally allocated vectors
     !
@@ -2493,16 +2496,18 @@ CONTAINS
         weq_land_new = 0._wp
       END IF
 
+      ! do not calc at the first timestep
       IF (.NOT. is_experiment_start) THEN
         weq_balance_err(ic) = weq_land(ic) + weq_fluxes(ic) * dtime - weq_land_new
       END IF
       weq_land(ic) = weq_land_new
 
 #ifndef _OPENACC
-      ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
-      ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
+      ! Compute water balance threshold based on model resolution and time step.
+      ! The threshold corresponds to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
       wb_threshold(ic) = 1.0e-11_wp * tile_area(ic) * dtime
 
+      ! if in any gridcell the water balance error is larger than threshold
       IF (ABS(weq_balance_err(ic)) > wb_threshold(ic)) THEN
         IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
           WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',             NEW_LINE('a'), &
@@ -2530,9 +2535,11 @@ CONTAINS
             & 'Runoff:             ', runoff(ic)     * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Drainage:           ', drainage(ic)   * tile_area(ic) / rhoh2o * dtime
         END IF
+        ! finish the model or write a model if the error occurs - based on the 'enforce_water_budget' namelist option
         IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
           CALL finish (TRIM(routine), message_text_long)
         ELSE
+          ! TODO  add debug level or some like that to reduce or disable output if not needed
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
@@ -2547,6 +2554,8 @@ CONTAINS
 
   END SUBROUTINE update_water_balance
 
+  !> do not agregate the variables to beable to see at what tile the error occurs
+  !> 
   SUBROUTINE aggregate_water_balance(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

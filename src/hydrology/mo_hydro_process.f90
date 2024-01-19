@@ -1932,6 +1932,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     IF (air_is_saturated) THEN
+      ! plants do not transpire anything of soil moisture is below wilting point
       conductance = EPSILON(1._wp)
     ELSE
       conductance = cond_unstressed * water_stress
@@ -1940,7 +1941,7 @@ CONTAINS
   END FUNCTION get_canopy_cond_stressed_simple
 
   !
-  ! @brief      Gets the water stress factor.
+  ! @brief      Gets the water stress factor - linear scaling
   !
   ! @param      w_soil               The w soil sl
   ! @param      w_soil_max           The w soil fc sl
@@ -1950,6 +1951,7 @@ CONTAINS
   !
   ! @return     The water stress factor. !
   !
+! TODO  remove this ELEMENTAL statement ?!
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
