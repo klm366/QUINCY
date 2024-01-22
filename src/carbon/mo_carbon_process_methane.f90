@@ -26,7 +26,7 @@ CONTAINS
 
   PURE ELEMENTAL SUBROUTINE calc_methane_soil_c( &
     ! General inputs
-    &  is_peat, dt,                              &
+    & is_peat, dt,                               &
     ! Input coefficients (fixed)                 
     & LeafLit_coef_acid,                         &
     & LeafLit_coef_water,                        &
