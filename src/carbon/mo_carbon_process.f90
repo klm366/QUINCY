@@ -228,7 +228,7 @@ CONTAINS
 
     !! call yasso for leaf litter
     CALL yasso(dt,Yasso_io_pools(1:9), Weather, Cflx_green_2_litter * dt, LeafLit_coefV,                &
-      &        sizeZero, Yasso_out, fract_green_aboveGround, Cflx_2_root_exudates * sec_per_day, redFact_Nlimitation)
+      &        sizeZero, Yasso_out, fract_green_aboveGround, Cflx_2_root_exudates * dt, redFact_Nlimitation)
 
     c_acid_ag1        = Yasso_out(1)
     c_water_ag1       = Yasso_out(2)
