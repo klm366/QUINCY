@@ -414,6 +414,8 @@ CONTAINS
         & wt_inun(:) &
       )
 
+      frac_inun(:) = MIN(1._wp,MAX(0._wp,frac_inun(:) * dsl4jsb_Config(TOP_)%scale_inun))
+
       IF (lstart) frac_inun_pre(:) = frac_inun(:) 
 
     ENDIF

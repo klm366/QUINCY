@@ -54,6 +54,7 @@ MODULE mo_top_config_class
     INTEGER           :: month_summer_end       ! Ending #month for summer specific calculations
     INTEGER           :: years_long_term        ! #years to include in long term means
     REAL(wp)          :: soil_depth_min         ! Minimum soil depth to deterimine water table and inundation [m]
+    REAL(wp)          :: scale_inun             ! Scale inundated fraction with this number []
   CONTAINS
     PROCEDURE :: Init => Init_topmodel_config
   END TYPE t_top_config
@@ -97,6 +98,7 @@ CONTAINS
     INTEGER                     :: month_summer_end
     INTEGER                     :: years_long_term
     REAL(wp)                    :: soil_depth_min
+    REAL(wp)                    :: scale_inun
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_topmodel_nml/                      &
@@ -111,7 +113,7 @@ CONTAINS
       & inun_prescribed, lpeat, ltime_means,         &
       & lat_const_wetland_type, years_long_term,     &
       & month_summer_start, month_summer_end,        &
-      & soil_depth_min,                              &
+      & soil_depth_min, scale_inun,                  &
       & ic_filename, bc_filename
 
     ! Locals
@@ -151,6 +153,7 @@ CONTAINS
     month_summer_start     =  6 ! Summer starts in June
     month_summer_end       =  9 ! Summer ends in September
     soil_depth_min         =  0.11_wp
+    scale_inun             =   1._wp
     ic_filename            = 'ic_land_soil.nc'
     bc_filename            = 'bc_land_soil.nc'
 
@@ -187,6 +190,7 @@ CONTAINS
     config%month_summer_start     = month_summer_start
     config%month_summer_end       = month_summer_end
     config%years_long_term        = years_long_term
+    config%scale_inun             = scale_inun
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
 
