@@ -43,6 +43,7 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(CH4_)
+  dsl4jsb_Use_config(TOP_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -179,6 +180,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(CH4_)
+    dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
@@ -346,6 +348,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(CH4_)
+    dsl4jsb_Get_config(TOP_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -651,6 +654,7 @@ CONTAINS
           & WoodLit_coef_nonsoluble      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
           & WoodLit_coef_humus           = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
           & WoodLitterSize               = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
+          & frac_inun_min                = dsl4jsb_Config(CH4_)%frac_inun_min,                      & ! in
           !                              
           & temp                         = pseudo_temp_yDay,                                        & ! in
           & precip                       = pseudo_precip_yDay,                                      & ! in

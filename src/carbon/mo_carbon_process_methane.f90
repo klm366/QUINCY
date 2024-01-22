@@ -39,6 +39,7 @@ CONTAINS
     & WoodLit_coef_nonsoluble,                   &
     & WoodLit_coef_humus,                        &
     & WoodLitterSize,                            &
+    & frac_inun_min,                             &
     ! Variable inputs                            
     & temp,                                      &
     & precip,                                    &
@@ -98,6 +99,8 @@ CONTAINS
     REAL(wp),           INTENT(in)    :: WoodLit_coef_nonsoluble    ! fraction going to the non soluble pools
     REAL(wp),           INTENT(in)    :: WoodLit_coef_humus         ! fraction going to the humus pool
     REAL(wp),           INTENT(in)    :: WoodLitterSize             ! size of coarse debris
+    !   Other constants
+    REAL(wp),           INTENT(in)    :: frac_inun_min              ! Minimum inundated fraction to consider wet cell parts
 
     ! Carbon inputs [mol m-2 s-1]:
     REAL(wp),           INTENT(in)    :: leafLitter
@@ -219,7 +222,7 @@ CONTAINS
     IF (.NOT. is_peat) THEN ! first do non-peatlands
 
       ! either without inundation or inundated fraction too small (set up in initialisation part)
-      IF (frac_inun <= 1.e-3_wp) THEN
+      IF (frac_inun <= frac_inun_min) THEN
 
         ! non-inundated area -- should be the same as in unmodified mo_cbal_cpools
 
@@ -262,7 +265,7 @@ CONTAINS
         soilResp_oxic = soilResp_rate
         soilResp_anoxic = 0._wp
 
-      ELSE ! (inun_frac<=1.e-3)
+      ELSE ! (frac_inun <= frac_inun_min)
 
         ! YASSO for inundated area
         
