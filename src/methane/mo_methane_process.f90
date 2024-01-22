@@ -568,7 +568,7 @@ CONTAINS
       ! we assume organic soils in this case, using frac_CH4_anox_organic
 
       ! sum of carbon in oxic, anoxic acrotelm and catotelm
-      ! NEED TO MODIFY THIS ONCE WE HAVE CATOTELM
+      ! NEED TO MODIFY THIS ONCE WE HAVE CATOTELM and also for the availability of layered respiration
       carbon_dist_sum_oxic = SUM(root_dist_peat(1:mxlay_above_wt))
       carbon_dist_sum_anox = SUM(root_dist_peat((mxlay_above_wt+1):mxlay_above_rock))
 
