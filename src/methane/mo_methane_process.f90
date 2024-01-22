@@ -449,7 +449,7 @@ CONTAINS
   PURE SUBROUTINE production(is_peatland, is_wet, mxlay_above_rock, mxlay_above_wt,        &
                         frac_CH4_anox_mineral, frac_CH4_anox_organic, meth_q10, root_dist, &
                         inun_frac, Tsoil, OxicDecompCarbon, AnoxDecompCarbon,              &
-                        CH4_Prod, CO2_Prod, O2_Uptake, CH4_prod_ratio)
+                        CH4_Prod, CO2_Prod, O2_Uptake, CH4_prod_ratio, resp_sl)
     LOGICAL,  INTENT(in)  :: is_peatland      ! peatland flag (.TRUE. if peatland)
     LOGICAL,  INTENT(in)  :: is_wet           ! wetness state, .FALSE. = dry, .TRUE. = wet
     INTEGER,  INTENT(in)  :: mxlay_above_rock ! layer number above bedrock
@@ -466,6 +466,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: CO2_Prod(:)      ! CO2 production per layer [mol m-2 ts-1]
     REAL(wp), INTENT(out) :: O2_Uptake(:)     ! O2 uptake during oxic CO2 production per layer [mol m-2 ts-1]
     REAL(wp), INTENT(out) :: CH4_Prod_ratio   ! ratio of CH4 to total anoxic production []
+    REAL(wp), OPTIONAL, INTENT(in) :: resp_sl(:) ! Distribution of respiration on individual soil layers if avail [mol m-2 ts-1]
 
     ! Parameters
     CHARACTER(len=*), PARAMETER :: routine = modname//':production'
@@ -487,6 +488,7 @@ CONTAINS
     REAL(wp) :: carbon_dist_sum_anox_inv             ! inverse of the sum of carbon in anoxic layers [-]
     REAL(wp) :: carbon_dist_sum_acro_inv             ! inverse of the sum of carbon in anoxic acrotelm [-]
     REAL(wp) :: carbon_dist_sum_cato_inv             ! inverse of the sum of carbon in catotelm [-]
+    REAL(wp) :: resp_sum
 
     CH4_Prod       = 0._wp
     CO2_Prod       = 0._wp
@@ -524,16 +526,32 @@ CONTAINS
     IF (.NOT. is_peatland) THEN
       ! vertical distribution of anoxic carbon - entire soil column is either saturated or not
       IF (.NOT. is_wet) THEN
-        ! carbon is input according to root distribution
-        carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_oxic
+
+        IF (PRESENT(resp_sl)) THEN
+          resp_sum = SUM(resp_sl(1:mxlay_above_rock))
+          IF (resp_sum /= 0._wp) THEN ! If not, carbon_oxic should also be 0
+            ! Distribute according to respiration
+            carbon_dist(1:mxlay_above_rock) = carbon_oxic * resp_sl(1:mxlay_above_rock) / resp_sum
+          ENDIF
+        ELSE
+          ! carbon is input according to root distribution
+          carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_oxic
+        ENDIF
 
         ! dry part of grid cell is completely oxic, becoming CO2 
         CO2_Prod_oxic(1:mxlay_above_rock) = carbon_dist(1:mxlay_above_rock)
       ELSE
-        f_ch4 = frac_CH4_anox_mineral * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp)
-        f_ch4 = MIN(f_ch4,0.5_wp)
-        ! carbon is input according to root distribution
-        carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_anox
+        f_ch4(:) = MIN(0.5_wp,frac_CH4_anox_mineral * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp))
+        IF (PRESENT(resp_sl)) THEN
+          resp_sum = SUM(resp_sl(1:mxlay_above_rock))
+          IF (resp_sum /= 0._wp) THEN ! If not, carbon_oxic should also be 0
+            ! Distribute according to respiration
+            carbon_dist(1:mxlay_above_rock) = carbon_oxic * resp_sl(1:mxlay_above_rock) / resp_sum
+          ENDIF
+        ELSE
+          ! carbon is input according to root distribution
+          carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_anox
+        ENDIF
 
         ! C decomposed under anaerobic conditions becomes both CH4 and CO2, with
         ! fractions determined by frac_CH4_anox_mineral
