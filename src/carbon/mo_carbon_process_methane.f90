@@ -403,8 +403,9 @@ CONTAINS
       !! call yasso for leaf litter
       !! non-inundated fraction first
       CALL yasso(dt, (1._wp-frac_inundated_YPeat(1:9))*Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV, &
-                 0._wp, Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt,                                     &
-                 redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.)
+                 0._wp, Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt,                                  &
+                 redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.,                               &
+                 N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp)
 
       ! There the area modification is done in the yasso call, thus not scaled using inun_frac
       c_acid_ag1           =                        Yasso_out_oxic(1)
@@ -423,7 +424,8 @@ CONTAINS
       !! inundated fraction second
       CALL yasso(dt, frac_inundated_YPeat(1:9)*Yasso_io_pools(1:9), Weather, 0._wp, LeafLit_coefV, &
                       0._wp, Yasso_out_anoxic, fract_green_aboveGround, 0._wp,                     &
-                      redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.)
+                      redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,           &
+                      N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp)
                 
       c_acid_ag1           = c_acid_ag1           + Yasso_out_anoxic(1)
       c_water_ag1          = c_water_ag1          + Yasso_out_anoxic(2)
@@ -442,7 +444,8 @@ CONTAINS
       !! non-inundated fraction first
       CALL yasso(dt,(1._wp-frac_inundated_YPeat(10:18))*Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV, &
                  WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp,                                      &
-                 redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.) ! no exudates
+                 redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.,                                  &
+                 N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp) ! no exudates
                 
       c_acid_ag2           =                        Yasso_out_oxic(1)
       c_water_ag2          =                        Yasso_out_oxic(2)
@@ -460,7 +463,8 @@ CONTAINS
       !! inundated fraction second
       CALL yasso(dt,frac_inundated_YPeat(10:18)*Yasso_io_pools(10:18), Weather, 0._wp, WoodLit_coefV, &
                  WoodLitterSize, Yasso_out_anoxic, fract_wood_aboveGround, 0.0_wp,                    &
-                 redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.) ! no exudates
+                 redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,                   &
+                 N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp) ! no exudates
                 
       c_acid_ag2           = c_acid_ag2           + Yasso_out_anoxic(1)
       c_water_ag2          = c_water_ag2          + Yasso_out_anoxic(2)
