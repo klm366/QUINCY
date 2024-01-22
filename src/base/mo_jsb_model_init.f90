@@ -1,19 +1,17 @@
-!> Summary: Methods for JSBACH initializations
+!> Methods for JSBACH initializations
 !>
-!>### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
+!> ICON-Land
 !>
-!> Copyright (c) 2013-2021 Reiner Schnur  
-!> Copyright (c) 2016 Julia Nabel
-!>#### Revision History
-!> First version and many ongoing changes               by Reiner Schnur (2013-04-04 - present)
-!> Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-04-15)
-!> Task order changes required for forest management    by Julia Nabel   (2018-07-05)
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### License
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
 !>
 MODULE mo_jsb_model_init
 
@@ -612,7 +610,7 @@ CONTAINS
           IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
           tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
         END IF
-        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract)
+        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract) ASYNC(1)
       END DO
 
       CALL model%Goto_next_tile(tile)

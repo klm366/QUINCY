@@ -1,17 +1,16 @@
+!> Contains JSBACH grid structure and methods
 !>
-!! @brief Contains JSBACH grid structure and methods
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_grid_class
 #ifndef __NO_JSBACH__
 
@@ -163,9 +162,9 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
-    !$ACC ENTER DATA COPYIN(new%lat, new%lsf, new%lsm)
 
     grid => new
+    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm)
 
     ! CALL message(routine, 'construction of JSBACH grid completed.')
 
@@ -509,10 +508,10 @@ CONTAINS
         END IF
       END IF
     END IF
-    !$ACC UPDATE DEVICE(new%levels) IF(present(levels))
-    !$ACC UPDATE DEVICE(new%lbounds) IF(present(lbounds))
-    !$ACC UPDATE DEVICE(new%ubounds) IF(present(ubounds))
-    !$ACC UPDATE DEVICE(new%dz) IF(present(dz))
+    !$ACC UPDATE DEVICE(new%levels) ASYNC(1) IF(present(levels))
+    !$ACC UPDATE DEVICE(new%lbounds) ASYNC(1) IF(present(lbounds))
+    !$ACC UPDATE DEVICE(new%ubounds) ASYNC(1) IF(present(ubounds))
+    !$ACC UPDATE DEVICE(new%dz) ASYNC(1) IF(present(dz))
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)

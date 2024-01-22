@@ -1,12 +1,16 @@
+!> atmosphere-land constants, orbital parameters, conversion factors, plus init routine 
 !>
-!! @brief atmosphere-land constants, orbital parameters, conversion factors, plus init routine 
-!!
-!! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_atmland_constants
 #ifndef __NO_JSBACH__
 

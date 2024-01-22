@@ -1,16 +1,16 @@
+!> Contains the interfaces to the fuel process
 !>
-!! @brief Contains the interfaces to the fuel process
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-05-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -102,7 +102,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of task fuel
+  !> Implementation of task fuel
   !! Task "fuel" calculates the fuel available for the fire process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.

@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #-----------------------------------------------------------------------------
 # Script to generate initial soil data from model output.
 # The intention is to reduce equilibration time after model initialization.
