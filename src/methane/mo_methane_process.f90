@@ -562,8 +562,7 @@ CONTAINS
         CH4_Prod(1:mxlay_above_rock) = f_ch4(1:mxlay_above_rock) * carbon_dist(1:mxlay_above_rock)
       END IF
     ELSE   ! is_peatland
-      f_ch4 = frac_CH4_anox_organic * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp)
-      f_ch4 = MIN(f_ch4,0.5_wp)
+      f_ch4(:) = MIN(0.5_wp,frac_CH4_anox_organic * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp))
 
       ! we assume organic soils in this case, using frac_CH4_anox_organic
 
