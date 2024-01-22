@@ -245,7 +245,7 @@ CONTAINS
       CALL message(routine,'termite methane emissions '//logical2string(do_termite))
       CALL message(routine,'herbivore methane emissions '//logical2string(do_herbivore))
       IF (GHG_from_atm) THEN
-        CALL message(routine,'Using ECHAM values for GHG mmr')
+        CALL message(routine,'Using values for GHG mmr from host model')
       ELSE
         CALL message(routine,'Using namelist values for GHG vmr')
         CALL message(routine,'CO2 VMR: '//real2string(concentration_mol_m3_2_vmr(CO2_consts,CO2_conc)))

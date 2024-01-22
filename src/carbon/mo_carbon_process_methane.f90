@@ -224,7 +224,7 @@ CONTAINS
       ! either without inundation or inundated fraction too small (set up in initialisation part)
       IF (frac_inun <= frac_inun_min) THEN
 
-        ! non-inundated area -- should be the same as in unmodified mo_cbal_cpools
+        ! non-inundated area -- should be the same as in mo_carbon_process::calc_soil_c
 
         !! call yasso for leaf litter; this time with nutrient effects
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,                &
