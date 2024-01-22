@@ -629,8 +629,8 @@ CONTAINS
   ! @brief     oxidation following Michaelis-Menten kinetics
   !
   !!
-  PURE ELEMENTAL SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, Tsoil, rel_soil_moist, &
-                                         dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod, &
+  PURE ELEMENTAL SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, oxid_q10, Tsoil, rel_soil_moist, &
+                                         dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod,           &
                                          CH4_Oxid, CO2_Oxid, O2_Oxid, O2_Other)
 
     USE mo_jsb_physical_constants, ONLY: tmelt
@@ -638,7 +638,8 @@ CONTAINS
     LOGICAL,  INTENT(in)  :: is_wet            ! wetness state: .FALSE. = dry, .TRUE. = wet
     REAL(wp), INTENT(in)  :: dt                ! time step [s]
     REAL(wp), INTENT(in)  :: oxid_scale_dry    ! 
-    REAL(wp), INTENT(in)  :: oxid_scale_wet    ! 
+    REAL(wp), INTENT(in)  :: oxid_scale_wet    !
+    REAL(wp), INTENT(in)  :: oxid_q10
     REAL(wp), INTENT(in)  :: Tsoil             ! Soil temperature [K]
     REAL(wp), INTENT(in)  :: rel_soil_moist    ! relative soil moisture
     REAL(wp), INTENT(in)  :: dens2conc         ! conversion factor from density to concentration []
@@ -662,7 +663,6 @@ CONTAINS
                                                             !   CH4: concentration where v = 0.5 * v_Max (reduced for upland)
     REAL(wp), PARAMETER :: K_M_O2  = 2.e-2_wp               ! Michaelis-Menten constant [mol m-3]
                                                             !   O2: concentration where v = 0.5 * v_Max
-    REAL(wp), PARAMETER :: Q10_Oxid = 1.9_wp                ! Q10 value for CH4 oxidation rate []
     REAL(wp), PARAMETER :: ten = 10._wp                     ! divisor for Q10 exponent []
     REAL(wp), PARAMETER :: stoich = 2._wp                   ! stoichiometric CH4 oxidation: 2mol O2 for 1mol CH4 []
     REAL(wp), PARAMETER :: frac_O2_Ox  = 0.4_wp             ! fraction of O2 needed for other oxidation processes []
@@ -708,7 +708,7 @@ CONTAINS
       MMkin = v_Max_eff * &
               (CH4_conc / (K_M_CH4_eff + CH4_conc)) * &
               (O2_conc  / (K_M_O2      + O2_conc )) * &
-              Q10_Oxid**((Tsoil - (tmelt + ten)) / ten) * &
+              oxid_q10**((Tsoil - (tmelt + ten)) / ten) * &
               moist_lim * dt
       CH4_conc_oxid = -MMkin
     END IF
