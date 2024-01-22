@@ -795,6 +795,7 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
             CALL oxidation_mm(is_Wet,  dt,                                                &
                               dsl4jsb_Config(CH4_)%scale_oxid_dry,                        &
                               dsl4jsb_Config(CH4_)%scale_oxid_wet,                        &
+                              dsl4jsb_Config(CH4_)%oxid_q10,                              &
                               t_soil_sl (i,1:nly), relative_moist_sl             (1:nly), &
                               dens2conc_sl(1:nly), conc2dens_sl                  (1:nly), &
                               CH4_act     (1:nly), CO2_act    (1:nly), O2_act    (1:nly), &

@@ -35,6 +35,7 @@ MODULE mo_ch4_config_class
     REAL(wp)          :: frac_CH4_anox_organic         ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
     REAL(wp)          :: tile_threshold                ! tile size cutoff for CH4 calculations (0 - 0.01 resonable)
     REAL(wp)          :: meth_q10                      ! Q10 for CH4:CO2 ratio
+    REAL(wp)          :: oxid_q10                      ! Q10 for CH4 oxidation
     REAL(wp)          :: co2_conc                      ! Atmospheric concentration of CO2 [mol m-3]
     REAL(wp)          :: ch4_conc                      ! Atmospheric concentration of CH4 [mol m-3]
     REAL(wp)          ::  o2_conc                      ! Atmospheric concentration of  O2 [mol m-3]
@@ -82,6 +83,7 @@ CONTAINS
     REAL(wp)                    :: frac_CH4_anox_organic     ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
     REAL(wp)                    :: tile_threshold            ! [-] tile size cutoff for CH4 calculations (0 - 0.01 resonable)
     REAL(wp)                    :: meth_q10                  ! Q10 for CH4:CO2 ratio
+    REAL(wp)                    :: oxid_q10                  ! Q10 for CH4 oxidation
     REAL(wp)                    :: co2_vmr                   ! VMR of CO2 [m3 m-3]
     REAL(wp)                    :: ch4_vmr                   ! VMR of CH4 [m3 m-3]
     REAL(wp)                    ::  O2_vmr                   ! VMR of O2  [m3 m-3]
@@ -116,6 +118,7 @@ CONTAINS
          frac_CH4_anox_organic,    &
          tile_threshold,           &
          meth_q10,                 &
+         oxid_q10,                 &
          co2_vmr,                  &
          ch4_vmr,                  &
          co2_mmr,                  &
@@ -153,6 +156,7 @@ CONTAINS
     frac_CH4_anox_organic  =    0.1_wp
     tile_threshold         =    0.0_wp
     meth_q10               =    1.0_wp
+    oxid_q10               =    1.9_wp
     CO2_vmr                =  400.e-6_wp
     CH4_vmr                = 1885.e-9_wp
      O2_vmr                =    2.0946e-1_wp
@@ -209,6 +213,7 @@ CONTAINS
     config%frac_CH4_anox_organic  = frac_CH4_anox_organic
     config%tile_threshold         = tile_threshold
     config%meth_q10               = meth_q10
+    config%oxid_q10               = oxid_q10
     config%co2_conc               = co2_conc
     config%ch4_conc               = ch4_conc
     config%o2_conc                = o2_conc
@@ -232,6 +237,7 @@ CONTAINS
       CALL message(routine,'CH4 production fraction organic soil '//real2string(frac_CH4_anox_organic))
       CALL message(routine,'tile size threshold '//real2string(tile_threshold))
       CALL message(routine,'Q10 for methane production fraction '//real2string(meth_q10))
+      CALL message(routine,'Q10 for methane oxidation           '//real2string(oxid_q10))
       CALL message(routine,'implicit contribution in Crank-Nicolson diffusion '//real2string(implicit_contrib))
       CALL message(routine,'methane time steps per day '//int2string(nstep_per_day))
       CALL message(routine,'diffusion steps per timestep '//int2string(nstep_diffusion))
