@@ -666,7 +666,7 @@ CONTAINS
 
     CH4_conc_oxid = 0._wp
 
-    IF (is_wet) THEN
+    IF (.NOT. is_wet) THEN
       v_Max_eff = v_Max_dry*oxid_scale_dry
       K_M_CH4_eff = K_M_CH4_dry
     ELSE
