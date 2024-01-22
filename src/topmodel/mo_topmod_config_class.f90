@@ -40,7 +40,7 @@ MODULE mo_top_config_class
     REAL(wp)          :: wetland_threshold      ! Minimum for relaxed P/E allowing wetlands []
     LOGICAL           :: init_runmean           ! initialise the running means
     LOGICAL           :: use_cti_basin          ! use basin mean CTI index in inundated area calc.
-    LOGICAL           :: use_openwater        ! use open water fraction to limit inundated fraction
+    LOGICAL           :: use_openwater          ! use open water fraction to limit inundated fraction
     LOGICAL           :: use_wt_max             ! use wt_max to limit inundated fraction
     LOGICAL           :: use_cti_max            ! use cti_max to limit inundated fraction
     LOGICAL           :: use_cti_flood          ! use cti_min_flooding to limit inundated fraction
@@ -128,13 +128,13 @@ CONTAINS
     ! Set defaults
     active                 = .FALSE.
     dbg_topmodel           = .FALSE.
-    cti_min                =  5.0_wp
-    cti_max                = 35.0_wp
-    cti_min_flooding       =  9.0_wp
-    wt_min                 =  0._wp
-    wt_max                 =  0.5_wp
-    efold                  =  2.0_wp
-    saturation_threshold   =  0.95_wp
+    cti_min                =   5.0_wp
+    cti_max                =  35.0_wp
+    cti_min_flooding       =   9.0_wp
+    wt_min                 =   0._wp
+    wt_max                 =   0.5_wp
+    efold                  =   2.0_wp
+    saturation_threshold   =   0.95_wp
     relaxation_time        = 365.2425_wp
     wetland_threshold      =   1.0_wp
     init_runmean           = .FALSE.
@@ -143,16 +143,16 @@ CONTAINS
     use_wt_max             = .FALSE.
     use_cti_max            = .FALSE.
     use_cti_flood          = .TRUE.
-    peat_runoff_exp        = 20.0_wp
-    peat_runoff_fac        =  1.e-2_wp
+    peat_runoff_exp        =  20.0_wp
+    peat_runoff_fac        =   1.e-2_wp
     inun_prescribed        = .FALSE.
     lpeat                  = .FALSE.
     ltime_means            = .FALSE.
-    lat_const_wetland_type = 40._wp
-    years_long_term        =  5
-    month_summer_start     =  6 ! Summer starts in June
-    month_summer_end       =  9 ! Summer ends in September
-    soil_depth_min         =  0.11_wp
+    lat_const_wetland_type =  40._wp
+    years_long_term        =   5
+    month_summer_start     =   6 ! Summer starts in June
+    month_summer_end       =   9 ! Summer ends in September
+    soil_depth_min         =   0.11_wp
     scale_inun             =   1._wp
     ic_filename            = 'ic_land_soil.nc'
     bc_filename            = 'bc_land_soil.nc'
