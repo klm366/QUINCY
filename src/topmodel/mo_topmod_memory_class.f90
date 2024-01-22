@@ -30,7 +30,7 @@ MODULE mo_top_memory_class
 
   PUBLIC :: t_top_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 30
+  INTEGER, PARAMETER :: max_no_of_vars = 32
 
   ! ======================================================================================================= !
   !>Type definition for topmodel  memory
@@ -55,6 +55,7 @@ MODULE mo_top_memory_class
       & wt_inun_mean_month,   &                ! monthly mean of wt_inun [m]
       & wt_inun_min_lt,       &                ! multiyear avg of minimum monthly wt_inun [m]
       & aet,                  &                ! equilibrium evapotranspiration [kg m-2 s-1]
+      & aet_relax,            &                ! AET running average with time relaxation [kg m-2 s-1]
       & poaet_lt,             &                ! multiyear avg of precipitation over equilibrium evapotranspiration []
       & aet_sum_day,          &                ! equilibrium evapotranspiration: sum over day [kg m-2 s-1]
       & aet_mean_day,         &                ! mean equilibrium evapotranspiration during day [kg m-2 s-1]
@@ -63,6 +64,7 @@ MODULE mo_top_memory_class
       & poaet_sum_year,       &                ! yearly sum precip / eq evap []
       & precip_sum_day,       &                ! daily sum of precipitation flux [kg m-2 s-1]
       & precip_mean_day,      &                ! mean precipitation flux from previous day [kg m-2 s-1]
+      & precip_relax,         &                ! precipitation running average with time relaxation [kg m-2 s-1]
       & frac_liquid_top,      &                ! fraction of water in liquid form in uppermost soil layers []
       & frac_liquid_top_uncorr,  &             ! fraction of water in liquid form in uppermost soil layers (uncorrected) []
       & peat_water_flux,      &                ! water flux of peatland [kg m-2 s-1]
@@ -328,12 +330,30 @@ CONTAINS
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
+      CALL mem%Add_var( 'precip_relax', mem%precip_relax,                      &
+        & hgrid, surface,                                                      &
+        & t_cf('precip_relax', 'kg m-2 s-1', 'precipitation'),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
+        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
       CALL mem%Add_var( 'aet', mem%aet,                                        &
         & hgrid, surface,                                                      &
         & t_cf('aet', 'kg m-2 s-1', 'potential evanpotranspiration'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+      CALL mem%Add_var( 'aet_relax', mem%aet_relax,                            &
+        & hgrid, surface,                                                      &
+        & t_cf('aet_relax', 'kg m-2 s-1', 'potential evanpotranspiration'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 

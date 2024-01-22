@@ -142,6 +142,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: frac_liquid_top_uncorr
     dsl4jsb_Real2D_onChunk :: precip_sum_day
     dsl4jsb_Real2D_onChunk :: precip_mean_day
+    dsl4jsb_Real2D_onChunk :: precip_relax
     dsl4jsb_Real2D_onChunk :: frac_inun
     dsl4jsb_Real2D_onChunk :: frac_inun_uncorr
     dsl4jsb_Real2D_onChunk :: frac_inun_pre
@@ -160,6 +161,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: aet
     dsl4jsb_Real2D_onChunk :: aet_sum_day
     dsl4jsb_Real2D_onChunk :: aet_mean_day
+    dsl4jsb_Real2D_onChunk :: aet_relax
     dsl4jsb_Real2D_onChunk :: poaet_mean_day
     dsl4jsb_Real2D_onChunk :: poaet_sum_year
     dsl4jsb_Real2D_onChunk :: poaet_mean_year
@@ -184,6 +186,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
     REAL(wp) :: water_table_t, frac_liquid_top_t
+    LOGICAL,  POINTER :: PE_mask(:)
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i
     INTEGER  :: year, month, summer_state, ylen, mlen
@@ -253,6 +256,7 @@ CONTAINS
     ALLOCATE(t_soil          (nsoil))
     ALLOCATE(wtr_soil        (nsoil))
     ALLOCATE(ice_soil        (nsoil))
+    ALLOCATE(PE_mask         (nc))
 
     IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_topmodel)) call message(routine,'First instance of update_topmodel')
 
@@ -267,8 +271,10 @@ CONTAINS
       ! Variables only available if lpeat
       dsl4jsb_Get_var2D_onChunk(TOP_, precip_sum_day)
       dsl4jsb_Get_var2D_onChunk(TOP_, precip_mean_day)
+      dsl4jsb_Get_var2D_onChunk(TOP_, precip_relax)
       dsl4jsb_Get_var2D_onChunk(TOP_, aet_sum_day)
       dsl4jsb_Get_var2D_onChunk(TOP_, aet_mean_day)
+      dsl4jsb_Get_var2D_onChunk(TOP_, aet_relax)
       dsl4jsb_Get_var2D_onChunk(TOP_, poaet_mean_day)
       dsl4jsb_Get_var2D_onChunk(TOP_, poaet_sum_year)
       dsl4jsb_Get_var2D_onChunk(TOP_, poaet_mean_year)
@@ -292,14 +298,15 @@ CONTAINS
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
-        CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                 &
-          &                      lnew_year,lnew_month,lnew_day,                            &
-          &                      mlen,ylen,tspd,                                           &
-          &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),            &
-          &                      rain(:),snow(:),  precip_sum_day (:),precip_mean_day (:), &
-          &                      aet(:),              aet_sum_day (:),   aet_mean_day (:), &
-          &                      poaet_mean_day(:), poaet_sum_year(:), poaet_mean_year(:), &
-          &                      poaet_lt(:)                                               &
+        CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                  &
+          &                      lnew_year,lnew_month,lnew_day,                                             &
+          &                      mlen,ylen,tspd,                                                            &
+          &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                             &
+          &                      dsl4jsb_Config(TOP_)%relaxation_time*tspd,                                 &
+          &                      rain(:),snow(:),  precip_sum_day (:),precip_mean_day (:), precip_relax(:), &
+          &                      aet(:),              aet_sum_day (:),   aet_mean_day (:),    aet_relax(:), &
+          &                      poaet_mean_day(:), poaet_sum_year(:), poaet_mean_year(:),                  &
+          &                      poaet_lt(:)                                                                &
         )
       ENDIF
 
@@ -376,6 +383,13 @@ CONTAINS
         frac_liquid_top_uncorr(i) =            frac_liquid_top(i)
         frac_liquid_top       (i) = MAX(0.1_wp,frac_liquid_top(i))
       ENDDO
+      DO i=1, nc
+        IF (aet_relax(i) > 0._wp) THEN
+          PE_mask(i) = (precip_relax(i) / aet_relax(i)) > dsl4jsb_Config(TOP_)%wetland_threshold
+        ELSE
+          PE_mask(i) = precip_relax(i) > 0._wp
+        ENDIF
+      ENDDO
 
       ! Calculate inundated area
       CALL update_inun_frac(                         &
@@ -394,6 +408,7 @@ CONTAINS
         & soil_depth(:),                             & ! Geographical dependent parameters
         & cti_mean(:),cti_basin(:),cti_openwater(:), &
         & cti_phi(:),cti_mu(:),cti_chi(:),           &
+        & PE_mask(:),                                &
         & water_table(:),frac_liquid_top(:),         & ! Variable inputs
         & frac_inun(:),frac_inun_uncorr(:),          & ! Outputs
         & wt_inun(:) &
@@ -450,6 +465,7 @@ CONTAINS
     DEALLOCATE(t_soil)
     DEALLOCATE(wtr_soil)
     DEALLOCATE(ice_soil)
+    DEALLOCATE(PE_mask)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -503,8 +519,10 @@ CONTAINS
     ENDIF
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
       dsl4jsb_Aggregate_onChunk(TOP_,  aet,                    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(TOP_,  aet_relax,              weighted_by_fract)
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
         dsl4jsb_Aggregate_onChunk(TOP_, precip_mean_day,   weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(TOP_, precip_relax,      weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,    aet_mean_day,   weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  poaet_mean_day,   weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  poaet_mean_year,  weighted_by_fract)
