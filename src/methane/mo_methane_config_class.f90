@@ -44,6 +44,7 @@ MODULE mo_ch4_config_class
     REAL(wp)          :: scale_oxid_wet                ! scale CH4 oxidation wet part
     REAL(wp)          :: implicit_contrib              ! contribution from implicit part of Crank-Nicolson diffusion equation
     REAL(wp)          :: frac_inun_min                 ! Threshold for tile fraction to be considered for methane processes
+    REAL(wp)          :: polar_anoxic_fac              ! Multiply polar anoxic respiration by this factor
     LOGICAL           :: GHG_from_atm                  ! get GHG concentrations from ECHAM
     LOGICAL           :: do_fire                       ! determine fire CH4 emissions
     LOGICAL           :: do_termite                    ! determine termite CH4 emissions
@@ -96,6 +97,7 @@ CONTAINS
     REAL(wp)                    :: scale_oxid_wet            ! scale CH4 oxidation wet part
     REAL(wp)                    :: implicit_contrib          ! contribution from implicit part of Crank-Nicolson diffusion equation
     REAL(wp)                    :: frac_inun_min             ! Threshold for tile fraction to be considered for methane processes
+    REAL(wp)                    :: polar_anoxic_fac          ! Multiply pole-near anoxic respiration by this factor
     LOGICAL                     :: GHG_from_atm              ! get GHG concentration from ECHAM
     LOGICAL                     :: do_fire                   ! determine fire CH4 emissions
     LOGICAL                     :: do_termite                ! determine termite CH4 emissions
@@ -131,6 +133,7 @@ CONTAINS
          do_herbivore,             &
          minimum_no_layers,        &
          frac_inun_min,            &
+         polar_anoxic_fac,         &
          nstep_per_day,            &
          nstep_diffusion
 
@@ -165,6 +168,7 @@ CONTAINS
     scale_oxid_wet         =    1.0_wp
     implicit_contrib       =    0.5_wp
     frac_inun_min          =    1.e-3_wp
+    polar_anoxic_fac       =    1.0_wp
     minimum_no_layers      =    3
     nstep_per_day          =    2
     nstep_diffusion        =    1
@@ -221,6 +225,7 @@ CONTAINS
     config%nstep_per_day          = nstep_per_day
     config%minimum_no_layers      = minimum_no_layers
     config%frac_inun_min          = frac_inun_min
+    config%polar_anoxic_fac       = polar_anoxic_fac
 
     IF (active) THEN
       CALL message(routine,'Running CH4 soil transport model with parameters:')

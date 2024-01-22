@@ -28,6 +28,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -152,7 +153,6 @@ CONTAINS
     END SELECT
 
   END SUBROUTINE Register_carbon_tasks
-
   ! ================================================================================================================================
   !>
   !! @brief Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
@@ -176,9 +176,11 @@ CONTAINS
 
     ! Declare local variables
     TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid), POINTER       :: grid
     LOGICAL                         :: lstart, lrestart, new_day, new_year
     INTEGER                         :: iblk, ics, ice
     REAL(wp)                        :: dtime
+    REAL(wp), POINTER               :: lat(:)
     TYPE(t_subset)                  :: subset
     REAL(wp), ALLOCATABLE           :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
@@ -348,6 +350,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice,iblk)
     dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_config(TOP_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -688,7 +692,13 @@ CONTAINS
           & soilResp_anoxic              = soil_respiration_anoxic,                                 & ! out
           & acrotelm_height_ag           = acrotelm_height_ag,                                      & ! out
           & acrotelm_height_bg           = acrotelm_height_bg                                       & ! out
-          & ) 
+          & )
+          ! Test case: "manually" manipulate the anoxic fraction. polar_anoxic_fac is 1 in the standard case
+          WHERE (lat(:) > dsl4jsb_Config(TOP_)%lat_const_wetland_type)
+            soil_respiration_anoxic(:) = MAX(soil_respiration       (:), & ! Respiration by def < 0
+                                             soil_respiration_anoxic(:) * dsl4jsb_Config(CH4_)%polar_anoxic_fac)
+            soil_respiration_oxic  (:) = soil_respiration(:) - soil_respiration_anoxic(:)
+          ENDWHERE
       ELSE
         CALL calc_soil_c( &
           & sec_per_day,                                                                       & ! in
