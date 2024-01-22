@@ -251,7 +251,7 @@ CONTAINS
     & soil_depth,                                &
     & cti_mean, cti_basin, cti_openwater,        &
     & cti_phi, cti_mu, cti_chi,                  &
-    & water_table, frac_liquid_water,            &
+    & mask, water_table, frac_liquid_water,      &
     & frac_inun, frac_inun_uncorr, wt_inun       &
   )
 
@@ -277,6 +277,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: cti_mu
     REAL(wp), INTENT(in)    :: cti_chi
     !  Topmodel variables
+    LOGICAL,  INTENT(in)    :: mask
     REAL(wp), INTENT(in)    :: water_table
     REAL(wp), INTENT(in)    :: frac_liquid_water
     REAL(wp), INTENT(inout) :: frac_inun
@@ -295,7 +296,7 @@ CONTAINS
     frac_inun_uncorr = 0._wp
     wt_inun          = 0._wp
 
-    IF ((cti_mean > cti_min) .AND. (water_table > -water_table_threshold * soil_depth)) THEN
+    IF ((cti_mean > cti_min) .AND. (water_table > -water_table_threshold * soil_depth) .AND. mask) THEN
 
       ! Determine inundated area
       cti_ref = cti_mean
@@ -467,11 +468,11 @@ CONTAINS
   ELEMENTAL PURE SUBROUTINE update_peat_runmean(            &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
-    & nyear_lt,                                             &
+    & nyear_lt, nstep_relaxation,                           &
     & rain, snow,                                           &
-    & precip_sum_day, precip_mean_day,                      &
+    & precip_sum_day, precip_mean_day, precip_relax,        &
     & aet,                                                  &
-    & aet_sum_day,  aet_mean_day,                           &
+    & aet_sum_day,  aet_mean_day, aet_relax,                &
     & poaet_mean_day,                                       &
     & poaet_sum_year, poaet_mean_year,                      &
     & poaet_lt                                              &
@@ -482,10 +483,13 @@ CONTAINS
     INTEGER,  INTENT(in)    :: ylen                            ! Length of year of previous timestep [days] (by lyear only)
     INTEGER,  INTENT(in)    :: tspd                            ! Time steps per day
     REAL(wp), INTENT(in)    :: nyear_lt                        ! efolding time for long term averages [years]
+    REAL(wp), INTENT(in)    :: nstep_relaxation                ! #efolding steps for precipitation and aet averages
     REAL(wp), INTENT(in)    :: rain, snow                      ! Rain and snow [kg m-2 s-1] (from A2L_)
     REAL(wp), INTENT(inout) :: precip_sum_day, precip_mean_day ! Daily sum/mean of total precipitation [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: precip_relax                    ! Efolded average of precipitation [kg m-2 s-1]
     REAL(wp), INTENT(in)    :: aet                             ! Potential evapotranspiration [kg m-2 s-1]
     REAL(wp), INTENT(inout) :: aet_sum_day,  aet_mean_day      ! Daily sum/mean of potential evapotranspiration [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: aet_relax                       ! Efolded average of aet [kg m-2 s-1]
     REAL(wp), INTENT(inout) :: poaet_mean_day                  ! Daily mean of precip/potential evapotranspiration []
     REAL(wp), INTENT(inout) :: poaet_sum_year, poaet_mean_year ! Yearly sum/mean of daily mean precip/pot evapotranspiration []
     REAL(wp), INTENT(inout) :: poaet_lt                        ! Long term mean of year mean of poaet []
@@ -523,6 +527,10 @@ CONTAINS
     ! Any time step: Add to sums
     precip_sum_day = precip_sum_day + rain + snow
     aet_sum_day    = aet_sum_day + aet
+
+    ! Update efolded averages
+    aet_relax    = (   aet_relax * (nstep_relaxation - 1._wp) + aet        ) / nstep_relaxation
+    precip_relax = (precip_relax * (nstep_relaxation - 1._wp) + rain + snow) / nstep_relaxation
 
   END SUBROUTINE update_peat_runmean
 

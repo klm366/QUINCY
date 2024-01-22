@@ -36,6 +36,8 @@ MODULE mo_top_config_class
     REAL(wp)          :: cti_max                ! maximum CTI for inundation (larger is considered lake/river)
     REAL(wp)          :: cti_min_flooding       ! minimum CTI for floodability
     REAL(wp)          :: saturation_threshold   ! threshold above which soil layer is assumed saturated
+    REAL(wp)          :: relaxation_time        ! time scale for relaxation of aet and precip [d]
+    REAL(wp)          :: wetland_threshold      ! Minimum for relaxed P/E allowing wetlands []
     LOGICAL           :: init_runmean           ! initialise the running means
     LOGICAL           :: use_cti_basin          ! use basin mean CTI index in inundated area calc.
     LOGICAL           :: use_openwater        ! use open water fraction to limit inundated fraction
@@ -77,6 +79,8 @@ CONTAINS
     REAL(wp)                    :: cti_max
     REAL(wp)                    :: cti_min_flooding
     REAL(wp)                    :: saturation_threshold
+    REAL(wp)                    :: relaxation_time
+    REAL(wp)                    :: wetland_threshold
     LOGICAL                     :: init_runmean
     LOGICAL                     :: use_cti_basin
     LOGICAL                     :: use_openwater
@@ -99,7 +103,8 @@ CONTAINS
       & active, dbg_topmodel,                        &
       & efold, wt_min, wt_max,                       &
       & cti_min, cti_max, cti_min_flooding,          &
-      & saturation_threshold, init_runmean,          &
+      & saturation_threshold, relaxation_time,       &
+      & wetland_threshold, init_runmean,             &
       & use_cti_basin, use_openwater,                &
       & use_wt_max, use_cti_max, use_cti_flood,      &
       & peat_runoff_exp, peat_runoff_fac,            &
@@ -128,6 +133,8 @@ CONTAINS
     wt_max                 =  0.5_wp
     efold                  =  2.0_wp
     saturation_threshold   =  0.95_wp
+    relaxation_time        = 365.2425_wp
+    wetland_threshold      =   1.0_wp
     init_runmean           = .FALSE.
     use_cti_basin          = .FALSE.
     use_openwater          = .FALSE.
@@ -163,6 +170,8 @@ CONTAINS
     config%cti_max                = cti_max
     config%cti_min_flooding       = cti_min_flooding
     config%saturation_threshold   = saturation_threshold
+    config%relaxation_time        = relaxation_time
+    config%wetland_threshold      = wetland_threshold
     config%use_cti_basin          = use_cti_basin
     config%use_openwater          = use_openwater
     config%use_wt_max             = use_wt_max
