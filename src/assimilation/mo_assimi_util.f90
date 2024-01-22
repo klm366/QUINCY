@@ -1,30 +1,20 @@
+!> Summary: JSBACH & QUINCY helper routines for assimilation
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief diverse subroutines and functions for the assimilation process
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (2018-04-06)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### various helper routines for the assimilation process
+!>
 MODULE mo_assimi_util
 #ifndef __NO_JSBACH__
 
@@ -75,13 +65,13 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
+    model  => Get_model(tile%owner_model_id)
+
+    IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
-
-    ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -109,40 +99,41 @@ CONTAINS
   !> calculate time moving averages and daytime averages for ASSIMI_
   !>
   SUBROUTINE calculate_time_average_assimilation(tile, options)
-
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, ASSIMI_, PHENO_
+    USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, ASSIMI_, Q_PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER              :: model
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
+    REAL(wp)                                :: dtime                !< timestep
     INTEGER                                 :: ic                   !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_assimilation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -163,29 +154,32 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime_dacc
-    ! PHENO_
+    ! Q_PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)              RETURN  ! only if the present tile is a pft
+    IF (tile%lcts(1)%lib_id == 0) RETURN !< only if the present tile is a pft
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                   ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)        ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                  ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)           ! in
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                  ! in
@@ -206,8 +200,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)         ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)     ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)     ! out
-    ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! in
+    ! Q_PHENO_
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! in
 
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
@@ -239,13 +233,8 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !>
-    !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver
-    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
-      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
-          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
+      IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           beta_air_daytime(ic)     = beta_air_daytime_dacc(ic)     / daytime_counter(ic)
@@ -258,7 +247,6 @@ CONTAINS
         beta_soil_gs_daytime_dacc(ic) = 0.0_wp
       END IF
     END DO
-
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>2.0 moving averages

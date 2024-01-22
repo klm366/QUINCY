@@ -20,7 +20,8 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_, CH4_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_, CH4_, &
+    &                   Q_PHENO_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
@@ -192,6 +193,7 @@ CONTAINS
     USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_assimi_init,         ONLY: assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
+    USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
@@ -479,11 +481,11 @@ CONTAINS
 
       !-- set flux variables to zero
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")       ! ALL
+      CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
       CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
       ENDIF
-      CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
 
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN
@@ -491,7 +493,7 @@ CONTAINS
       ENDIF
       CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
       CALL model%Queue_task(RAD_, "radiation_quincy")             ! ALL
-      CALL model%Queue_task(PHENO_, "phenology")                  ! ALL
+      CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
       CALL model%Queue_task(ASSIMI_, "canopy_fluxes")             ! ALL
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
@@ -596,9 +598,12 @@ CONTAINS
         END IF
       END SELECT
 
-      ! Initialize PHENO_ before HYDRO_ and VEG_
+      ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       IF (tile%Is_process_active(PHENO_)) THEN
         CALL pheno_init(tile)
+      END IF
+      IF (tile%Is_process_active(Q_PHENO_)) THEN
+        CALL q_pheno_init(tile)
       END IF
 
       ! HYDRO_ & SSE_
@@ -819,7 +824,7 @@ CONTAINS
       IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
         IF (        tile%is_vegetation                                          &
-            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) /= 'climatology' &
+            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
             & .AND. tile%lcts(1)%lib_id == 0)                                   &
           & CALL finish(TRIM(routine), &
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))

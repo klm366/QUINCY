@@ -1,31 +1,21 @@
+!> Summary: QUINCY calculate vegetation growth
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the plant growth 
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!!
-MODULE mo_veg_growth
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate vegetation growth including, e.g., diameter, height, allometry and nutrient uptake
+!>
+MODULE mo_q_veg_growth
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -43,7 +33,7 @@ MODULE mo_veg_growth
   PUBLIC :: update_veg_growth
   PUBLIC :: calc_diameter_from_woody_biomass, calc_height_from_diameter
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_growth'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_growth'
 
 CONTAINS
 
@@ -56,11 +46,11 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
-    USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
+    USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration 
+    USE mo_q_veg_canopy,            ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(ASSIMI_)
@@ -69,7 +59,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(SB_)
@@ -106,14 +96,13 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: q_air
@@ -160,6 +149,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
@@ -272,7 +262,6 @@ CONTAINS
     nc        = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
@@ -281,13 +270,16 @@ CONTAINS
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
@@ -301,9 +293,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                              ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! in
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
@@ -350,6 +341,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)           ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)           ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)                     !   inout
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)                    ! in
@@ -1491,7 +1483,7 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, eps8
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_veg_constants          ! e.g. delta_n_leaf
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1676,7 +1668,7 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, &
       &                                   leaf2root_min_ratio, leaf2root_max_ratio
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2219,7 +2211,7 @@ CONTAINS
       k_labphen = k_labphen_grass
     CASE DEFAULT
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
-      CALL finish("mo_veg_growth",message_text)
+      CALL finish("mo_q_veg_growth",message_text)
     END SELECT
 
     DO ic = 1,nc
@@ -2679,7 +2671,7 @@ CONTAINS
       !! Write statement
       !! 
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
-      CALL finish("mo_veg_growth",message_text)
+      CALL finish("mo_q_veg_growth",message_text)
     END SELECT
 
     !> 1.3 Convert biomass increments to allocation fractions
@@ -3178,4 +3170,4 @@ CONTAINS
 
    END SUBROUTINE calc_root_distribution_change
 
-END MODULE mo_veg_growth
+END MODULE mo_q_veg_growth

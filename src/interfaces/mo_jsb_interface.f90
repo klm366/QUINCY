@@ -99,9 +99,15 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
-    & DEBUG_VAR,        &
-    ! OPTIONAL arguments:
-    !   for lakes
+    ! OPTIONAL arguments
+    ! For QUINCY
+    & nhx_deposition,         & !< in
+    & noy_deposition,         & !< in
+    & nhx_n15_deposition,     & !< in
+    & noy_n15_deposition,     & !< in
+    & p_deposition,           & !< in
+    ! For lakes
+    & DEBUG_VAR,                                                        & !< in
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
@@ -113,7 +119,7 @@ CONTAINS
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     !   for ICON-Land standalone
-    & evapopot                                                          & !< out
+    & evapopot                                                          & !< out, optional
     & )
 
 #ifndef __ICON__
@@ -151,8 +157,14 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    ! For lakes:
-    REAL(wp), INTENT(in), OPTIONAL ::    &
+    REAL(wp), INTENT(in), OPTIONAL :: &
+      ! MODEL_QUINCY
+      & nhx_deposition    (:), &
+      & noy_deposition    (:), &
+      & nhx_n15_deposition(:), &
+      & noy_n15_deposition(:), &
+      & p_deposition      (:), &
+      ! For lakes:
       & DEBUG_VAR         (:), &
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -277,8 +289,14 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
+      ! For QUINCY
+      & nhx_deposition     = nhx_deposition,        &
+      & noy_deposition     = noy_deposition,        &
+      & nhx_n15_deposition = nhx_n15_deposition,    &
+      & noy_n15_deposition = noy_n15_deposition,    &
+      & p_deposition       = p_deposition,          &
+      ! For lakes
       & DEBUG_VAR          = DEBUG_VAR,             &
-      ! For lakes:
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
       & t_acoef_wtr        = t_acoef_wtr,           &

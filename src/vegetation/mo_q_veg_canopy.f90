@@ -1,32 +1,21 @@
+!> Summary: QUINCY calculate canopy layer properties
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines to calculate the canopy layer C and N content, and routines using this functionality
-!!
-!! @author
-!!  Soenke Zaehle, Silvia Caldararu, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2016-29-08)
-!!
-!!
-MODULE mo_veg_canopy
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate canopy layer properties, e.g., C & N content, LAI, fractional allocation
+!>
+MODULE mo_q_veg_canopy
 
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
@@ -38,7 +27,7 @@ MODULE mo_veg_canopy
   PRIVATE
   PUBLIC :: calc_canopy_layers, calc_marginal_canopy_flux_increment, calc_dir_optimal_cn_leaf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_canopy'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_canopy'
 
 CONTAINS
 
@@ -190,7 +179,7 @@ CONTAINS
           .NOT.PRESENT(t_jmax_opt)) THEN
 
           WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate] variables'
-          CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
+          CALL finish("mo_q_veg_canopy:calc_canopy_layer",message_text)
        ENDIF
     ENDIF
 
@@ -505,7 +494,6 @@ CONTAINS
     REAL(wp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
     REAL(wp) :: fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl    ! optimal N fractions
     REAL(wp) :: m_rub, m_et, m_pepc                            ! specific PS rates
-    LOGICAL  :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':optimise_canopy_n_fractions'
 
 
@@ -513,10 +501,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-    !> 0.9 init local var
-    !>
-    l_day = .FALSE.
 
     ! run this routine only if there are leaves at this canopy layer
     ! this routine is called in a loop over all canopy layers (DO icanopy = 1,ncanopy)
@@ -543,7 +527,6 @@ CONTAINS
                                  t_jmax_omega                  , &
                                  ps_pathway                    , &  ! lctlib
                                  canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
-                                 l_day                         , &  ! in
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
@@ -593,7 +576,6 @@ CONTAINS
       CALL calc_photosynthesis( &
                gmin, g0, g1, t_jmax_omega, ps_pathway, &
                canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-               l_day, & ! in
                t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
                beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -630,7 +612,6 @@ CONTAINS
         CALL calc_photosynthesis( &
                  gmin, g0, g1, t_jmax_omega, ps_pathway, &
                  canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-                 l_day, & ! in
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
                  beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -836,11 +817,11 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
+  ! Sub Task to calc_growth (currently in mo_q_veg_canopy to get rid of circular dependencies)
   !
   !------------------------------------------------------------------------------------------------------
   !> Subroutine to calculate change in net photosynthesis and transpiration with small change in LAI
-  !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
+  !! Needed for calculation of optimal leaf and root allocation fraction. See mo_q_veg_growth
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment( nc                      , &
                                                   ncanopy                 , &
@@ -972,7 +953,6 @@ CONTAINS
                                                           hlp0, hlp1, hlp2          , &   ! calc_photosynthesis dummy output
                                                           hlp3, hlp4                      ! calc_photosynthesis dummy output
                                                                                                 
-    LOGICAL, DIMENSION(nc)                             :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     INTEGER                                            :: icanopy !< looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
@@ -991,7 +971,6 @@ CONTAINS
     fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
     fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
     beta_sinklim_local        = 1._wp
-    l_day(:)                  = .FALSE.
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -999,7 +978,7 @@ CONTAINS
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_cl(:,:)
 
- !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
+ !> @todo: mo_q_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
  !! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
  !! ratios, not a fixed constant. ie
  !! f_increment = f_alloc_leaf/f_alloc_root+sapwood
@@ -1067,7 +1046,6 @@ CONTAINS
                                     lctlib_t_jmax_omega             , &
                                     lctlib_ps_pathway               , &
                                     canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
-                                    l_day(:)                        , & ! in
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -1128,7 +1106,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
+  ! Sub Task to calc_growth (currently in mo_q_veg_canopy to get rid of circular dependencies)
   !
   !------------------------------------------------------------------------------------------------------
   !> Subroutine to determine direction in which total leaf N should change in order to increase NPP
@@ -1187,8 +1165,8 @@ CONTAINS
 
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
-    USE mo_time_averages,                 ONLY: mavg_period_tgrowth
-    USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_lnd_time_averages,             ONLY: mavg_period_tgrowth
+    USE mo_q_pheno_constants,             ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1262,7 +1240,6 @@ CONTAINS
     REAL(wp)                                              :: hlp2, hlp3, hlp4         ! calc_photosynthesis dummy output
     REAL(wp)                                              :: direction
     REAL(wp), DIMENSION(nc)                               :: beta_sinklim_ps_local
-    LOGICAL, DIMENSION(nc)                                :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
     INTEGER                                               :: icanopy, dd, ic      ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1283,7 +1260,6 @@ CONTAINS
     fn_chl_new_cl(:,:)   = fn_chl_cl(:,:)
     fn_et_new_cl(:,:)    = fn_et_cl(:,:)
     fn_rub_new_cl(:,:)   = fn_rub_cl(:,:)
-    l_day(:)             = .FALSE.
 
 
     !> 1.0 ...
@@ -1369,7 +1345,6 @@ CONTAINS
                        lctlib_t_jmax_omega                       , &
                        lctlib_ps_pathway                         , &
                        canopy_cond_scheme                        , &  ! ASSIMI_ config (medlyn/ballberry)
-                       l_day(ic)                                 , & ! in
                        t_air_tcnl_mavg(ic)                       , &  ! in
                        press_srf_tcnl_mavg(ic)                   , &
                        co2_mixing_ratio_tcnl_mavg(ic)            , &
@@ -1416,4 +1391,4 @@ CONTAINS
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
   
-END MODULE mo_veg_canopy
+END MODULE mo_q_veg_canopy

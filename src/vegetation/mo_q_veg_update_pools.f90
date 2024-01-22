@@ -1,33 +1,21 @@
+!> Summary: QUINCY update vegetation pools
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_q_assimi_process.f90
-!! some refactoring and rewriting for bgcm -- Jan Engel MPI-BGC (2023-05)
-!!
-MODULE mo_veg_update_pools
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### routines for calculating the vegetation pools using the fluxes that have been calculated
+!>
+MODULE mo_q_veg_update_pools
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message
@@ -43,7 +31,7 @@ MODULE mo_veg_update_pools
   PRIVATE
   PUBLIC :: update_veg_pools
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_update_pools'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_update_pools'
 
 CONTAINS
 
@@ -59,30 +47,29 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_parameters,                  ONLY: rfr_ratio_toc 
-    USE mo_veg_canopy,                      ONLY: calc_canopy_layers
-    USE mo_veg_growth,                      ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
+    USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
+    USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
     USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_assimi_constants,                ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
     USE mo_q_assimi_process,                ONLY: discrimination_ps
-    USE mo_pheno_constants,                 ONLY: ievergreen
+    USE mo_q_pheno_constants,               ONLY: ievergreen
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(ASSIMI_)    
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)        
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -115,9 +102,8 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -129,13 +115,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season 
     dsl4jsb_Real2D_onChunk      :: lai_max
-    dsl4jsb_Real2D_onChunk      :: lai
-    ! PHENO_ 3D
-    dsl4jsb_Real3D_onChunk      :: lai_cl
-    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 3D
@@ -151,6 +133,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp
@@ -189,12 +172,21 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: n_transform_respiration
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_l2aveghlp
+    dsl4jsb_Real2D_onChunk      :: biological_n_fixation_l2aveghlp
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_n
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_p
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_c13
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_c14
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_n15
+    dsl4jsb_Real2D_onChunk      :: veg_pool_leaf_c
+    dsl4jsb_Real2D_onChunk      :: veg_pool_leaf_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_wood_c
+    dsl4jsb_Real2D_onChunk      :: veg_pool_wood_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_fine_root_c
+    dsl4jsb_Real2D_onChunk      :: veg_pool_fine_root_n
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_c
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_n
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_p
@@ -217,6 +209,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -224,7 +218,6 @@ CONTAINS
     nc        = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
@@ -233,13 +226,15 @@ CONTAINS
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -262,13 +257,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)                      ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! CASE "plant" & "land": out / other Cases: in
-    ! PHENO_ 3D
-    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! out
-    dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)                  ! out
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! SPQ_ 3D
@@ -279,67 +270,77 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! VEG 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                       ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                       ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)                         ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                  ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                           ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp)                            ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)                     ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)                        ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)         ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)          ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)   ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)                        ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)         ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)          ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)   ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)          ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)        ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)               ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)         ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)               ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)         ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)               ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)           ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)    ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                  ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)               ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n)               ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_p)               ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c13)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c14)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n15)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_n)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_p)             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c13)           ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c14)           ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_n15)           ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c)         ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_n)         ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_p)         ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c13)       ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c14)       ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_n15)       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! CASE "plant" & "land": out / other Cases: in
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)                           ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)                              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)                              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_l2aveghlp)   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation_l2aveghlp)      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_p)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c13)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c14)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n15)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_leaf_c)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_leaf_n)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_wood_c)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_wood_n)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_fine_root_c)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_fine_root_n)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_n)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_p)                   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c13)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c14)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_n15)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_n)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_p)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c13)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_c14)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_total_n15)             ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
@@ -350,6 +351,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 set g1 according to canopy_conductance_scheme
@@ -625,13 +628,22 @@ CONTAINS
 
     !> 6.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element
+    !>     or simply add value (of one/two/few pool variables) to a memory variable for aggregation and output
     !>
+    ! pools
     veg_pool_total_c(:)         = SUM(veg_pool_mt(:, ixC, :), DIM = 1)
     veg_pool_total_n(:)         = SUM(veg_pool_mt(:, ixN, :), DIM = 1)
     veg_pool_total_p(:)         = SUM(veg_pool_mt(:, ixP, :), DIM = 1)
     veg_pool_total_c13(:)       = SUM(veg_pool_mt(:, ixC13, :), DIM = 1)
     veg_pool_total_c14(:)       = SUM(veg_pool_mt(:, ixC14, :), DIM = 1)
     veg_pool_total_n15(:)       = SUM(veg_pool_mt(:, ixN15, :), DIM = 1)
+    veg_pool_leaf_c(:)          = veg_pool_mt(ix_leaf, ixC, :)
+    veg_pool_leaf_n(:)          = veg_pool_mt(ix_leaf, ixN, :)
+    veg_pool_wood_c(:)          = veg_pool_mt(ix_sap_wood, ixC, :) + veg_pool_mt(ix_heart_wood, ixC, :)
+    veg_pool_wood_n(:)          = veg_pool_mt(ix_sap_wood, ixN, :) + veg_pool_mt(ix_heart_wood, ixN, :)
+    veg_pool_fine_root_c(:)     = veg_pool_mt(ix_fine_root, ixC, :)
+    veg_pool_fine_root_n(:)     = veg_pool_mt(ix_fine_root, ixN, :)
+    ! fluxes
     veg_growth_total_c(:)       = SUM(veg_growth_mt(:, ixC, :), DIM = 1)
     veg_growth_total_n(:)       = SUM(veg_growth_mt(:, ixN, :), DIM = 1)
     veg_growth_total_p(:)       = SUM(veg_growth_mt(:, ixP, :), DIM = 1)
@@ -645,6 +657,18 @@ CONTAINS
     veg_litterfall_total_c14(:) = SUM(veg_litterfall_mt(:, ixC14, :), DIM = 1)
     veg_litterfall_total_n15(:) = SUM(veg_litterfall_mt(:, ixN15, :), DIM = 1)
 
+    !> 6.0 biosphere-level diagnostics across multiple processes
+    !>
+    !>   see also 'update_sb_pools()'
+    !>
+    !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
+    !>
+    ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
+    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
+      & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_transform_respiration(:)
+    ! biological N fixation (VEG_ and SB_ processes)
+    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp(:) + n_fixation(:)
+
   END SUBROUTINE update_veg_pools
 
-END MODULE mo_veg_update_pools
+END MODULE mo_q_veg_update_pools

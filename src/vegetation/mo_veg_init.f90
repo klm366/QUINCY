@@ -1,30 +1,20 @@
+!> Summary: QUINCY vegetation variables init
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Initialization of the the vegetation memory.
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (20161213)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### initialization of vegetation memory variables using, e.g., ic & bc input files
+!>
 MODULE mo_veg_init
 #ifndef __NO_JSBACH__
 
@@ -57,7 +47,7 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_
+    USE mo_jsb_process_class,               ONLY: VEG_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_grid
     USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
@@ -72,7 +62,6 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -92,11 +81,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ (used only with models: QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
-    dsl4jsb_Real2D_onDomain      :: lai    
-    dsl4jsb_Real3D_onDomain      :: lai_cl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain      :: target_cn_leaf
     dsl4jsb_Real2D_onDomain      :: target_np_leaf
@@ -104,6 +89,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: target_np_fine_root
     dsl4jsb_Real2D_onDomain      :: dens_ind
     dsl4jsb_Real2D_onDomain      :: height 
+    dsl4jsb_Real2D_onDomain      :: lai
     dsl4jsb_Real2D_onDomain      :: dphi
     dsl4jsb_Real2D_onDomain      :: npp_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: n_fixation_talloc_mavg
@@ -176,10 +162,11 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onDomain      :: fn_oth_cl
     dsl4jsb_Real3D_onDomain      :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onDomain      :: lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
@@ -189,21 +176,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
-    SELECT CASE(model%config%qmodel_id)
-    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
-      dsl4jsb_Get_memory(PHENO_)
-    END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
     veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D & 3D
-    SELECT CASE(model%config%qmodel_id)
-    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
-      dsl4jsb_Get_var2D_onDomain(PHENO_, lai)
-      dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)
-    END SELECT
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)
@@ -211,6 +188,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_fine_root)
     dsl4jsb_Get_var2D_onDomain(VEG_, dens_ind)
     dsl4jsb_Get_var2D_onDomain(VEG_, height)
+    dsl4jsb_Get_var2D_onDomain(VEG_, lai)
     dsl4jsb_Get_var2D_onDomain(VEG_, dphi)
     dsl4jsb_Get_var2D_onDomain(VEG_, npp_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, n_fixation_talloc_mavg)
@@ -283,6 +261,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, leaf_nitrogen_cl)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+      dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
+    END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 init veg_pool_mt_domain with zero
@@ -296,6 +278,11 @@ CONTAINS
     !>  1.1 Land & Plant & Soil
     !>
     CASE(QLAND, QPLANT, QSOIL)
+#ifdef __QUINCY_STANDALONE__
+#else
+      ! lai init should also work with 0.0_wp
+      lai(:,:)     = 1.0_wp
+#endif
       target_cn_leaf(:,:)      = lctlib%cn_leaf
       target_np_leaf(:,:)      = lctlib%np_leaf
       target_cn_fine_root(:,:) = target_cn_leaf(:,:) / root2leaf_cn
@@ -450,7 +437,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'Invalid QUINCY model name. Use either land, plant, soil, canopy, test_canopy or test_radiation.')
     ENDSELECT
 
-    !>2.0 vegetation init for all QUINCY models
+    !> 2.0 set veg_pool bgcm to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      veg_pool_mt_domain(:,:,:,:) = 0.0_wp
+    END IF
+
+    !> 3.0 vegetation init for all QUINCY models
     !>
     ! plant variables
     dphi(:,:)                             = -1.0_wp * lctlib%phi_leaf_min
@@ -525,8 +518,8 @@ CONTAINS
     net_growth_tvegdyn_mavg(:,:)          = 5.0_wp
     lai_tvegdyn_mavg(:,:)                 = 0.1_wp
     beta_sinklim_ps_tacclim_mavg(:,:)     = 1.0_wp
-    t_air_tacclim_mavg(:,:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
-    t_soil_root_tacclim_mavg(:,:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
+    t_air_tacclim_mavg(:,:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
+    t_soil_root_tacclim_mavg(:,:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp

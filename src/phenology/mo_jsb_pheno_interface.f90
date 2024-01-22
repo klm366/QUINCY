@@ -43,7 +43,7 @@ MODULE mo_jsb_pheno_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pheno_tasks_jsbach
+  PUBLIC :: Register_pheno_tasks
   PUBLIC :: update_phenology
   PUBLIC :: global_phenology_diagnostics, merge_pheno_variables_upon_ageing
 
@@ -104,13 +104,13 @@ CONTAINS
   ! ======================================================================================================= !
   !> Register tasks for pheno process
   !>
-  SUBROUTINE Register_pheno_tasks_jsbach(this, model_id)
+  SUBROUTINE Register_pheno_tasks(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_phenology(model_id))
     CALL this%Register_task(tsk_foliage_projected_cover(model_id))
-  END SUBROUTINE Register_pheno_tasks_jsbach
+  END SUBROUTINE Register_pheno_tasks
 
   ! ======================================================================================================= !
   !>Implementation of "update" of the "phenology" task
@@ -150,11 +150,11 @@ CONTAINS
     model        => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
-    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) /= 'climatology') THEN
+    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology') THEN
       CALL message(TRIM(routine), 'Vegetation tile has no PFTs, using climatology for LAI')
       CALL update_phenology_climatology(tile, options)
     ELSE
-      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach))
+      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme))
       CASE ('logrop')
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
@@ -800,7 +800,7 @@ CONTAINS
 
     ! Update foliage projected cover
     !
-    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology' &
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
@@ -980,7 +980,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: scaling (:,:)
     REAL(wp)               :: global_land_area
 
-
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
     dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in

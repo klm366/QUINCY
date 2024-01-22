@@ -1,31 +1,21 @@
+!> Summary: QUINCY soil-turbulence calculation
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_soil_turbulence
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
-!!
-MODULE mo_spq_update_turbulence
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate the task update_soil_turbulence, i.e., surface condition & turbulence, drag coefficient
+!>
+MODULE mo_q_spq_update_turbulence
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -35,12 +25,12 @@ MODULE mo_spq_update_turbulence
   PRIVATE
   PUBLIC :: update_soil_turbulence
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_update_turbulence'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_spq_update_turbulence'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !>update soil moisture and theta for the plant only model
+  !>update soil moisture and theta for the plant only model - NOTE update/improve docu
   !> 
   ! two cases considered:
   !   a) dynamic water uptake calculation
@@ -48,7 +38,7 @@ CONTAINS
   SUBROUTINE update_soil_turbulence(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
-    USE mo_jsb_process_class,      ONLY: A2L_, SPQ_, PHENO_, VEG_
+    USE mo_jsb_process_class,      ONLY: A2L_, SPQ_, VEG_
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -62,7 +52,6 @@ CONTAINS
     dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -83,7 +72,6 @@ CONTAINS
     dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
@@ -105,10 +93,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     dsl4jsb_Real3D_onChunk                :: w_snow_snl
     dsl4jsb_Real3D_onChunk                :: t_snow_snl
-    ! PHENO_
-    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_
     dsl4jsb_Real2D_onChunk                :: height 
+    dsl4jsb_Real2D_onChunk                :: lai
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -126,7 +113,6 @@ CONTAINS
     dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -148,9 +134,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_snow_snl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)            ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.8 correct height for bare soil effect on roughness
@@ -306,4 +291,4 @@ CONTAINS
     ga       = heat_transfer_coef(drag_srf, steplen, alpha) * wind_air
   END SUBROUTINE calc_drag_coefficient
 
-END MODULE mo_spq_update_turbulence
+END MODULE mo_q_spq_update_turbulence

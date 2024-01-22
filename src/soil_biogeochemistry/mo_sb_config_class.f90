@@ -1,32 +1,20 @@
+!> Summary: QUINCY soil-biogeochemistry process config
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains structures and methods for soil_biogeochemistry config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04);
-!! 2nd version by Jan Engel, MPI BGC (20170104) -> integration into SLM
-!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### define soil-biogeochemistry config structure, read soil-biogeochemistry namelist and init configuration parameters
+!>
 MODULE mo_sb_config_class
 !#ifndef __NO_JSBACH__
 
@@ -37,7 +25,7 @@ MODULE mo_sb_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_sb_config, get_number_of_sb_compartments
+  PUBLIC :: t_sb_config, get_number_of_sb_compartments, simple_1d_compartments
   PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
   PUBLIC :: SB_PART_FUNGI_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
@@ -87,6 +75,8 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
     
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -107,6 +97,9 @@ MODULE mo_sb_config_class
       & SB_PART_RESIDUE_ASSOC_IDX,    &  !< minerally associated microbial necromass
       & LAST_SB_PART_IDX                 !< last of this ENUM, used to determine the max number of compartments
   END ENUM
+
+  INTEGER, PARAMETER :: simple_1d_compartments(6) = [ SB_PART_SOLUBLE_LITTER_IDX, SB_PART_POLYMERIC_LITTER_IDX, &
+    & SB_PART_WOODY_LITTER_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX ]
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
@@ -129,7 +122,9 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=filename_max) :: ic_filename
+    CHARACTER(len=filename_max) :: bc_filename
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
@@ -162,6 +157,7 @@ CONTAINS
                       active                    , &
                       ic_filename               , &
                       bc_filename               , &
+                      bc_quincy_soil_filename   , &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
@@ -195,6 +191,7 @@ CONTAINS
     active                      = .TRUE.
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
+    bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
@@ -212,7 +209,7 @@ CONTAINS
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     soil_ph                     = 6.5_wp 
-    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?!
+    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
     soil_p_labile               = 50._wp
     soil_p_slow                 = 70._wp
     soil_p_occluded             = 150._wp
@@ -229,13 +226,13 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_sb_nml)
 #endif
 
-    config%active                    = active
-    config%ic_filename               = ic_filename
-    config%bc_filename               = bc_filename
-
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
+    config%active                          = active
+    config%ic_filename                     = ic_filename
+    config%bc_filename                     = bc_filename
+    config%bc_quincy_soil_filename         = bc_quincy_soil_filename
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)

@@ -1,33 +1,21 @@
+!> Summary: QUINCY soil-biogeochemistry process interface
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains the interface to the soil_biogeochemistry processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (20170104)
-!! 2nd version by Jan Engel (20200618), add to jsbach4
-!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
-!!
-MODULE mo_sb_interface
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of tasks for the soil-biogeochemistry process incl. update and aggregate routines
+!>
+MODULE mo_q_sb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -40,10 +28,10 @@ MODULE mo_sb_interface
   USE mo_jsb_process_class,           ONLY: t_jsb_process
 
   ! "Integrate" routines
-  USE mo_sb_rate_modifier,            ONLY: update_sb_rate_modifier
-  USE mo_sb_simple_model,             ONLY: update_sb_simple_model
-  USE mo_sb_jsm_main,                 ONLY: update_sb_jsm
-  USE mo_sb_update_pools,             ONLY: update_sb_pools
+  USE mo_q_sb_rate_modifier,          ONLY: update_sb_rate_modifier
+  USE mo_q_sb_ssm_main,               ONLY: update_sb_simple_model
+  USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm
+  USE mo_q_sb_update_pools,           ONLY: update_sb_pools
 
   dsl4jsb_Use_processes SB_, VEG_
   dsl4jsb_Use_config(SB_)
@@ -52,7 +40,7 @@ MODULE mo_sb_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_sb_tasks
+  PUBLIC :: Register_sb_tasks_quincy
 
   ! ======================================================================================================= !
   !>Type definition: reset_sb_fluxes task
@@ -150,14 +138,14 @@ MODULE mo_sb_interface
     PROCEDURE Create_task_update_time_average_soilbiogeochemistry         !< Constructor function for task
   END INTERFACE tsk_time_average_soilbiogeochemistry
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_sb_interface'
 
 CONTAINS
 
   ! ======================================================================================================= !
   !>Register tasks: SB_ process
   !>
-  SUBROUTINE Register_sb_tasks(this, model_id)
+  SUBROUTINE Register_sb_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
@@ -167,7 +155,7 @@ CONTAINS
     CALL this%Register_task(tsk_sb_jsm(model_id))
     CALL this%Register_task(tsk_sb_pools(model_id))
     CALL this%Register_task(tsk_time_average_soilbiogeochemistry(model_id))
-  END SUBROUTINE Register_sb_tasks
+  END SUBROUTINE Register_sb_tasks_quincy
 
   ! ======================================================================================================= !
   !>Constructor: reset_sb_fluxes task
@@ -437,6 +425,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_no3_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_po4_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -471,8 +462,13 @@ CONTAINS
 
     ! @TODO  add missing variables for aggregation
 
+    ! SB_ 3D
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  
+
   END SUBROUTINE aggregate_sb_jsm
 
   ! ======================================================================================================= !
@@ -486,6 +482,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -501,8 +498,18 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(VEG_)
 
+    ! fluxes
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c14          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c14          , weighted_by_fract)
     ! 2D
+    dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
+    ! pools
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_nitrogen          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_flux_phosphorus        , weighted_by_fract)
@@ -515,6 +522,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, n2o_n15                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, n2                           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, n2_n15                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, total_soil_n                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, total_soil_inorg_n           , weighted_by_fract)
+    ! pools
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_n              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_p              , weighted_by_fract)
@@ -533,6 +543,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c13     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c14     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_n15     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_woody_litter_c       , weighted_by_fract)
+
+    ! VEG_ fluxes
+    dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production_l2aveghlp  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,   biological_n_fixation_l2aveghlp     , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -595,4 +610,4 @@ CONTAINS
   END SUBROUTINE aggregate_time_average_soilbiogeochemistry
 
 #endif
-END MODULE mo_sb_interface
+END MODULE mo_q_sb_interface

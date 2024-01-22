@@ -1,34 +1,20 @@
+!> Summary: QUINCY routines for photosynthesis related processes
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
-!! Tea Thum (2023-06-19): added calc_chlorophyll_fluorescence_yield()
-!! Jan Engel (2023-09-27): rename mo_assimi_update_canopy_fluxes -> mo_q_assimi_process
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### routines for photosynthesis related processes, e.g., calculation of photosynthesis
+!>
 MODULE mo_q_assimi_process
 #ifndef __NO_JSBACH__
 
@@ -57,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
-    USE mo_jsb_process_class,      ONLY: A2L_, ASSIMI_, PHENO_, VEG_, RAD_, SPQ_
+    USE mo_jsb_process_class,      ONLY: A2L_, ASSIMI_, VEG_, RAD_, SPQ_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -70,7 +56,6 @@ CONTAINS
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
@@ -83,7 +68,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy             !< Vertical grid
     INTEGER                               :: ncanopy                  !< number of canopy layers
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
-    LOGICAL,  DIMENSION(options%nc)       :: l_day                    !< day/night (calc as in RAD_)
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp), DIMENSION(options%nc)       :: ga, hlp1, hlp2, hlp3     !< dummy variables
     INTEGER                               :: iblk, ics, ice, nc, ic   !< dimensions
@@ -96,7 +80,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -139,14 +122,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
-    ! PHENO_ 2D
-    dsl4jsb_Real2D_onChunk      :: lai
-    ! PHENO_ 3D
-    dsl4jsb_Real3D_onChunk      :: lai_cl
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tacclim_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
@@ -162,19 +144,20 @@ CONTAINS
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
@@ -212,11 +195,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
-    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tacclim_mavg)   ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! in
@@ -250,25 +233,13 @@ CONTAINS
     !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
 
-#ifdef __QUINCY_STANDALONE__
-    ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MAX(wind_10m, min_wind) 
-#else
     ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MIN( MAX(wind_10m(:), min_wind), max_wind)
-#endif
 
     ! calc scaling factor to account for the 'state of acclimation' of evergreen conifers in spring
     beta_soa(:) = calc_beta_soa(soa_tsoa_mavg(:),lctlib%phenology_type)
 
     !>2.0 calculate photosynthesis per layer
     !>
-    ! get information about day/nigth (same way as in RAD_)
-#ifdef __QUINCY_STANDALONE__
-    ! init, simply to give it a value
-    l_day(:) = .FALSE.     ! day
-#else
-    !$claw expand
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-#endif
     ! calc photosynthesis
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(                                     &
@@ -278,7 +249,6 @@ CONTAINS
         & lctlib%t_jmax_omega                                     , &
         & lctlib%ps_pathway                                       , &
         & TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , & ! config
-        & l_day(:)                                                , & ! in
         & t_air(:)                                                , & ! in
         & press_srf(:)                                            , &
         & co2_mixing_ratio(:)                                     , &
@@ -386,7 +356,6 @@ CONTAINS
                                             t_jmax_omega        , &
                                             ps_pathway          , &
                                             canopy_cond_scheme  , &
-                                            l_day               , &
                                             t_air               , &
                                             press_srf           , &
                                             co2_mixing_ratio    , &
@@ -423,7 +392,7 @@ CONTAINS
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
                                           chl2n
   USE mo_assimi_constants,          ONLY: Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
-  USE mo_veg_respiration,           ONLY: temperature_response_respiration
+  USE mo_q_veg_respiration,         ONLY: temperature_response_respiration
 
   IMPLICIT NONE
   ! ---------------------------
@@ -434,7 +403,6 @@ CONTAINS
                                           t_jmax_omega            !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
   CHARACTER(len=*),         INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
-  LOGICAL,                  INTENT(IN) :: l_day                   !< TRUE = day | FALSE = night
   REAL(wp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
@@ -517,14 +485,11 @@ CONTAINS
     maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(t_air, temp_acclim) * &
                       leaf_nitrogen_cl
 
-
-    !> @par IF: initialise output for no-light condition
-    !! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
-#ifdef __QUINCY_STANDALONE__
-    IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
-#else
-    IF (.NOT. l_day) THEN
-#endif
+    !> calculate photosynthesis only if light is available at this canopy layer
+    !>
+    !> else: initialise output for no-light condition
+    !>
+    IF (ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
       ag_cl    = 0.0_wp
       an_cl    = ag_cl - maint_resp_cl
       gs_cl    = MAX(gmin,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
@@ -532,7 +497,6 @@ CONTAINS
       m_et   = 0.0_wp
       m_rub  = 0.0_wp
       m_pepc = 0.0_wp
-    !> @par ELSE: calculate photosynthesis only if it's day
     ELSE
       !> Michaelis-Menten constant of Rubisco for CO2 (Pa)
       kc  = exp(E0kc - E1kc/rtck) * ppm2Pa
@@ -733,18 +697,13 @@ CONTAINS
         iterate =  iterate + 1
       END DO  ! closing: [DO WHILE (iterate < ps_it_max .AND. dan_cl > eps4 ) ]
       !> END DO WHILE
-    ENDIF     ! closing: IF (.NOT. l_day) THEN
+    ENDIF     ! light / no light condition
     ! for output purposes, convert ci to ppm
     ci_cl = ci_cl / ppm2Pa
 
     ! ChlF (chlorophyll fluorescence yield) calculation
     ! if light levels above eps8
-    ! use l_day(:) for consistency with RAD_ (IQ / QUINCY in ICON-Land)
-#ifdef __QUINCY_STANDALONE__
     IF (ppfd_sunlit_cl + ppfd_shaded_cl > eps8) THEN
-#else
-    IF (l_day) THEN
-#endif
       ! sunlit area fluorescence
       IF (fleaf_sunlit_cl > eps8) THEN
         CALL calc_chlorophyll_fluorescence_yield(frac_tot_sunlit, t_air, chlfl_yield)
@@ -940,7 +899,7 @@ CONTAINS
   !>
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
-    USE mo_pheno_constants,            ONLY: ievergreen
+    USE mo_q_pheno_constants,          ONLY: ievergreen
     USE mo_assimi_parameters,          ONLY: soa_b, soa_t_s
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation

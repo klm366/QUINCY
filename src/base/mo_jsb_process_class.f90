@@ -28,7 +28,8 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_
+    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_,          &
+    &       Q_PHENO_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -52,8 +53,9 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
-      &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_,   &
+      &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_, &
+      &           Q_PHENO_
   END ENUM
 
   ! Process actions
@@ -90,6 +92,8 @@ CONTAINS
       return_value = 'assimi'
     CASE (PHENO_)
       return_value = 'pheno'
+    CASE (Q_PHENO_)
+      return_value = 'q_pheno'
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       return_value = 'hd'
@@ -156,6 +160,8 @@ CONTAINS
       return_value = ASSIMI_
     CASE ('pheno')
       return_value = PHENO_
+    CASE ('q_pheno')
+      return_value = Q_PHENO_
 #ifndef __NO_JSBACH_HD__
     CASE ('hd')
       return_value = HD_

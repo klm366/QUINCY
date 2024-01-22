@@ -26,10 +26,10 @@ MODULE mo_seb_land
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
-  USE mo_jsb_time,           ONLY: is_time_experiment_start
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(A2L_)
@@ -54,18 +54,22 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, update_drag
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb4_forcing,           ONLY: forcing_options
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    !
-    !dsl4jsb_Def_config(SEB_)
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -117,10 +121,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
+    dsl4jsb_Real2D_onChunk :: pch
+    dsl4jsb_Real2D_onChunk :: richardson
 
     ! Locally allocated vectors
     !
@@ -134,7 +141,10 @@ CONTAINS
      & t_star,                          &
      & liquid_max,                      &
      & t_air_in_Celcius,                &
-     & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds)
+     & frozen_fract,                    & !< Frozen surface fraction (snow and frozen surface water ponds)
+     & rough_h_srf,                     &
+     & rough_m_srf,                     &
+     & t_srf_upd                          !< Updated surface temperature for drag filtering
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -144,16 +154,13 @@ CONTAINS
 
     REAL(wp) ::    & ! Avoid compute in param
      & soil_depth_sl_vol_porosity_sl_tmp(size(liquid_max,dim=1))
-    REAL(wp) :: w_soil_critical_tmp
+    REAL(wp) :: w_soil_critical_tmp, eps
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
-
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
@@ -172,7 +179,7 @@ CONTAINS
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
-    !dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -185,13 +192,16 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN/OUT (coupled/standalone)
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   richardson)     ! -/OUT (coupled/standalone)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -334,12 +344,8 @@ CONTAINS
       & t_old(:), &
       & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
 
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
-    !$claw end expand
-
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2_1 tile_name=tile%name
     t2s_conv(:) = s_old(:) / t_old(:)  !
-
 
     ! Account for ice in ponds, assuming that for partially frozen surface water
     ! the ice is always on top
@@ -350,6 +356,75 @@ CONTAINS
         frozen_fract(i) = fract_snow(i)
       END IF
     END DO
+
+    ! 3. Compute surface drag and exchange coefficients for standalone simulations
+    IF (jsbach_runs_standalone()) THEN
+      ! Get surface roughness
+      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
+      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+
+      ! Update drag and exchange coefficients based on external forcing data
+      CALL update_drag( &
+      ! INTENT in
+      & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+      & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+      & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+      ! INTENT out
+      & drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+
+      ! Compute the updated surface temperature to be used for a filtered drag computation
+      ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
+
+      IF (lstart) THEN
+        s_star(:) = s_old(:)
+      ELSE
+        CALL surface_temp_implicit( nc, steplen, alpha,   & ! in
+          t2s_conv(:),                                    & ! in
+          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), & ! in
+          s_old(:), qsat_srf_old(:), dQdT(:),             & ! in
+          rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    & ! in
+          fact_q_air(:), fact_qsat_srf(:),                & ! in
+          frozen_fract(:), heat_cap(:),                   & ! in
+          & s_star(:))                                      ! out
+      END IF
+
+      ! Fix needed for numerical reasons on grid cells without real land fraction
+      DO i=1, size(s_star,dim=1)
+        IF (tile_fract_zero(i)) THEN
+          ! s_star(:) = s_old(:)
+          s_star(i) = 280._wp * t2s_conv(i)
+        END IF
+      END DO
+
+      ! New unfiltered surface temperature
+      ! @Todo: why not using the weighting as done for the coupled case? Check!
+      t_unfilt(:) = s_star(:) / t2s_conv(:)
+
+      ! Asselin filter (copy of the routine `update_asselin_land`)
+      eps = get_asselin_coef()
+      IF (eps > 0._wp) THEN
+        t_srf_upd(:) = t_unfilt_old(:) + eps * (t_old(:) - 2._wp * t_unfilt_old(:) + t_unfilt(:))
+      ELSE
+        t_srf_upd(:) = t_unfilt(:)
+      END IF
+
+      ! Update drag based on updated surface temperature and filtered richardson number
+      CALL update_drag( &
+      ! INTENT in
+      & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+      & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+      & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+      ! INTENT out
+      & drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+      ! Optional variables for filtering
+      & t_srf_upd(:), richardson(:))
+    END IF
+
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
+    !$claw end expand
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN

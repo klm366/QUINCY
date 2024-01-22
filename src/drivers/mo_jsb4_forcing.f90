@@ -39,13 +39,13 @@ MODULE mo_jsb4_forcing
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, rdv
   USE mo_jsb_physical_constants, ONLY: grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
-    & tmelt, rd, amco2, amd, cpd, rvd1, cpvd1, von_karman, rd_o_cpd
+    & tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   ! jsb4
   USE mo_jsb_class,              ONLY: jsbach
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -56,10 +56,7 @@ MODULE mo_jsb4_forcing
     & NF_NOERR                                           ! from netcdf.inc
 
   USE mo_jsb_class,              ONLY: get_model
-
-  dsl4jsb_Use_processes HYDRO_, A2L_
-  dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(A2L_)
+  USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
 
   IMPLICIT NONE
   PRIVATE
@@ -118,12 +115,18 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
+  ! ... and deposition for QUINCY
+  CHARACTER(len=*), PARAMETER :: nhxdep_varname = 'NHx_deposition'
+  CHARACTER(len=*), PARAMETER :: noydep_varname = 'NOy_deposition'
+  CHARACTER(len=*), PARAMETER :: pdep_varname = 'pdep'
 
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
+  CHARACTER(len=*), PARAMETER :: unit_kg_m2_s = 'kg/m2/s'
+  CHARACTER(len=*), PARAMETER :: exp_unit_deposition = unit_kg_m2_s
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
@@ -220,6 +223,10 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
+     ! ... required for Quincy
+     TYPE(input_variable_type) :: nhx_dep       !! NHx deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: noy_dep       !! NOy deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: p_dep         !! P deposition [kg/m2/s]
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
 
@@ -233,37 +240,32 @@ CONTAINS
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !> 
   SUBROUTINE get_standalone_driver(                                                        &
-    & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
-    & current_datetime, next_datetime, use_lakes,                                          &
+    & model_id,                                                                            &  ! in
+    & model_scheme,                                                                        &
+    & startblk, endblk, startidx, endidx,                                                  &
+    & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
-    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
     & cos_zenith_angle,                                                                    &  ! in
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
-    & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &  ! out
-    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &  ! optional in
-    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &  ! optional out
-    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)                           ! optional out
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & p_deposition                                                                         &
+    & )
 
     INTEGER,  INTENT(IN)  :: model_id
+    INTEGER,  INTENT(IN)  :: model_scheme
     INTEGER,  INTENT(IN)  :: startblk
     INTEGER,  INTENT(IN)  :: endblk
     INTEGER,  INTENT(IN)  :: startidx(:)
     INTEGER,  INTENT(IN)  :: endidx(:)
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
-    LOGICAL,  INTENT(IN)  :: use_lakes
     REAL(wp), INTENT(IN)  :: elevation(:,:)
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)          ! In setups with lakes refering to the land tile
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)     !       ""
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)  !       ""
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)    !       ""
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)    !       ""
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
@@ -278,29 +280,11 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: pch(:,:)
-    ! Optional input for lakes
-    REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_q_air_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_qsat_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_h_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_m_srf_lake(:,:)
-    ! Optional output for lakes
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_ice(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic
@@ -310,8 +294,7 @@ CONTAINS
       &                      tmin_data(:,:), &
       &                      rad_uv_down(:,:), &
       &                      sat_spec_humidity(:,:), &
-      &                      rel_humidity(:,:), &
-      &                      pch_lake(:,:)
+      &                      rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:)
@@ -334,27 +317,32 @@ CONTAINS
       ALLOCATE(tmin_data(nproma, nblks))
       ALLOCATE(tmax_data(nproma, nblks))
     ENDIF
-    IF (use_lakes) THEN
-      ALLOCATE(pch_lake(nproma, nblks))
-    END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
 !$OMP PARALLEL
     ! @TODO set all OUT variables to zero here, and test for differences in simulation results
-    CO2_air(:,:)           = 0._wp
-    t_air(:,:)             = 0._wp
-    q_air(:,:)             = 0._wp
-    rain(:,:)              = 0._wp
-    snow(:,:)              = 0._wp
-    wind_air(:,:)          = 0._wp
-    wind_10m(:,:)          = 0._wp
-    lw_srf_down(:,:)       = 0._wp
-    swvis_srf_down(:,:)    = 0._wp
-    swnir_srf_down(:,:)    = 0._wp
-    swpar_srf_down(:,:)    = 0._wp
-    fract_par_diffuse(:,:) = 0._wp
-    press_srf(:,:)         = 0._wp
-    sat_spec_humidity(:,:) = 0._wp
+    CO2_air(:,:)            = 0._wp
+    t_air(:,:)              = 0._wp
+    q_air(:,:)              = 0._wp
+    rain(:,:)               = 0._wp
+    snow(:,:)               = 0._wp
+    wind_air(:,:)           = 0._wp
+    wind_10m(:,:)           = 0._wp
+    lw_srf_down(:,:)        = 0._wp
+    swvis_srf_down(:,:)     = 0._wp
+    swnir_srf_down(:,:)     = 0._wp
+    swpar_srf_down(:,:)     = 0._wp
+    fract_par_diffuse(:,:)  = 0._wp
+    press_srf(:,:)          = 0._wp
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      nhx_deposition(:,:)     = 0._wp
+      noy_deposition(:,:)     = 0._wp
+      nhx_n15_deposition(:,:) = 0._wp
+      noy_n15_deposition(:,:) = 0._wp
+      p_deposition(:,:)       = 0._wp
+    END SELECT
+    sat_spec_humidity(:,:)  = 0._wp
 !$OMP END PARALLEL
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -584,32 +572,37 @@ CONTAINS
     CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 compute remaining required input for jsb4 interface
+    !> 9.0 N & P deposition
     !>
-    CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                  &
-      & t_air, press_srf, q_air, wind_air,                                                           &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc,         &
-      & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,              &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%nhx_dep, nhx_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%noy_dep, noy_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%p_dep, p_deposition)
 
-    IF (use_lakes) THEN
-      ! Note: pch_lake is only defined, as pch should not be overwritten. As pch is only used for
-      !       calculations on vegetated tiles, pch_lake is not needed.
-      CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                &
-        & t_air, press_srf, q_air, wind_air,                                                         &
-        & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake,       &
-        & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,            &
-        & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr, pch_lake)
-      ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
-      ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-!$OMP PARALLEL
-      drag_ice   (:,:) = drag_wtr   (:,:)
-      t_acoef_ice(:,:) = t_acoef_wtr(:,:)
-      t_bcoef_ice(:,:) = t_bcoef_wtr(:,:)
-      q_acoef_ice(:,:) = q_acoef_wtr(:,:)
-      q_bcoef_ice(:,:) = q_bcoef_wtr(:,:)
-!$OMP END PARALLEL
-    END IF
+      ! Convert from kg/m2/s -> mumol/m2/s
+      ! -- This unit should have been tested above if specified correctly using expectedUnit
+      IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
+          & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
+          & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
+        WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
+          & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
+          & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
+          & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
+        CALL finish(TRIM(routine), message_text)
+      ENDIF
+      ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+      nhx_deposition(:,:) = nhx_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      noy_deposition(:,:) = noy_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      p_deposition(:,:) = p_deposition(:,:) * 1000._wp / molar_mass_P / 1.e-6_wp
+
+      ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    END SELECT
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 10.0 deallocate local variables
@@ -624,9 +617,6 @@ CONTAINS
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
     DEALLOCATE(rel_humidity)
-    IF (use_lakes) THEN
-      DEALLOCATE (pch_lake)
-    END IF
   END SUBROUTINE get_standalone_driver
 
   ! ======================================================================================================= !
@@ -722,6 +712,13 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    CHARACTER(NF_MAX_NAME) :: forcing_dep_file_prefix          !! Prefix for files with NHx, NOy and P deposition data
+    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
+    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
+    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
+    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
+    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -735,13 +732,14 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit
+      & forcing_qair_unit, forcing_dep_file_prefix, forcing_dep_frequ, forcing_nhx_dep_const,                                 &
+      & forcing_noy_dep_const, forcing_p_dep_const, forcing_dep_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
     !------------------------------------------------------------------------------------
-
+    model => Get_model(model_id)
     delta_time    = dtime
     time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
@@ -804,6 +802,19 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+
+      ! N and P deposition required for QUINCY
+      forcing_dep_file_prefix = 'deposition_'
+      forcing_dep_frequ       = 'DAILY' ! 'CONST'
+      ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
+      !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
+      forcing_nhx_dep_const   = 6.3419e-12_wp / 2._wp
+      forcing_noy_dep_const   = 6.3419e-12_wp / 2._wp
+      ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
+      !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
+      !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
+      forcing_p_dep_const     = 6.3419e-12 / (14.0_wp / molar_mass_N * molar_mass_P)
+      forcing_dep_unit        = exp_unit_deposition
 
       ! ----- read the namelist
 
@@ -954,6 +965,13 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_dep_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_nhx_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_noy_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_p_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -995,6 +1013,16 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
+    ! --- deposition variables required for quincy
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL init_forcing_input_variable(nhxdep_varname, forcing_dep_frequ, forcing_nhx_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_nhx_dep_const, forcing_input(model_id)%nhx_dep)
+      CALL init_forcing_input_variable(noydep_varname, forcing_dep_frequ, forcing_noy_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_noy_dep_const, forcing_input(model_id)%noy_dep)
+      CALL init_forcing_input_variable(pdep_varname, forcing_dep_frequ, forcing_p_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_p_dep_const, forcing_input(model_id)%p_dep)
+    END SELECT
 
   END SUBROUTINE init_forcing
 
@@ -1132,13 +1160,14 @@ CONTAINS
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
       RETURN
-    ENDIF
+    ENDIF ! forcing_input_variable%variable_name == CO2_varname .AND. frequency == GHG_SCENARIO_
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
-    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_)  .AND. (frequency /= SUBDAILY_)) &
-      &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
-      &  'daily, subdaily or timestep frequency, please check program flow')
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
+        &  'daily, subdaily or timestep frequency, please check program flow.')
+    ENDIF
 
     ! TODO: test in case of lresume
 
@@ -1473,149 +1502,18 @@ CONTAINS
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
 
+      IF (forcing_input(jg)%nhx_dep%input_file%is_open) CALL forcing_input(jg)%nhx_dep%input_file%Close()
+
+      IF (forcing_input(jg)%noy_dep%input_file%is_open) CALL forcing_input(jg)%noy_dep%input_file%Close()
+
+      IF (forcing_input(jg)%p_dep%input_file%is_open) CALL forcing_input(jg)%p_dep%input_file%Close()
+
     END DO
 
     DEALLOCATE(forcing_input, forcing_options)
 
   END SUBROUTINE finalize_external_forcing
 
-  ! ======================================================================================================= !
-  !>
-  !> calculates the remaining input required for jsbach4
-  !>
-  SUBROUTINE get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx, &
-      & temp_air, pressure, qair, wind, &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
-      & height_wind, height_humidity, &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
-
-    INTEGER,  INTENT(IN)  :: startblk, endblk, startidx(:), endidx(:)
-    REAL(wp), INTENT(IN)  :: temp_air(:,:)
-    REAL(wp), INTENT(IN)  :: pressure(:,:)
-    REAL(wp), INTENT(IN)  :: qair(:,:)
-    REAL(wp), INTENT(IN)  :: wind(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
-    REAL(wp), INTENT(in)  :: height_wind, height_humidity
-
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: pch     (:,:)
-
-    INTEGER  :: ics, ice, iblk, ic, nblks, nc
-    REAL(wp) :: zcons9, zcons11, zcons12, zsigma
-    REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf(SIZE(temp_air,1))
-    REAL(wp) :: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
-
-    ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
-    zcons9 = 3._wp * cb
-    zcons11 = 3._wp * cb * cc
-    zcons12 = time_step_len * grav / rd
-    zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
-
-    nblks = SIZE(temp_air,2)
-    nc    = SIZE(temp_air,1)
-
-    ! Initializations needed for grid cells beyond icz
-!$OMP PARALLEL
-        drag_srf(:,:) = 0._wp
-        t_acoef (:,:) = 0._wp
-        t_bcoef (:,:) = 0._wp
-        q_acoef (:,:) = 0._wp
-        q_bcoef (:,:) = 0._wp
-        pch     (:,:) = 0._wp
-!$OMP END PARALLEL
-
-!$OMP PARALLEL DO PRIVATE(iblk, ics, ice, ic, air_pressure, zdu2, ztvd, ztvir, qsat_surf, ztvs, zg, zgh, zril, &
-!$OMP                     zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl)
-    DO iblk = startblk, endblk
-
-      ics = startidx(iblk)
-      ice = endidx  (iblk)
-
-      CALL sat_specific_humidity(t_srf_proc(ics:ice,iblk), pressure(ics:ice,iblk), qsat_surf(ics:ice))
-
-      DO ic = ics, ice
-
-        !------------------------------------------------------------------------------------
-        ! Approximation of cdrag
-        !------------------------------------------------------------------------------------
-        ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-        zdu2 = MAX(wind(ic,iblk)**2, 1._wp)
-
-        ! virtual potential air temperature (see mo_surface_boundary.f90)
-        ! according to Saucier, WJ Principles of Meteoroligical Analyses
-        ! tv = t * (1 + 0.61 * q )    ! virtual temperature
-        ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-        ! tvd = tair * (100000/p_pa)^rd_o_cps * (1 + rvd1 * qair) ! virtual potential temperature
-        air_pressure = zsigma * pressure(ic, iblk)
-        ztvd = ( temp_air(ic, iblk) * ( 100000._wp/air_pressure)**rd_o_cpd ) * ( 1._wp + rvd1 * qair(ic, iblk))
-        ztvir = temp_air(ic, iblk) * ( 1._wp + rvd1 * qair(ic, iblk) )
-
-        ! virtual potential surface temperature
-        ztvs = t_srf_proc(ic,iblk) * ( 100000._wp/pressure(ic,iblk))**rd_o_cpd * &
-          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic,iblk) * qsat_surf(ic) + ( 1._wp - fact_q_air_proc(ic,iblk) ) &
-          & * qair(ic,iblk)))
-
-        ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-        ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-        IF(height_wind > 0._wp .AND. height_humidity > 0._wp) THEN
-          zg  = height_wind * grav
-          zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
-        ELSE
-          zg = ztvir * rd * LOG(1._wp / zsigma)
-          zgh = zg
-        ENDIF
-
-        ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
-        ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-        zril = zg * ( ztvd - ztvs ) / ( zdu2 * (ztvd + ztvs)/2._wp )
-
-        ! Neutral drag coefficient for momentum and heat
-        zchnl = von_karman**2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic,iblk) )) &
-                  * LOG( ( grav * rough_m_srf_proc(ic,iblk) + zgh ) / (grav * rough_h_srf_proc(ic,iblk) )))
-
-        ! account for stable/unstable case: helper variables
-        zscfl = SQRT ( 1._wp + 5._wp * ABS(zril))
-        zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp &
-          & + zgh / (grav * rough_h_srf_proc(ic,iblk)))))
-
-        ! ignoring cloud water correction (see mo_surface_land.f90)
-        zcons = zcons12 * pressure(ic,iblk) / ( temp_air(ic,iblk) * (1._wp + rvd1 * qair(ic,iblk)))
-        zcfnchl  = zcons * SQRT(zdu2) * zchnl
-
-        ! Stable / Unstable case
-        IF ( zril .GT. 0._wp ) THEN
-          zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
-        ELSE
-          zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
-        END IF
-
-        drag_srf(ic,iblk) = zcfhl
-        pch(ic,iblk) = zcfhl / zcfnchl * zchnl
-
-        !---------------------------------------------------------------------------------------------------------------
-        ! Computation of Richtmeyr-Morton Coefficients
-        ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
-        !---------------------------------------------------------------------------------------------------------------
-        t_acoef(ic,iblk) = 0.0_wp
-        t_bcoef(ic,iblk) = cpd * (1 + cpvd1 * qair(ic,iblk)) * temp_air(ic,iblk) + zgh
-        q_acoef(ic,iblk) = 0.0_wp
-        q_bcoef(ic,iblk) = qair(ic,iblk)
-
-      END DO
-    ENDDO
-!$OMP END PARALLEL DO
-
-  END SUBROUTINE get_remaining_input_for_jsb4_interface
 
   ! ======================================================================================================= !
   !>

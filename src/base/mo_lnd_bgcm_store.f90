@@ -1,17 +1,19 @@
-!> Summary: Contains methods for collecting, storing and providing bgc materials
+!> Summary: defines methods for collecting, storing and providing bgc materials
 !>
-!>### Contains methods (used on tiles) to ease working with bgc materials
+!>#### ICON-Land
 !>
-!> Copyright (c) 2023 Julia Nabel
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2023-01-12 - present)
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
 !>
-!>#### License
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### defines methods (used on tiles) for collecting, storing and providing bgc materials
 !>
 MODULE mo_lnd_bgcm_store
 #ifndef __NO_JSBACH__
@@ -140,6 +142,7 @@ CONTAINS
           idx_1l_2d_bgcm = idx_1l_2d_bgcm + 1
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(nr_of_elements))
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
+          this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_wp
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_2d_bgcm
           DO i_element = 1, nr_of_elements
@@ -150,6 +153,7 @@ CONTAINS
           idx_1l_3d_bgcm = idx_1l_3d_bgcm + 1
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(nr_of_elements))
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
+          this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_wp
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_3d_bgcm
           DO i_element = 1, nr_of_elements
@@ -175,6 +179,7 @@ CONTAINS
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
+          this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_wp
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_2d_bgcm
@@ -183,6 +188,7 @@ CONTAINS
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
+          this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_wp
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_3d_bgcm

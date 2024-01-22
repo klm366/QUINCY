@@ -749,8 +749,8 @@ CONTAINS
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
-    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY
+    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day
+    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
@@ -760,12 +760,10 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_jsb_math_constants,        ONLY: eps8
+    USE mo_q_atm2land_process,        ONLY: update_local_time_and_daytime_counter
 
-    dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
+    dsl4jsb_Use_processes A2L_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(SEB_)
-    dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
@@ -786,35 +784,15 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
 
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    dsl4jsb_Def_memory_tile(SEB_, land_tile)
-    dsl4jsb_Real2D_onDomain :: t_land_tile
-    dsl4jsb_Def_memory_tile(TURB_, land_tile)
-    dsl4jsb_Real2D_onDomain :: fact_q_air_land_tile
-    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_land_tile
-    dsl4jsb_Real2D_onDomain :: rough_h_land_tile
-    dsl4jsb_Real2D_onDomain :: rough_m_land_tile
-
-    dsl4jsb_Def_memory_tile(SEB_, lake_tile)
-    dsl4jsb_Real2D_onDomain :: t_lake_tile
-    dsl4jsb_Def_memory_tile(TURB_, lake_tile)
-    dsl4jsb_Real2D_onDomain :: fact_q_air_lake_tile
-    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_lake_tile
-    dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
-    dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
 
     ! quincy
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
-    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -824,7 +802,8 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, nt, it, ics, ice
+    INTEGER :: nc, ics, ice
+    INTEGER :: global_seconds_day
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -877,6 +856,8 @@ CONTAINS
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
 
+    CALL model%Get_top_tile(tile)
+
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
     DO iblk = startblk, endblk
@@ -884,55 +865,9 @@ CONTAINS
       endidx  (iblk) = grid%Get_col_end(iblk)
     END DO
 
-
-    CALL model%Get_top_tile(tile)
-    IF (tile%contains_lake) THEN
-      ! We need separate variables for the land and the lake tile and cannot use the box tile.
-
-      ! Get pointer to the land tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          land_tile => tile%Get_first_child_tile()
-        ELSE
-          land_tile => land_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the land tile was found
-        IF (TRIM(land_tile%name) == 'land') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
-      dsl4jsb_Get_memory_tile(TURB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
-
-      ! Get pointer to the lake tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          lake_tile => tile%Get_first_child_tile()
-        ELSE
-          lake_tile => lake_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the lake tile was found
-        IF (TRIM(lake_tile%name) == 'lake') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
-      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
-    END IF
-
     IF (use_external_forcing) THEN
 
       dsl4jsb_Get_memory(A2L_)
-      dsl4jsb_Get_memory(SEB_)
-      dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
       lon => grid%lon
@@ -958,18 +893,40 @@ CONTAINS
       !> get variables (that are in the coupled simulation provided via the model interface by the host model)
       !>   including dimensional data and data from external forcing, i.e., forcing input files
       !>   see: 'mo_jsb_interface:interface_full'
-      !> 
-      IF (model%config%use_lakes) THEN
+      !>
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
         CALL get_standalone_driver( &
           ! in
-          & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
-          & .TRUE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                         &
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
           & sinlat, coslat, lon, evapo_act2pot,                                        &
-          & t_land_tile(:,:),                                                          &
-          & fact_q_air_land_tile(:,:),                                                 &
-          & fact_qsat_srf_land_tile(:,:),                                              &
-          & rough_h_land_tile(:,:),                                                    &
-          & rough_m_land_tile(:,:),                                                    &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
+          & )
+      CASE (MODEL_QUINCY)
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
           & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
@@ -985,62 +942,13 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
-          ! Input for lakes (optional)
-          & t_lake_tile(:,:),                                                          &
-          & fact_q_air_lake_tile(:,:),                                                 &
-          & fact_qsat_srf_lake_tile(:,:),                                              &
-          & rough_h_lake_tile(:,:),                                                    &
-          & rough_m_lake_tile(:,:),                                                    &
-          ! Output for lakes (optional)
-          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
-      ELSE
-        CALL get_standalone_driver( &
-          ! in
-          & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
-          & .FALSE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                        &
-          & sinlat, coslat, lon, evapo_act2pot,                                        &
-          & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
-          & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
-          & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
-          & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
-          & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-          ! out
-          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, pch))
-      END IF
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, p_deposition)                                 &
+          & )
+      END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
@@ -1055,28 +963,13 @@ CONTAINS
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
 
+        ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_one_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
-
-        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
-        WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
-            & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8)
-          ! zero the counter for number of accumulated values per day
-          daytime_counter(:,:) = 0.0_wp
-        END WHERE
-
+        dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
-        WHERE(swpar_srf_down(:,:) > eps8)
-          ! count number of daytime values
-          daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
-        END WHERE
-
-        ! shift for cos_zenith_angle tracing for midnight identification
-        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
-        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
-        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+        global_seconds_day = get_secs_of_day(datetime_new)
+        CALL update_local_time_and_daytime_counter( &
+          &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
       END SELECT
 
       DEALLOCATE(evapo_act2pot)
