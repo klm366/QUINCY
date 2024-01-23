@@ -377,7 +377,6 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -412,9 +411,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: pond_freeze
     dsl4jsb_Real2D_onChunk :: pond_melt
-    dsl4jsb_Real2D_onChunk :: wtr_pond_infl
-    dsl4jsb_Real2D_onChunk :: wtr_pond_outfl
-    dsl4jsb_Real2D_onChunk :: wtr_pond_ovrfl
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -430,7 +426,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: evapo_pond
-    dsl4jsb_Real2D_onChunk :: cond_pond
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
@@ -454,17 +449,13 @@ CONTAINS
 
     LOGICAL  :: lstart
     LOGICAL  :: ltpe_closed
-    INTEGER  :: iblk, ics, ice, nc, nsoil, ic
+    INTEGER  :: iblk, ics, ice, nc, nsoil
     REAL(wp) :: dtime, w_skin_max_config
 
-    REAL(wp), POINTER :: area(:), lat(:), lon(:)
-
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
-    CHARACTER(len=4096)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -477,12 +468,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
-
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -577,12 +564,8 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)       ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   ice_pond)       ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_pond)     ! out
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   cond_pond)      ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_freeze)    ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)      ! out
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_infl)  ! out
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_outfl) ! out
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_ovrfl) ! out
       END IF
     END IF
 
@@ -712,14 +695,10 @@ CONTAINS
         & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & !< Amount of water freezing within ponds [kg m-2 s-1]
         & pond_melt(:),                   & !< Amount of ice melting within ponds [kg m-2 s-1]
-        & wtr_pond_infl(:),               & !< Amount of water entering ponds [kg m-2 s-1]
-        & wtr_pond_outfl(:),              & !< Amount of water leaving ponds [kg m-2 s-1]
-        & wtr_pond_ovrfl(:),              & !< Amount of water overflowing due to maximum pond storage [kg m-2 s-1]
         & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin, snow and pond reservoirs [kg m-2 s-1]
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
         & evapo_pond(:),                  & !< evaporation from ponds [kg m-2 s-1]
-        & cond_pond(:),                   & !< condensation over ponds [kg m-2 s-1]
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
@@ -735,19 +714,6 @@ CONTAINS
       END IF
 
       DEALLOCATE(soil_sat_deficit)
-
-      ! Temporary checks for pond scheme
-      DO ic = 1, nc
-        IF (wtr_pond_ovrfl(ic) - wtr_pond_infl(ic) - cond_pond(ic) > 1.0e-10) THEN
-          WRITE (message_text_long,*) 'Pond overflow error [m dt-1]: ',                         &
-            &  (wtr_pond_ovrfl(ic) - wtr_pond_infl(ic) - cond_pond(ic)) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E:',            NEW_LINE('a'), &
-            & 'Pond inflow:         ', wtr_pond_infl(ic)  / rhoh2o * dtime,               NEW_LINE('a'), &
-            & 'Pond condensation:   ', cond_pond(ic)      / rhoh2o * dtime,               NEW_LINE('a'), &
-            & 'Pond overflow:       ', wtr_pond_ovrfl(ic) / rhoh2o * dtime
-          CALL finish (TRIM(routine), message_text_long)
-        END IF
-      END DO
 
     END IF
 
@@ -810,7 +776,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_pond,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, cond_pond,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
@@ -820,9 +785,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_freeze,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_melt,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_infl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_outfl,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_ovrfl,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1085,7 +1047,6 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1094,11 +1055,6 @@ CONTAINS
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: wtr_pond_infl
-    dsl4jsb_Real2D_onChunk :: cond_pond
-    dsl4jsb_Real2D_onChunk :: wtr_pond_ovrfl
 
     ! Locally allocated vectors
 
@@ -1109,7 +1065,7 @@ CONTAINS
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
 
-    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
@@ -1117,7 +1073,6 @@ CONTAINS
     REAL(wp) :: tile_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
-    CHARACTER(len=4096)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1192,8 +1147,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_outfl    ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_ovrfl    ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
@@ -1214,22 +1167,6 @@ CONTAINS
     ! Convert soil hydrology balance error to volume
     dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) &
       & * tile_fract(:) * area(:)
-
-    ! Temporary checks for pond scheme
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond_infl)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, cond_pond)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond_ovrfl)
-    DO ic = 1, nc
-      IF (wtr_pond_ovrfl(ic) - wtr_pond_infl(ic) - cond_pond(ic) > 1.0e-10) THEN
-        WRITE (message_text_long,*) 'Pond overflow error [m dt-1]: ',                         &
-          &  (wtr_pond_ovrfl(ic) - wtr_pond_infl(ic) - cond_pond(ic)) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E:',            NEW_LINE('a'), &
-          & 'Pond inflow:         ', wtr_pond_infl(ic)  / rhoh2o * dtime,               NEW_LINE('a'), &
-          & 'Pond condensation:   ', cond_pond(ic)      / rhoh2o * dtime,               NEW_LINE('a'), &
-          & 'Pond overflow:       ', wtr_pond_ovrfl(ic) / rhoh2o * dtime
-        CALL finish (TRIM(routine), message_text_long)
-      END IF
-    END DO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1272,8 +1209,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_outfl,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_ovrfl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)

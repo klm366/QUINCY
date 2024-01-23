@@ -85,9 +85,8 @@ CONTAINS
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
-    & wtr_pond_infl, wtr_pond_outfl, wtr_pond_ovrfl,                &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & cond_pond, water_to_soil, evapo_deficit, infilt, runoff)
+    & water_to_soil, evapo_deficit, infilt, runoff)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -108,17 +107,13 @@ CONTAINS
       & wtr_pond(:), ice_pond(:)
     REAL(wp), INTENT(out)   ::                                              &
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
-      & pond_melt(:), wtr_pond_infl(:), wtr_pond_outfl(:), wtr_pond_ovrfl(:), &
-      & evapotrans_soil(:), evapo_skin(:), evapo_snow(:),                   &
-      & evapo_pond(:), cond_pond(:), water_to_soil(:), evapo_deficit(:),    &
+      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
+      & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
       & infilt(:), runoff(:)
     !$claw end model-data
     !
     !  local variables
     !
-    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
-    INTEGER             :: i
-    REAL(wp)            :: temp(10,nc)
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -128,7 +123,6 @@ CONTAINS
       & evapo_soil_in_m(nc),      & !< amount of ground evaporation within time step [m]
       & evapo_skin_in_m(nc),      & !< amount of evaporation from skin reservoir within time step [m]
       & evapo_pond_in_m(nc),      & !< amount of evaporation from pond reservoir within time step [m]
-      & cond_pond_in_m(nc),       & !< amount of condensation over pond reservoir within time step [m]
       & transpiration_in_m(nc),   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m(nc),      & !< amount of sublimation from snow within time step [m]
       & snowmelt_can(nc),         & !< snow melt from canopy [m]
@@ -173,9 +167,6 @@ CONTAINS
     wtr_pond_outflow(:)  = 0._wp
     water_to_soil(:)     = 0._wp
     evapo_deficit(:)     = 0._wp
-
-    temp(:,:)            = 0._wp
-    temp(1,:)            = wtr_pond(:) + ice_pond(:)
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
@@ -292,22 +283,14 @@ CONTAINS
     !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
     evapo_skin_in_m(:) = wtr_skin(:) - (wtr_skin_pre_rain(:) + rain_to_skinres(:))
 
-    ! Separate pond potential ET into evaporation and condensation
-    WHERE(evapo_pond_pot_in_m(:) <= 0._wp)
-      ! Limit pond evaporation to the available pond weq
-      evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
-      cond_pond_in_m(:)  = 0._wp
-    ELSEWHERE
-      evapo_pond_in_m(:) = 0._wp
-      cond_pond_in_m(:)  = evapo_pond_pot_in_m(:)
-    ENDWHERE
-
+    ! Limit pond evaporation to the available pond weq
+    evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
     ! Only evaporate from ponds if demand cannot be fullfilled from skin reservoir and transpiration
     evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:), &
       & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
 
     ! Update evaporation required from the soil
-    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - (evapo_pond_in_m(:) + cond_pond_in_m(:))
+    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
     WHERE (weq_soil(:) + evapotrans_soil_in_m(:) < 0._wp)
       ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
       evapo_pond_in_m(:)      = MAX(-(wtr_pond(:) + ice_pond(:)), &
@@ -316,9 +299,9 @@ CONTAINS
     END WHERE
     evapo_soil_in_m(:) = evapotrans_soil_in_m(:) - transpiration_in_m(:)
 
-    ! Add dew to liquid pond storage or evaporate pond water/ice
-    WHERE (cond_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
-      wtr_pond(:) = wtr_pond(:) + (evapo_pond_in_m(:) + cond_pond_in_m(:))
+    ! Add dew to liquid pond storage or evaporate pond water
+    WHERE (evapo_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
+      wtr_pond(:) = wtr_pond(:) + evapo_pond_in_m(:)
     ELSE WHERE (-evapo_pond_in_m(:) < wtr_pond(:) + ice_pond(:))
       ice_pond(:) = ice_pond(:) + (evapo_pond_in_m(:) + wtr_pond(:))
       wtr_pond(:) = 0._wp
@@ -422,26 +405,6 @@ CONTAINS
     evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
     evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
-    cond_pond(:)       = cond_pond_in_m(:)       * rhoh2o / dtime
-    wtr_pond_infl(:)   = wtr_pond_inflow(:)      * rhoh2o / dtime
-    wtr_pond_outfl(:)  = wtr_pond_outflow(:)     * rhoh2o / dtime
-    wtr_pond_ovrfl(:)  = wtr_pond_overflow(:)    * rhoh2o / dtime
-
-    ! Temporary sanity checks for ponds
-    temp(2,:)            = wtr_pond(:) + ice_pond(:)
-    DO i = 1, nc
-      IF (wtr_pond_overflow(i) - wtr_pond_inflow(i) - cond_pond_in_m(i) > 1.0E-10_wp) THEN
-        WRITE (message_text_long,*) '*** Pond overflow error: ', &
-          &  wtr_pond_overflow(i) - wtr_pond_inflow(i) -cond_pond_in_m(i), NEW_LINE('a'), &
-          &  'Pond stor (start): ', temp(1,i),               NEW_LINE('a'), &
-          &  'Pond stor (end):   ', temp(2,i),               NEW_LINE('a'), &
-          &  'Max pond stor:     ', weq_pond_max(i),         NEW_LINE('a'), &
-          &  'Pond inflow:       ', wtr_pond_inflow(i),      NEW_LINE('a'), &
-          &  'Pond condensation: ', cond_pond_in_m(i),       NEW_LINE('a'), &
-          &  'Pond overflow:     ', wtr_pond_overflow(i)
-        CALL finish('calc_surface_hydrology_land', message_text_long)
-      END IF
-    END DO
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -591,8 +554,7 @@ CONTAINS
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
     & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_outfl,                &
-    & wtr_pond_ovrfl, tpe_overflow, evapo_deficit,                                       &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, evapo_deficit,   &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
       drain_lat, wtr_soilhyd_res                                                         &
@@ -618,7 +580,7 @@ CONTAINS
       & fract_pond_max, evapotrans_soil, transpiration, &
       & ice_pond, weq_pond_max
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_outfl, wtr_pond_ovrfl
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -729,18 +691,13 @@ CONTAINS
 
     ! Infiltration overflow goes into ponds water storage or runoff
     WHERE (fract_pond_max(:) > EPSILON(1._wp) .AND. infilt_over(:) > 0._wp)
-      ! Pond state and outflow diagnostics need to be corrected accordingly
-      ! Add infiltration overflow to pond storage and reduce infiltration from ponds
+      ! Pond state need to be corrected accordingly
+      ! Add infiltration overflow to pond storage
       wtr_pond_corr(:)  = MIN(MAX(0._wp, weq_pond_max(:) - wtr_pond(:) - ice_pond(:)), infilt_over(:))
       wtr_pond(:)       = wtr_pond(:) + wtr_pond_corr(:)
-      wtr_pond_outfl(:) = MAX(0._wp, wtr_pond_outfl(:) - (wtr_pond_corr(:) * rhoh2o / dtime))
-      ! Check for remaining overflow and add to pond overflow and surface runoff
+      ! Check for remaining overflow and add to surface runoff
       wtr_pond_corr(:)  = MAX(0._wp, infilt_over(:) - wtr_pond_corr(:))
       runoff(:)         = runoff(:) + wtr_pond_corr(:)
-      ! For some reason, diagnosing this as pond overflow results in pond_overflow > pond_inflow
-      ! which appears strange. Is this a time lag effect? Or infiltration from the non-pond fraction,
-      ! then it should be accounted as both, inflow and overflow.
-      ! wtr_pond_ovrfl(:) = MAX(0._wp, wtr_pond_ovrfl(:) + (wtr_pond_corr(:) * rhoh2o / dtime))
 
     ! Without ponds, all infitration overflow goes directly into surface runoff
     ELSEWHERE
