@@ -13,7 +13,7 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### read phenology namelist and init configuration parameters
+!>#### define phenology config structure, read phenology namelist and init configuration parameters
 !>
 MODULE mo_q_pheno_config_class
 #ifndef __NO_JSBACH__

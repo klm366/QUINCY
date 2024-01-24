@@ -1,31 +1,19 @@
-
-!> Summary: Handels the qmodel id (representing quincy slm model set-ups)
+!> Summary: QUINCY model modes
 !>
-!>### Provides qmodel ids and routines to map quincy slm model names and qmodel ids
+!>#### ICON-Land
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!>#### Revision History
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
 !>
-!> First version   by Julia Nabel   (2021-10-13)
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### License
-!>
-!> QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!> Copyright (C) 2021 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!>
-!> This file is part of the QUINCY model.
-!> The QUINCY model is free software: you can redistribute it and/or modify
-!> it under the terms of the GNU General Public License version 3,
-!> as published by the Free Software Foundation.
-!>
-!> The QUINCY model is distributed in the hope that it will be useful,
-!> but WITHOUT ANY WARRANTY; without even the implied warranty of
-!> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!> GNU General Public License for more details.
-!>
-!> You should have received a copy of the GNU General Public License
-!> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!>#### defines QUINCY model modes and related helper routines
 !>
 MODULE mo_quincy_model_config
 

@@ -75,8 +75,14 @@ CONTAINS
     & pch,                    &
     & cos_zenith_angle,       &
     & CO2_air,                &
-    & DEBUG_VAR,              &
+    ! For QUINCY
+    & nhx_deposition,         &
+    & noy_deposition,         &
+    & nhx_n15_deposition,     &
+    & noy_n15_deposition,     &
+    & p_deposition,           &
     ! For lakes:
+    & DEBUG_VAR,              &
     & drag_wtr,               &
     & drag_ice,               &
     & t_acoef_wtr,            &
@@ -102,7 +108,9 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
-      & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
+      & CO2_air,                                                                                                   &
+      & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition, p_deposition,                      &
+      & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
     ! ----------------------------------------------------------------------------------------------------- !
@@ -142,6 +150,11 @@ CONTAINS
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
       & CO2_mixing_ratio_ptr,  &
+      & nhx_deposition_ptr,    &
+      & noy_deposition_ptr,    &
+      & nhx_n15_deposition_ptr,&
+      & noy_n15_deposition_ptr,&
+      & p_deposition_ptr,      &
       & DEBUG_VAR_ptr,         &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
@@ -244,6 +257,21 @@ CONTAINS
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
       END IF
+    END IF
+    IF (PRESENT(nhx_deposition)) THEN
+      nhx_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, nhx_deposition)
+    END IF
+    IF (PRESENT(noy_deposition)) THEN
+      noy_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, noy_deposition)
+    END IF
+    IF (PRESENT(nhx_n15_deposition)) THEN
+      nhx_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, nhx_n15_deposition)
+    END IF
+    IF (PRESENT(noy_n15_deposition)) THEN
+      noy_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, noy_n15_deposition)
+    END IF
+    IF (PRESENT(p_deposition)) THEN
+      p_deposition_ptr        => dsl4jsb_var2D_onChunk(A2L_, p_deposition)
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -415,9 +443,42 @@ CONTAINS
         END IF
       END DO
     END IF
+    !> MODEL_QUINCY
+    !>
+    IF (PRESENT(nhx_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        nhx_deposition_ptr(i) = nhx_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(noy_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        noy_deposition_ptr(i) = noy_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(nhx_n15_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        nhx_n15_deposition_ptr(i) = nhx_n15_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(noy_n15_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        noy_n15_deposition_ptr(i) = noy_n15_deposition(i)
+      END DO
+    END IF
+    IF (PRESENT(p_deposition)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        p_deposition_ptr(i) = p_deposition(i)
+      END DO
+    END IF
 
+    !> lakes
+    !>
     IF (tile_contains_lake) THEN
-
       IF (PRESENT(drag_wtr)) THEN
       !$acc loop gang vector
         DO i=1,nc

@@ -749,7 +749,7 @@ CONTAINS
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day
-    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY
+    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
@@ -893,26 +893,61 @@ CONTAINS
       !>   including dimensional data and data from external forcing, i.e., forcing input files
       !>   see: 'mo_jsb_interface:interface_full'
       !>
-      CALL get_standalone_driver( &
-        ! in
-        & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
-        & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
-        & sinlat, coslat, lon, evapo_act2pot,                                        &
-        & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-        ! out
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-        & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-        & dsl4jsb_var2D_onDomain(A2L_, press_srf))
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
+          & )
+      CASE (MODEL_QUINCY)
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, p_deposition)                                 &
+          & )
+      END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 

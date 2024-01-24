@@ -1,37 +1,20 @@
+!> Summary: QUINCY assimilation process interface
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!!    This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!!    Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!! 
-!! @brief Contains the interfaces to the assimi process of the quincy model
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg (jsbach code)
-!!  Jan Engel, MPI-BGC Jena (quincy code)
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-30)
-!! First version of quincy code by Jan Engel (2016-07-19)
-!! Jan Engel MPI-BGC (2023-09-27): re-write for quincy model based on the jsbach module
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of tasks for the assimilation process (photosynthesis) incl. update and aggregate routines
+!>
 MODULE mo_q_assimi_interface
 #ifndef __NO_JSBACH__
 

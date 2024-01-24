@@ -1,31 +1,20 @@
+!> Summary: QUINCY soil-physics process config
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains structures and methods for spq config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04);
-!! 2nd version by Jan Engel, MPI BGC (20160913) -> integration into SLM
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### define soil-physics-quincy config structure, read soil-physics-quincy namelist and init configuration parameters
+!>
 MODULE mo_spq_config_class
 #ifndef __NO_JSBACH__
 
@@ -57,7 +46,8 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)                    :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)                    :: bulk_density   
-    CHARACTER(len=filename_max) :: bc_sso_filename      !< For elevation and oro_stddev 
+    CHARACTER(len=filename_max) :: bc_sso_filename          !< elevation and oro_stddev 
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
@@ -117,6 +107,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_sso_filename
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
     INTEGER                     :: nsnow
@@ -135,6 +126,7 @@ CONTAINS
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
+                          bc_quincy_soil_filename , &
                           flag_snow               , &
                           nsoil_energy            , &
                           nsoil_water             , &
@@ -170,16 +162,17 @@ CONTAINS
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
-    flag_snow                     = .FALSE.
-    nsoil_energy                  = 5
-    nsoil_water                   = 5
+    bc_quincy_soil_filename       = 'bc_quincy_soil.nc'
+    flag_snow                     = .TRUE.
+    nsoil_energy                  = 15
+    nsoil_water                   = 15
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
     dz_energy(6:max_soil_layers)  = 0._wp
     dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
     dz_water (6:max_soil_layers)  = 0._wp 
     wsr_capacity                  = 2.E-4_wp
     wsn_capacity                  = 2.E-4_wp
-    soil_depth                    = 5.7_wp 
+    soil_depth                    = 9.5_wp
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp 
     soil_sand                     = 0.3_wp
@@ -249,6 +242,7 @@ CONTAINS
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename
+    config%bc_quincy_soil_filename   = bc_quincy_soil_filename
     config%flag_snow                 = flag_snow
     config%nsoil_energy              = nsoil_energy     ! depreciated feature, but needed for now, see ticket #521
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521

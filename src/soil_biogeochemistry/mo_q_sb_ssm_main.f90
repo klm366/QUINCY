@@ -1,32 +1,20 @@
+!> Summary: QUINCY 'simple soil model' calculate soil-biogeochemical pools
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task sb_simple_model 
-!!
-!! @author
-!!  Silvia Caldararu, Soenke Zaehle 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
-!! Second version by Soenke Zaehle (20170331): added a 4 pool model 
-!! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### main routines for the SSM (simple soil model), calculating the soil biogeochemical pools
+!>
 MODULE mo_q_sb_ssm_main
 
   USE mo_kind,                    ONLY: wp
@@ -263,12 +251,14 @@ CONTAINS
     nc        = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
@@ -1988,6 +1978,7 @@ CONTAINS
                                                         microbial_uptake_po4_sl       !< microbial immobilisation of PO4 [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
+    INTEGER                           :: ic, isoil      !< looping
     REAL(wp), DIMENSION(nc, nsoil_sb) :: hlp1, hlp2
     REAL(wp), DIMENSION(nc, nsoil_sb) :: transfer_c
     REAL(wp), DIMENSION(nc, nsoil_sb) :: f_uptake_nh4_sl
@@ -2080,38 +2071,43 @@ CONTAINS
  
     !> 1.4  limit plant uptake and denitrification to available NO3 minus transport losses 
     !!
-    WHERE(microbial_uptake_no3_sl(:,:) >= 0.0_wp)
-      hlp1(:,:) = microbial_uptake_no3_sl(:,:) + plant_uptake_no3_sl(:,:) + denitrification_n2(:,:) + mycorrhiza_uptake_no3_sl(:,:)
-      hlp2(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
-      WHERE(hlp2(:,:) < hlp1(:,:))
-        WHERE(hlp1(:,:) > eps8)
-          microbial_uptake_no3_sl(:,:)  = hlp2(:,:) * microbial_uptake_no3_sl(:,:) / hlp1(:,:) 
-          plant_uptake_no3_sl(:,:)      = hlp2(:,:) * plant_uptake_no3_sl(:,:) / hlp1(:,:)
-          denitrification_n2(:,:)       = hlp2(:,:) * denitrification_n2(:,:) / hlp1(:,:)
-          mycorrhiza_uptake_no3_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_sl(:,:) / hlp1(:,:)
-        ELSEWHERE
-          microbial_uptake_no3_sl(:,:)  = 0.0_wp
-          plant_uptake_no3_sl(:,:)      = 0.0_wp 
-          denitrification_n2(:,:)       = 0.0_wp 
-          mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-        ENDWHERE
-      ENDWHERE 
-    ELSEWHERE
-      hlp1(:,:) = plant_uptake_no3_sl(:,:) + denitrification_n2(:,:) + mycorrhiza_uptake_no3_sl(:,:)
-      hlp2(:,:) = no3_solute(:,:) + transport_no3_solute(:,:) - microbial_uptake_no3_sl(:,:)
-      WHERE(hlp2(:,:) < hlp1(:,:))
-        WHERE(hlp1(:,:) > eps8)
-          plant_uptake_no3_sl(:,:)      = hlp2(:,:) * plant_uptake_no3_sl(:,:) / hlp1(:,:)
-          denitrification_n2(:,:)       = hlp2(:,:) * denitrification_n2(:,:) / hlp1(:,:)
-          mycorrhiza_uptake_no3_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_sl(:,:) / hlp1(:,:)
-        ELSEWHERE
-          plant_uptake_no3_sl(:,:)      = 0.0_wp 
-          denitrification_n2(:,:)       = 0.0_wp 
-          mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-        ENDWHERE
-      ENDWHERE
-    ENDWHERE
-           
+    DO isoil = 1, nsoil_sb
+      DO ic = 1, nc
+        IF (microbial_uptake_no3_sl(ic,isoil) >= 0.0_wp) THEN
+          hlp1(ic,isoil) = microbial_uptake_no3_sl(ic,isoil) + plant_uptake_no3_sl(ic,isoil) + &
+                  denitrification_n2(ic,isoil) + mycorrhiza_uptake_no3_sl(ic,isoil)
+          hlp2(ic,isoil) = no3_solute(ic,isoil) + transport_no3_solute(ic,isoil)
+          IF (hlp2(ic,isoil) < hlp1(ic,isoil)) THEN
+            IF (hlp1(ic,isoil) > eps8) THEN
+              microbial_uptake_no3_sl(ic,isoil)  = hlp2(ic,isoil) * microbial_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              plant_uptake_no3_sl(ic,isoil)      = hlp2(ic,isoil) * plant_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              denitrification_n2(ic,isoil)       = hlp2(ic,isoil) * denitrification_n2(ic,isoil) / hlp1(ic,isoil)
+              mycorrhiza_uptake_no3_sl(ic,isoil) = hlp2(ic,isoil) * mycorrhiza_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+            ELSE
+              microbial_uptake_no3_sl(ic,isoil)  = 0.0_wp
+              plant_uptake_no3_sl(ic,isoil)      = 0.0_wp
+              denitrification_n2(ic,isoil)       = 0.0_wp
+              mycorrhiza_uptake_no3_sl(ic,isoil) = 0.0_wp
+            END IF
+          END IF
+        ELSE
+          hlp1(ic,isoil) = plant_uptake_no3_sl(ic,isoil) + denitrification_n2(ic,isoil) + mycorrhiza_uptake_no3_sl(ic,isoil)
+          hlp2(ic,isoil) = no3_solute(ic,isoil) + transport_no3_solute(ic,isoil) - microbial_uptake_no3_sl(ic,isoil)
+          IF (hlp2(ic,isoil) < hlp1(ic,isoil)) THEN
+            IF (hlp1(ic,isoil) > eps8) THEN
+              plant_uptake_no3_sl(ic,isoil)      = hlp2(ic,isoil) * plant_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+              denitrification_n2(ic,isoil)       = hlp2(ic,isoil) * denitrification_n2(ic,isoil) / hlp1(ic,isoil)
+              mycorrhiza_uptake_no3_sl(ic,isoil) = hlp2(ic,isoil) * mycorrhiza_uptake_no3_sl(ic,isoil) / hlp1(ic,isoil)
+            ELSE
+              plant_uptake_no3_sl(ic,isoil)      = 0.0_wp
+              denitrification_n2(ic,isoil)       = 0.0_wp
+              mycorrhiza_uptake_no3_sl(ic,isoil) = 0.0_wp
+            END IF
+          END IF
+        END IF  !< microbial_uptake_no3_sl(ic,isoil) >= 0.0_wp
+      END DO    !< ic = 1, nc
+    END DO      !< isoil = 1, nsoil_sb
+
     !> 2.0 determine actual growth rate of fast SOM pool
     !!
    

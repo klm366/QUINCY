@@ -13,7 +13,7 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### initialization of phenology variables using ic & bc input files
+!>#### initialization of phenology memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_pheno_init
 #ifndef __NO_JSBACH__

@@ -1261,9 +1261,13 @@ CONTAINS
        !>
        !>  loop over vegetation lct:
        !>    'jsbach_lite' & 'jsbach_pfts': calculations are applied to vegetation only; the lct = 1 is glacier (and has no values, i.e. is 0, in the quincy lctlib part)!
-       !>    'quincy_eight_pfts':           calculations are applied to all 8 PFT
+       !>    'quincy_eight_pfts':           calculations are applied to all 8  PFT
+       !>    'quincy_11_pfts':              calculations are applied to all 11 PFT
+       !>  TODO QUINCY: calculations may not need to be applied for
+       !>               bare soil and urban area in usecases quincy_11_pfts / quincy_14_pfts
+       !>    
        IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
-         IF (usecase == 'quincy_eight_pfts') THEN
+         IF (usecase == 'quincy_eight_pfts' .OR. usecase == 'quincy_11_pfts') THEN
            j = 1
          ELSE
            j = 2
@@ -1587,14 +1591,13 @@ CONTAINS
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
 
-    !>Throw away values for glacier (first column) for some model usecases (mo_jsb_usecases)
+    !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
-    ! quincy model with 8 PFT tiles
-    CASE ('quincy_eight_pfts')
+    ! quincy model with 8 / 11 PFT tiles
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
-
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1

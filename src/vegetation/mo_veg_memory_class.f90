@@ -1,32 +1,20 @@
+!> Summary: QUINCY vegetation process memory
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains the memory class for the vegetation processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (20160830, based on the JSBACH4, MPI-M Hamburg)
-!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
-!! code additions for bgcm store solution ported from ICON-Land by Jan Engel, MPI-BGC (20230117)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of (memory) variables for the vegetation process
+!>
 MODULE mo_veg_memory_class
 
   USE mo_kind,                   ONLY: wp
@@ -88,6 +76,13 @@ MODULE mo_veg_memory_class
       & veg_litterfall_total_c13  , &     !< sum of all veg_litterfall%*%carbon13    [mol m-2 timestep-1]
       & veg_litterfall_total_c14  , &     !< sum of all veg_litterfall%*%carbon14    [mol m-2 timestep-1]
       & veg_litterfall_total_n15          !< sum of all veg_litterfall%*%nitrogen15  [mol m-2 timestep-1]
+    TYPE(t_jsb_var_real2d) :: &
+      & veg_pool_leaf_c           , &     !< leaf carbon                  [mol m-2]
+      & veg_pool_leaf_n           , &     !< leaf nitrogen                [mol m-2]
+      & veg_pool_wood_c           , &     !< sapwood + heartwood carbon   [mol m-2]
+      & veg_pool_wood_n           , &     !< sapwood + heartwood nitrogen [mol m-2]
+      & veg_pool_fine_root_c      , &     !< fine root carbon             [mol m-2]
+      & veg_pool_fine_root_n              !< fine root nitrogen           [mol m-2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
@@ -170,8 +165,8 @@ MODULE mo_veg_memory_class
                                     uptake_no3                    , & !< NO3 uptake from soil [micro-mol N m-2 s-1]
                                     uptake_no3_n15                , & !< 15NO3 uptake from soil [micro-mol N m-2 s-1]
                                     uptake_po4                    , & !< PO4 uptake from soil [micro-mol P m-2 s-1]
-                                    n_fixation                    , & !< symbiontic N fixation [micro-mol N m-2 s-1]
-                                    n_fixation_n15                , & !< symbiontic N fixation [micro-mol 15N m-2 s-1]
+                                    n_fixation                    , & !< symbiotic N fixation [micro-mol N m-2 s-1]
+                                    n_fixation_n15                , & !< symbiotic N fixation [micro-mol 15N m-2 s-1]
                                     recycling_leaf_n              , & !< net flux of N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_leaf_n15            , & !< net flux of 15N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_leaf_p              , & !< net flux of P from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
@@ -317,6 +312,14 @@ MODULE mo_veg_memory_class
                                     t_air_week_mavg                , &  !< air temperature time-averaged [K]
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
                                     t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
+
+    ! 1.11 helper variables for L2A_ process
+    !      these var are used at PFT tiles and aggregated to box tile
+    !      in 'mo_atmland_interface:update_land2atm' their values are added to the "L2A_ counterpart variables"
+    !      this is needed because the L2A_ var are not available at other tiles than the box tile (i.e., top tile)
+    TYPE(t_jsb_var_real2d) ::       &
+      & net_biosphere_production_l2aveghlp  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
+      & biological_n_fixation_l2aveghlp         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
@@ -794,6 +797,72 @@ CONTAINS
       CALL mem%Add_var('veg_litterfall_total_n15', mem%veg_litterfall_total_n15, &
         & hgrid, surface, &
         & t_cf('veg_litterfall_total_n15', 'mol m-2 timestep-1', 'total N15, sum of all veg_litterfall components'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_leaf_c', mem%veg_pool_leaf_c, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_leaf_c', 'mol m-2', 'vegetation pool leaf carbon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_leaf_n', mem%veg_pool_leaf_n, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_leaf_n', 'mol m-2', 'vegetation pool leaf nitrogen'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_wood_c', mem%veg_pool_wood_c, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_wood_c', 'mol m-2', 'vegetation pool sapwood + heartwood carbon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_wood_n', mem%veg_pool_wood_n, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_wood_n', 'mol m-2', 'vegetation pool sapwood + heartwood nitrogen'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_fine_root_c', mem%veg_pool_fine_root_c, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_fine_root_c', 'mol m-2', 'vegetation pool fine root carbon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_fine_root_n', mem%veg_pool_fine_root_n, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_fine_root_n', 'mol m-2', 'vegetation pool fine root nitrogen'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2594,6 +2663,28 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('net_biosphere_production_l2aveghlp', mem%net_biosphere_production_l2aveghlp, &
+        & hgrid, surface, &
+        & t_cf('net_biosphere_production_l2aveghlp', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('biological_n_fixation_l2aveghlp', mem%biological_n_fixation_l2aveghlp, &
+        & hgrid, surface, &
+        & t_cf('biological_n_fixation_l2aveghlp', '[micro-mol N m-2 s-1]', 'symbiotic + asymbiotic N fixation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)

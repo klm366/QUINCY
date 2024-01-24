@@ -1,32 +1,20 @@
-
-!> Summary: generic routine providing various ways for the averaging of variables over time for all model processes
+!> Summary: defines routine for averaging variables
 !>
-!>### Provides routines to specify, create and write quincy netcdf4 output
+!>#### ICON-Land
 !>
-!> Copyright (c) Jan Engel, Soenke Zaehle, MPI-BGC Jena
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!>#### Revision History
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
 !>
-!> 1st version in jsb4 by Jan Engel (2019-08-30) - integration of calc_mavg() from QUINCY model
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### License
+!>#### defines a generic routine providing various ways for the averaging of variables over time for all model processes
 !>
-!> QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!> Copyright (C) 2022 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!>
-!> This file is part of the QUINCY model.
-!> The QUINCY model is free software: you can redistribute it and/or modify
-!> it under the terms of the GNU General Public License version 3,
-!> as published by the Free Software Foundation.
-!>
-!> The QUINCY model is distributed in the hope that it will be useful,
-!> but WITHOUT ANY WARRANTY; without even the implied warranty of
-!> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!> GNU General Public License for more details.
-!>
-!> You should have received a copy of the GNU General Public License
-!> along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!> ======================================================================================================
 MODULE mo_lnd_time_averages
 #ifndef __NO_JSBACH__
 

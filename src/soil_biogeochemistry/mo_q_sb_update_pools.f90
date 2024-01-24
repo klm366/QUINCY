@@ -1,31 +1,20 @@
+!> Summary: QUINCY update soil-biogeochemical pools
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_sb_pools
-!!
-!! @author
-!!  Silvia Caldararu, Soenke Zaehle 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
-!! refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### routines for calculating the soil-biogeochemical pools using the fluxes that have been calculated
+!>
 MODULE mo_q_sb_update_pools
 
   USE mo_kind,                    ONLY: wp
@@ -143,11 +132,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
-    ! VEG_
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    ! SOIL
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production_l2aveghlp
+    dsl4jsb_Real2D_onChunk :: biological_n_fixation_l2aveghlp
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: percolation_sl
@@ -183,6 +175,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: emission_n2o_n15
     dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: emission_n2_n15
+    dsl4jsb_Real2D_onChunk :: ecosystem_total_n_loss
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -319,6 +312,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c13
     dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c14
     dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n15
+    dsl4jsb_Real3D_onChunk :: sb_pool_woody_litter_c
+    dsl4jsb_Real3D_onChunk :: total_soil_n
+    dsl4jsb_Real3D_onChunk :: total_soil_inorg_n
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -327,13 +323,16 @@ CONTAINS
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
+    ! ---------------------------
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -386,10 +385,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,      f_n_demand)                  ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,      f_p_demand)                  ! in
+    ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_l2aveghlp)   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation_l2aveghlp)      ! out
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SPQ_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     bulk_dens_sl)                ! in
@@ -402,7 +404,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_,     silt_sl)                     ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     clay_sl)                     ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     volume_min_sl)               ! in
-    ! ---------------------------
+    ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_phosphorus)       ! out
@@ -426,12 +428,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration)             ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c13)         ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c14)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       ecosystem_total_n_loss)      ! out
+    ! SB_ 3D
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c14)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
@@ -561,6 +565,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c13)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c14)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n15)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_n)                ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_n)          ! out
     !------------------------------------------------------------------------------------------------------ !
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
@@ -989,7 +996,8 @@ CONTAINS
       & + SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
 
     !> 13.0 bgc_material diagnostics - sum up sb_pool components
-    !>     sum up: all, soil organic material, and litter for each particular element
+    !>      sum up: all, soil organic material, and litter for each particular element
+    !>      or just pass the values from one/multiple variable to the diagnostics variable
     !>
     sb_pool_total_c(:,:)          = SUM(sb_pool_mt(:, ixC, :, :), DIM=1)
     sb_pool_total_n(:,:)          = SUM(sb_pool_mt(:, ixN, :, :), DIM=1)
@@ -997,6 +1005,8 @@ CONTAINS
     sb_pool_total_c13(:,:)        = SUM(sb_pool_mt(:, ixC13, :, :), DIM=1)
     sb_pool_total_c14(:,:)        = SUM(sb_pool_mt(:, ixC14, :, :), DIM=1)
     sb_pool_total_n15(:,:)        = SUM(sb_pool_mt(:, ixN15, :, :), DIM=1)
+
+    sb_pool_woody_litter_c(:,:)   = sb_pool_mt(ix_woody_litter, ixC, :, :)
 
     CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC, sb_pool_total_som_c)
     CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixN, sb_pool_total_som_n)
@@ -1011,6 +1021,30 @@ CONTAINS
     CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC13, sb_pool_total_litter_c13)
     CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC14, sb_pool_total_litter_c14)
     CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixN15, sb_pool_total_litter_n15)
+
+    !> 14.0 biosphere-level diagnostics (SB_ process)
+    !>
+
+    !> 14.1 SB_ process
+    !>
+    ecosystem_total_n_loss(:) = &
+      & emission_noy(:) + emission_n2o(:) + emission_n2(:) &
+      & + leaching_dom_nitrogen(:) + leaching_nh4_solute(:) + leaching_no3_solute(:) &
+      & + SUM(lateral_loss_dom_nitrogen_sl(:,:), DIM=2) + SUM(lateral_loss_nh4_solute_sl(:,:), DIM=2) &
+      & + SUM(lateral_loss_no3_solute_sl(:,:), DIM=2)
+    total_soil_n(:,:)         = sb_pool_total_som_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
+    total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
+
+    !> 14.2 across multiple processes
+    !>
+    !>   see also 'update_veg_pools()'
+    !>
+    !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
+    !>
+    ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
+    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) - SUM(het_respiration(:,:), DIM = 2)
+    ! biological N fixation (VEG_ and SB_ processes)
+    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp + SUM(asymb_n_fixation(:,:), DIM = 2)
 
     !------------------------------------------------------------------------------------------------------ !
     DEALLOCATE(sb_particle_transport_hlp_mt, sb_pool_prev_timestep_hlp_mt)
