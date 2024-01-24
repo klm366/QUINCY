@@ -56,7 +56,7 @@ MODULE mo_hydro_config_class
       & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
                                 !! 'upstream' (default) or 'arithmetic' mean
       & pond_dynamics           !< Choice of pond dynamics scheme (i.e. depth-area scaling)
-                                !! quadratic (default), tanh
+                                !! tanh (default), quadratic
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -137,7 +137,7 @@ CONTAINS
     l_ponds                = .FALSE.
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
-    pond_dynamics          = "quadratic"
+    pond_dynamics          = "tanh"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 

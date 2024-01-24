@@ -235,15 +235,9 @@ CONTAINS
           & fill_array=hydro_init_vars%depth_pond_max)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) <= 0._wp)
       ELSE
-        ! Set fields to negativ value to indicate they should be computed later
-        hydro_init_vars%fract_pond_max(:,:) = -1._wp
-        hydro_init_vars%depth_pond_max(:,:) = -1._wp
-        CALL message(TRIM(routine), '*** Warning: surf_depr_fract or surf_depr_depth not found in bc_sso file --> '// &
-          & 'both will be computed based on steepness correlation')
+        CALL finish(TRIM(routine), '*** Error: surf_depr_fract and/or surf_depr_depth not found in bc_sso file. '// &
+          & 'Pond scheme cannot run without these fields')
       END IF
-    ELSE
-      hydro_init_vars%fract_pond_max(:,:) = 0._wp
-      hydro_init_vars%depth_pond_max(:,:) = 0._wp
     END IF
 
     CALL input_file%Close()
@@ -452,34 +446,14 @@ CONTAINS
 
     ! Maximum depth and extent of surface water ponds
     IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-      IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp .OR. &
-        & MAXVAL(hydro_init_vars%depth_pond_max(:,:)) < 0._wp) THEN
-        ! No maximum pond fraction or depth found in init file --> estimate from steepness
-        ! This equation is based on curve fitting steepness data to the
-        ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
-        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
-          & 0.3_wp / ( 0.5_wp + dsl4jsb_var_ptr(HYDRO_, steepness)**0.4_wp)
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.1_wp * dsl4jsb_var_ptr(HYDRO_, fract_pond_max)
-        WRITE (message_text,*) 'Computed pond characteristics range between: ',       NEW_LINE('a'), &
-          &  'Max. pond fraction: ', MINVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), ' <=> ',       &
-          &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), NEW_LINE('a'), &
-          &  'Max. pond depth:    ', MINVAL(dsl4jsb_var_ptr(HYDRO_, weq_pond_max)),   ' <=> ',       &
-          &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, weq_pond_max))
-        CALL message(TRIM(routine), message_text)
-      ELSE
-        ! Maximum pond fraction and cell average depth read from from init file
-        !   Note, surface depressions are given es negativ value in the data, but represent
-        !   a storage on top of the soil --> need to be converted to positive value!
-        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
-        WRITE (message_text,*) 'Read in pond characteristics range between: ',        NEW_LINE('a'), &
-          &  'Max. pond fraction: ', MINVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), ' <=> ',       &
-          &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), NEW_LINE('a'), &
-          &  'Max. pond depth:    ', MINVAL(dsl4jsb_var_ptr(HYDRO_, weq_pond_max)),   ' <=> ',       &
-          &                          MAXVAL(dsl4jsb_var_ptr(HYDRO_, weq_pond_max))
-        CALL message(TRIM(routine), message_text)
-      END IF
+      ! Note, surface depression depth is given es negative value in the data, but represent
+      !   a storage on top of the soil --> needs to be converted to positive values!
+      dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+      dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
     ELSE
+      ! Note, that ponds are implicitely disabled by setting the maximum allowed pond fraction
+      !   and depth to zero. Thus, we can avoid a large number l_ponds conditions for surface
+      !   and soil hydrology processes.
       dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
       dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
     END IF
