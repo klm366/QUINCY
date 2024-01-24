@@ -86,7 +86,7 @@ CONTAINS
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & water_to_soil, evapo_deficit, infilt, runoff)
+    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt, runoff)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -108,8 +108,8 @@ CONTAINS
     REAL(wp), INTENT(out)   ::                                              &
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
-      & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
-      & infilt(:), runoff(:)
+      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),               &
+      & evapo_deficit(:), infilt(:), runoff(:)
     !$claw end model-data
     !
     !  local variables
@@ -167,6 +167,7 @@ CONTAINS
     wtr_pond_outflow(:)  = 0._wp
     water_to_soil(:)     = 0._wp
     evapo_deficit(:)     = 0._wp
+    wtr_pond_net_flx(:)  = 0._wp
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
@@ -256,15 +257,17 @@ CONTAINS
     ! 1.) Potential melting:
     t_pond(:) = t_unfilt(:) - snowmelt_soil(:) / hcap_grnd(:) * (alf*rhoh2o)
     WHERE (t_pond(:) > tmelt .AND. ice_pond(:) > 0._wp)
-      pond_change_pot(:) = hcap_grnd(:) * (t_pond(:)-tmelt)/(alf*rhoh2o)
-      pond_melt(:)       = MAX(MIN(pond_change_pot(:), ice_pond(:)), 0._wp)
-      ice_pond(:)        = ice_pond(:) - pond_melt(:)
-      wtr_pond(:)        = wtr_pond(:) + pond_melt(:)
+      pond_change_pot(:)  = hcap_grnd(:) * (t_pond(:)-tmelt)/(alf*rhoh2o)
+      pond_melt(:)        = MAX(MIN(pond_change_pot(:), ice_pond(:)), 0._wp)
+      ice_pond(:)         = ice_pond(:) - pond_melt(:)
+      wtr_pond(:)         = wtr_pond(:) + pond_melt(:)
+      wtr_pond_net_flx(:) = wtr_pond_net_flx(:) + pond_melt(:)
     ELSE WHERE (t_pond(:) < tmelt .AND. wtr_pond(:) > 0._wp)
       pond_change_pot(:) = hcap_grnd(:) * (tmelt-t_pond(:))/(alf*rhoh2o)
       pond_freeze(:)     = MAX(MIN(pond_change_pot(:), wtr_pond(:)), 0._wp)
       wtr_pond(:)        = wtr_pond(:) - pond_freeze(:)
       ice_pond(:)        = ice_pond(:) + pond_freeze(:)
+      wtr_pond_net_flx(:) = wtr_pond_net_flx(:) - pond_freeze(:)
     END WHERE
 
     !-----------------------------------------------------------
@@ -310,6 +313,7 @@ CONTAINS
       wtr_pond(:) = 0._wp
       ice_pond(:) = 0._wp
     END WHERE
+    wtr_pond_net_flx(:) = wtr_pond_net_flx(:) + evapo_pond_in_m(:)
 
     WHERE (evapo_skin_pot_in_m(:) < 0._wp)
       evapo_deficit(:) = evapo_deficit(:) + evapo_skin_pot_in_m(:) - evapo_skin_in_m(:)
@@ -383,6 +387,8 @@ CONTAINS
       ELSEWHERE
         wtr_pond_overflow(:) = 0._wp
       ENDWHERE
+      wtr_pond_net_flx(:) = wtr_pond_net_flx(:) + wtr_pond_inflow(:) &
+        &                 - wtr_pond_outflow(:) - wtr_pond_overflow(:)
 
       ! Update amount of water available for runoff and infiltration
       water_to_soil(:) = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:) &
@@ -401,10 +407,11 @@ CONTAINS
     pond_freeze(:)   = pond_freeze(:)   * rhoh2o / dtime
     pond_melt(:)     = pond_melt(:)     * rhoh2o / dtime
 
-    evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
-    evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
-    evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
-    evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
+    evapotrans_soil(:)  = evapotrans_soil_in_m(:) * rhoh2o / dtime
+    evapo_skin(:)       = evapo_skin_in_m(:)      * rhoh2o / dtime
+    evapo_snow(:)       = evapo_snow_in_m(:)      * rhoh2o / dtime
+    evapo_pond(:)       = evapo_pond_in_m(:)      * rhoh2o / dtime
+    wtr_pond_net_flx(:) = wtr_pond_net_flx(:)     * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -554,7 +561,8 @@ CONTAINS
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
     & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, evapo_deficit,   &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
+    & tpe_overflow, evapo_deficit,                                                       &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
       drain_lat, wtr_soilhyd_res                                                         &
@@ -580,7 +588,7 @@ CONTAINS
       & fract_pond_max, evapotrans_soil, transpiration, &
       & ice_pond, weq_pond_max
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_net_flx
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -693,8 +701,9 @@ CONTAINS
     WHERE (fract_pond_max(:) > EPSILON(1._wp) .AND. infilt_over(:) > 0._wp)
       ! Pond state need to be corrected accordingly
       ! Add infiltration overflow to pond storage
-      wtr_pond_corr(:)  = MIN(MAX(0._wp, weq_pond_max(:) - wtr_pond(:) - ice_pond(:)), infilt_over(:))
-      wtr_pond(:)       = wtr_pond(:) + wtr_pond_corr(:)
+      wtr_pond_corr(:)    = MIN(MAX(0._wp, weq_pond_max(:) - wtr_pond(:) - ice_pond(:)), infilt_over(:))
+      wtr_pond(:)         = wtr_pond(:) + wtr_pond_corr(:)
+      wtr_pond_net_flx(:) = wtr_pond_net_flx(:) + wtr_pond_corr(:) * rhoh2o / dtime
       ! Check for remaining overflow and add to surface runoff
       wtr_pond_corr(:)  = MAX(0._wp, infilt_over(:) - wtr_pond_corr(:))
       runoff(:)         = runoff(:) + wtr_pond_corr(:)
