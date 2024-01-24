@@ -140,7 +140,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_process) &
       CALL message(TRIM(routine), 'Reading topmodel boundary conditions for tile '//TRIM(tile%name))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%ic_filename), model%grid_id)
@@ -184,7 +184,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_process) &
       CALL message(TRIM(routine), 'Setting top-model boundary conditions for tile '//TRIM(tile%name))
 
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
@@ -226,7 +226,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_process) &
       CALL message(TRIM(routine), 'Initializing top-model memory for tile '//TRIM(tile%name))
 
     IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN

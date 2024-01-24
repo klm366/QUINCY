@@ -28,7 +28,7 @@ MODULE mo_top_config_class
   PUBLIC :: t_top_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_top_config
-    LOGICAL           :: dbg_topmodel           ! Debug topmodel processes and tasks
+    LOGICAL           :: dbg_process            ! Debug topmodel processes and tasks
     REAL(wp)          :: efold                  ! topmodel efolding depth
     REAL(wp)          :: wt_min                 ! minimum water table required for inundation
     REAL(wp)          :: wt_max                 ! maximum water table for inundation (larger is considered lake/river)
@@ -72,7 +72,7 @@ CONTAINS
 
     ! Namelist variables
     LOGICAL                     :: active
-    LOGICAL                     :: dbg_topmodel
+    LOGICAL                     :: dbg_process
     REAL(wp)                    :: efold
     REAL(wp)                    :: wt_min
     REAL(wp)                    :: wt_max
@@ -102,7 +102,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_topmodel_nml/                      &
-      & active, dbg_topmodel,                        &
+      & active, dbg_process,                         &
       & efold, wt_min, wt_max,                       &
       & cti_min, cti_max, cti_min_flooding,          &
       & saturation_threshold, relaxation_time,       &
@@ -127,7 +127,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
-    dbg_topmodel           = .FALSE.
+    dbg_process            = .FALSE.
     cti_min                =   5.0_wp
     cti_max                =  35.0_wp
     cti_min_flooding       =   9.0_wp
@@ -165,7 +165,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active                 = active
-    config%dbg_topmodel           = dbg_topmodel
+    config%dbg_process            = dbg_process
     config%cti_min                = cti_min
     config%efold                  = efold
     config%wt_min                 = wt_min
@@ -214,7 +214,7 @@ CONTAINS
       END IF
       CALL message(routine,'Peatland water table submodel: lpeat '//logical2string(lpeat))
       IF (inun_prescribed) CALL message(routine,'Using prescribed inundation fraction. Many other parameters ignored')
-      IF (dbg_topmodel) THEN
+      IF (dbg_process) THEN
         IF (.NOT. inun_prescribed) THEN
           CALL message(routine,'Detailed topmodel settings: ')
           CALL message(routine,'  CTI data from         : '//ic_filename)

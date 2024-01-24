@@ -258,7 +258,7 @@ CONTAINS
     ALLOCATE(ice_soil        (nsoil))
     ALLOCATE(PE_mask         (nc))
 
-    IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_topmodel)) call message(routine,'First instance of update_topmodel')
+    IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_process)) CALL message(routine,'First instance of update_topmodel')
 
     ! Get needed time state
     lstart     = is_time_experiment_start(options%current_datetime)
