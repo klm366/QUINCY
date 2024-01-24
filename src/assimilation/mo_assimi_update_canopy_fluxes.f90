@@ -91,6 +91,7 @@ CONTAINS
     REAL(wp)                              :: tmp_steplen_times_wind           !  dummy variable
     INTEGER                               :: iblk, ics, ice, nc, ic
     REAL(wp)                              :: steplen
+    REAL(wp)                              :: alpha                            !< implicitness factor
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -158,6 +159,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
@@ -255,7 +257,7 @@ CONTAINS
     !$ACC   PRIVATE(tmp_steplen_times_wind)
     DO ic=1,nc
       tmp_steplen_times_wind = steplen * MAX(wind_10m(ic), min_wind)
-      ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind) 
+      ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind, alpha)
     END DO
     !$ACC END PARALLEL LOOP
 

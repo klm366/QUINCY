@@ -54,9 +54,10 @@ MODULE mo_seb_memory_class
       & heat_cap_old,           & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
-      & forc_hflx                 !< Additional heat flux at surface                                 [W m-2]
+      & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
+      & richardson                !< Richardson number                                               []
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &
@@ -229,6 +230,14 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'richardson', mem%richardson,                                  &
+      & hgrid, surface,                                                              &
+      & t_cf('richardson', '-', 'Richardson number'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & initval_r=0.0_wp )
 
     IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &

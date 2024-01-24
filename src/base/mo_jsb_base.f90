@@ -22,11 +22,18 @@ MODULE mo_jsb_base
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach
   PUBLIC :: jsbach_setup_models, jsbach_setup_tiles
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> Setup the ICON-Land models
+  !>
+  !>   Routine is called by both:
+  !>      ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
+  !>      host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
+  !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &

@@ -46,7 +46,7 @@ CONTAINS
 
     INTEGER :: nsoil, is
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_1d'
 
     !$ACC ROUTINE SEQ
 
@@ -111,18 +111,20 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC:1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         root_depth(ic) = root_depth(ic) + dz_root(ic,is)
       END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END PARALLEL
 
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC:1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         bottom(ic)    = bottom(ic) + dz(ic,is)
           IF (root_depth(ic) >= bottom(ic)) THEN              ! Root zone extends to below current layer
@@ -133,8 +135,8 @@ CONTAINS
           END IF
           bottom_m1(ic) = bottom_m1(ic) + dz(ic,is)
         END DO
+      !$ACC END LOOP
     END DO
-
     !$ACC END PARALLEL
 
 #ifndef _OPENACC
