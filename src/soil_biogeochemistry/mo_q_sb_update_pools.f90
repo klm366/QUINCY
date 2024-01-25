@@ -1030,8 +1030,9 @@ CONTAINS
     ecosystem_total_n_loss(:) = &
       & emission_noy(:) + emission_n2o(:) + emission_n2(:) &
       & + leaching_dom_nitrogen(:) + leaching_nh4_solute(:) + leaching_no3_solute(:) &
-      & + SUM(lateral_loss_dom_nitrogen_sl(:,:), DIM=2) + SUM(lateral_loss_nh4_solute_sl(:,:), DIM=2) &
-      & + SUM(lateral_loss_no3_solute_sl(:,:), DIM=2)
+      & + SUM(lateral_loss_dom_nitrogen_sl(:,:) * soil_depth_sl(:,:), DIM=2) &
+      & + SUM(lateral_loss_nh4_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2) &
+      & + SUM(lateral_loss_no3_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2)
     total_soil_n(:,:)         = sb_pool_total_som_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
 
@@ -1042,9 +1043,11 @@ CONTAINS
     !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
-    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) - SUM(het_respiration(:,:), DIM = 2)
+    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
+      &                                     - SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM = 2)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp + SUM(asymb_n_fixation(:,:), DIM = 2)
+    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp &
+      &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !------------------------------------------------------------------------------------------------------ !
     DEALLOCATE(sb_particle_transport_hlp_mt, sb_pool_prev_timestep_hlp_mt)
