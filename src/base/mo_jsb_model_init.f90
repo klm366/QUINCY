@@ -19,8 +19,9 @@ MODULE mo_jsb_model_init
 
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_, CH4_, &
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_,  &
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, &
+    &                   SB_, SPQ_, TOP_, CH4_, MEGAN_,                                             &
     &                   Q_PHENO_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
