@@ -81,7 +81,7 @@ CONTAINS
     & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
     & fract_pond_max, fract_snow, fract_skin, fract_pond,           &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil, soil_sat_deficit,   &
+    & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
@@ -101,7 +101,7 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
-      & weq_rootzone_max(:), weq_soil(:), soil_sat_deficit(:)
+      & weq_rootzone_max(:), weq_soil(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -374,7 +374,7 @@ CONTAINS
         wtr_pond_outflow(:) = 0._wp
       ELSEWHERE
         wtr_pond_outflow(:) = MIN(wtr_pond(:) + 0.5_wp * wtr_pond_inflow(:), &
-          & MIN(k_sat_clay * dtime, soil_sat_deficit(:)) * fract_pond(:))
+          & k_sat_clay * dtime * fract_pond(:))
       ENDWHERE
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
