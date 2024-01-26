@@ -1,6 +1,18 @@
-!> Summary: interface to the pplcc process (pre- and postprocessing for all land cover change processes)
+!> interface to the pplcc process
 !>
-!>### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all lcc processes
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all
+!>     land cover change processes
 !>
 !> Note: 
 !>
@@ -12,17 +24,6 @@
 !>          these will anyway have to specially be dealt with in the concept and thus need to be 
 !>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>          Also, integration of pool-structure might need some additional work.
-!>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-02 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"

@@ -1,17 +1,16 @@
+!> Contains the interfaces for the surface energy balance process.
 !>
-!! @brief Contains the interfaces for the surface energy balance process.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -181,7 +180,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface energy"
+  !> Implementation of "update" for task "surface energy"
   !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
   !! net radiation, ground heat).
   !!
@@ -278,7 +277,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "snowmelt_correction"
+  !> Implementation of "update" for task "snowmelt_correction"
   !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -370,8 +369,8 @@ CONTAINS
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$ACC DATA CREATE(heat_cap)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        !$ACC DATA CREATE(heat_cap) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
 
           ! Correction for snowmelt
@@ -396,6 +395,7 @@ CONTAINS
 
         END DO
         !$ACC END PARALLEL LOOP
+        !$ACC WAIT(1)
         !$ACC END DATA
       END IF
 
@@ -446,7 +446,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "asselin_filter"
+  !> Implementation of "update" for task "asselin_filter"
   !! Task "asselin_filter" calculates applies the Asselin time filter to the new surface temperature, if applicable
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -524,7 +524,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface fluxes"
+  !> Implementation of "update" for task "surface fluxes"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.

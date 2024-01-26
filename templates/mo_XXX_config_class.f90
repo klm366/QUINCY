@@ -10,22 +10,19 @@
 ! ===                                                                                                                         ===
 ! === Finally delete this header.                                                                                             ===
 ! ===============================================================================================================================
-
-
+!> Contains structures and methods for <PROCESS_NAME_LOWER_CASE> config
 !>
-!! @brief Contains structures and methods for <PROCESS_NAME_LOWER_CASE> config
-!!
-!! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------

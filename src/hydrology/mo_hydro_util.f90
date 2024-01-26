@@ -1,17 +1,16 @@
+!> Contains utilities for the hydrology process
 !>
-!! @brief Contains utilities for the hydrology process
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hydro_util
 #ifndef __NO_JSBACH__
 
@@ -47,7 +46,7 @@ CONTAINS
 
     INTEGER :: nsoil, is
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_1d'
 
     !$ACC ROUTINE SEQ
 
@@ -101,27 +100,31 @@ CONTAINS
     nsoil  = SIZE(dz,2)       ! Number of soil layers
 
     !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
-    !$ACC PARALLEL DEFAULT(PRESENT)
 
-    !$ACC LOOP GANG(STATIC:1) VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       root_depth(ic) = 0._wp
       bottom(ic)     = 0._wp
       bottom_m1(ic)  = 0._wp
       ws_root(ic)    = 0._wp
     END DO
+    !$ACC END PARALLEL LOOP
 
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC:1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         root_depth(ic) = root_depth(ic) + dz_root(ic,is)
       END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END PARALLEL
 
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC:1) VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         bottom(ic)    = bottom(ic) + dz(ic,is)
           IF (root_depth(ic) >= bottom(ic)) THEN              ! Root zone extends to below current layer
@@ -132,7 +135,9 @@ CONTAINS
           END IF
           bottom_m1(ic) = bottom_m1(ic) + dz(ic,is)
         END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END PARALLEL
 
 #ifndef _OPENACC
     DO ic = 1, SIZE(ws, 1)
@@ -142,7 +147,7 @@ CONTAINS
     END DO
 #endif
 
-    !$ACC END PARALLEL
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE get_amount_in_rootzone_2d

@@ -1,17 +1,16 @@
+!> Contains the routines for the soil and snow energy processes
 !>
-!! @brief Contains the routines for the soil and snow energy processes
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_process
 #ifndef __NO_JSBACH__
 
@@ -30,7 +29,7 @@ MODULE mo_sse_process
 CONTAINS
 
   !!
-  ! @brief      Calculates the volumetric heat capacity of soil (de Vries, 1963)
+  ! !>      Calculates the volumetric heat capacity of soil (de Vries, 1963)
   !
   ! @param [in]  vol_heat_cap_soil_dry_mineral  Heat capacity of dry mineral soil solid
   ! @param [in]  porosity                       Volumetric soil porosity
@@ -81,7 +80,7 @@ CONTAINS
   END FUNCTION calc_vol_heat_capacity
 
   !!
-  ! @brief      Calculates the soil thermal conductivity after Johansen 1977.
+  ! !>      Calculates the soil thermal conductivity after Johansen 1977.
   !
   ! @param      heat_cond_soil_mineral  The heat condition soil mineral
   ! @param      water                   The water
@@ -333,7 +332,7 @@ CONTAINS
   END SUBROUTINE init_soil_temperature
 
   !
-  ! @brief      Calculates the soil temperature.
+  ! !>      Calculates the soil temperature.
   !
   ! @param      nidx          The nidx
   ! @param      nsoil         The nsoil
@@ -464,45 +463,43 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m] 
+    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: jl, jk
     REAL(wp) :: z1(nidx,nsoil)
-    REAL(wp) :: zd1(nsoil)
-    REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
-    REAL(wp) :: heat_cap(nidx,nsoil) !, freezemelt(nidx,nsoil)
-    REAL(wp) :: zdz1_sum(nidx), zdz2_sum(nidx), z1_sum(nidx), t_soil_acoef_sum(nidx), t_soil_bcoef_sum(nidx)
-
+    REAL(wp) :: zd1(nsoil-1)
+    REAL(wp) :: zdz1(nidx,nsoil-1), zdz2(nidx,nsoil)
+    REAL(wp) :: heat_cap(nidx,nsoil)
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, liquid_max)
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jk = 1,nsoil-1
        zd1(jk) = 1._wp / (mids(jk+1) - mids(jk))
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO jl = 1, nidx
       DO jk = 1, nsoil
         heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    
+
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
     !-----------------------------------------------------------------------------------------------
 
     IF (PRESENT(ws)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO jk = 1, nsoil
         DO jl = 1, nidx
           frozen    (jl,jk) = 0._wp
@@ -513,7 +510,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jl = 1, nidx
       thaw_depth(jl) = 0._wp
     END DO
@@ -521,16 +518,15 @@ CONTAINS
 
     IF (.NOT. lstart) THEN
 
-      !$ACC PARALLEL DEFAULT(PRESENT)
-
       ! uppermost layer
-      !$ACC LOOP GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
         t_soil_sl(jl,1) = t_unfilt(jl)
       END DO
-      !$ACC END LOOP
+      !$ACC END PARALLEL LOOP
 
       ! deeper layers
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
       DO jk = 1, nsoil-1
         !$ACC LOOP GANG VECTOR
@@ -540,14 +536,13 @@ CONTAINS
         !$ACC END LOOP
       END DO
       !$ACC END LOOP
-
       !$ACC END PARALLEL
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(ws)) THEN
 
         IF (l_supercool) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO jk=1,nsoil
             DO jl=1,nidx
               liquid_max(jl,jk) = Get_liquid_max( &
@@ -556,41 +551,35 @@ CONTAINS
                 & matrix_pot(jl,jk), &
                 & bclapp    (jl,jk)  &
                 & )
-            END DO 
+            END DO
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO jk=1,nsoil
             DO jl=1,nidx
               liquid_max(jl,jk) = 0._wp
-            END DO 
+            END DO
           END DO
           !$ACC END PARALLEL LOOP
         END IF
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO jl=1,nidx
           DO jk=1,nsoil
             IF (t_soil_sl(jl,jk) < tmelt .AND. ws(jl,jk) > liquid_max(jl,jk)) THEN
               frozen(jl,jk) = MIN(ws(jl,jk) - liquid_max(jl,jk), &
                 &               heat_cap(jl,jk) * (tmelt - t_soil_sl(jl,jk)) / (alf * rhoh2o) &
                 &              )
-              ! ws (jl,jk) = ws (jl,jk) - frozen(jl,jk)
-              ! ice(jl,jk) = ice(jl,jk) + frozen(jl,jk)
-              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) + frozen(jl,jk) * alf * rhoh2o / heat_cap(jl,jk)
             ELSE IF (t_soil_sl(jl,jk) > tmelt .AND. ice(jl,jk) > 0._wp) THEN
               melt(jl,jk) = MIN(ice(jl,jk), heat_cap(jl,jk) * (t_soil_sl(jl,jk) - tmelt) / (alf * rhoi))
-              ! ws (jl,jk) = ws (jl,jk) + melt(jl,jk)
-              ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
-              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
             END IF
-          END DO 
+          END DO
         END DO
         !$ACC END PARALLEL LOOP
 
         ! Note: only either frozen or melt is non-zero at any given point
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO jk=1,nsoil
           DO jl=1,nidx
             ws(jl,jk) = ws(jl,jk) - frozen(jl,jk) + melt(jl,jk)
@@ -606,7 +595,7 @@ CONTAINS
       END IF
 
       ! Thawing depth
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
       DO jl=1,nidx
         thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
@@ -630,7 +619,7 @@ CONTAINS
 
     ELSE ! lstart
       IF (l_freeze .AND. PRESENT(ws)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO jk = 1, nsoil
           DO jl=1,nidx
             liquid_max(jl,jk) = 0._wp
@@ -640,11 +629,10 @@ CONTAINS
       END IF
     END IF
 
-
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO jk = 1, nsoil
       DO jl=1,nidx
         zdz2(jl,jk) = heat_cap(jl,jk) / delta_time
@@ -653,7 +641,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO jk = 1, nsoil-1
       DO jl=1,nidx
         zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
@@ -662,7 +650,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! lowest soil layer
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jl=1,nidx
       z1(jl,nsoil-1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
       t_soil_acoef(jl,nsoil-1) = zdz2(jl,nsoil) * t_soil_sl(jl,nsoil) / z1(jl,nsoil-1)
@@ -671,7 +659,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! soil layers above
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
     DO jl=1,nidx
       !$ACC LOOP SEQ
@@ -688,13 +676,14 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
     ! Computation of surface diffusive heat flux from the ground and heat capacity of the ground
     !------------------------------------------------------------------------------------------------
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jl=1,nidx
       grnd_hflx(jl) = zdz1(jl,1) * (t_soil_acoef(jl,1) + (t_soil_bcoef(jl,1) - 1._wp) * t_soil_sl(jl,1))
       hcap_grnd(jl) = (zdz2(jl,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(jl,1)) * zdz1(jl,1))
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE calc_soil_temperature
@@ -807,7 +796,7 @@ CONTAINS
 
     !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
 
-    !$ACC PARALLEL LOOP GANG(STATIC: 1) VECTOR
+    !$ACC PARALLEL LOOP GANG VECTOR ASYNC(1)
     DO jl=1,nidx
       t_soil_sl1(jl) = t_soil_sl(jl,1)
       grnd_hflx(jl) = 0._wp
@@ -840,7 +829,7 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! mid of two uppermost soil layers
-    !$ACC PARALLEL LOOP GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP GANG VECTOR ASYNC(1)
     DO jl=1,nidx
       zmid(jl,nsnow+1) = zmid(jl,nsnow) + 0.5_wp * (dz(jl,nsnow) + dz_soil(1))
       zmid(jl,nsnow+2) = zmid(jl,nsnow+1) + 0.5_wp * (dz_soil(1) + dz_soil(2))
@@ -851,31 +840,13 @@ CONTAINS
 
     ! Reset old values accounting for changes in number of snow layers
     !
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
     DO jl=1,nidx
-      ! itop_prev = itop_old(jl)
       itop_new = itop(jl)
-      ! t_snow_acoef(jl,1:itop_new-1) = 0._wp
-      ! t_snow_bcoef(jl,1:itop_new-1) = 0._wp
       !$ACC LOOP SEQ
       DO jk = 1, itop_new - 1
         t_snow      (jl,jk) = 0._wp
-      ! DO jk=itop_new,nsnow                                     ! At least one snow layer present
-      !   IF (itop_new < itop_prev .AND. jk < itop_prev) THEN    ! New snow layer
-      !     IF (itop_prev == nsnow+1) THEN                       ! No snow layers present in previous time step
-      !       t_snow_acoef(jl,jk) = t_soil_acoef(jl)             ! so we use coefficients and old temperature from top soil layer
-      !       t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
-      !       t_snow      (jl,jk) = t_soil_sl1(jl)
-      !     ELSE                                                 ! Use values from previous top snow layer
-      !       t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_prev)
-      !       t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_prev)
-      !       t_snow      (jl,jk) = t_snow      (jl,itop_prev)
-      !     END IF
-      !   ! ELSE                                                 ! Snow layer was present before
-      !   !   ! Nothing to do
-      !   END IF
-      ! END DO
       END DO
       !$ACC END LOOP
     END DO
@@ -887,7 +858,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !
     IF (.NOT. lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO jl=1,nidx
         DO jk=1,nsnow
           t_snow(jl,jk) = 0._wp
@@ -895,7 +866,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO jl=1,nidx
         DO jk=1,nsnow
           IF (itop(jl) <= jk .AND. jk <= itop_old(jl)) THEN          ! zero+ new snow layers: from new top layer to top prev layer
@@ -907,7 +878,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
       DO jl=1,nidx
         !$ACC LOOP SEQ
@@ -920,8 +891,8 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
-      
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
         ! New temperature for top soil layer (t_unfilt where there was or is no snow)
         IF (MAX(itop(jl),itop_old(jl)) <= nsnow) THEN
@@ -934,13 +905,12 @@ CONTAINS
 
     END IF
 
-
     !
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
     DO jl=1,nidx
       itop_new = itop(jl)
@@ -949,10 +919,12 @@ CONTAINS
         t_snow_acoef(jl,jk) = 0._wp
         t_snow_bcoef(jl,jk) = 0._wp
       END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END LOOP
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL LOOP GANG DEFAULT(PRESENT) VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP GANG DEFAULT(PRESENT) VECTOR COLLAPSE(2) ASYNC(1)
     DO jl=1,nidx
       DO jk = 1,nsnow
         IF (jk >= itop(jl)) THEN
@@ -961,9 +933,9 @@ CONTAINS
         END IF
       END DO
     END DO
-      !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jl=1,nidx
       zdz2(jl,nsnow+1) = vol_heat_cap_soil(jl) * dz_soil(1) / delta_time
       zdz1(jl,nsnow+1) = zd1(jl,nsnow+1) * heat_cond_soil(jl)
@@ -981,7 +953,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! snow layers above up to top snow layer
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
     DO jl=1,nidx
       !$ACC LOOP SEQ
@@ -990,9 +962,6 @@ CONTAINS
           z1(jl) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_snow_bcoef(jl,jk)))
           t_snow_acoef(jl,jk-1) = (t_snow(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_snow_acoef(jl,jk)) * z1(jl)
           t_snow_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl)
-        ! ELSE WHERE
-        !   t_snow_acoef(:,nsnow) = 0._wp
-        !   t_snow_bcoef(:,nsnow) = 0._wp
         END IF
       END DO
       !$ACC END LOOP
@@ -1004,7 +973,7 @@ CONTAINS
     ! Computation of surface diffusive heat flux from the ground and heat capacity of the ground
     !------------------------------------------------------------------------------------------------
     !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO jl=1,nidx
       DO jk=1,nsnow
         IF (itop(jl) == jk) THEN ! Snow present
@@ -1015,6 +984,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE calc_snow_temperature
@@ -1104,8 +1074,8 @@ CONTAINS
     INTEGER :: jk, i
     REAL(wp) :: zso_cond(nidx), zso_capa(nidx)
     REAL(wp) :: z1(nidx)
-    REAL(wp) :: zd1(nsoil)
-    REAL(wp) :: zdz1(nidx,nsoil),   zdz2(nidx,nsoil)
+    REAL(wp) :: zd1(nsoil-1)
+    REAL(wp) :: zdz1(nidx,nsoil-1),   zdz2(nidx,nsoil)
     REAL(wp) :: zkappa(nidx,nsoil), zcapa(nidx,nsoil)
     REAL(wp) :: zsnow_h(nidx), zx1(nidx), zx2(nidx)
     REAL(wp) :: zrici, zdifiz, zsn_cond, zsn_dens, zsn_capa
@@ -1126,7 +1096,7 @@ CONTAINS
   !
     !$ACC DATA CREATE(zso_cond, zso_capa, z1, zd1, zdz1, zdz2, zkappa, zcapa, zsnow_h, zx1, zx2)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jk = 1,nsoil-1
        zd1(jk) = 1._wp / (cmid(jk+1) - cmid(jk))
     END DO
@@ -1135,7 +1105,7 @@ CONTAINS
   !*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM
   !*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].
   !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO i = 1, nidx
       IF (ldglac(i)) THEN
         zso_capa(i) = zrici
@@ -1149,7 +1119,7 @@ CONTAINS
   !
   !*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.
   !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO i = 1, nidx
       DO jk = 1,nsoil
         zkappa(i,jk) = zso_cond(i)
@@ -1168,7 +1138,7 @@ CONTAINS
   !
     IF (.NOT. lstart) THEN
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO i = 1, nidx
         ptsoil(i,1) = pts(i)
       END DO
@@ -1177,7 +1147,7 @@ CONTAINS
   !   Deeper layers
   !
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO i = 1, nidx
         DO jk = 1,nsoil-1
           ptsoil(i,jk+1) = pgrndc(i,jk) + pgrndd(i,jk) * ptsoil(i,jk)
@@ -1191,7 +1161,7 @@ CONTAINS
   !   COMPUTATION OF THE CGRD AND DGRD COEFFICIENTS FOR THE NEXT STEP
   !   ---------------------------------------------------------------
   !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO i = 1, nidx
       zsnow_h(i) = psn(i) * RhoH2O / zsn_dens
   !
@@ -1212,7 +1182,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
     DO i = 1, nidx
       !$ACC LOOP SEQ
@@ -1233,7 +1203,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
   !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO i = 1, nidx
       DO jk=1,nsoil
         zdz2(i,jk) = zcapa(i,jk) * cdel(jk) / delta_time
@@ -1241,7 +1211,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO i = 1, nidx
       DO jk=1,nsoil-1
         zdz1(i,jk) = zd1(jk) * zkappa(i,jk)
@@ -1249,7 +1219,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
     !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO i = 1, nidx
       z1(i) = zdz2(i,nsoil) + zdz1(i,nsoil-1)
       pgrndc(i,nsoil-1) = zdz2(i,nsoil) * ptsoil(i,nsoil) / z1(i)
@@ -1258,7 +1228,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
     !
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
     DO i = 1, nidx
       !$ACC LOOP SEQ
@@ -1267,7 +1237,9 @@ CONTAINS
         pgrndc(i,jk-1) = (ptsoil(i,jk) * zdz2(i,jk) + zdz1(i,jk) * pgrndc(i,jk)) * z1(i)
         pgrndd(i,jk-1) = zdz1(i,jk-1) * z1(i)
       END DO
+      !$ACC END LOOP
     END DO
+    !$ACC END LOOP
     !$ACC END PARALLEL
   !
   !   ---------------------------------------------------------
@@ -1275,13 +1247,14 @@ CONTAINS
   !   CALORIFIC CAPACITY OF THE GROUND:
   !   ---------------------------------------------------------
   !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO i = 1, nidx
       pgrndhflx(i) = zdz1(i,1) * (pgrndc(i,1) + (pgrndd(i,1) - 1._wp) * ptsoil(i,1))
       pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,1)) * zdz1(i,1))
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE calc_soiltemp_old

@@ -1,17 +1,16 @@
+!> Contains methods for initialization of JSBACH usecases.
 !>
-!! @brief Contains methods for initialization of JSBACH usecases.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_model_usecases
 #ifndef __NO_JSBACH__
 
@@ -80,6 +79,7 @@ CONTAINS
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
+    !$ACC ENTER DATA COPYIN(box_tile)
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -95,23 +95,27 @@ CONTAINS
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), &
           & parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
+        !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+          !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(veg_tile)
 
     NULLIFY(box_tile, land_tile, veg_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
@@ -135,6 +139,7 @@ CONTAINS
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
+    !$ACC ENTER DATA COPYIN(box_tile)
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -151,6 +156,7 @@ CONTAINS
           ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
@@ -158,6 +164,7 @@ CONTAINS
           & lct=t_jsb_lct(LAND_TYPE), &
           & parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
+        !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
         IF (model%config%use_glacier) THEN
@@ -169,11 +176,13 @@ CONTAINS
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(glacier_tile, veg_tile)
         ELSE
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='equal')
+          !$ACC ENTER DATA COPYIN(veg_tile)
         END IF
 
     NULLIFY(box_tile, land_tile, veg_tile)
@@ -222,6 +231,7 @@ CONTAINS
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
+    !$ACC ENTER DATA COPYIN(box_tile)
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -240,11 +250,13 @@ CONTAINS
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
+        !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
         IF (model%config%use_glacier) THEN
@@ -253,6 +265,7 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+          !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
         ! default jsb4: HYDRO_ is active at veg tile only to save runtime
@@ -262,6 +275,7 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(veg_tile)
 
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
@@ -281,6 +295,7 @@ CONTAINS
             & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(veg_tile)
         ENDIF
 
         IF (model%processes(TLCC_)%p%config%active) THEN
@@ -329,6 +344,8 @@ CONTAINS
             DO i=1,npft
               pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+              !$ACC ENTER DATA COPYIN(pft_tile)
+              NULLIFY(pft_tile)
             END DO
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)

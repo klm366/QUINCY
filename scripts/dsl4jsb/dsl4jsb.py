@@ -1,5 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #
 #  dsl4jsb.py
 #
@@ -92,6 +104,9 @@ macros = {
     'var2d_onchunk': [re.compile(
         r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
+    'var2d_onchunk_tile_name' : [re.compile(
+        r'dsl4jsb_var2D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\1__mem__\3%\2%ptr(ics:ice,iblk)'],
     'var3d_onchunk': [re.compile(
         r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],

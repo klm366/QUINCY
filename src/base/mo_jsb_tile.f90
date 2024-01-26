@@ -1,18 +1,16 @@
+!> Contains concrete tile class that contains the surface structure and memory state.
 !>
-!! @brief Contains concrete tile class that contains the surface structure and memory state.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! This had to be separated from mo_jsb_tile_class in order to avoid circular dependencies.
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -99,6 +97,7 @@ CONTAINS
 
     ! Allocate and initialize base structure (=state) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
+
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
       CALL return_ptr%Init_state(name, description, parent_tmp)
@@ -320,14 +319,14 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -340,14 +339,14 @@ CONTAINS
           END IF
           child_no = this%path(this%level)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p)
+          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF
 
     END DO
-    !$ACC UPDATE DEVICE(this%mem)
+    !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
 
   END SUBROUTINE Init_tile
 
@@ -402,8 +401,6 @@ CONTAINS
     ELSE
       varlist_name_loc = TRIM(varlist_name)
     END IF
-
-    !$ACC ENTER DATA COPYIN(this)
 
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -502,7 +499,7 @@ CONTAINS
         CALL this%Set_fraction(fract=return_pointer(:,:))
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
-        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm)
+        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
       END IF
 
       IF (TRIM(this%fract_varname) == '') THEN
@@ -607,10 +604,13 @@ CONTAINS
       END SELECT
 
       mem => this%mem(iproc)%p
+      __acc_attach(mem)
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
-        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-          & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) THEN
+          ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+          !$ACC ENTER DATA CREATE(mem%vars(i)%p%child_idx)
+        END IF
         DO child_no=1,no_of_children
           IF (ASSOCIATED(mem%children(child_no)%p)) THEN
             mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
@@ -618,8 +618,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$ACC ENTER DATA COPYIN(mem%vars(i)%p%child_idx)
-        ! __acc_attach(mem%vars(i)%p%child_idx)
+        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx) ASYNC(1)
       END DO
 
     END DO
@@ -628,7 +627,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief identifies the conserved quantity types in use on this tile and counts the number of conserved quantities 
+  !> identifies the conserved quantity types in use on this tile and counts the number of conserved quantities 
   !!        for each of these types on the given tile
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -699,7 +698,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief collects the pointers to the variables that are conserved quantities on the given tile
+  !> collects the pointers to the variables that are conserved quantities on the given tile
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !

@@ -1,16 +1,16 @@
+!> Contains main JSBACH model class.
 !>
-!! @brief Contains main JSBACH model class.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_var_class.pp-jsb.f90"
 
@@ -430,7 +430,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -439,6 +439,7 @@ CONTAINS
     TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: alpha
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
@@ -450,6 +451,7 @@ CONTAINS
 
     CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
     CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
+    CALL assign_if_present(this%options(no_omp_thread)%alpha,   alpha)
     CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
@@ -652,11 +654,11 @@ CONTAINS
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
@@ -667,6 +669,8 @@ CONTAINS
       CALL this%Goto_next_tile(tile)
 
     END DO
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE Sync_vars_from_gpu_to_cpu
 
@@ -714,10 +718,10 @@ CONTAINS
         DO i=1,mem%no_of_vars
           ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           END IF
         END DO

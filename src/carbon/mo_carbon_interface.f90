@@ -1,18 +1,16 @@
+!> Contains the interfaces to the carbon process
 !>
-!! @brief Contains the interfaces to the carbon process
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
-!!      ++ subroutines for cpool sums and c conservation test
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -128,7 +126,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
+  !> Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
   !!        R: Corresponds to update_cbalance_bethy in JSBACH3.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -803,7 +801,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief scales all carbon state variables upon reference area change
+  !> scales all carbon state variables upon reference area change
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to scale from somewhere else?
   !!
@@ -960,7 +958,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Calculates the per tile states from current canopy states
+  !> Calculates the per tile states from current canopy states
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
   !!
@@ -1218,7 +1216,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief calculates the current sum of all carbon state variables -> on ta! (per canopy vars are not aggregated!)
+  !> calculates the current sum of all carbon state variables -> on ta! (per canopy vars are not aggregated!)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
   !!
@@ -1355,7 +1353,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief calculates the current sum of all bg carbon state variables (per canopy)
+  !> calculates the current sum of all bg carbon state variables (per canopy)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
   !!
@@ -1532,7 +1530,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief conducts a carbon conservation test on this tile's current states and given old sum + fluxes
+  !> conducts a carbon conservation test on this tile's current states and given old sum + fluxes
   !!        -> on ta! (per canopy vars are not aggregated!)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
@@ -1571,7 +1569,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
+  !> conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1656,7 +1654,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief calculations of diagnostic global sums
+  !> calculations of diagnostic global sums
   !!        called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !! @param[in,out] tile    Tile for which routine is executed.
   !

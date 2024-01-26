@@ -1,17 +1,16 @@
+!> Contains the class and methods for the JSBACH memory structure
 !>
-!! @brief Contains the class and methods for the JSBACH memory structure
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
@@ -247,11 +246,12 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr1d)
+    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -398,11 +398,12 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr2d)
+    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -564,11 +565,12 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr3d)
+    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -642,6 +644,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
@@ -662,6 +668,10 @@ CONTAINS
     INTEGER :: i !, iproc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice - ics + 1, &
       &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
@@ -687,6 +697,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     DO i=1,no_children
       this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
@@ -708,6 +722,10 @@ CONTAINS
     INTEGER :: i
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles

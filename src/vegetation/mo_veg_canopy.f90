@@ -1,13 +1,20 @@
+!> calculate canopy layer properties (QUINCY)
 !>
-!! @brief Contains the routines to calculate the canopy layer C and N content, and routines using this functionality
-!!
-!! @author
-!!  Sönke Zaehle, Silvia Caldararu, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2016-29-08)
-!!
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate canopy layer properties, e.g., C & N content, LAI, fractional allocation
+!>
 MODULE mo_veg_canopy
 #ifndef __NO_JSBACH__
 

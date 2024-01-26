@@ -1,19 +1,20 @@
+!> Memory management module for automatic destruction of temporary objects to avoid memory leaks
 !>
-!! @brief Memory management module for automatic destruction of temporary objects to avoid memory leaks
-!!
-!! @author Reiner Schnur, MPI for Meteorology
-!!
-!! @par Revision History
-!!  Initial version (2019-06-07)
-!!    After Rouson, Xia and Xu (2011). Scientific Software Design - The Object-Oriented Way
-!!    See also Stewart, G. W. (2007). Memory leaks in derived types revisited. ACM SIGPLAN Fortran Forum, 22(3), 25–27. https://doi.org/10.1145/962180.962183
-!!
-!! @par Copyright and License
-!!
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> After Rouson, Xia and Xu (2011). Scientific Software Design - The Object-Oriented Way
+!> See also Stewart, G. W. (2007). Memory leaks in derived types revisited.
+!>          ACM SIGPLAN Fortran Forum, 22(3), 25–27. https://doi.org/10.1145/962180.962183
+!>
 MODULE mo_hermetic
 
   IMPLICIT NONE

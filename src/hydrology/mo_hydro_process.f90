@@ -1,16 +1,16 @@
+!> Contains the routines for the hydro processes
 !>
-!! @brief Contains the routines for the hydro processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-10-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
@@ -41,12 +41,7 @@ CONTAINS
   !
   ! ===============================================================================================================================
   !>
-  !! @brief   Compute surface hydrology on glacier-free land
-  !!
-  !! @par Revision History
-  !!   Routine based on the former JSBACH3 routine update_surf_down
-  !!   Rewritten in Mai 2016 by V. Gayler
-  !!   Adapted for JSBACH4 in February 2017 by R. Schnur
+  !! Compute surface hydrology on glacier-free land
   !!
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
@@ -145,7 +140,6 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2 = 1.87E5_wp     ! [Ks]
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
-    !$noACC DECLARE COPYIN(zc1, zc2, zc3)
 
     nc = SIZE(snowmelt_soil)
 
@@ -251,10 +245,6 @@ CONTAINS
         weq_snow_soil(ic) = MIN(snow_depth_max, weq_snow_soil(ic))
       END IF
 
-!
-! ==>> go on here at October 13th session - Jan cannot join, Julia might cover the documentation instead
-!
-
       !-----------------------------------------------------------
       !   Budget of water in skin reservoir (canopy and ground)
       !-----------------------------------------------------------
@@ -346,12 +336,7 @@ CONTAINS
 
   ! ===============================================================================================================================
   !>
-  !! @brief   calc surface hydrology on glaciers
-  !!
-  !! @par Revision History
-  !!   Routine based on the former JSBACH3 routine update_surf_down
-  !!   Rewritten in Mai 2016 by V. Gayler
-  !!   Adapted for JSBACH4 in February 2017 by R. Schnur
+  !! calc surface hydrology on glaciers
   !!
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
@@ -602,7 +587,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     !> unit conversion
     !>
     !>  [m / timestep] -> [kg / m^2 / s]
@@ -1629,7 +1614,7 @@ CONTAINS
   END SUBROUTINE diagnose_evapotrans
 
   !----------------------------------------------------------------------------------------------
-  ! @brief      Calculates the snow fraction on lake ice.
+  ! Calculates the snow fraction on lake ice.
   !
   ! @param [in]     weq_snow_lice    Snow depth on lake ice [m water equivalent]
   ! @param [out]    fract_snow_lice  Fraction of snow on lake ice
@@ -1915,7 +1900,7 @@ CONTAINS
   END FUNCTION get_canopy_cond_stressed_simple
 
   !
-  ! @brief      Gets the water stress factor.
+  ! !>      Gets the water stress factor.
   !
   ! @param      w_soil               The w soil sl
   ! @param      w_soil_max           The w soil fc sl

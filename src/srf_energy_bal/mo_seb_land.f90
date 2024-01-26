@@ -1,17 +1,16 @@
+!> Contains the routines for the surface energy balance on LAND lct_type.
 !>
-!! @brief Contains the routines for the surface energy balance on LAND lct_type.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-!! Separated out the surface energy balance for LAND part by Reiner Schnur (2016-03-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -27,8 +26,8 @@ MODULE mo_seb_land
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
-  USE mo_jsb_control,        ONLY: debug_on
-  USE mo_jsb_time,           ONLY: is_time_experiment_start
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
   dsl4jsb_Use_config(SEB_)
@@ -55,18 +54,22 @@ CONTAINS
   SUBROUTINE update_surface_energy_land(tile, options)
 
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac1, tpfac2, tpfac3, cpd
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef, &
+      &                                  update_drag
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_turb_interface,         ONLY: update_exchange_coefficients
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb4_forcing,           ONLY: forcing_options
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    ! Local variables
-    !
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
@@ -104,7 +107,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: drag_srf      ! old turb
-    dsl4jsb_Real2D_onChunk :: ch            ! new turb
+    dsl4jsb_Real2D_onChunk :: ch            ! new turb (tmx)
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
@@ -117,10 +120,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
+    dsl4jsb_Real2D_onChunk :: pch
+    dsl4jsb_Real2D_onChunk :: richardson
 
     ! Locally allocated vectors
     !
@@ -131,28 +137,29 @@ CONTAINS
      & t2s_conv,                        & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
-     & liquid_max
-    REAL(wp) :: t_air_in_Celcius
+     & liquid_max,                      &
+     & rough_h_srf,                     &
+     & rough_m_srf,                     &
+     & t_srf_upd,                       & !< Updated surface temperature for drag filtering
+     & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds)
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
-     & is_lake,                       &
-     & is_ocean,                      &
-     & has_snow_layer
+     & has_snow_layer,                &
+     & tile_fract_zero
 
     REAL(wp) :: &
+      & t_air_in_Celcius,             &
       & w_soil_critical_config,       &
+      & eps,                          &
       & soil_depth_sl_vol_porosity_sl_tmp
     LOGICAL  :: l_snow_config, l_freeze_config, l_supercool_config, use_tmx
 
-    INTEGER  :: iblk, ics, ice, nc, ic, i, iter
-    REAL(wp) :: steplen
+    INTEGER  :: iblk, ics, ice, nc, ic, iter
+    REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
-    LOGICAL  :: l_is_newday
+    LOGICAL  :: l_is_newday, jsb_standalone
     INTEGER  :: ilct
-
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
@@ -161,6 +168,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -170,6 +178,8 @@ CONTAINS
     use_tmx = model%config%use_tmx
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
+
+    jsb_standalone         = jsbach_runs_standalone()
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
@@ -184,13 +194,17 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN/OUT (coupled/standalone)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN/OUT (coupled/standalone)
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
-
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
+    IF (jsb_standalone) THEN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_min)           ! INOUT
@@ -232,12 +246,12 @@ CONTAINS
     IF (use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
     !$ACC DATA &
     !$ACC   CREATE(qsat_srf_old, s_old, dQdT, t2s_conv, heat_tcoef, t_star, liquid_max) &
-    !$ACC   CREATE(is_glacier, is_ocean, is_lake, has_snow_layer)
+    !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     IF (use_tmx) THEN
@@ -254,6 +268,7 @@ CONTAINS
             DO ic=1,nc
               is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._wp
             END DO
+            !$ACC END PARALLEL LOOP
             EXIT
           END IF
         END DO
@@ -266,25 +281,11 @@ CONTAINS
       END IF
     END IF
 
-    IF (use_tmx) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic=1,nc
-        is_lake(ic) = .FALSE.
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(i)
-      DO ic=1,nc
-        i = ics + ic - 1
-        is_lake(ic) = tile%fract(i,iblk) <= 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      is_ocean(ic) = .NOT. grid%lsm(ic,iblk)
-    END DO
-    !$ACC END PARALLEL LOOP
+    ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
+    ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
+    tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
+    !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
+    !$ACC WAIT(1)
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
@@ -292,7 +293,8 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(t_air_in_Celcius)
     DO ic=1,nc
 
       ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
@@ -328,15 +330,14 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
 
-      IF (is_ocean(ic) .OR. is_lake(ic)) THEN
-        ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
-        ! leading to a crash in convect_tables
+      ! Save old surface temperature and saturation spec. humidity
+      IF (tile_fract_zero(ic)) THEN
+        ! Fix needed for numerical reasons on grid cells without real land fraction
         t_unfilt_old(ic) = 280._wp
         t_old(ic)        = 280._wp
       ELSE
-        ! Save old surface temperature and saturation spec. humidity
         t_unfilt_old(ic) = t_unfilt(ic)
-        t_old       (ic) = t(ic)
+        t_old(ic)        = t(ic)
       END IF
 
       ! Save old surface saturation specific humidity and compute its sensitivity to temperature
@@ -357,31 +358,113 @@ CONTAINS
       ! Old dry static energy
       s_old(ic) = surface_dry_static_energy( &
         & t_old(ic), &
-        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd)
+        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd, jsb_standalone)
+
+      t2s_conv(ic) = s_old(ic) / t_old(ic)
+
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Compute surface drag and exchange coefficients for standalone simulations
+    IF (jsb_standalone) THEN
+      !TODO: GPU adaptation still missing!
+      !$ACC DATA &
+      !$ACC   CREATE(frozen_fract, rough_h_srf, rough_m_srf, t_srf_upd)
+
+      ! Get surface roughness
+      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
+      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+
+      ! Update drag and exchange coefficients based on external forcing data
+      CALL update_drag( &
+          ! INTENT in
+        & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+        & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+          ! INTENT out
+        & drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+
+      ! Get Asselin filter coefficient
+      eps = get_asselin_coef()
+
+      ! Compute the updated surface temperature to be used for a filtered drag computation
+      ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+        frozen_fract(ic) = fract_snow(ic)
+
+        IF (lstart) THEN
+          s_star(ic) = s_old(ic)
+        ELSE
+          CALL surface_temp_implicit( steplen, alpha,             & ! in
+            & t2s_conv(ic),                                       & ! in
+            & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+            & s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
+            & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+            & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+            & frozen_fract(ic), heat_cap(ic),                     & ! in
+            & s_star(ic))                                           ! out
+        END IF
+
+        ! Fix needed for numerical reasons on grid cells without real land fraction
+        IF (tile_fract_zero(ic)) THEN
+          s_star(ic) = 280._wp * t2s_conv(ic)
+        END IF
+        ! New unfiltered surface temperature
+        ! @Todo: why not using the weighting as done for the coupled case? Check!
+        t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
+
+        ! Asselin filter (copy of the routine `update_asselin_land`)
+        IF (eps > 0._wp) THEN
+          t_srf_upd(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))
+        ELSE
+          t_srf_upd(ic) = t_unfilt(ic)
+        END IF
+
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      ! Update drag based on updated surface temperature and filtered richardson number
+      CALL update_drag( &
+          ! INTENT in
+        & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+        & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+          ! INTENT out
+        & drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! Optional variables for filtering
+        & t_srf_upd(:), richardson(:))
+
+      !$ACC END DATA
+    END IF ! jsbach_runs_standalone
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
 
       ! Transfer coefficient
       IF (use_tmx) THEN
         heat_tcoef(ic) = ch(ic)
       ELSE
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
       END IF
-
-      t2s_conv(ic) = s_old(ic) / t_old(ic)
 
       ! Compute new surface temperature and saturation humidity
       IF (lstart) THEN
         s_star(ic) = s_old(ic)
       ELSE
-        CALL surface_temp_implicit(                           & ! in
-          MERGE(1._wp, tpfac1, use_tmx),                      & ! in
-          steplen,                                            & ! in
-          t2s_conv(ic),                                       & ! in
-          t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-          s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
-          rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
-          fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-          fract_snow(ic), heat_cap(ic),                       & ! in
-          & s_star(ic))                                         ! out
+        CALL surface_temp_implicit(                             & ! in
+          & alpha,                                              & ! in
+          & steplen,                                            & ! in
+          & t2s_conv(ic),                                       & ! in
+          & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+          & s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
+          & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+          & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+          & fract_snow(ic), heat_cap(ic),                       & ! in
+          & s_star(ic))                                           ! out
       END IF
 
     END DO
@@ -399,7 +482,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           CALL surface_temp_implicit(                           & ! in
-            MERGE(1._wp, tpfac1, use_tmx),                      & ! in
+            alpha,                                              & ! in
             steplen,                                            & ! in
             t2s_conv(ic),                                       & ! in
             t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
@@ -414,18 +497,17 @@ CONTAINS
     END IF
     !$ACC WAIT(1)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(soil_depth_sl_vol_porosity_sl_tmp)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(soil_depth_sl_vol_porosity_sl_tmp)
     DO ic=1,nc
 
-      IF (is_ocean(ic) .OR. is_lake(ic)) THEN
-        ! Todo: Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
-        ! leading to a crash in convect_tables (lake and land tiles need to be direct children of root tile!)
-        ! s_star(:) = s_old(:)
+      ! Fix needed for numerical reasons on grid cells without real land fraction
+      IF (tile_fract_zero(ic)) THEN
         s_star(ic) = 280._wp * t2s_conv(ic)
       END IF
 
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-      IF (use_tmx) THEN
+      IF (use_tmx .OR. jsb_standalone) THEN
         t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
       ELSE
         t_unfilt(ic) = ( tpfac2 * s_star(ic) + tpfac3 * s_old(ic) ) / t2s_conv(ic)
@@ -509,19 +591,18 @@ CONTAINS
 #endif
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       t_eff4(ic) = t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))
     END DO
     !$ACC END PARALLEL LOOP
-
     !$ACC WAIT(1)
 
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_surface_energy_land 
+  END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(alpha, steplen,     &
     &            pcp,                                  &
@@ -566,9 +647,6 @@ CONTAINS
     pdt     = alpha * steplen
     !pc16    = cpd * cpvd1
 
-    !$noACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$noACC LOOP GANG VECTOR &
-    !$noACC   PRIVATE(zcolin, zcohfl, zcoind, zicp, zca, zcs)
     ! DO ic=1,nc
       ! zicp = 1._wp / pcp(ic)
       ! !
@@ -603,7 +681,6 @@ CONTAINS
       !
       psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
     ! END DO
-    !$noACC END PARALLEL
 
   END SUBROUTINE surface_temp_implicit
   !
@@ -666,7 +743,7 @@ CONTAINS
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       IF (eps > 0._wp) THEN
         t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))
@@ -679,6 +756,7 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -720,7 +798,7 @@ CONTAINS
       & heat_tcoef      !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -732,6 +810,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -750,7 +829,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)             ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
 
@@ -772,13 +851,13 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
 
-      s_air(ic) = t_acoef(ic) * s_star   (ic) + t_bcoef(ic)
+      s_air(ic) = t_acoef(ic) * s_star(ic) + t_bcoef(ic)
 
       IF (use_tmx) THEN
         sensible_hflx(ic) = ch(ic) * (s_air(ic) - s_star(ic)) * cvd / cpd ! Sensible heat flux
       ELSE
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)    ! Transfer coefficient
-        sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic)) ! Sensible heat flux
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha) ! Transfer coefficient
+        sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic))     ! Sensible heat flux
       END IF
 
       ! Compute latent heat flux
@@ -805,7 +884,6 @@ CONTAINS
     & is_newday,                                    & ! Input
     & l_start,                                      & ! Input
     & t_air_in_Celcius,                             & ! Input
-    ! & dtime,                                        & ! Input
     & time_steps_per_day,                           & ! Input
     & previous_day_temp_mean,                       & ! InOut
     & day_temp_sum,                                 & ! InOut
@@ -824,13 +902,12 @@ CONTAINS
     LOGICAL,   intent(in)    :: is_newday
     LOGICAL,   intent(in)    :: l_start
 
-    REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
-                                !dtime
+    REAL(wp),  intent(in)    :: t_air_in_Celcius ! air temperature at current time step in lowest atmospheric layer in Celcius
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
-                                previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
+    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! Intent(in) because if it is not calculated new, it should remain
+                                previous_day_temp_min,  & ! as before. Without (in) it would be NaN in the output.
                                 previous_day_temp_max
 
     REAL(wp),  intent(inout) :: day_temp_sum,           &

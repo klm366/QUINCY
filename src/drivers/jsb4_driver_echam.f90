@@ -1,18 +1,16 @@
+!> Contains the ECHAM driver for ICON-Land standalone using MPI-ESM/ECHAM infrastructure
 !>
-!! @brief Contains the driver for jsbach standalone -> currently only and explicitly for use with Echam
-!!        Initial version based on the jsbach3 driver 'jsbalone_driver'
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 PROGRAM jsb4_driver
 #ifndef __NO_JSBACH__
 #ifndef __ICON__
@@ -36,7 +34,7 @@ PROGRAM jsb4_driver
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
+  USE mo_jsb4_forcing_echam, ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
 
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
@@ -121,7 +119,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: pch(:,:)
   REAL(wp), ALLOCATABLE :: cos_zenith_angle(:,:)
 
-  !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing
+  !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing_echam
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
   REAL(wp), ALLOCATABLE :: fract_par_diffuse(:,:)
 

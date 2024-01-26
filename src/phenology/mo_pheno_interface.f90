@@ -1,18 +1,16 @@
+!> Contains the interfaces to the phenlogy processes
 !>
-!! @brief Contains the interfaces to the phenlogy processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added optional functionality: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_process.pp-jsb.f90"
@@ -212,7 +210,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the phenology state
+  !> Implementation to update the phenology state
   !! Task "phenology" calculates the phenology state of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -284,7 +282,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'LOGROP' phenology scheme
+  !> Implementation of 'LOGROP' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -551,7 +549,7 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear(options%current_datetime, options%dtime)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           veg_fract_correction_old(ic) = veg_fract_correction(ic)
 
@@ -584,15 +582,16 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
         ! todo: adapt for GPU
-        !$ACC UPDATE HOST(old_c_state_sum_ta)
+        !$ACC UPDATE HOST(old_c_state_sum_ta) ASYNC(1)
+        !$ACC WAIT(1)
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
           & dummy_flux(:), cconservation_allom(:))
-        !$ACC UPDATE DEVICE(cconservation_allom)
+        !$ACC UPDATE DEVICE(cconservation_allom) ASYNC(1)
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday(options%current_datetime, options%dtime)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           CALL track_max_green_pool(       &
             & c_green(ic),                 & ! in
@@ -792,14 +791,14 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
+    !$ACC WAIT(1)
     !$ACC END DATA
-    !$ACC WAIT
 
    END SUBROUTINE update_phenology_logrop
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'climatology' phenology scheme
+  !> Implementation of 'climatology' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1052,7 +1051,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

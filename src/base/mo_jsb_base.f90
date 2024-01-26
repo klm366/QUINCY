@@ -1,17 +1,16 @@
+!> Contains main JSBACH structure and methods.
 !>
-!! @brief Contains main JSBACH structure and methods.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_base
 #ifndef __NO_JSBACH__
 
@@ -23,11 +22,18 @@ MODULE mo_jsb_base
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach
   PUBLIC :: jsbach_setup_models, jsbach_setup_tiles
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> Setup the ICON-Land models
+  !>
+  !>   Routine is called by both:
+  !>      ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
+  !>      host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
+  !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &

@@ -1,3 +1,16 @@
+!> Contains basic definitions and functions for I/O
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
@@ -90,7 +103,7 @@ CONTAINS
   END FUNCTION Construct_cf
 
   !>
-  !! @brief Initialize io control for JSBACH
+  !> Initialize io control for JSBACH
   !!
   SUBROUTINE init_jsb_io(namelist_filename)
 

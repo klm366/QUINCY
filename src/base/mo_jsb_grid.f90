@@ -1,9 +1,16 @@
+!> Contains functions for grid instances
 !>
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_grid
 #ifndef __NO_JSBACH__
 
@@ -49,8 +56,8 @@ CONTAINS
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
 
-    !$ACC ENTER DATA PCREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
-    !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
+    !$ACC ENTER DATA CREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
+    !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf) ASYNC(1)
 
   END SUBROUTINE Register_grid
 
@@ -95,7 +102,7 @@ CONTAINS
     CALL message(TRIM(routine), message_text)
 
     !$ACC ENTER DATA CREATE(vgrid, vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz)
-    !$ACC UPDATE DEVICE(vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz)
+    !$ACC UPDATE DEVICE(vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz) ASYNC(1)
   END SUBROUTINE Register_vgrid
 
   FUNCTION Get_grid(id) RESULT(grid)

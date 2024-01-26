@@ -1,17 +1,16 @@
+!> Initialization of the the seb memory.
 !>
-!! @brief Initialization of the the seb memory.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
 
@@ -74,7 +73,7 @@ CONTAINS
       F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/PhenoParam%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
 
-      !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp)
+      !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
     END IF
 
   END SUBROUTINE seb_init

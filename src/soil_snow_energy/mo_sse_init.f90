@@ -1,17 +1,16 @@
+!> Initialization of the the soil and snow memory.
 !>
-!! @brief Initialization of the the soil and snow memory.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
@@ -338,10 +337,11 @@ CONTAINS
       END DO
       dsl4jsb_var2D_onDomain(SSE_, heat_cond) = &
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
     END IF
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,heat_cond))
 
   END SUBROUTINE sse_init_bc
@@ -395,14 +395,15 @@ CONTAINS
       END DO
     END IF
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
+    !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl)) ASYNC(1)
 
     ! IF (TRIM(tile%name) /= 'box') THEN
     IF ( (model%config%use_tmx .AND. .NOT. tile%Has_children()) .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t))
     END IF
 
@@ -496,8 +497,8 @@ CONTAINS
 
     ! On glacier tile, set variables and return
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT)
-      !$ACC LOOP GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(3)
       DO is=1,nsoil
         DO ib=1,nblks
           DO ic=1,nproma
@@ -507,7 +508,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END LOOP
-      !$ACC LOOP GANG VECTOR COLLAPSE(2)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO ib=1,nblks
         DO ic=1,nproma
           vol_heat_cap_snow(ic  ,ib) = vol_hcap_snow
@@ -535,7 +536,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(liquid_max)
 
       IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) PRIVATE(ws_max_sl)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1) PRIVATE(ws_max_sl)
         DO is = 1, nsoil
           DO ib = 1, nblks
             DO ic = 1, nproma
@@ -551,7 +552,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
         DO is = 1, nsoil
           DO ib = 1, nblks
             DO ic = 1, nproma
@@ -562,7 +563,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -585,6 +586,7 @@ CONTAINS
       !   dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
       ! END IF
 
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(liquid_max)
       DEALLOCATE(liquid_max)
 
@@ -602,7 +604,7 @@ CONTAINS
     ELSE
       ALLOCATE(fract_org_sl(nproma, nsoil, nblks))
       !$ACC ENTER DATA CREATE(fract_org_sl)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -615,7 +617,7 @@ CONTAINS
 
     ALLOCATE(vol_heat_cap_tmp(nproma,nsoil,nblks), heat_cond_tmp(nproma,nsoil,nblks))
     !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, heat_cond_tmp)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
     DO is = 1, nsoil
       DO ib = 1, nblks
         DO ic = 1, nproma
@@ -631,8 +633,7 @@ CONTAINS
         &      vol_heat_cap_org_tmp(nproma, nsoil, nblks))
       !$ACC ENTER DATA CREATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
 
-      !$noACC UPDATE DEVICE(soil_depth_sl, wtr_soil_sl, ice_soil_sl)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO ic = 1, nproma
         DO is = 1, nsoil
           DO ib = 1, nblks
@@ -648,14 +649,16 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC UPDATE HOST(fract_water, fract_ice)
+      !$ACC WAIT(1)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1, nblks
         DO ic = 1, nproma
            vol_heat_cap_org_tmp(ic,1,ib) = vol_hcap_org_top
         END DO
       END DO
-     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC END PARALLEL LOOP
+     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 2, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -663,8 +666,9 @@ CONTAINS
           END DO
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -682,12 +686,14 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(fract_water, fract_ice, vol_heat_cap_org_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
     ELSE
 
-      !$ACC UPDATE DEVICE(vol_heat_cap)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC UPDATE DEVICE(vol_heat_cap) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib=1,nblks
           DO ic = 1, nproma
@@ -705,7 +711,7 @@ CONTAINS
         & hcond_dry_org_tmp(nproma,nsoil,nblks))
       !$ACC ENTER DATA CREATE(vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1, nblks
         DO ic = 1, nproma
           vol_porosity_org_tmp(ic,1,ib) = vol_porosity_org_top
@@ -713,7 +719,8 @@ CONTAINS
           hcond_dry_org_tmp(ic,1,ib)    = hcond_dry_org_top
         END DO
       END DO
-     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC END PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 2, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -723,8 +730,9 @@ CONTAINS
           END DO
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
       
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 2, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -745,10 +753,11 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
       DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib=1,nblks
           DO ic = 1, nproma
@@ -760,13 +769,14 @@ CONTAINS
     END IF
 
     IF (.NOT. (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil)) THEN
+      !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(fract_org_sl)
       DEALLOCATE(fract_org_sl)
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ib=1,nblks
           DO ic = 1, nproma
             vol_heat_cap_snow(ic,ib) = 634500._wp
@@ -777,7 +787,7 @@ CONTAINS
       ELSE
         IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
           ! Use snow density values for fresh snow for initialization
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO ib=1,nblks
             DO ic = 1, nproma
               vol_heat_cap_snow(ic,ib) = ci * dens_snow_min              ! Use specific heat of ice (Verseghy 1991)
@@ -789,7 +799,7 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO ib=1,nblks
             DO ic = 1, nproma
               vol_heat_cap_snow(ic,ib) = vol_hcap_snow
@@ -800,6 +810,8 @@ CONTAINS
         END IF
       END IF
     END IF
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE init_soil_properties
 
