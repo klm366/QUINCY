@@ -24,6 +24,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_jsb_control,            ONLY: jsbach_runs_standalone
 
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
@@ -57,7 +58,7 @@ MODULE mo_seb_memory_class
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
-      & richardson                !< Richardson number                                               []
+      & richardson                !< Richardson number (standalone model)                            []
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &
@@ -231,13 +232,15 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'richardson', mem%richardson,                                  &
-      & hgrid, surface,                                                              &
-      & t_cf('richardson', '-', 'Richardson number'),                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.TRUE.,                                                             &
-      & initval_r=0.0_wp )
+    IF (jsbach_runs_standalone()) THEN
+      CALL mem%Add_var( 'richardson', mem%richardson,                                &
+        & hgrid, surface,                                                            &
+        & t_cf('richardson', '-', 'Richardson number'),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.TRUE.,                                                           &
+        & initval_r=0.0_wp )
+    END IF
 
     IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
