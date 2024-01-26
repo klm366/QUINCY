@@ -368,6 +368,9 @@ CONTAINS
     & wt_inun, wt_inun_sum_month, wt_inun_mean_month,       &
     & wt_inun_min_year, wt_inun_min_lt                      &
     & )
+
+    USE mo_top_util, ONLY: time_relaxation
+
     LOGICAL,  INTENT(in)    :: lexp, lyear, lmonth, lday ! .TRUE. if first step of a(n) Experiment/Year/Month/Day
     LOGICAL,  INTENT(in)    :: lfirst_year                     ! .TRUE. if first year of experiment (finished)
     INTEGER,  INTENT(in)    :: mlen                      ! Length of month of previous timestep [days] (by lmonth only)
@@ -431,16 +434,9 @@ CONTAINS
         IF (lyear) THEN
 
           ! Update long term means
-          IF (lexp) THEN
-            ! Actually initialize them
-            frac_inun_min_lt  = frac_inun_min_year
-            frac_inun_summ_lt = frac_inun_summ_year
-            wt_inun_min_lt    = wt_inun_min_year
-          ELSE
-            frac_inun_min_lt  = (frac_inun_min_lt  * (nyear_lt - 1._wp) + frac_inun_min_year ) / nyear_lt
-            frac_inun_summ_lt = (frac_inun_summ_lt * (nyear_lt - 1._wp) + frac_inun_summ_year) / nyear_lt
-            wt_inun_min_lt    = (wt_inun_min_lt    * (nyear_lt - 1._wp) + wt_inun_min_year   ) / nyear_lt
-          ENDIF
+          CALL time_relaxation(  wt_inun_min_year,   wt_inun_min_lt, nstep=nyear_lt,linit=lexp)
+          CALL time_relaxation(frac_inun_min_year, frac_inun_min_lt ,nstep=nyear_lt,linit=lexp)
+          CALL time_relaxation(frac_inun_summ_year,frac_inun_summ_lt,nstep=nyear_lt,linit=lexp)
 
           ! Permanent wetland
           IF (larctic) THEN

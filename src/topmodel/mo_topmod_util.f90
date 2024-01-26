@@ -22,10 +22,41 @@ MODULE mo_top_util
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: gamm_p, gamm_inv_p, gamm_q, gamm_ln
+  PUBLIC :: time_relaxation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_top_util'
 
 CONTAINS
+
+  !!
+  ! @brief Update a moving average (e-fold relaxation) with a new value
+  !        Either dt and t_relax or nstep must be present
+  !
+  !!
+  PURE ELEMENTAL SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
+    REAL(wp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
+    REAL(wp),           INTENT(inout) :: relax   ! Mean value to update [?]
+    REAL(wp), OPTIONAL, INTENT(in)    :: dt      ! Time step between updates [s]
+    REAL(wp), OPTIONAL, INTENT(in)    :: t_relax ! E-fold time of the relaxation [s]
+    REAL(wp), OPTIONAL, INTENT(in)    :: nstep   ! Number of update steps in the e-fold time
+    LOGICAL,  OPTIONAL, INTENT(in)    :: linit   ! Initialize averages if linit=.TRUE.
+
+    REAL(wp) :: n
+
+    IF (PRESENT(nstep)) THEN
+      n = nstep
+    ELSE IF (PRESENT(dt) .AND. PRESENT(t_relax)) THEN
+      n = t_relax / dt
+    ELSE
+      n = 1._wp ! relax = inst
+    ENDIF
+    IF (PRESENT(linit)) THEN
+      IF (linit) n = 1._wp ! relax = inst => initialize averaging
+    ENDIF
+
+    relax = (relax * (n - 1._wp) + inst) / n
+
+  END SUBROUTINE time_relaxation
 
   !------------------------------------------------------------------------------------
   ! Helper routines -- solve gamma function. See Numerical Recipes, Chap. 6
