@@ -129,6 +129,8 @@ CONTAINS
       return_value = 'top'
     CASE (CH4_)
       return_value = 'methane'
+    CASE (MEGAN_)
+      return_value = 'megan'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -197,6 +199,8 @@ CONTAINS
       return_value = TOP_
     CASE ('methane')
       return_value = CH4_
+    CASE ('megan')
+      return_value = MEGAN_
     CASE DEFAULT
       return_value = 0
     END SELECT
