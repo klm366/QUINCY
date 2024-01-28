@@ -55,7 +55,7 @@ MODULE mo_interface_parflow
 #ifdef YAC_coupling
   PUBLIC :: construct_parflow_coupling
 #endif
-  PUBLIC :: interface_parflow
+  PUBLIC :: interface_parflow, rla2rlarot, phi2phirot
   PUBLIC :: lyac_very_1st_get, nbr_inner_cells, mask_checksum, field_id, &
        & is_valid_parflow, parflow_buffer
 
@@ -124,6 +124,14 @@ CONTAINS
     CHARACTER(len=40), ALLOCATABLE :: field_name(:)
     INTEGER :: collection_size(no_of_fields)
 
+    REAL(wp), PARAMETER :: &
+      zrpi18 = 57.2957795_wp, &
+      zpir18 = 0.0174532925_wp, &
+      polgam = 0.0_wp
+
+    REAL(wp) :: polphi, pollam
+    REAL(wp) :: rot_lon, rot_lat
+
     dsl4jsb_Def_config(HYDRO_)
 
     model => Get_model(model_id)
@@ -137,6 +145,9 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+
+    polphi = model%config%pfl_rotpole_lat
+    pollam = model%config%pfl_rotpole_lon
 
     ! YAC initialization steps
 
@@ -178,8 +189,13 @@ CONTAINS
     DO jb = 1, patch_horz%nblks_v
       DO jc = 1, nproma
         nn = (jb-1)*nproma+jc
-        buffer_lon(nn) = patch_horz%verts%vertex(jc,jb)%lon
-        buffer_lat(nn) = patch_horz%verts%vertex(jc,jb)%lat
+        IF (model%config%pfl_rotpole) THEN
+          buffer_lon(nn) = zpir18*rla2rlarot ( zrpi18*patch_horz%verts%vertex(jc,jb)%lat, zrpi18*patch_horz%verts%vertex(jc,jb)%lon, polphi, pollam, polgam )
+          buffer_lat(nn) = zpir18*phi2phirot ( zrpi18*patch_horz%verts%vertex(jc,jb)%lat, zrpi18*patch_horz%verts%vertex(jc,jb)%lon, polphi, pollam )
+        ELSE
+          buffer_lon(nn) = patch_horz%verts%vertex(jc,jb)%lon
+          buffer_lat(nn) = patch_horz%verts%vertex(jc,jb)%lat
+        ENDIF
       ENDDO
     ENDDO
     !ICON_OMP_END_DO NOWAIT
@@ -216,8 +232,13 @@ CONTAINS
     DO jb = 1, patch_horz%nblks_c
       DO jc = 1, nproma
         nn = (jb-1)*nproma+jc
-        buffer_lon(nn) = patch_horz%cells%center(jc,jb)%lon
-        buffer_lat(nn) = patch_horz%cells%center(jc,jb)%lat
+        IF (model%config%pfl_rotpole) THEN
+          buffer_lon(nn) = zpir18*rla2rlarot ( zrpi18*patch_horz%cells%center(jc,jb)%lat, zrpi18*patch_horz%cells%center(jc,jb)%lon, polphi, pollam, polgam )
+          buffer_lat(nn) = zpir18*phi2phirot ( zrpi18*patch_horz%cells%center(jc,jb)%lat, zrpi18*patch_horz%cells%center(jc,jb)%lon, polphi, pollam )
+        ELSE
+          buffer_lon(nn) = patch_horz%cells%center(jc,jb)%lon
+          buffer_lat(nn) = patch_horz%cells%center(jc,jb)%lat
+        ENDIF
       ENDDO
     ENDDO
     !ICON_OMP_END_PARALLEL_DO
@@ -305,9 +326,13 @@ CONTAINS
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
 
-              !IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
-              !  & .OR. ABS( grid%lat(jc,jb) ) .GT. model%config%parflow_lat ) THEN
-              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) ) THEN
+              rot_lon = rla2rlarot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam, polgam )
+              rot_lat = phi2phirot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam )
+              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
+                & .OR. (rot_lon .LT. model%config%pfl_dom_nw_lon) & 
+                & .OR. (rot_lon .GT. model%config%pfl_dom_se_lon) &
+                & .OR. (rot_lat .GT. model%config%pfl_dom_nw_lat) &
+                & .OR. (rot_lat .LT. model%config%pfl_dom_se_lat) ) THEN
                 ! ocean point (fraction of ocean is >0., lsmnolake .lt. 1.) is valid
                 ! or grid point outside the Parflow latitude belt
                 is_valid((jb-1)*nproma+jc) = .FALSE.
@@ -408,6 +433,7 @@ CONTAINS
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
     INTEGER               :: iblk, n, nn !, nlen
     INTEGER               :: nsoil, is
+    REAL(wp), POINTER     :: dz(:)
 
     n = options%nc ! only to avoid compiler warnings
 
@@ -423,6 +449,7 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    dz => soil_w%dz(:)
 
     ! Get reference to variables in memory
     dsl4jsb_Get_memory(HYDRO_)
@@ -445,14 +472,14 @@ CONTAINS
       !  nlen = grid%npromz
       !END IF
       DO n = 1, grid%nproma
-        buffer(nn+n,1) = water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk)
+        buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) / dz(1)
       END DO
     END DO
     DO is = 2, nsoil
       DO iblk = 1, grid%nblks
         nn = (iblk - 1) * grid%nproma
         DO n = 1, grid%nproma
-          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk)
+          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk) / dz(is)
         END DO
       END DO
     END DO
@@ -493,5 +520,108 @@ CONTAINS
 
   END SUBROUTINE interface_parflow
 
+  FUNCTION rla2rlarot ( phi, rla, polphi, pollam, polgam )
+  
+  !------------------------------------------------------------------------------
+  !
+  ! Description:
+  ! This routine converts lambda from the real geographical system to lambda
+  ! in the rotated system.
+  !
+  !------------------------------------------------------------------------------
+
+  REAL (KIND=wp), INTENT (IN) :: &
+    polphi, & ! latitude of the rotated north pole
+    pollam, & ! longitude of the rotated north pole
+    phi, & ! latitude in geographical system
+    rla ! longitude in geographical system
+
+  REAL (KIND=wp), INTENT (IN) :: &
+    polgam ! angle between the north poles of the systems
+
+  REAL (KIND=wp) :: &
+    rla2rlarot ! longitude in the the rotated system
+
+  ! Local variables
+  REAL (KIND=wp) :: &
+    zsinpol, zcospol, zlampol, zphi, zrla, zarg1, zarg2, zrla1
+
+  REAL (KIND=wp), PARAMETER :: &
+    zrpi18 = 57.2957795_wp, & !
+    zpir18 = 0.0174532925_wp
+
+  !------------------------------------------------------------------------------
+
+    zsinpol = SIN (zpir18 * polphi)
+    zcospol = COS (zpir18 * polphi)
+    zlampol = zpir18 * pollam
+    zphi = zpir18 * phi
+    IF (rla > 180.0_wp) THEN
+      zrla1 = rla - 360.0_wp
+    ELSE
+      zrla1 = rla
+    ENDIF
+    zrla = zpir18 * zrla1
+
+    zarg1 = - SIN (zrla-zlampol) * COS(zphi)
+    zarg2 = - zsinpol * COS(zphi) * COS(zrla-zlampol) + zcospol * SIN(zphi)
+
+    IF (zarg2 == 0.0_wp) zarg2 = 1.0E-20_wp
+
+    rla2rlarot = zrpi18 * ATAN2 (zarg1,zarg2)
+
+    IF (polgam /= 0.0_wp) THEN
+      rla2rlarot = polgam + rla2rlarot
+      IF (rla2rlarot > 180._wp) rla2rlarot = rla2rlarot -360._wp
+    ENDIF
+
+  END FUNCTION rla2rlarot
+
+  FUNCTION phi2phirot ( phi, rla, polphi, pollam )
+
+  !------------------------------------------------------------------------------
+  ! Description:
+  ! This routine converts phi from the real geographical system to phi
+  ! in the rotated system.
+  !
+  !------------------------------------------------------------------------------
+
+  REAL (KIND=wp), INTENT (IN) :: &
+    polphi, & ! latitude of the rotated north pole
+    pollam, & ! longitude of the rotated north pole
+    phi, & ! latitude in the geographical system
+    rla ! longitude in the geographical system
+
+  REAL (KIND=wp) :: &
+    phi2phirot ! latitude in the rotated system
+
+  ! Local variables
+  REAL (KIND=wp) :: &
+    zsinpol, zcospol, zlampol, zphi, zrla, zarg1, zarg2, zrla1
+
+  REAL (KIND=wp), PARAMETER :: &
+    zrpi18 = 57.2957795_wp, & !
+    zpir18 = 0.0174532925_wp
+
+  !------------------------------------------------------------------------------
+
+    zsinpol = SIN (zpir18 * polphi)
+    zcospol = COS (zpir18 * polphi)
+    zlampol = zpir18 * pollam
+    zphi = zpir18 * phi
+    IF (rla > 180.0_wp) THEN
+      zrla1 = rla - 360.0_wp
+    ELSE
+      zrla1 = rla
+    ENDIF
+    zrla = zpir18 * zrla1
+
+    zarg1 = SIN (zphi) * zsinpol
+    zarg2 = COS (zphi) * zcospol * COS (zrla - zlampol)
+
+    phi2phirot = zrpi18 * ASIN (zarg1 + zarg2)
+
+  END FUNCTION phi2phirot
+    
 #endif
 END MODULE mo_interface_parflow

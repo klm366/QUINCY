@@ -37,7 +37,13 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
     LOGICAL                        :: use_parflow
-    REAL(wp)                       :: parflow_lat      ! North-south extent of the Parflow latitude belt
+    LOGICAL                        :: pfl_rotpole
+    REAL(wp)                       :: pfl_rotpole_lon  ! Coordinates of the rotated pole
+    REAL(wp)                       :: pfl_rotpole_lat
+    REAL(wp)                       :: pfl_dom_nw_lon   ! Upper left corner of the ParFlow domain (in rotated coordinates)
+    REAL(wp)                       :: pfl_dom_nw_lat
+    REAL(wp)                       :: pfl_dom_se_lon   ! Lower right corner of the ParFlow domain
+    REAL(wp)                       :: pfl_dom_se_lat
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
@@ -94,7 +100,13 @@ CONTAINS
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
     LOGICAL                       :: use_parflow
-    REAL(wp)                      :: parflow_lat
+    LOGICAL                       :: pfl_rotpole
+    REAL(wp)                      :: pfl_rotpole_lon
+    REAL(wp)                      :: pfl_rotpole_lat
+    REAL(wp)                      :: pfl_dom_nw_lon
+    REAL(wp)                      :: pfl_dom_nw_lat
+    REAL(wp)                      :: pfl_dom_se_lon
+    REAL(wp)                      :: pfl_dom_se_lat
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
@@ -111,7 +123,13 @@ CONTAINS
       use_glacier, &
       use_quincy, &
       use_parflow, &
-      parflow_lat, &
+      pfl_rotpole, &
+      pfl_rotpole_lon, &
+      pfl_rotpole_lat, &
+      pfl_dom_nw_lon, &
+      pfl_dom_nw_lat, &
+      pfl_dom_se_lon, &
+      pfl_dom_se_lat, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
@@ -136,7 +154,13 @@ CONTAINS
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
     use_parflow                = .FALSE.
-    parflow_lat                = 20.0
+    pfl_rotpole                = .TRUE.
+    pfl_rotpole_lon            = 198.0 ! Default is the Euro Cordex domain
+    pfl_rotpole_lat            = 39.25
+    pfl_dom_nw_lon             = -28.21
+    pfl_dom_nw_lat             = 21.67
+    pfl_dom_se_lon             = 18.43
+    pfl_dom_se_lat             = -23.65
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -168,7 +192,13 @@ CONTAINS
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
     model_config%use_parflow                = use_parflow
-    model_config%parflow_lat                = parflow_lat
+    model_config%pfl_rotpole                = pfl_rotpole
+    model_config%pfl_rotpole_lon            = pfl_rotpole_lon
+    model_config%pfl_rotpole_lat            = pfl_rotpole_lat
+    model_config%pfl_dom_nw_lon             = pfl_dom_nw_lon
+    model_config%pfl_dom_nw_lat             = pfl_dom_nw_lat
+    model_config%pfl_dom_se_lon             = pfl_dom_se_lon
+    model_config%pfl_dom_se_lat             = pfl_dom_se_lat
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme

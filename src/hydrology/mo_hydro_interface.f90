@@ -966,6 +966,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
+    dsl4jsb_Real2D_onChunk :: fract_parflow
 
 
     ! Locally allocated vectors
@@ -1025,6 +1026,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_parflow)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)
@@ -1082,6 +1084,13 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow) &
       & )
 
+    IF (ALLOCATED(is_valid_parflow) .AND. lyac_very_1st_get) THEN
+      DO ic = 1, nc
+        IF (is_valid_onChunk(ic)) THEN
+          fract_parflow(ic) = 1.0
+        END IF
+      END DO
+    END IF
     ! If running with ParFlow, copy the values from the ParFlow buffer
     ! (but only within the ParFlow coverage)
     ! and do not overwrite soil water with zeros at the first time step
@@ -1161,6 +1170,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ws_negative,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_parflow,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_to_parflow, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

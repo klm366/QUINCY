@@ -65,7 +65,8 @@ MODULE mo_hydro_memory_class
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain,       & !< internal drain
-      & water_to_parflow        !< water to Parflow    
+      & fract_parflow,        & !< fraction of ParFlow coverage
+      & water_to_parflow        !< water to Parflow
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
@@ -348,6 +349,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'fract_parflow', mem%fract_parflow,                    &
+      & hgrid, surface,                                                      &
+      & t_cf('fract_parflow', '-', 'fraction of parflow coverage'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & loutput=.TRUE.,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'water_to_parflow', mem%water_to_parflow,              &
