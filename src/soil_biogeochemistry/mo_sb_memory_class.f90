@@ -1,32 +1,20 @@
+!> Summary: QUINCY soil-biogeochemistry process memory
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains the memory class for the soil_biogeochemistry processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (20170103, based on the JSBACH4, MPI-M Hamburg)
-!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
-!! code additions for bgcm store solution ported from ICON-Land by Jan Engel, MPI-BGC (20230117)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of (memory) variables for the soil-biogeochemistry process
+!>
 MODULE mo_sb_memory_class
 
   USE mo_kind,                   ONLY: wp
@@ -75,20 +63,23 @@ MODULE mo_sb_memory_class
       & sb_pool_total_n15                   !< sum of all sb_pool%*%nitrogen15  [mol m-3]
     ! som: dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
     TYPE(t_jsb_var_real3d)  :: &
-      & sb_pool_total_som_c        , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon      [mol m-3 timestep-1]
-      & sb_pool_total_som_n        , &      !< sum of 'soil organic matter' components of sb_pool%*%nitrogen    [mol m-3 timestep-1]
-      & sb_pool_total_som_p        , &      !< sum of 'soil organic matter' components of sb_pool%*%phosphorus  [mol m-3 timestep-1]
-      & sb_pool_total_som_c13      , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon13    [mol m-3 timestep-1]
-      & sb_pool_total_som_c14      , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon14    [mol m-3 timestep-1]
-      & sb_pool_total_som_n15               !< sum of 'soil organic matter' components of sb_pool%*%nitrogen15  [mol m-3 timestep-1]
+      & sb_pool_total_som_c        , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon      [mol m-3]
+      & sb_pool_total_som_n        , &      !< sum of 'soil organic matter' components of sb_pool%*%nitrogen    [mol m-3]
+      & sb_pool_total_som_p        , &      !< sum of 'soil organic matter' components of sb_pool%*%phosphorus  [mol m-3]
+      & sb_pool_total_som_c13      , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon13    [mol m-3]
+      & sb_pool_total_som_c14      , &      !< sum of 'soil organic matter' components of sb_pool%*%carbon14    [mol m-3]
+      & sb_pool_total_som_n15               !< sum of 'soil organic matter' components of sb_pool%*%nitrogen15  [mol m-3]
     ! litter: soluable_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d)  :: &
-      & sb_pool_total_litter_c    , &       !< sum of *litter of sb_pool%*%carbon      [mol m-3 timestep-1]
-      & sb_pool_total_litter_n    , &       !< sum of *litter of sb_pool%*%nitrogen    [mol m-3 timestep-1]
-      & sb_pool_total_litter_p    , &       !< sum of *litter of sb_pool%*%phosphorus  [mol m-3 timestep-1]
-      & sb_pool_total_litter_c13  , &       !< sum of *litter of sb_pool%*%carbon13    [mol m-3 timestep-1]
-      & sb_pool_total_litter_c14  , &       !< sum of *litter of sb_pool%*%carbon14    [mol m-3 timestep-1]
-      & sb_pool_total_litter_n15            !< sum of *litter of sb_pool%*%nitrogen15  [mol m-3 timestep-1]
+      & sb_pool_total_litter_c    , &       !< sum of *litter of sb_pool%*%carbon      [mol m-3]
+      & sb_pool_total_litter_n    , &       !< sum of *litter of sb_pool%*%nitrogen    [mol m-3]
+      & sb_pool_total_litter_p    , &       !< sum of *litter of sb_pool%*%phosphorus  [mol m-3]
+      & sb_pool_total_litter_c13  , &       !< sum of *litter of sb_pool%*%carbon13    [mol m-3]
+      & sb_pool_total_litter_c14  , &       !< sum of *litter of sb_pool%*%carbon14    [mol m-3]
+      & sb_pool_total_litter_n15            !< sum of *litter of sb_pool%*%nitrogen15  [mol m-3]
+    ! various bgcm diagnostics
+    TYPE(t_jsb_var_real3d)  :: &
+      & sb_pool_woody_litter_c              !< woody litter or sb_pool [mol m-3]
 
     !------------------------------------------------------------------------------------------------------ !
     !>pools 3D
@@ -233,8 +224,8 @@ MODULE mo_sb_memory_class
                             denitrification_noy_n15, &            !< nitrification 15NOy [micro-mol m-3 s-1]
                             denitrification_n2, &                 !< denitrification to N2  [micro-mol m-3 s-1]
                             denitrification_n2_n15, &             !< denitrification to 15N2  [micro-mol m-3 s-1]
-                            asymb_n_fixation, &                   !< asymboitic N fixation [micro-mol m-3 s-1]
-                            asymb_n_fixation_n15, &               !< asymboitic 15N fixation [micro-mol m-3 s-1]
+                            asymb_n_fixation, &                   !< asymbiotic N fixation [micro-mol m-3 s-1]
+                            asymb_n_fixation_n15, &               !< asymbiotic 15N fixation [micro-mol m-3 s-1]
                             weathering_po4, &                     !< phosphorus weathering rate [micro-mol P m-3 s-1]
                             occlusion_po4, &                      !< phosphorus occlusion rate, assoc_slow --> occluded [micro-mol P m-3 s-1]
                             slow_exchange_po4, &                  !< phosphorus slow exchange rate, assoc_fast <--> assoc_slow [micro-mol P m-3 s-1]
@@ -326,6 +317,17 @@ MODULE mo_sb_memory_class
                             total_flux_carbon13, &                !< carbon13 mass balance checks in soil_biogeochemistry model [mol C13 m-2 s-1]
                             total_flux_carbon14, &                !< carbon14 mass balance checks in soil_biogeochemistry model [mol C14 m-2 s-1]
                             total_flux_nitrogen15                 !< nitrogen15 mass balance checks in soil_biogeochemistry model [mol N15 m-2 s-1]
+
+    !------------------------------------------------------------------------------------------------------ !
+    !> biosphere-level diagnostics
+    !>
+    TYPE(t_jsb_var_real3d)  :: &
+      & total_soil_n, &                 !< sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
+      & total_soil_inorg_n              !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
+
+    TYPE(t_jsb_var_real2d)  :: &
+      & ecosystem_total_n_loss          !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
+                                        !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_memory
@@ -764,6 +766,17 @@ CONTAINS
       CALL mem%Add_var('sb_pool_total_litter_n15', mem%sb_pool_total_litter_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_n15', 'mol m-3', 'total N15, sum of all litter sb_pool components'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_pool_woody_litter_c', mem%sb_pool_woody_litter_c, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('sb_pool_woody_litter_c', 'mol m-3', 'sb_pool woody litter'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1573,8 +1586,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1584,8 +1597,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1595,8 +1608,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1606,8 +1619,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1617,8 +1630,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1628,8 +1641,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -2013,9 +2026,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
@@ -2026,7 +2039,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('weathering_po4', mem%weathering_po4, &
@@ -2808,6 +2821,39 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('total_soil_n', mem%total_soil_n, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('total_soil_n', 'mol m-3', 'sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('total_soil_inorg_n', mem%total_soil_inorg_n, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('total_soil_inorg_n', 'mol m-3', 'nh4_solute + nh4_assoc + no3_solute'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('ecosystem_total_n_loss', mem%ecosystem_total_n_loss, &
+        & hgrid, surface, &
+        & t_cf('ecosystem_total_n_loss', 'micro-mol m-2 s-1', 'emissions + leaching + lateral loss'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)

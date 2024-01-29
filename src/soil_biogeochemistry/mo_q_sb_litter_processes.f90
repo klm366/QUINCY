@@ -1,32 +1,21 @@
+!> Summary: QUINCY litter transport and partitioning
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief 
-!!  Contains the science routines for the litter transport and partitioning for the JSM and SIMPLE soil models
-!!
-!! @author
-!!  Soenke Zaehle 
-!!
-!! @par Revision History
-!!  First version by Jan Engel (20181001): copyied from sb/mo_sb_simple_model.f90
-!!
-MODULE mo_sb_litter_processes
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### routines for litter transport and partitioning for the both JSM and SSM (soil models in QUINCY)
+!>
+MODULE mo_q_sb_litter_processes
 
   USE mo_kind,            ONLY: wp
   USE mo_lnd_bgcm_idx
@@ -36,7 +25,7 @@ MODULE mo_sb_litter_processes
   PRIVATE
   PUBLIC :: calc_litter_partitioning
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_litter_processes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_litter_processes'
 
 CONTAINS
 
@@ -500,4 +489,4 @@ CONTAINS
     END DO  
   END SUBROUTINE calc_litter_partitioning
 
-END MODULE mo_sb_litter_processes
+END MODULE mo_q_sb_litter_processes

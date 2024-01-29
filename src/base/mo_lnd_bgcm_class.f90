@@ -1,17 +1,19 @@
-!> Summary: Contains elem enum and soon common functions for bgc materials; to be integrated with current mo_jsb_pool_class
+!> Summary: define indices and helper functions for bgc material
 !>
-!>### Contains enum and methods for bgc materials; to be integrated with current mo_jsb_pool_class
+!>#### ICON-Land
 !>
-!> Copyright (c) 2022 Julia Nabel
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2022-12-14 - present)
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
 !>
-!>#### License
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### define indices (enumerator) and helper functions for bgc material and their components
 !>
 MODULE mo_lnd_bgcm_class
 #ifndef __NO_JSBACH__

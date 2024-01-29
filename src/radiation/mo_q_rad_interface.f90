@@ -1,17 +1,20 @@
+!> Summary: QUINCY radiation process interface
 !>
-!! @brief Contains the interfaces for teh QUINCY model to the radiation process 
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version based on mo_jsb_rad_interface by Jan Engel MPI-BGC (2023-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of tasks for the radiation process incl. update and aggregate routines
+!>
 MODULE mo_q_rad_interface
 #ifndef __NO_JSBACH__
 
@@ -29,11 +32,11 @@ MODULE mo_q_rad_interface
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
 
-  dsl4jsb_Use_processes RAD_, VEG_, A2L_, PHENO_
+  dsl4jsb_Use_processes RAD_, VEG_, A2L_, Q_PHENO_
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(Q_PHENO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -182,6 +185,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, albedo                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, net_radiation             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon               , weighted_by_fract)
     ! RAD_ 3D
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl            , weighted_by_fract)
@@ -203,7 +207,7 @@ CONTAINS
   SUBROUTINE update_time_average_radiation_quincy(tile, options)
 
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -212,12 +216,12 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, VEG_, RAD_, PHENO_
+    USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, VEG_, RAD_, Q_PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -230,6 +234,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
+    REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -237,15 +242,13 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
-    ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
+    ! Q_PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
@@ -266,6 +269,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)               RETURN  ! only if the present tile is a pft
@@ -277,7 +281,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
 
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
 
@@ -286,12 +290,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
-    ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
+    ! Q_PHENO_
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in 
     ! 2D RAD_
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
@@ -342,14 +344,8 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
-    !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
-    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
-    !>
     DO ic = 1, nc
-      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
-          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
+      IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)

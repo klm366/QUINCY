@@ -1,20 +1,20 @@
-##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles        
-##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany         
-##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.        
-##        
-##    This file is part of the QUINCY model.        
-##    The QUINCY model is free software: you can redistribute it and/or modify        
-##    it under the terms of the GNU General Public License version 3,        
-##    as published by the Free Software Foundation.        
-##        
-##    The QUINCY model is distributed in the hope that it will be useful,        
-##    but WITHOUT ANY WARRANTY; without even the implied warranty of        
-##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        
-##    GNU General Public License for more details.        
-##        
-##    You should have received a copy of the GNU General Public License        
-##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.        
-        
+# !> Summary: lctlib file for 8 landcover types (QUINCY)
+# !>
+# !>#### ICON-Land
+# !>
+# !> ------------------------------------------------------------------------
+# !> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+# !> Contact information: <https://icon-model.org>
+# !>
+# !> See AUTHORS.TXT for a list of authors  
+# !> See LICENSES/ for license information  
+# !> SPDX-License-Identifier: BSD-3-Clause
+# !> ------------------------------------------------------------------------
+# !>
+# !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+# !>
+# !>#### definition of parameters for 8 different landcover types (lctlib) used with the 'quincy_eight_pfts' usecase
+# !>
 #----------------------------------------------------------------------------------------                             
 # QUINCY Model
 # LANDCOVER LIBRARY
@@ -27,41 +27,18 @@
 # The data refer to the following landcover classification:                             
 #        
 #  QUINCY                             
-#  1: TrBE: broad leaved evergreen (rainforest)        
-#  2: TeBE: broad leaved evergreen (xeric forest)        
-#  3: TrBR: broad leaved deciduous (rain green)        
-#  4: TeBS: broad leaved deciduous (summer green) & BBS: ?        
-#  5: BNE:  needle-leaved evergreen & TeNE: ?        
-#  6: BNS:  needle-leaved deciduous        
-#  7: TeH:  C3 grass & TeC: C3 crop ?        
-#  8: TrH:  C4 grass & TrC: C4 crop ?        
-#        
-#  JSBACH4.x reference        
-#  1: Glacier                             
-#  2: Tropical evergreen trees                             
-#  3: Tropical deciduous trees                             
-#  4: Extra-tropical evergreen trees                             
-#  5: Extra-tropical deciduous trees                             
-#  6: Temperate broadleaf evergreen trees                             
-#  7: Temperate broadleaf deciduous trees                             
-#  8: Coniferous evergreen trees                             
-#  9: Coniferous deciduous trees                             
-# 10: Raingreen shrubs                             
-# 11: Deciduous shrubs                             
-# 12: C3 grass                             
-# 13: C4 grass                             
-# 14: Pasture                             
-# 15: C3 pasture                             
-# 16: C4 pasture                             
-# 17: Tundra                             
-# 18: Swamp                             
-# 19: Crops                             
-# 20: C3 crop                             
-# 21: C4 crop                             
+#  1: BEM:  moist broadleaved evergreen
+#  2: BED:  dry broadleaved evergreen
+#  3: BDR:  rain green broadleaved deciduous
+#  4: BDS:  summer green broadleaved deciduous
+#  5: NE :  needle-leaved evergreen
+#  6: NS :  summer green needle-leaved
+#  7: TeH:  C3 grass
+#  8: TrH:  C4 grass
                              
 #----------------------------------------------------------------------------------------                             
                              
-NLCT 8 # number of landcover types <- QUINCY 8 PFTs
+NLCT 8 # number of landcover types
         
 #----------------------------------------------------------------------------------------                             
 #LctNumber: Landcover type index numbers (not used in the model)                             

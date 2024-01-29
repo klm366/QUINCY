@@ -1,17 +1,20 @@
+!> Summary: JSBACH & QUINCY radiation process memory
 !>
-!! @brief Contains the memory class for radiation.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of (memory) variables for the radiation process
+!>
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
@@ -149,7 +152,8 @@ MODULE mo_rad_memory_class
       & net_radiation                   !< surface net radiation [W m-2]
 
     TYPE(t_jsb_var_real2d)  :: &
-      & albedo                          !< total surface albedo [unitless]
+      & albedo,                &        !< total surface albedo [unitless]
+      & albedo_noon                     !< albedo at local solar noon, value is modified only every 24h [unitless]
 
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_soil,                & !< radiation in VIS range absorbed by the soil [W m-2]
@@ -158,7 +162,7 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_can,                 & !< radiation in VIS range absorbed by the canopy [W m-2]
       & arad_nir_can,                 & !< radiation in NIR range absorbed by the canopy [W m-2]
-      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density [micro-mol m-2 s-1]
+      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density (a.k.a. faPAR) [micro-mol m-2 s-1]
       & rfr_ratio_boc,                & !< red to far-red ratio at the bottom of the canopy [unitless]
       & rfr_ratio_boc_tvegdyn_mavg      !< red to far-red ratio at the bottom of the canopy [unitless]
 
@@ -838,7 +842,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp )
-  
+
       CALL mem%Add_var('albedo', mem%albedo, &
         & hgrid, surface, &
         & t_cf('albedo', 'unitless', 'total surface albedo'), &
@@ -849,7 +853,18 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
+        CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
+        & hgrid, surface, &
+        & t_cf('albedo_noon', 'unitless', 'albedo at local solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
         & hgrid, surface, &
         & t_cf('arad_vis_soil', 'W m-2', 'radiation in VIS range absorbed by the soil'), &
@@ -896,12 +911,12 @@ CONTAINS
   
       CALL mem%Add_var('appfd', mem%appfd, &
         & hgrid, surface, &
-        & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
+        & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density (faPAR)'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   

@@ -1,17 +1,20 @@
+!> Summary: JSBACH & QUINCY assimilation parameters
 !>
-!! @brief Contains parameters for the assimilation processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena, based on mo_assimi_constants (2023-02-03)
-!!
-!! @par Revision History
-!! see mo_assimi_constants
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### declare and init assimilation parameters
+!>
 MODULE mo_assimi_parameters
 #ifndef __NO_JSBACH__
 
@@ -131,6 +134,18 @@ MODULE mo_assimi_parameters
     & soa_b = def_parameters, &              !< parameter in state of acclimation calculation used for evergreen forests
     & soa_t_s = def_parameters               !< parameter in state of acclimation calculation used  for evergreen forests
 
+  ! parameters for calculation of chlorophyll fluorescence
+  REAL(wp), SAVE:: &
+    & heat_dissipation_enrg_dep_param_1               = def_parameters, &   !< parameter for kn (energy dependent heat dissipation) calculation, source: drought dataset (Flexas 2002), for cotton kno=2.48 (Weiss and Berry 1987)
+    & heat_dissipation_enrg_dep_param_2               = def_parameters, &   !< parameter for kn calculation, source: drought dataset (Flexas 2002), for cotton alpha_kn=2.83 (Weiss and Berry 1987)
+    & heat_dissipation_enrg_dep_param_3               = def_parameters, &   !< parameter for kn calculation, source: drought dataset (Flexas 2002), for cotton beta_kn=0.114 (Weiss and Berry 1987)
+    & k_fluorescence_rate                             = def_parameters, &   !< rate coefficient of fluorescence
+    & thermal_dissipation_enrg_constitutive_max_rate  = def_parameters, &   !< maximum value for rate constant of energy constitutive thermal dissipation
+    & thermal_dissipation_enrg_constitutive_param_1   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
+    & thermal_dissipation_enrg_constitutive_param_2   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
+    & k_photochemistry_rate                           = def_parameters      !< rate coefficient for photochemistry    
+
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_parameters'
 
 CONTAINS
@@ -226,6 +241,17 @@ CONTAINS
     ! ...
     soa_b         = -0.5_wp                             !< .. reference
     soa_t_s       = 5.0_wp                              !< .. reference
+
+    ! parameters for chlorophyll fluorescence
+    heat_dissipation_enrg_dep_param_1               = 5.01_wp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_2               = 1.93_wp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_3               = 10.0_wp     !< Flexas 2002
+    k_fluorescence_rate                             = 0.05_wp     !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_max_rate  = 0.8738_wp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_1   = 0.0301_wp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_2   = 0.0773_wp   !< van der Tol 2014
+    k_photochemistry_rate                           = 4.0_wp      !< van der Tol 2014
+
   END SUBROUTINE init_assimi_parameters_quincy
 
 #endif

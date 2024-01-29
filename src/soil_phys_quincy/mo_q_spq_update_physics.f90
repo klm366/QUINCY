@@ -1,32 +1,21 @@
+!> Summary: QUINCY soil-physics calculation
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for the Task update_spq_physics
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (20160104)
-!! Permafrost specific processes included (Fabrice Lacroix 04/11/2020)
-!! 
-MODULE mo_spq_update_physics
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate the task update_spq_physics, i.e., snow accumulation, soil hydrology, surface energy balance
+!>
+MODULE mo_q_spq_update_physics
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -36,12 +25,12 @@ MODULE mo_spq_update_physics
   PRIVATE
   PUBLIC :: update_spq_physics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_update_physics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_spq_update_physics'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !>update soil moisture and theta for the plant only model
+  !>update soil moisture and theta for the plant only model - NOTE update/improve docu
   !> 
   ! two cases considered:
   !   a) dynamic water uptake calculation
@@ -53,7 +42,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SPQ_, PHENO_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SPQ_, VEG_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
@@ -63,7 +52,6 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -88,7 +76,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
@@ -169,10 +156,9 @@ CONTAINS
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
     dsl4jsb_Real2D_onChunk                :: net_radiation
-    ! PHENO_ 2D
-    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk                :: height
+    dsl4jsb_Real2D_onChunk                :: lai 
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -199,7 +185,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -281,9 +266,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)        ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in 
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in 
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -883,7 +867,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,          ONLY: dtime, eps8
     USE mo_jsb_physical_constants,      ONLY: grav, Tzero
-    USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
+    USE mo_q_assimi_process,            ONLY: calc_soil_moisture_stress
     USE mo_spq_constants,               ONLY: drain_frac, fdrain_srf_runoff, &
                                               InterceptionEfficiency, w_skin_max, &
                                               wpot_min, water2ice_density_ratio, &
@@ -1074,10 +1058,10 @@ CONTAINS
       gw_runoff_sl(:,isoil) = 0.0_wp
       ! update water balance of lower soil layers
       w_soil_sl(:,isoil)    = w_soil_sl(:,isoil) + & 
-                              (( 1.0_wp - drain_frac ** soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - &
+                              (drainage_sl(:,isoil-1) - drainage_sl(:,isoil) - &
                               evaporation(:) * fevaporation(:,isoil) - &
                               transpiration(:) * ftranspiration(:,isoil)) / &
-                             1000._wp * dtime
+                              1000._wp * dtime
 
       ! Compute flows to avoid w_soil_sl being above field capacity  
       ! Check if water content (including ice volume) is above field capacity
@@ -1191,8 +1175,8 @@ CONTAINS
 
        ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
        hlp3(:) =  soil_depth_sl(:,isoil-1) / (soil_depth_sl(:,isoil))             
-       hlp2(:) = ((w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1)) * water2ice_density_ratio - &
-         &        (w_soil_sl(:,isoil) + w_ice_sl(:,isoil)* water2ice_density_ratio)  * hlp3(:)) / (1._wp + hlp3(:))
+       hlp2(:) = ((w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio) - &
+         &        (w_soil_sl(:,isoil) + w_ice_sl(:,isoil)* water2ice_density_ratio) * hlp3(:)) / (1._wp + hlp3(:))
        ! ...
        WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
        WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
@@ -1750,4 +1734,4 @@ CONTAINS
       snow_srf_heat_flux(ichunk) = snow_heat_flux(ichunk,nsnow_top)
     ENDDO
   END SUBROUTINE
-END MODULE mo_spq_update_physics
+END MODULE mo_q_spq_update_physics

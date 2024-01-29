@@ -1,32 +1,23 @@
+!> Summary: QUINCY vegetation process interface
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains the interface for plant growth and turnover processes
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!! 2nd version by Jan Engel (20160719)
-!!
-MODULE mo_veg_interface
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of tasks for the vegetation process incl. update and aggregate routines
+!>
+!> includes plant growth and turnover
+!>
+MODULE mo_q_veg_interface
 #ifndef __NO_JSBACH__
 
 
@@ -40,41 +31,19 @@ MODULE mo_veg_interface
   USE mo_jsb_process_class,           ONLY: t_jsb_process
 
   ! "Integrate" routines
-  USE mo_veg_turnover,                ONLY: update_veg_turnover
-  USE mo_veg_dynamics,                ONLY: update_veg_dynamics
-  USE mo_veg_growth,                  ONLY: update_veg_growth
-  USE mo_veg_update_pools,            ONLY: update_veg_pools
+  USE mo_q_veg_turnover,              ONLY: update_veg_turnover
+  USE mo_q_veg_dynamics,              ONLY: update_veg_dynamics
+  USE mo_q_veg_growth,                ONLY: update_veg_growth
+  USE mo_q_veg_update_pools,          ONLY: update_veg_pools
 
-  dsl4jsb_Use_processes VEG_, PHENO_, RAD_, SB_
+  dsl4jsb_Use_processes VEG_, RAD_, SB_
   dsl4jsb_Use_memory(VEG_)
-  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SB_)
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_veg_tasks
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition: call_write_matrices_back task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_call_write_matrices_back
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_call_write_matrices_back
-    PROCEDURE, NOPASS :: Aggregate => aggregate_call_write_matrices_back
-  END TYPE tsk_call_write_matrices_back
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition: call_store_bgcms_in_matrices task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_call_store_bgcms_in_matrices
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_call_store_bgcms_in_matrices
-    PROCEDURE, NOPASS :: Aggregate => aggregate_call_store_bgcms_in_matrices
-  END TYPE tsk_call_store_bgcms_in_matrices
+  PUBLIC :: Register_veg_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
@@ -146,22 +115,6 @@ MODULE mo_veg_interface
   END INTERFACE tsk_reset_veg_fluxes
 
   !-----------------------------------------------------------------------------------------------------
-  !> Constructor interface: call_write_matrices_back task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  INTERFACE tsk_call_write_matrices_back
-    PROCEDURE Create_task_call_write_matrices_back         !< Constructor function for task
-  END INTERFACE tsk_call_write_matrices_back
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor interface: call_store_bgcms_in_matrices task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  INTERFACE tsk_call_store_bgcms_in_matrices
-    PROCEDURE Create_task_call_store_bgcms_in_matrices         !< Constructor function for task
-  END INTERFACE tsk_call_store_bgcms_in_matrices
-
-  !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_turnover task
   !!
   !-----------------------------------------------------------------------------------------------------
@@ -201,7 +154,7 @@ MODULE mo_veg_interface
     PROCEDURE Create_task_update_time_average_vegetation         !< Constructor function for task
   END INTERFACE tsk_time_average_vegetation
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_veg_interface'
 
 CONTAINS
 
@@ -209,19 +162,17 @@ CONTAINS
   !> Register tasks: VEG_ process
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Register_veg_tasks(this, model_id)
+  SUBROUTINE Register_veg_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_veg_fluxes(model_id))
-    CALL this%Register_task(tsk_call_write_matrices_back(model_id))
-    CALL this%Register_task(tsk_call_store_bgcms_in_matrices(model_id))
     CALL this%Register_task(tsk_veg_turnover(model_id))
     CALL this%Register_task(tsk_veg_dynamics(model_id))
     CALL this%Register_task(tsk_veg_growth(model_id))
     CALL this%Register_task(tsk_veg_pools(model_id))
     CALL this%Register_task(tsk_time_average_vegetation(model_id))
-  END SUBROUTINE Register_veg_tasks
+  END SUBROUTINE Register_veg_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_veg_fluxes task
@@ -236,34 +187,6 @@ CONTAINS
     CALL return_ptr%Construct(name='reset_veg_fluxes', process_id=VEG_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_veg_fluxes
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: call_write_matrices_back task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_call_write_matrices_back(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_call_write_matrices_back::return_ptr)
-    CALL return_ptr%Construct(name='call_write_matrices_back', process_id=VEG_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_call_write_matrices_back
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: call_store_bgcms_in_matrices task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_call_store_bgcms_in_matrices(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_call_store_bgcms_in_matrices::return_ptr)
-    CALL return_ptr%Construct(name='call_store_bgcms_in_matrices', process_id=VEG_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_call_store_bgcms_in_matrices
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -423,118 +346,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, recycling_heart_wood_p            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, delta_dens_ind                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, unit_transpiration                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_l2aveghlp, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation_l2aveghlp   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_reset_veg_fluxes
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "update": call_write_matrices_back task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_call_write_matrices_back(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_call_write_matrices_back'
-
-    iblk    = options%iblk
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, options%ics, options%ice, iblk)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_call_write_matrices_back
-
-  ! ======================================================================================================= !
-  !>Implementation of "aggregate": call_write_matrices_back task
-  !>
-  SUBROUTINE aggregate_call_write_matrices_back(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_call_write_matrices_back'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! do nothing
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_call_write_matrices_back
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "update": call_store_bgcms_in_matrices task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_call_store_bgcms_in_matrices(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_call_store_bgcms_in_matrices'
-
-    iblk    = options%iblk
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, options%ics, options%ice, iblk)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_call_store_bgcms_in_matrices
-
-  ! ======================================================================================================= !
-  !>Implementation of "aggregate": call_store_bgcms_in_matrices task
-  !>
-  SUBROUTINE aggregate_call_store_bgcms_in_matrices(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_call_store_bgcms_in_matrices'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! do nothing
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_call_store_bgcms_in_matrices
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_turnover task
@@ -719,7 +537,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(RAD_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
@@ -736,26 +553,36 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(RAD_)
 
     ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, diameter                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, height                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, dens_ind                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_growth                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, dphi                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp                         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_n15              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, diameter                            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, height                              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, dens_ind                            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_growth                          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, dphi                                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp                                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_n15                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_l2aveghlp  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation_l2aveghlp     , weighted_by_fract)
+    ! VEG_ bgcm pools
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_c             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_n             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_c             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_n             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_c        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_n        , weighted_by_fract)
+    ! VEG_ bgcm fluxes
     dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_n          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p          , weighted_by_fract)
@@ -776,17 +603,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, fn_chl_cl                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_oth_cl                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl  , weighted_by_fract)
-    ! PHENO_
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai                       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai_cl                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, cumm_lai_cl               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, lai_cl                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, cumm_lai_cl                 , weighted_by_fract)
     ! RAD_
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
   END SUBROUTINE aggregate_veg_pools
 
 
@@ -928,4 +752,4 @@ CONTAINS
   END SUBROUTINE aggregate_time_average_vegetation
 
 #endif
-END MODULE mo_veg_interface
+END MODULE mo_q_veg_interface

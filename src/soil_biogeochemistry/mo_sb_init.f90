@@ -1,30 +1,20 @@
+!> Summary: QUINCY soil-biogeochemistry variables init
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Initialization of the the soil_biogeochemistry memory.
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version for SLM by Jan Engel (20161208) based on the JBACH4 version by Reiner Schnur (2013-04-04)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### initialization of soil-biogeochemistry memory variables using, e.g., ic & bc input files
+!>
 MODULE mo_sb_init
 
   USE mo_kind,                  ONLY: wp
@@ -36,28 +26,70 @@ MODULE mo_sb_init
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID
 
+  USE mo_jsb_process_class,       ONLY: SB_, SPQ_, VEG_
+
   IMPLICIT NONE
   
   PRIVATE
   PUBLIC :: sb_init
+
+  TYPE t_sb_init_vars
+    REAL(wp), POINTER :: &
+      & usda_taxonomy_class     (:,:) => NULL(), &
+      & nwrb_taxonomy_class     (:,:) => NULL(), &
+      & qmax_org_fine_particle  (:,:) => NULL(), &
+      & soil_ph                 (:,:) => NULL(), &
+      & soil_p_labile           (:,:) => NULL(), &
+      & soil_p_slow             (:,:) => NULL(), &
+      & soil_p_occluded         (:,:) => NULL(), &
+      & soil_p_primary          (:,:) => NULL()
+    INTEGER, POINTER :: &
+      & usda_taxonomy_class_int (:,:) => NULL(), &
+      & nwrb_taxonomy_class_int (:,:) => NULL()
+  END TYPE t_sb_init_vars
+
+  TYPE(t_sb_init_vars) :: sb_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_init'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !>Intialize soil_biogeochemistry process (after memory has been set up)
-  !> 
+  !> Intialize SB_ process
+  !>
   SUBROUTINE sb_init(tile)
+
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
+
+    ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL sb_read_init_vars(tile)
+    END IF
+
+    CALL sb_init_ic_bc(tile)
+
+    IF (tile%Is_last_process_tile(SB_)) THEN
+      CALL sb_finalize_init_vars()
+    END IF
+
+  END SUBROUTINE sb_init
+
+  ! ======================================================================================================= !
+  !> Intialize SB_ process from ic and bc input files
+  !>
+  SUBROUTINE sb_init_ic_bc(tile)
     USE mo_jsb_class,                     ONLY: Get_model
     USE mo_jsb_tile_class,                ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,               ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
-    USE mo_jsb_process_class,             ONLY: SB_, SPQ_, VEG_
     USE mo_jsb_grid_class,                ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,                      ONLY: Get_grid, Get_vgrid
     USE mo_assimi_constants,              ONLY: IC3PHOT
-    USE mo_assimi_update_canopy_fluxes,   ONLY: discrimination_ps
+    USE mo_q_assimi_process,              ONLY: discrimination_ps
     USE mo_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_atmland_constants,             ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                         def_co2_deltaC13, def_co2_deltaC14
@@ -87,7 +119,7 @@ CONTAINS
     INTEGER                         :: nproma                !< number of grid points per iblk
     INTEGER                         :: sb_pool_idx           !< index of the sb pool within the bgcm store
     REAL(wp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_ic_bc'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
@@ -275,7 +307,7 @@ CONTAINS
     
     !>  1.2 init site-specific soil properties
     !>
-    ph_sl(:,:,:)              = dsl4jsb_Config(SB_)%soil_ph
+    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_sb)
     Qmax_AlFe_cor(:,:,:)      = 1._wp                           !< ... docu ...
     
     !>  1.3 init SB_ variables from constants
@@ -312,7 +344,7 @@ CONTAINS
 #endif
 
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
-    !>2.0 simple_sm - a simple four pool soil biogeochemical model
+    !>2.0 ssm - a simple four pool soil biogeochemical model
     !>
     CASE("simple_1d")
       CALL sb_init_simple_sm( &
@@ -322,11 +354,11 @@ CONTAINS
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), & 
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & dsl4jsb_Config(SB_)%qmax_org_fine_particle, &
-        & dsl4jsb_Config(SB_)%soil_p_labile, &
-        & dsl4jsb_Config(SB_)%soil_p_slow, &
-        & dsl4jsb_Config(SB_)%soil_p_occluded, &
-        & dsl4jsb_Config(SB_)%soil_p_primary, &
+        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_sb), &
         & dsl4jsb_Config(SB_)%soil_p_depth, & 
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -376,7 +408,7 @@ CONTAINS
         & site_ID_spp1685 &                           ! optional in
 #endif
         & )
-    !>3.0 JSM - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
+    !>3.0 jsm - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
     !>
     CASE("jsm")
       CALL sb_init_jsm( &
@@ -386,11 +418,11 @@ CONTAINS
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), & 
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & dsl4jsb_Config(SB_)%qmax_org_fine_particle, &
-        & dsl4jsb_Config(SB_)%soil_p_labile, &
-        & dsl4jsb_Config(SB_)%soil_p_slow, &
-        & dsl4jsb_Config(SB_)%soil_p_occluded, &
-        & dsl4jsb_Config(SB_)%soil_p_primary, &
+        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_sb), &
         & dsl4jsb_Config(SB_)%soil_p_depth, & 
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -451,7 +483,160 @@ CONTAINS
       CALL finish(routine, 'Invalid setting of sb_model_scheme (simple_sm / jsm).')
     END SELECT  ! simple_sm | jsm
 
-  END SUBROUTINE sb_init
+    !> 3.0 set sb_pool bgcm to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      sb_pool_mt_domain(:,:,:,:,:) = 0.0_wp
+    END IF
+
+  END SUBROUTINE sb_init_ic_bc
+
+  ! ======================================================================================================= !
+  !> de-allocate SPQ_ init vars
+  !>
+  SUBROUTINE sb_finalize_init_vars
+    DEALLOCATE( &
+      & sb_init_vars%usda_taxonomy_class      , &
+      & sb_init_vars%nwrb_taxonomy_class      , &
+      & sb_init_vars%qmax_org_fine_particle   , &
+      & sb_init_vars%soil_ph                  , &
+      & sb_init_vars%soil_p_labile            , &
+      & sb_init_vars%soil_p_slow              , &
+      & sb_init_vars%soil_p_occluded          , &
+      & sb_init_vars%soil_p_primary           , &
+      & sb_init_vars%usda_taxonomy_class_int  , &
+      & sb_init_vars%nwrb_taxonomy_class_int)
+  END SUBROUTINE sb_finalize_init_vars
+
+  ! ======================================================================================================= !
+  !> read SB_ init vars from input file
+  !>
+  SUBROUTINE sb_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(SB_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SB_)
+
+    REAL(wp), POINTER           :: ptr_2D(:, :)
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_input_file)          :: input_file
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting SB_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE( &
+      & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
+      & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
+      & sb_init_vars%soil_ph                 (nproma, nblks),       &
+      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
+      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
+      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
+      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
+      & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
+      & )
+
+    sb_init_vars%usda_taxonomy_class     (:,:) = missval
+    sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
+    sb_init_vars%soil_ph                 (:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
+    sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
+
+    dsl4jsb_Get_config(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
+
+
+    !> USDA taxonomy soil class
+    !>
+    ptr_2D => input_file%Read_2d(       &
+      & variable_name='TAXOUSDA_10km',  &
+      & fill_array = sb_init_vars%usda_taxonomy_class)
+    sb_init_vars%usda_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
+    sb_init_vars%usda_taxonomy_class_int(:,:) = INT(sb_init_vars%usda_taxonomy_class(:,:))
+
+    !> NWRB taxonomy soil class
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='TAXNWRB',   &
+      & fill_array = sb_init_vars%nwrb_taxonomy_class)
+    sb_init_vars%nwrb_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
+    sb_init_vars%nwrb_taxonomy_class_int(:,:) = INT(sb_init_vars%nwrb_taxonomy_class(:,:))
+
+    !> qmax organic fine particle
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='qmax_org',  &
+      & fill_array = sb_init_vars%qmax_org_fine_particle)
+    sb_init_vars%qmax_org_fine_particle(:,:) = MERGE(ptr_2D, 6.5537_wp, ptr_2D > 0.0_wp)
+
+    !> soil ph
+    !>
+    ptr_2D => input_file%Read_2d(   &
+      & variable_name='PHIHOX',     &
+      & fill_array = sb_init_vars%soil_ph)
+    sb_init_vars%soil_ph(:,:) = MERGE(ptr_2D, 65.0_wp, ptr_2D > 0.0_wp)
+    ! divide by 10 to get the actual values within the correct range
+    sb_init_vars%soil_ph(:,:) = sb_init_vars%soil_ph(:,:) / 10.0_wp
+
+    !> P labile
+    !>
+    ptr_2D => input_file%Read_2d(           &
+      & variable_name='Labile_Inorganic_P', &
+      & fill_array = sb_init_vars%soil_p_labile)
+    sb_init_vars%soil_p_labile(:,:) = MERGE(ptr_2D, 50._wp, ptr_2D > 0.0_wp)
+
+    !> P slow
+    !>
+    ptr_2D => input_file%Read_2d(             &
+      & variable_name='Seconday_Mineral__P',  &
+      & fill_array = sb_init_vars%soil_p_slow)
+    sb_init_vars%soil_p_slow(:,:) = MERGE(ptr_2D, 70._wp, ptr_2D > 0.0_wp)
+
+    !> P occluded
+    !>
+    ptr_2D => input_file%Read_2d(     &
+      & variable_name='Occluded_P',   &
+      & fill_array = sb_init_vars%soil_p_occluded)
+    sb_init_vars%soil_p_occluded(:,:) = MERGE(ptr_2D, 150._wp, ptr_2D > 0.0_wp)
+
+    !> P primary (apatite)
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='Apatite_P',  &
+      & fill_array = sb_init_vars%soil_p_primary)
+    sb_init_vars%soil_p_primary(:,:) = MERGE(ptr_2D, 100._wp, ptr_2D > 0.0_wp)
+
+    CALL input_file%Close()
+  END SUBROUTINE sb_read_init_vars
 
   ! ======================================================================================================= !
   !>init SB_ with the simple soil model
@@ -514,7 +699,7 @@ CONTAINS
     & flag_spp1685, &   ! optional in
     & site_ID_spp1685 ) ! optional in
 
-    USE mo_sb_jsm_processes,              ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+    USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
     USE mo_spq_util,                      ONLY: calc_qmax_texture
@@ -540,11 +725,11 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: lctlib_growthform
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
-    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle           !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_labile                    !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_slow                      !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_occluded                  !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_primary                   !< SB_ config
+    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
     REAL(wp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
@@ -639,7 +824,7 @@ CONTAINS
       END DO
     END DO
 
-    ! NOTE: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
+    ! NOTE: this differs on purpose from the calculation in mo_q_sb_update_pools for the prescribed option
     !       this is because here I'm trying to ensure that the models are initialised with the same amount of nutrient
     !       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
     !       to more nutrient in the soil column in 1d compared to 0d.
@@ -663,7 +848,7 @@ CONTAINS
       bulk_dens_corr_sl(:,:,iblk) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:,iblk), &
         &                                                        soil_litter_carbon_sl(:,:,iblk), &
         &                                                        bulk_dens_sl(:,:,iblk))
-      qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle, &
+      qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle(:,:,iblk), &
         &                                           silt_sl(:,:,iblk), &
         &                                           clay_sl(:,:,iblk)) 
       CALL calc_qmax_bulk_density_correction( &
@@ -820,7 +1005,7 @@ CONTAINS
           & nproma, &
           & nsoil_sb, &
           & soil_lay_depth_center_sl(:,:,iblk), & 
-          & soil_p_labile,   &
+          & soil_p_labile, &
           & soil_p_slow, &
           & soil_p_occluded, &
           & soil_p_primary, &
@@ -854,10 +1039,10 @@ CONTAINS
         & soil_depth_sl(:,:,iblk), &
         & bulk_dens_corr_sl(:,:,iblk), &
         & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile, &
-        & soil_p_slow, &
-        & soil_p_occluded, &
-        & soil_p_primary, &
+        & soil_p_labile(:,:,iblk), &
+        & soil_p_slow(:,:,iblk), &
+        & soil_p_occluded(:,:,iblk), &
+        & soil_p_primary(:,:,iblk), &
         & soil_p_depth, &
         & p_labile_slow_site(:,:,iblk), &   ! in
         & po4_solute(:,:,iblk), &           ! inout
@@ -949,10 +1134,10 @@ CONTAINS
     & flag_spp1685, &           ! optional in
     & site_ID_spp1685 )         ! optional in
 
-    USE mo_sb_jsm_processes,              ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+    USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
-    USE mo_sb_jsm_transport,              ONLY: calc_bioturbation_rate
+    USE mo_q_sb_jsm_transport,            ONLY: calc_bioturbation_rate
     USE mo_spq_util,                      ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
@@ -969,11 +1154,11 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: lctlib_growthform
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
-    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle           !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_labile                    !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_slow                      !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_occluded                  !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_p_primary                   !< SB_ config
+    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
+    REAL(wp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
     REAL(wp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
@@ -1088,7 +1273,7 @@ CONTAINS
       IF (isoil > 10._wp) THEN 
         frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
       ENDIF
-      sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :) = qmax_org_fine_particle &
+      sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :) = qmax_org_fine_particle(:, isoil, :) &
         &                                           * (clay_sl(:, isoil, :) + silt_sl(:, isoil, :)) &
         &                                           * bulk_dens_sl(:, isoil, :) * frac_mineral_assoc_soil_c
       ! To avoid over-saturation of OM in soil layer
@@ -1129,7 +1314,7 @@ CONTAINS
       ! check if soil is over-saturated with fast and stable C
     ELSEWHERE ((arr_hlp7(:, isoil, :) + arr_hlp8(:, isoil, :)) > 1._wp )
         arr_hlp9(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :)) * fact_repartition_om_init_cond1 * &
-          &                     qmax_org_fine_particle * &
+          &                     qmax_org_fine_particle(:, isoil, :) * &
           &                     (clay_sl(:, isoil, :) + silt_sl(:, isoil, :)) * bulk_dens_sl(:, isoil, :)
         arr_hlp8(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :)) * (1._wp - fact_repartition_om_init_cond1) * &
           &                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
@@ -1150,7 +1335,7 @@ CONTAINS
       ! check if the available mineral surface is enough for sorbed OM
       ELSEWHERE
         arr_hlp9(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :) - arr_hlp8(:, isoil, :)) &
-          &                     * qmax_org_fine_particle &
+          &                     * qmax_org_fine_particle(:, isoil, :) &
           &                     * (clay_sl(:, isoil, :) + silt_sl(:, isoil, :)) * bulk_dens_sl(:, isoil, :)
         arr_hlp8(:, isoil, :) &
           & = (sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) + sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :))
@@ -1196,7 +1381,7 @@ CONTAINS
         &                                                        bulk_dens_sl(:,:,iblk))
       !> po4/OC adsorption parameter intialisation 
       !! OC adsorption
-      qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle, &
+      qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle(:,:,iblk), &
         &                                           silt_sl(:,:,iblk), &
         &                                           clay_sl(:,:,iblk))
       CALL calc_qmax_bulk_density_correction( &
@@ -1346,10 +1531,10 @@ CONTAINS
         & soil_depth_sl(:,:,iblk), &
         & bulk_dens_corr_sl(:,:,iblk), &
         & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile, &
-        & soil_p_slow, &
-        & soil_p_occluded, &
-        & soil_p_primary, &
+        & soil_p_labile(:,:,iblk), &
+        & soil_p_slow(:,:,iblk), &
+        & soil_p_occluded(:,:,iblk), &
+        & soil_p_primary(:,:,iblk), &
         & soil_p_depth, &
         & p_labile_slow_site(:,:,iblk), &         ! in
         & po4_solute(:,:,iblk), &                 ! inout
@@ -1474,7 +1659,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: molar_mass_P
     USE mo_sb_constants           ! e.g.: k1_p_pool_depth_corr, k2_p_pool_depth_corr, k3_p_pool_depth_corr, &
                                   !       k4_p_pool_depth_corr, k_p_pool_depth_corr_min_occlud, p_labile_slow_global_avg
-    USE mo_sb_jsm_processes,       ONLY: calc_fast_po4
+    USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
 
     INTEGER,                          INTENT(in)     :: nc                        !< dimensions
     INTEGER                         , INTENT(in)     :: nsoil_sb                  !< number of soil layers as used/defined by the SB_ process
@@ -1484,8 +1669,8 @@ CONTAINS
                                                         root_fraction_sl, &   !< 
                                                         bulk_dens_sl, &       !< corrected soil bulk density per soil layer, [kg m-3]
                                                         p_labile_slow_ratio   !< ratio between labile and labile+slow P pools
-    REAL(wp)                        , INTENT(in)     :: soil_p_depth, &       !< soil depth of the soil P maps
-                                                        soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
+    REAL(wp)                        , INTENT(in)     :: soil_p_depth          !< soil depth of the soil P maps
+    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)     :: soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
                                                         soil_p_slow, &        !< total slow P pool (secondary P) of the soil P maps, [g m-2]
                                                         soil_p_occluded, &    !< total occluded P pool of the soil P maps, [g m-2]
                                                         soil_p_primary        !< total primary P pool of the soil P maps, [g m-2]
@@ -1501,7 +1686,7 @@ CONTAINS
                                                         qmax_slow_po4, &      !< maximum PO4 sorption capacity for po4_assoc_slow, [mol m-3]
                                                         km_slow_po4           !< half-saturation PO4 concentration for po4_assoc_slow, [mol m-3]
     INTEGER                                          :: isoil
-    REAL(wp)                                         :: rhlp1
+    REAL(wp), DIMENSION(nc)                          :: rhlp1
     REAL(wp), DIMENSION(nc)                          :: soil_p_weight         !< total soil weight up to the soil_p_depth [kg]
     REAL(wp), DIMENSION(nc)                          :: soil_p_layer          !< up to soil_p_layer keep the P init map info
     REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2
@@ -1525,7 +1710,8 @@ CONTAINS
     hlp1(:)  = 0._wp
     hlp2(:)  = 0._wp
     aflag(:) = .TRUE.
-    rhlp1    = soil_p_slow + soil_p_labile + soil_p_occluded + soil_p_primary
+    !> NOTE at the moment the soil_p_* values are identical across soil layers, hence, using the value from sl 1
+    rhlp1(:) = soil_p_slow(:,1) + soil_p_labile(:,1) + soil_p_occluded(:,1) + soil_p_primary(:,1)
     DO isoil = 1,nsoil_sb
       soil_weight_sl(:,isoil) = soil_depth_sl(:,isoil) * bulk_dens_sl(:,isoil)
       WHERE (aflag) 
@@ -1538,7 +1724,7 @@ CONTAINS
         ENDWHERE
       ENDWHERE
     END DO
-    hlp4(:) = rhlp1 / soil_p_weight(:) ! the P density from init map, [g P / kg soil]
+    hlp4(:) = rhlp1(:) / soil_p_weight(:) ! the P density from init map, [g P / kg soil]
     
     !> 2.0 calculate the initial slow P, occluded P, primary P pool, and p_labile
     !! based on the assumption that soil P pool are linearly corrected with soil weight
@@ -1559,12 +1745,14 @@ CONTAINS
         hlp3(:) = hlp3(:) / (hlp1(:) + hlp2(:) + hlp3(:))
       ENDWHERE
       WHERE (soil_p_layer(:) > isoil) 
-        po4_assoc_slow(:,isoil) = bulk_dens_sl(:,isoil) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * &
-                              (1._wp - p_labile_slow_ratio(:,isoil))
-        po4_occluded(:,isoil)   = bulk_dens_sl(:,isoil) * hlp4(:) * soil_p_occluded               / rhlp1 / molar_mass_P
-        po4_primary(:,isoil)    = bulk_dens_sl(:,isoil) * hlp4(:) * soil_p_primary                / rhlp1 / molar_mass_P
-        arr_hlp1(:,isoil)       = bulk_dens_sl(:,isoil) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * &
-                              p_labile_slow_ratio(:,isoil) 
+        po4_assoc_slow(:,isoil) = bulk_dens_sl(:,isoil) * hlp4(:) * (soil_p_slow(:,isoil) + soil_p_labile(:,isoil)) &
+          &                       / rhlp1(:) / molar_mass_P * (1._wp - p_labile_slow_ratio(:,isoil))
+        po4_occluded(:,isoil)   = bulk_dens_sl(:,isoil) * hlp4(:) * soil_p_occluded(:,isoil) &
+          &                       / rhlp1(:) / molar_mass_P
+        po4_primary(:,isoil)    = bulk_dens_sl(:,isoil) * hlp4(:) * soil_p_primary(:,isoil) &
+          &                       / rhlp1(:) / molar_mass_P
+        arr_hlp1(:,isoil)       = bulk_dens_sl(:,isoil) * hlp4(:) * (soil_p_slow(:,isoil) + soil_p_labile(:,isoil)) &
+          &                       / rhlp1(:) / molar_mass_P * p_labile_slow_ratio(:,isoil) 
       ELSEWHERE
         po4_assoc_slow(:,isoil) = bulk_dens_sl(:,isoil) * hlp4(:) * hlp2(:) / molar_mass_P * (1._wp - p_labile_slow_ratio(:,isoil))
         po4_occluded(:,isoil)   = bulk_dens_sl(:,isoil) * hlp4(:) * hlp3(:) / molar_mass_P

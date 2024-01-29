@@ -26,7 +26,8 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_
+    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, &
+    &                               Q_PHENO_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -71,6 +72,9 @@ CONTAINS
     ! QUINCY 8 PFTs
     CASE ('quincy_eight_pfts')
       CALL init_usecase_quincy_eight_pfts(model)
+    ! QUINCY 11 PFTs
+    CASE ('quincy_11_pfts')
+      CALL init_usecase_quincy_11_pfts(model)
     ! catch wrong usecase setting
     CASE DEFAULT
       CALL finish(TRIM(routine), 'No such usecase defined.')
@@ -530,12 +534,12 @@ CONTAINS
       &                              'pft01', 'pft02', 'pft03', 'pft04', &
       &                              'pft05', 'pft06', 'pft07', 'pft08' ]
     CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &   ! pft long names
-      &                              'TrBE: broad leaved evergreen (rainforest)',   &
-      &                              'TeBE: broad leaved evergreen (xeric forest)', &
-      &                              'TrBR: broad leaved deciduous (rain green)',   &
-      &                              'TeBS: broad leaved deciduous (summer green)', &
-      &                              'BNE:  needle-leaved evergreen',               &
-      &                              'BNS:  needle-leaved deciduous',               &
+      &                              'BEM:  moist broadleaved evergreen',           &
+      &                              'BED:  dry broadleaved evergreen',             &
+      &                              'BDR:  rain green broadleaved deciduous',      &
+      &                              'BDS:  summer green broadleaved deciduous',    &
+      &                              'NE :  needle-leaved evergreen',               &
+      &                              'NS :  summer green needle-leaved',            &
       &                              'TeH:  C3 grass',                              &
       &                              'TrH:  C4 grass' ]
     ! Index of PFT (columns) in the lctlib file
@@ -591,16 +595,17 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
+    !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_,      SB_,       SPQ_/), &
+      & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   Q_PHENO_,   VEG_,      SB_,       SPQ_/), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-      & fract_varname='fract_veg')
+      & fract_varname='equal')
 
     ! create PFT tiles 1:npft
     DO i = 1,npft
-      ! via contructor of t_jsb_tile
+      ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
        &                     TRIM(pft_longnames(i)), &
        &                     lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
@@ -618,6 +623,118 @@ CONTAINS
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_quincy_eight_pfts
+
+  ! ======================================================================================================= !
+  !> init routine for usecase quincy_11_pfts
+  !>
+  !>   works only in combination with 'model%config%model_scheme = MODEL_QUINCY', 
+  !>   code for other options not available in this usecase
+  !>
+  !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
+  !>
+  SUBROUTINE init_usecase_quincy_11_pfts(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
+
+    CLASS(t_jsb_tile), POINTER    :: box_tile, land_tile, &
+      &                              veg_tile, pft_tile                   !< tiles used with this usecase
+    INTEGER                       :: i                                    !< for looping
+    ! number of pft
+    INTEGER, PARAMETER            :: npft = 11
+    ! pft short names
+    CHARACTER(len=5), PARAMETER   :: pft_shortnames(npft) = [character(len=5) :: &
+      &                              'pft01', 'pft02', 'pft03', 'pft04', &
+      &                              'pft05', 'pft06', 'pft07', 'pft08', &
+      &                              'pft09', 'pft10', 'pft11'  ]
+    ! pft long names
+    CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &
+      &                              'BEM:  moist broadleaved evergreen',           &
+      &                              'BED:  dry broadleaved evergreen',             &
+      &                              'BDR:  rain green broadleaved deciduous',      &
+      &                              'BDS:  summer green broadleaved deciduous',    &
+      &                              'NE :  needle-leaved evergreen',               &
+      &                              'NS :  summer green needle-leaved',            &
+      &                              'TeH:  C3 grass',                              &
+      &                              'TrH:  C4 grass',                              &
+      &                              'TeC:  C3 crop',                               &
+      &                              'TrC:  C4 crop',                               &
+      &                              'BSO:  bare soil' ]
+    ! index of PFT (columns) in the lctlib file
+    ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
+    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13 /)
+    CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_11_pfts'
+
+    ! overview of tile structure:
+    !
+    !  box
+    !   |
+    !   |
+    !   |
+    !  land
+    !   |
+    !   |
+    !   |
+    !  vegetation
+    !   |
+    !   |--------------------------
+    !   |      |      |        |
+    !  pft01  pft02  pftXX  baresoil
+
+    ! QUINCY model must be enabled for this usecase
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL message(TRIM(routine), 'Using the model_scheme MODEL_QUINCY')
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'The quincy_11_pfts model usecase does work only with the model_scheme MODEL_QUINCY.')
+    END SELECT
+
+    !------------------------------------------------------------------------------------------------------ !
+    ! box tile
+    !
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_     , TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
+    model%top => box_tile
+
+    !------------------------------------------------------------------------------------------------------ !
+    ! land tile w/o process
+    !
+    land_tile => t_jsb_tile('land', 'Land tile', &
+      ! add processes here only to make model init and jsb4_forcing working
+      ! none of the tasks of these processes is running via task queue
+      & processes       = (/SEB_    /), &
+      & process_actions = (/ON_TILE_/), &
+      & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+      & fract_varname='equal')   ! Fraction of land tile = 1
+                                 ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
+
+    !------------------------------------------------------------------------------------------------------ !
+    ! vegetation tile with PFT tiles as leafs
+    !   fraction is "equal" because it is the only tile at this level (same as land tile)
+    !
+    veg_tile => t_jsb_tile('veg', 'Veg tile', &
+      & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   Q_PHENO_,   VEG_,      SB_,       SPQ_/), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+      & fract_varname='equal')
+
+    ! create PFT tiles 1:npft
+    DO i = 1,npft
+      ! via constructor of t_jsb_tile
+      pft_tile => t_jsb_tile(pft_shortnames(i), &
+       &                     TRIM(pft_longnames(i)), &
+       &                     lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
+       &                     parent = veg_tile)
+    END DO
+
+    ! catch compiler warnings and cleanup pointers
+    !
+    ! ! Next line only to avoid compiler warnings about pointers not being dereferenced
+    ! IF (ASSOCIATED(pft_tile)) CONTINUE
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+  END SUBROUTINE init_usecase_quincy_11_pfts
 
 #endif
 END MODULE mo_jsb_model_usecases

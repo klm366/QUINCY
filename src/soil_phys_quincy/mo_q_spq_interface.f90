@@ -1,31 +1,21 @@
+!> Summary: QUINCY soil-physics process interface
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains the interface to the spq processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (2016-07-19)
-!!
-MODULE mo_spq_interface
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### definition and init of tasks for the soil-physics-quincy process incl. update and aggregate routines
+!>
+MODULE mo_q_spq_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -39,8 +29,8 @@ MODULE mo_spq_interface
 
   ! "Integrate" routines  
   USE mo_spq_util,                    ONLY: reset_spq_fluxes
-  USE mo_spq_update_turbulence,       ONLY: update_soil_turbulence
-  USE mo_spq_update_physics,          ONLY: update_spq_physics
+  USE mo_q_spq_update_turbulence,     ONLY: update_soil_turbulence
+  USE mo_q_spq_update_physics,        ONLY: update_spq_physics
 
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(RAD_)
@@ -48,7 +38,7 @@ MODULE mo_spq_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_spq_tasks
+  PUBLIC :: Register_spq_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_spq_fluxes task
@@ -113,14 +103,14 @@ CONTAINS
   !> Register tasks: SPQ_ process
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Register_spq_tasks(this, model_id)
+  SUBROUTINE Register_spq_tasks_quincy(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_spq_fluxes(model_id))
     CALL this%Register_task(tsk_soil_turbulence(model_id))
     CALL this%Register_task(tsk_spq_physics(model_id))
-  END SUBROUTINE Register_spq_tasks
+  END SUBROUTINE Register_spq_tasks_quincy
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_spq_fluxes task
@@ -322,4 +312,4 @@ CONTAINS
   END SUBROUTINE aggregate_spq_physics
 
 #endif
-END MODULE mo_spq_interface
+END MODULE mo_q_spq_interface

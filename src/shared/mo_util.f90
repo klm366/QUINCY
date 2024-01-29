@@ -1,16 +1,18 @@
+!> Summary: ICON-Land helper routines
 !>
-!! @par Copyright
-!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-!! @brief diverse subroutines and functions for tile & forcing variables
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2014-03-17)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!>#### various helper routines for the ICON-Land framework
+!>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 

@@ -1,31 +1,21 @@
+!> Summary: QUINCY calculate vegetation dynamics
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief module to calculate vegetation dynamics 
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2016-04-14)
-!!
-MODULE mo_veg_dynamics
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate vegetation dynamics, e.g., establishment and mortality
+!>
+MODULE mo_q_veg_dynamics
 
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
@@ -42,7 +32,7 @@ MODULE mo_veg_dynamics
   PRIVATE
   PUBLIC :: update_veg_dynamics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_dynamics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_dynamics'
 
 CONTAINS
 
@@ -59,14 +49,14 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, RAD_, PHENO_, SPQ_
+    USE mo_jsb_process_class,     ONLY: VEG_, RAD_, Q_PHENO_, SPQ_
     USE mo_jsb4_forcing,          ONLY: forcing_options_quincy
     USE mo_veg_constants,         ONLY: ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -86,12 +76,12 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
@@ -114,15 +104,17 @@ CONTAINS
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -132,8 +124,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
     ! VEG_ 2D
@@ -646,4 +638,4 @@ CONTAINS
     delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
   END FUNCTION calc_delta_dens_ind
 
-END MODULE mo_veg_dynamics
+END MODULE mo_q_veg_dynamics

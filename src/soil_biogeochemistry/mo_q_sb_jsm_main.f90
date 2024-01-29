@@ -1,31 +1,21 @@
+!> Summary: QUINCY 'jena soil model' calculate soil-biogeochemical pools
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the main routines for the jsm soil model
-!!
-!! @author
-!!  Soenke Zaehle 
-!!
-!! @par Revision History
-!! First version by Jan Engel (20170508): copyied from mo_sb_update_pools.f90
-!!
-MODULE mo_sb_jsm_main
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### main routines for JSM (jena soil model), calculating the soil biogeochemical pools
+!>
+MODULE mo_q_sb_jsm_main
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -41,7 +31,7 @@ MODULE mo_sb_jsm_main
   PRIVATE
   PUBLIC :: update_sb_jsm
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_main'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_main'
 
 CONTAINS
 
@@ -60,16 +50,16 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants
-    USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
-    USE mo_sb_jsm_processes,      ONLY: calc_sinking_flux, calc_litter_turnover, &
+    USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
+    USE mo_q_sb_jsm_processes,    ONLY: calc_sinking_flux, calc_litter_turnover, &
       &                                 calc_microbial_growth, calc_sourcing_flux, &
       &                                 calc_microbial_turnover, calc_sorption_desorption_of_org_material, &
       &                                 calc_depolymerisation_SESAM, &
       &                                 calc_nitri_denitri_partitioning_rate, calc_asymb_bnf_fraction
-    USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, &
+    USE mo_q_sb_jsm_transport,    ONLY: calc_liquid_phase_transport_wrapper, &
       &                                 calc_bioturbation_transport_wrapper_jsm, &
       &                                 calc_bioturbation_rate
-    USE mo_sb_simple_model,       ONLY: calc_sb_inorganic_n15_fluxes
+    USE mo_q_sb_ssm_main,         ONLY: calc_sb_inorganic_n15_fluxes
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
@@ -302,12 +292,14 @@ CONTAINS
     nc        = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
@@ -1016,4 +1008,4 @@ CONTAINS
 
   END SUBROUTINE update_sb_jsm
 
-END MODULE mo_sb_jsm_main
+END MODULE mo_q_sb_jsm_main

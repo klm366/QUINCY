@@ -1,12 +1,20 @@
+!> Summary: JSBACH & QUINCY assimilation variables init
 !>
-!! @brief Initialization of the the assimilation memory.
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Jan Engel (20161213)
-!!
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### initialization of assimilation memory variables using, e.g., ic & bc input files
+!>
 MODULE mo_assimi_init
 #ifndef __NO_JSBACH__
 

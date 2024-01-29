@@ -1,31 +1,23 @@
+!> Summary: QUINCY calculate vegetation turnover and litterfall
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains the routines for plant turnover related processes 
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!!
-MODULE mo_veg_turnover
+!>#### ICON-Land
+!>
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
+!>
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ------------------------------------------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### calculate vegetation turnover and litterfall from tissue senesence, including nutrient recycling
+!>
+!> also calculate turnover of sapwood to heartwood and fruits to seed_bed
+!>
+MODULE mo_q_veg_turnover
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
@@ -42,7 +34,7 @@ MODULE mo_veg_turnover
   PRIVATE
   PUBLIC :: update_veg_turnover
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_turnover'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_veg_turnover'
 
 CONTAINS
 
@@ -55,11 +47,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, PHENO_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -75,12 +67,12 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
+    ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai
     ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_lai
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
@@ -103,23 +95,25 @@ CONTAINS
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                        ! in
+    ! Q_PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)           ! in
     ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
@@ -339,7 +333,7 @@ CONTAINS
     & net_growth                  )
 
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
@@ -591,4 +585,4 @@ CONTAINS
     ENDSELECT
   END FUNCTION calc_phosphorus_recycling_fract
 
-END MODULE mo_veg_turnover
+END MODULE mo_q_veg_turnover

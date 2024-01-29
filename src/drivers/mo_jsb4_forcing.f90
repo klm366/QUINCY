@@ -39,13 +39,13 @@ MODULE mo_jsb4_forcing
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, rdv
   USE mo_jsb_physical_constants, ONLY: grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
-    & tmelt, rd, amco2, amd, cpd, rvd1, cpvd1, von_karman, rd_o_cpd
+    & tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   ! jsb4
   USE mo_jsb_class,              ONLY: jsbach
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -56,15 +56,12 @@ MODULE mo_jsb4_forcing
     & NF_NOERR                                           ! from netcdf.inc
 
   USE mo_jsb_class,              ONLY: get_model
-
-  dsl4jsb_Use_processes HYDRO_, A2L_
-  dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(A2L_)
+  USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_interface_variables_from_external_forcing, setup_forcing, init_forcing, finalize_external_forcing, &
+  PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
     &       sat_specific_humidity, forcing_options, forcing_options_quincy
 
   REAL(wp), SAVE :: delta_time, time_step_len
@@ -118,12 +115,18 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
+  ! ... and deposition for QUINCY
+  CHARACTER(len=*), PARAMETER :: nhxdep_varname = 'NHx_deposition'
+  CHARACTER(len=*), PARAMETER :: noydep_varname = 'NOy_deposition'
+  CHARACTER(len=*), PARAMETER :: pdep_varname = 'pdep'
 
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
+  CHARACTER(len=*), PARAMETER :: unit_kg_m2_s = 'kg/m2/s'
+  CHARACTER(len=*), PARAMETER :: exp_unit_deposition = unit_kg_m2_s
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
@@ -140,8 +143,16 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER :: RH_   = 1         ! relative humidity as forcing data
   INTEGER,PARAMETER :: QAIR_ = 2         ! specific humidity as forcing data
 
-  ! --- Structures for handling input data
-  ! options relating forcing read from namelist
+
+  ! ======================================================================================================= !
+  ! TYPEs for handling input data
+  ! ======================================================================================================= !
+
+  
+  ! ======================================================================================================= !
+  !>
+  !> options relating forcing read from namelist
+  !>
   TYPE forcing_options_type
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
     INTEGER  :: cyclic_start_year              !! First year for cyclic forcing; default: 9999, i.e. use experiment start year
@@ -158,9 +169,12 @@ MODULE mo_jsb4_forcing
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
 
-  ! QUINCY model
-  !   this TYPE is not used with QUINCY in ICON-land
-  !   implemented here for compatibility with QS (the quincy standalone model)
+  ! ======================================================================================================= !
+  !>
+  !> this TYPE is NOT used with QUINCY in ICON-Land
+  !> implemented here for compatibility with QS (the quincy standalone model)
+  !>
+  !  QUINCY model
   TYPE t_q_forcing_options
     ! namelist
     ! ..
@@ -173,8 +187,10 @@ MODULE mo_jsb4_forcing
   END TYPE t_q_forcing_options
   TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
 
-
-  ! information for single forcing variable and the file it is read from
+  ! ======================================================================================================= !
+  !>
+  !> information for single forcing variable and the file it is read from
+  !>
   TYPE input_variable_type
     CHARACTER(NF_MAX_NAME)   :: variable_name=""       !! Name of the variable (name in netcdf-data file)
     CHARACTER(NF_MAX_NAME)   :: file_name_prefix = ""  !! Prefix of files in which the variable is located
@@ -191,7 +207,10 @@ MODULE mo_jsb4_forcing
     TYPE(t_input_file)       :: input_file
   END TYPE input_variable_type
 
-  ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_nml)
+  ! ======================================================================================================= !
+  !>
+  !> All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_nml)
+  !>
   TYPE forcing_input_type
      TYPE(input_variable_type) :: air_temp_min  !! daily minimum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp_max  !! daily maximum of air temperature at surface [Celsius]
@@ -204,46 +223,50 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
+     ! ... required for Quincy
+     TYPE(input_variable_type) :: nhx_dep       !! NHx deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: noy_dep       !! NOy deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: p_dep         !! P deposition [kg/m2/s]
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
 
 CONTAINS
 
+  ! ======================================================================================================= !
   !>
-  !! @brief provides the variables required for jsb4 interface calls in this timestep based on (namelist defined) external forcing
-  !!
-  !! @par History
-  !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
-  !!
-  SUBROUTINE get_interface_variables_from_external_forcing(                                &
-    & model_id, startblk, endblk, startidx, endidx,                                        &
-    & current_datetime, next_datetime, use_lakes,                                          &
+  !> reads or updates the external forcing (depending on timestep and temporal resolution of the file)
+  !> and derives interface variables that drive the standalone model
+  !> 
+  !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
+  !> 
+  SUBROUTINE get_standalone_driver(                                                        &
+    & model_id,                                                                            &  ! in
+    & model_scheme,                                                                        &
+    & startblk, endblk, startidx, endidx,                                                  &
+    & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
-    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
-    & cos_zenith_angle, CO2_air,                                                           &
+    & cos_zenith_angle,                                                                    &  ! in
+    & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
-    & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
-    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
-    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
-    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & p_deposition                                                                         &
+    & )
 
-    INTEGER,  INTENT(IN)  :: model_id, startblk, endblk, startidx(:), endidx(:)
+    INTEGER,  INTENT(IN)  :: model_id
+    INTEGER,  INTENT(IN)  :: model_scheme
+    INTEGER,  INTENT(IN)  :: startblk
+    INTEGER,  INTENT(IN)  :: endblk
+    INTEGER,  INTENT(IN)  :: startidx(:)
+    INTEGER,  INTENT(IN)  :: endidx(:)
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
-    LOGICAL,  INTENT(IN)  :: use_lakes
     REAL(wp), INTENT(IN)  :: elevation(:,:)
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)          ! In setups with lakes refering to the land tile
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)     !       ""
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)  !       ""
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)    !       ""
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)    !       ""
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
-
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
@@ -257,86 +280,80 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef(:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
-    REAL(wp), INTENT(OUT) :: pch(:,:)
-
-    ! Optional input for lakes
-    REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_q_air_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_qsat_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_h_srf_lake(:,:)
-    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_m_srf_lake(:,:)
-    ! Optional output for lakes
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_wtr(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_ice(:,:)
-    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_ice(:,:)
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_interface_variables_from_external_forcing'
-
-    REAL(wp) :: hlp_r
-    INTEGER  :: nproma, iblk, nblks, ics, ice, ic
-    INTEGER  :: day_of_year
-
-    REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
-      &                      sat_spec_humidity(:,:), rel_humidity(:,:), pch_lake(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)              :: hlp_r
+    INTEGER               :: nproma, iblk, nblks, ics, ice, ic
+    INTEGER               :: day_of_year
+    REAL(wp), ALLOCATABLE :: t_air_C(:,:), &
+      &                      tmax_data(:,:), &
+      &                      tmin_data(:,:), &
+      &                      rad_uv_down(:,:), &
+      &                      sat_spec_humidity(:,:), &
+      &                      rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
-
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
-    REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
-
+    REAL(wp), ALLOCATABLE :: help1(:,:)
+    REAL(wp), ALLOCATABLE :: help2(:,:)
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver'
+    ! ----------------------------------------------------------------------------------------------------- !
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
-
     nproma = SIZE(sinlat,1)
     nblks  = SIZE(sinlat,2)
-
-    !---------------------------------------------------------------------------------
-
+    ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(sat_spec_humidity(nproma, nblks))
-
-!$OMP PARALLEL
-    CO2_air(:,:)           = 0._wp
-    t_air(:,:)             = 0._wp
-    q_air(:,:)             = 0._wp
-    rain(:,:)              = 0._wp
-    snow(:,:)              = 0._wp
-    wind_air(:,:)          = 0._wp
-    wind_10m(:,:)          = 0._wp
-    lw_srf_down(:,:)       = 0._wp
-    swvis_srf_down(:,:)    = 0._wp
-    swnir_srf_down(:,:)    = 0._wp
-    swpar_srf_down(:,:)    = 0._wp
-    fract_par_diffuse(:,:) = 0._wp
-    press_srf(:,:)         = 0._wp
-    sat_spec_humidity(:,:) = 0._wp
-!$OMP END PARALLEL
-
     ALLOCATE(help1(nproma, nblks))
     ALLOCATE(help2(nproma, nblks))
-
     ALLOCATE(temporary_data1(nproma, nblks))
-
-    ! --- temperature
-    ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
     ALLOCATE(t_air_C(nproma, nblks))
+    ALLOCATE(rel_humidity(nproma, nblks))
+    ALLOCATE(rad_uv_down(nproma, nblks))
+    IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
+      ALLOCATE(tmin_data(nproma, nblks))
+      ALLOCATE(tmax_data(nproma, nblks))
+    ENDIF
+    ! ----------------------------------------------------------------------------------------------------- !
+
+!$OMP PARALLEL
+    ! @TODO set all OUT variables to zero here, and test for differences in simulation results
+    CO2_air(:,:)            = 0._wp
+    t_air(:,:)              = 0._wp
+    q_air(:,:)              = 0._wp
+    rain(:,:)               = 0._wp
+    snow(:,:)               = 0._wp
+    wind_air(:,:)           = 0._wp
+    wind_10m(:,:)           = 0._wp
+    lw_srf_down(:,:)        = 0._wp
+    swvis_srf_down(:,:)     = 0._wp
+    swnir_srf_down(:,:)     = 0._wp
+    swpar_srf_down(:,:)     = 0._wp
+    fract_par_diffuse(:,:)  = 0._wp
+    press_srf(:,:)          = 0._wp
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      nhx_deposition(:,:)     = 0._wp
+      noy_deposition(:,:)     = 0._wp
+      nhx_n15_deposition(:,:) = 0._wp
+      noy_n15_deposition(:,:) = 0._wp
+      p_deposition(:,:)       = 0._wp
+    END SELECT
+    sat_spec_humidity(:,:)  = 0._wp
+!$OMP END PARALLEL
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.0 temperature
+    !>
+    !>   for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
+    !>
     IF(forcing_options(model_id)%air_temperature_as_timestep) THEN
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp, t_air_C)
     ELSE
-      ALLOCATE(tmin_data(nproma, nblks))
-      ALLOCATE(tmax_data(nproma, nblks))
-
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp_min, tmin_data)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
@@ -348,7 +365,9 @@ CONTAINS
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
 
-    ! --- precipitation
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 2.0 precipitation
+    !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       &                            forcing_input(model_id)%precipitation, temporary_data1)
     ! convert if required
@@ -369,7 +388,9 @@ CONTAINS
         & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
     ENDIF
 
-    ! --- compute bottom pressure
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 3.0 compute bottom pressure
+    !>
 !$OMP PARALLEL DO PRIVATE(iblk, ics, ice)
     DO iblk = startblk, endblk
       ics = startidx(iblk)
@@ -378,7 +399,9 @@ CONTAINS
     ENDDO
 !$OMP END PARALLEL DO
 
-    ! --- compute specific humidity
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 compute specific humidity
+    !>
     SELECT CASE(forcing_options(model_id)%type_of_qair_forcing)
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
@@ -390,9 +413,8 @@ CONTAINS
           & evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
       ENDIF
       q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
-
+    ! @TODO add docu
     CASE(RH_)
-      ALLOCATE(rel_humidity(nproma, nblks))
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         &                            forcing_input(model_id)%rel_humidity, rel_humidity)
       ! check data
@@ -454,7 +476,7 @@ CONTAINS
         END DO
 !$OMP END PARALLEL DO
       ENDIF
-      DEALLOCATE(rel_humidity)
+    ! @TODO add docu
     CASE(QAIR_)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%qair, q_air(:,:))
@@ -473,31 +495,30 @@ CONTAINS
 !$OMP END PARALLEL DO
     END SELECT
 
-    DEALLOCATE(sat_spec_humidity)
-
-    ! --- compute shortwave radiation
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 5.0 compute shortwave radiation
+    !>
     day_of_year=day_in_year(next_datetime)
-    ALLOCATE(rad_uv_down(nproma, nblks))
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%shortwave, temporary_data1)
 
 !$OMP PARALLEL
-      CALL shortwave_from_direct_shortwave( &
-      ! in
-      & model_id,               &
-      & day_of_year,            &
-      & cos_zenith_angle (:,:), &
-      & coslat           (:,:), &
-      & sinlat           (:,:), &
-      & press_srf        (:,:), &
-      & temporary_data1  (:,:), &
-      ! out
-      & rad_uv_down      (:,:), & ! rad_UV
-      & swpar_srf_down   (:,:), & ! rad_PAR
-      & swnir_srf_down   (:,:), & ! rad_NIR
-      & fract_par_diffuse(:,:), & ! fract_PAR_diffuse
-      & help1            (:,:), & ! rad_sw
-      & help2            (:,:))   ! rad_sw_pot
+    CALL shortwave_from_direct_shortwave( &
+    ! in
+    & model_id,               &
+    & day_of_year,            &
+    & cos_zenith_angle (:,:), &
+    & coslat           (:,:), &
+    & sinlat           (:,:), &
+    & press_srf        (:,:), &
+    & temporary_data1  (:,:), &
+    ! out
+    & rad_uv_down      (:,:), & ! rad_UV
+    & swpar_srf_down   (:,:), & ! rad_PAR
+    & swnir_srf_down   (:,:), & ! rad_NIR
+    & fract_par_diffuse(:,:), & ! fract_PAR_diffuse
+    & help1            (:,:), & ! rad_sw
+    & help2            (:,:))   ! rad_sw_pot
 !$OMP END PARALLEL
 
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
@@ -507,9 +528,10 @@ CONTAINS
       END DO
     END DO
 !$OMP END PARALLEL DO
-    DEALLOCATE(rad_uv_down)
 
-    ! --- compute longwave radiation
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 6.0 compute longwave radiation
+    !>
     IF (forcing_input(model_id)%longwave%frequency == TIMESTEP_ .OR. forcing_input(model_id)%longwave%frequency == SUBDAILY_) THEN
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%longwave, lw_srf_down)
@@ -534,57 +556,73 @@ CONTAINS
       ENDIF
     ENDIF
 
-    ! --- wind
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 7.0 wind
+    !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%wind_speed, wind_10m)
     wind_air = wind_10m
 
-    ! --- CO2 concentration
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 8.0 CO2 concentration
+    !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%CO2_concentr, CO2_air)
     ! and convert to correct unit
     CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
 
-    ! --- compute remaining required input for jsb4 interface
-    CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                  &
-      & t_air, press_srf, q_air, wind_air,                                                           &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc,         &
-      & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,              &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 9.0 N & P deposition
+    !>
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%nhx_dep, nhx_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%noy_dep, noy_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%p_dep, p_deposition)
 
-    IF (use_lakes) THEN
-      ALLOCATE(pch_lake(nproma, nblks))
-      ! Note: pch_lake is only defined, as pch should not be overwritten. As pch is only used for
-      !       calculations on vegetated tiles, pch_lake is not needed.
-      CALL get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx,                &
-        & t_air, press_srf, q_air, wind_air,                                                         &
-        & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake,       &
-        & forcing_options(model_id)%heightWind, forcing_options(model_id)%heightHumidity,            &
-        & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr, pch_lake)
-      ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
-      ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-!$OMP PARALLEL
-      drag_ice   (:,:) = drag_wtr   (:,:)
-      t_acoef_ice(:,:) = t_acoef_wtr(:,:)
-      t_bcoef_ice(:,:) = t_bcoef_wtr(:,:)
-      q_acoef_ice(:,:) = q_acoef_wtr(:,:)
-      q_bcoef_ice(:,:) = q_bcoef_wtr(:,:)
-!$OMP END PARALLEL
-          DEALLOCATE (pch_lake)
-    END IF
+      ! Convert from kg/m2/s -> mumol/m2/s
+      ! -- This unit should have been tested above if specified correctly using expectedUnit
+      IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
+          & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
+          & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
+        WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
+          & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
+          & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
+          & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
+        CALL finish(TRIM(routine), message_text)
+      ENDIF
+      ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+      nhx_deposition(:,:) = nhx_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      noy_deposition(:,:) = noy_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      p_deposition(:,:) = p_deposition(:,:) * 1000._wp / molar_mass_P / 1.e-6_wp
 
-    ! ---- clean up
-    DEALLOCATE(t_air_C)
+      ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    END SELECT
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 10.0 deallocate local variables
+    !>
     IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
       DEALLOCATE(tmin_data)
       DEALLOCATE(tmax_data)
     ENDIF
-
+    DEALLOCATE(rad_uv_down)
+    DEALLOCATE(sat_spec_humidity)
+    DEALLOCATE(t_air_C)
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
+    DEALLOCATE(rel_humidity)
+  END SUBROUTINE get_standalone_driver
 
-  END SUBROUTINE get_interface_variables_from_external_forcing
-
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !>
   SUBROUTINE setup_forcing(no_of_models)
 
     INTEGER, INTENT(in) :: no_of_models
@@ -598,13 +636,10 @@ CONTAINS
 
   END SUBROUTINE setup_forcing
 
+  ! ======================================================================================================= !
   !>
-  !! @brief init reading forcing data (read namelist, set options...)
-  !!
-  !! @par History
-  !! Copied first version from jsbach3 mo_jsbalone_forcing     by Julia Nabel
-  !! -- after r304: removed all currently not required options
-  !!
+  !> init reading forcing data (read namelist, set options...)
+  !>
   SUBROUTINE init_forcing(model_id, namelist_filename, dtime, steplen)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
@@ -677,6 +712,13 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    CHARACTER(NF_MAX_NAME) :: forcing_dep_file_prefix          !! Prefix for files with NHx, NOy and P deposition data
+    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
+    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
+    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
+    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
+    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -690,13 +732,14 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit
+      & forcing_qair_unit, forcing_dep_file_prefix, forcing_dep_frequ, forcing_nhx_dep_const,                                 &
+      & forcing_noy_dep_const, forcing_p_dep_const, forcing_dep_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
     !------------------------------------------------------------------------------------
-
+    model => Get_model(model_id)
     delta_time    = dtime
     time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
@@ -759,6 +802,19 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+
+      ! N and P deposition required for QUINCY
+      forcing_dep_file_prefix = 'deposition_'
+      forcing_dep_frequ       = 'DAILY' ! 'CONST'
+      ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
+      !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
+      forcing_nhx_dep_const   = 6.3419e-12_wp / 2._wp
+      forcing_noy_dep_const   = 6.3419e-12_wp / 2._wp
+      ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
+      !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
+      !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
+      forcing_p_dep_const     = 6.3419e-12 / (14.0_wp / molar_mass_N * molar_mass_P)
+      forcing_dep_unit        = exp_unit_deposition
 
       ! ----- read the namelist
 
@@ -909,6 +965,13 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_dep_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_nhx_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_noy_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_p_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -950,15 +1013,23 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
+    ! --- deposition variables required for quincy
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL init_forcing_input_variable(nhxdep_varname, forcing_dep_frequ, forcing_nhx_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_nhx_dep_const, forcing_input(model_id)%nhx_dep)
+      CALL init_forcing_input_variable(noydep_varname, forcing_dep_frequ, forcing_noy_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_noy_dep_const, forcing_input(model_id)%noy_dep)
+      CALL init_forcing_input_variable(pdep_varname, forcing_dep_frequ, forcing_p_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_p_dep_const, forcing_input(model_id)%p_dep)
+    END SELECT
 
   END SUBROUTINE init_forcing
 
+  ! ======================================================================================================= !
+  !> Provides forcing data for const, timestep or daily forcing (reads data from netcdf if required)
   !>
-  !! @brief Provides forcing data for const, timestep or daily forcing (reads data from netcdf if required)
-  !!
-  !! @par History
-  !! First version by Julia Nabel (14.01.16)
-  !!
+  !>
   SUBROUTINE get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
     &                                  forcing_input_variable, current_forcing_array)
 
@@ -1089,13 +1160,14 @@ CONTAINS
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
       RETURN
-    ENDIF
+    ENDIF ! forcing_input_variable%variable_name == CO2_varname .AND. frequency == GHG_SCENARIO_
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
-    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_)  .AND. (frequency /= SUBDAILY_)) &
-      &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
-      &  'daily, subdaily or timestep frequency, please check program flow')
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
+        &  'daily, subdaily or timestep frequency, please check program flow.')
+    ENDIF
 
     ! TODO: test in case of lresume
 
@@ -1258,12 +1330,10 @@ CONTAINS
 
   END SUBROUTINE init_forcing_input_variable
 
+  ! ======================================================================================================= !
   !>
-  !! @brief assigns forcing frequency keyword to integer constant
-  !!
-  !! @par History
-  !! Based on jsbach3 mo_jsbalone_forcing init_variable_access by Julia Nabel (2016-01-14)
-  !!
+  !> assigns forcing frequency keyword to integer constant
+  !>
   INTEGER FUNCTION frequency_key_to_constant_val(variable_name, forcing_frequ_keyword)
 
     CHARACTER(len=*),INTENT(IN) :: variable_name
@@ -1293,12 +1363,10 @@ CONTAINS
     CALL message(TRIM(routine), 'Frequency for forcing variable "'//TRIM(variable_name)//'" is: '//TRIM(forcing_frequ_keyword))
   END FUNCTION frequency_key_to_constant_val
 
+  ! ======================================================================================================= !
   !>
-  !! @brief gets the length and the content of the time dimension
-  !!
-  !! @par History
-  !! First version by Julia Nabel (2016-02-25)
-  !!
+  !> gets the length and the content of the time dimension
+  !>
   SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
 
     TYPE(t_input_file),        INTENT(IN)    :: input_file
@@ -1320,14 +1388,12 @@ CONTAINS
 
   END SUBROUTINE get_time_dimension
 
+  ! ======================================================================================================= !
   !>
-  !! @brief tests if the read unit equals the expected unit (with some exception tests)
-  !!
-  !! @par History
-  !! First version by Julia Nabel (2016-02-25)
-  !!
-  !! TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
-  !!
+  !> tests if the read unit equals the expected unit (with some exception tests)
+  !>
+  !> TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
+  !>
   SUBROUTINE test_unit(file_id, variable_name, expectedUnit, readUnit)
 
     INTEGER, INTENT(IN) :: file_id
@@ -1367,12 +1433,10 @@ CONTAINS
 
   END SUBROUTINE test_unit
 
+  ! ======================================================================================================= !
   !>
-  !! @brief reads and returns missing value for variable fields
-  !!
-  !! @par History
-  !! First version by Tobias Stacke (2022-12-23)
-  !!
+  !> reads and returns missing value for variable fields
+  !>
   SUBROUTINE get_missval(file_id, variable_name, missval)
 
     INTEGER,         INTENT(IN)  :: file_id
@@ -1402,6 +1466,10 @@ CONTAINS
 
   END SUBROUTINE get_missval
 
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !> 
   SUBROUTINE finalize_external_forcing(no_of_models)
 
     INTEGER, INTENT(in) :: no_of_models
@@ -1434,165 +1502,27 @@ CONTAINS
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
 
+      IF (forcing_input(jg)%nhx_dep%input_file%is_open) CALL forcing_input(jg)%nhx_dep%input_file%Close()
+
+      IF (forcing_input(jg)%noy_dep%input_file%is_open) CALL forcing_input(jg)%noy_dep%input_file%Close()
+
+      IF (forcing_input(jg)%p_dep%input_file%is_open) CALL forcing_input(jg)%p_dep%input_file%Close()
+
     END DO
 
     DEALLOCATE(forcing_input, forcing_options)
 
   END SUBROUTINE finalize_external_forcing
 
+
+  ! ======================================================================================================= !
   !>
-  !! @brief calculates the remaining input required for jsbach4
-  !!
-  !! @par History
-  !! Copied required parts from jsbach3: mo_jsbalone: update_driving and adapted for jsb4   by Julia Nabel
-  !!
-  SUBROUTINE get_remaining_input_for_jsb4_interface(startblk, endblk, startidx, endidx, &
-      & temp_air, pressure, qair, wind, &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
-      & height_wind, height_humidity, &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
-
-    INTEGER,  INTENT(IN)  :: startblk, endblk, startidx(:), endidx(:)
-    REAL(wp), INTENT(IN)  :: temp_air(:,:)
-    REAL(wp), INTENT(IN)  :: pressure(:,:)
-    REAL(wp), INTENT(IN)  :: qair(:,:)
-    REAL(wp), INTENT(IN)  :: wind(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
-    REAL(wp), INTENT(in)  :: height_wind, height_humidity
-
-    REAL(wp), INTENT(OUT) :: drag_srf(:,:)
-    REAL(wp), INTENT(OUT) :: t_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: t_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_acoef (:,:)
-    REAL(wp), INTENT(OUT) :: q_bcoef (:,:)
-    REAL(wp), INTENT(OUT) :: pch     (:,:)
-
-    INTEGER  :: ics, ice, iblk, ic, nblks, nc
-    REAL(wp) :: zcons9, zcons11, zcons12, zsigma
-    REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf(SIZE(temp_air,1))
-    REAL(wp) :: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
-
-    ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
-    zcons9 = 3._wp * cb
-    zcons11 = 3._wp * cb * cc
-    zcons12 = time_step_len * grav / rd
-    zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
-
-    nblks = SIZE(temp_air,2)
-    nc    = SIZE(temp_air,1)
-
-    ! Initializations needed for grid cells beyond icz
-!$OMP PARALLEL
-        drag_srf(:,:) = 0._wp
-        t_acoef (:,:) = 0._wp
-        t_bcoef (:,:) = 0._wp
-        q_acoef (:,:) = 0._wp
-        q_bcoef (:,:) = 0._wp
-        pch     (:,:) = 0._wp
-!$OMP END PARALLEL
-
-!$OMP PARALLEL DO PRIVATE(iblk, ics, ice, ic, air_pressure, zdu2, ztvd, ztvir, qsat_surf, ztvs, zg, zgh, zril, &
-!$OMP                     zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl)
-    DO iblk = startblk, endblk
-
-      ics = startidx(iblk)
-      ice = endidx  (iblk)
-
-      CALL sat_specific_humidity(t_srf_proc(ics:ice,iblk), pressure(ics:ice,iblk), qsat_surf(ics:ice))
-
-      DO ic = ics, ice
-
-        !------------------------------------------------------------------------------------
-        ! Approximation of cdrag
-        !------------------------------------------------------------------------------------
-        ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-        zdu2 = MAX(wind(ic,iblk)**2, 1._wp)
-
-        ! virtual potential air temperature (see mo_surface_boundary.f90)
-        ! according to Saucier, WJ Principles of Meteoroligical Analyses
-        ! tv = t * (1 + 0.61 * q )    ! virtual temperature
-        ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-        ! tvd = tair * (100000/p_pa)^rd_o_cps * (1 + rvd1 * qair) ! virtual potential temperature
-        air_pressure = zsigma * pressure(ic, iblk)
-        ztvd = ( temp_air(ic, iblk) * ( 100000._wp/air_pressure)**rd_o_cpd ) * ( 1._wp + rvd1 * qair(ic, iblk))
-        ztvir = temp_air(ic, iblk) * ( 1._wp + rvd1 * qair(ic, iblk) )
-
-        ! virtual potential surface temperature
-        ztvs = t_srf_proc(ic,iblk) * ( 100000._wp/pressure(ic,iblk))**rd_o_cpd * &
-          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic,iblk) * qsat_surf(ic) + ( 1._wp - fact_q_air_proc(ic,iblk) ) &
-          & * qair(ic,iblk)))
-
-        ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-        ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-        IF(height_wind > 0._wp .AND. height_humidity > 0._wp) THEN
-          zg  = height_wind * grav
-          zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
-        ELSE
-          zg = ztvir * rd * LOG(1._wp / zsigma)
-          zgh = zg
-        ENDIF
-
-        ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
-        ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-        zril = zg * ( ztvd - ztvs ) / ( zdu2 * (ztvd + ztvs)/2._wp )
-
-        ! Neutral drag coefficient for momentum and heat
-        zchnl = von_karman**2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic,iblk) )) &
-                  * LOG( ( grav * rough_m_srf_proc(ic,iblk) + zgh ) / (grav * rough_h_srf_proc(ic,iblk) )))
-
-        ! account for stable/unstable case: helper variables
-        zscfl = SQRT ( 1._wp + 5._wp * ABS(zril))
-        zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp &
-          & + zgh / (grav * rough_h_srf_proc(ic,iblk)))))
-
-        ! ignoring cloud water correction (see mo_surface_land.f90)
-        zcons = zcons12 * pressure(ic,iblk) / ( temp_air(ic,iblk) * (1._wp + rvd1 * qair(ic,iblk)))
-        zcfnchl  = zcons * SQRT(zdu2) * zchnl
-
-        ! Stable / Unstable case
-        IF ( zril .GT. 0._wp ) THEN
-          zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
-        ELSE
-          zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
-        END IF
-
-        drag_srf(ic,iblk) = zcfhl
-        pch(ic,iblk) = zcfhl / zcfnchl * zchnl
-
-        !---------------------------------------------------------------------------------------------------------------
-        ! Computation of Richtmeyr-Morton Coefficients
-        ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
-        !---------------------------------------------------------------------------------------------------------------
-        t_acoef(ic,iblk) = 0.0_wp
-        t_bcoef(ic,iblk) = cpd * (1 + cpvd1 * qair(ic,iblk)) * temp_air(ic,iblk) + zgh
-        q_acoef(ic,iblk) = 0.0_wp
-        q_bcoef(ic,iblk) = qair(ic,iblk)
-
-      END DO
-    ENDDO
-!$OMP END PARALLEL DO
-
-  END SUBROUTINE get_remaining_input_for_jsb4_interface
-
+  !> converts daily relative humidity to specific humidity considering the daily course of temperature
   !>
-  !! @brief converts daily relative humidity to specific humidity considering the daily course of temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: spec_humidity_from_rel_humidity and adapted for jsb4 input   by Julia Nabel
-  !!
+  !> @NOTE Using this routine only makes sense together with the generated diurnal cycle of temperature as in
+  !>       'SUBROUTINE instantly_from_daily_temp_2()' otherwise the results will be faulty!
+  !>
   SUBROUTINE spec_humidity_from_rel_humidity(ice, sinlat, coslat, rel_humidity, Tmin, Tmax, elevation, qair)
-    ! This subroutine converts daily relative humidity to specific humidity considering the daily course of temperature
-    ! ops! Using this routine only makes sense together with the generated diurnal cycle of temperature as in
-    ! SUBROUTINE instantly_from_daily_temp_2
-    ! Otherwise the results will be faulty!
-
-    IMPLICIT NONE
 
     INTEGER, INTENT(IN)  :: ice
     REAL(wp),INTENT(IN)  :: sinlat(1:ice)
@@ -1759,16 +1689,16 @@ CONTAINS
     IF((ALLOCATED(qair_test))) DEALLOCATE(qair_test)
   END SUBROUTINE spec_humidity_from_rel_humidity
 
+  ! ======================================================================================================= !
   !>
-  !! @brief Returns saturation specific humidity for given temperature and pressure
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_atmosphere: sat_specific_humidity    by Julia Nabel (2016)
-  !!
+  !> Returns saturation specific humidity for given temperature and pressure 
+  !> (at some atmospheric level or at surface)
+  !>
+  !>   Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case,
+  !>   but the saturation vapor pressure of water over a liquid surface resp. ice 
+  !>   (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
+  !>
   SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
-    ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-    ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-    ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
 
     REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
@@ -1807,13 +1737,12 @@ CONTAINS
 
   END SUBROUTINE sat_specific_humidity
 
+  ! ======================================================================================================= !
   !>
-  !! @brief Returns saturation specific humidity for given air and vapour pressure
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: specific_humidity    by Julia Nabel
+  !> Returns saturation specific humidity for given air and vapour pressure
+  !>
   !
-  ! === specific_humidity() =======================================================================================================
+  ! docu: fun_specific_humidity()
   !
   ! Specific humidity is computed here by assuming that each component of a mixture of dry air and vapor can be considered as an
   ! ideal gas. So, let m_d and m_v the masses of the two components in a fixed volume V. Then the specific humidity "q" is
@@ -1835,21 +1764,19 @@ CONTAINS
   !             p-(1-eps)*p_v
   !
   PURE elemental FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
-    REAL(wp)            :: fun_specific_humidity !! (from [0,1])
-    REAL(wp),INTENT(in) :: vapour_pressure   !! [N/m^2]
-    REAL(wp),INTENT(in) :: air_pressure      !! air pressure at bottom [N/m^2]
+    REAL(wp),INTENT(in) :: vapour_pressure        !< [N/m^2]
+    REAL(wp),INTENT(in) :: air_pressure           !< air pressure at bottom [N/m^2]
+    REAL(wp)            :: fun_specific_humidity  !< (from [0,1])
 
-    !in jsbach3 rdv=eps
-    fun_specific_humidity = rdv*vapour_pressure/(air_pressure - (1._wp-rdv)*vapour_pressure)
+    fun_specific_humidity = rdv * vapour_pressure / (air_pressure - (1._wp - rdv) * vapour_pressure)
   END FUNCTION fun_specific_humidity
 
+  ! ======================================================================================================= !
   !>
-  !! @brief computes vapor pressure from actual and potential evapotranspiration
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: vapour_pressure_from_evapor    by Julia Nabel
+  !> computes vapor pressure from actual and potential evapotranspiration
+  !>
   !
-  ! === vapour_pressure_from_evapor() =============================================================================================
+  ! docu: vapour_pressure_from_evapor()
   !
   ! Vapor pressure is computed according to a method described in [1] from actual and potential evapotranspiration.
   ! Typically the mean vapor pressure at a day is approximately equal to the saturation vapor pressure at sunrise
@@ -1879,6 +1806,7 @@ CONTAINS
   ! this module. For desert studies it might be good to reduce h0 even further. As the specific humidity does not have a
   ! significant diurnal cycle, h1 is set to 0.
   !vg<<
+  !
   FUNCTION vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair)
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
@@ -1945,18 +1873,18 @@ CONTAINS
 
   END FUNCTION vapour_pressure_from_evapor
 
-
+  ! ======================================================================================================= !
   !>
-  !! @brief sets all not land (i.e. not notsea ;)) cells to the given constant
-  !!
-  !! @par History
-  !! First version    by Julia Nabel (20.01.16)
+  !> sets all not land (i.e. not notsea ;)) cells to the given constant
+  !>
   !
+  ! docu:
   !   Some external forcing is only defined for land cells.
   !   If the external forcing is only defined for land cells is specified by the namelist option
   !   "forcing_options%forcing_set_ocean_to_constants". If true: ocean cells need to be replaced
   !   by constants (reasonable values for the different variables) to ensure numeric stability.
   !   If false: forcing is expected for all variables for all cells (e.g. forcing from echam)
+  !
   SUBROUTINE set_ocean_cells(startblk, endblk, startidx, endidx, model_id, constant, array)
 
     USE mo_jsb_model_class, ONLY: t_jsb_model
@@ -1989,13 +1917,13 @@ CONTAINS
 
   END SUBROUTINE set_ocean_cells
 
+  ! ======================================================================================================= !
   !>
-  !! @brief replace missing values with the given constant
-  !!
-  !! @par History
-  !! First version by Tobias Stacke (2022-12-13)
+  !> replace missing values with the given constant
+  !>
   !
-  !  Land sea masks of model grids and offline forcing data don't alway match exactly. If
+  ! docu:
+  !    Land sea masks of model grids and offline forcing data don't alway match exactly. If
   !    the forcing dataset has missing values on land cell, the model will most likely
   !    crash with temperature bound violations due to the missing values. This routine
   !    replaces the missing value with a constant. Currently, the "ocean" value is
@@ -2026,13 +1954,12 @@ CONTAINS
 
   END SUBROUTINE set_miss_cells
 
+  ! ======================================================================================================= !
   !>
-  !! @brief estimate timestep temperature from daily min- and max temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: instantly_from_daily_temp_2 and adapted for 2D arrays    by Julia Nabel
+  !> estimate timestep temperature from daily min- and max temperature
+  !>
   !
-  ! --- instantly_from_daily_temp_2() --------------------------------------------------------------------------------------
+  ! docu: instantly_from_daily_temp_2()
   !
   ! The same as subroutine instantly_from_daily_temp_1(), but with temperature minimum and maximum as input instead of
   ! mean temperature and temperature range.
@@ -2056,9 +1983,8 @@ CONTAINS
   !         The mismatch is about 3 days in 10000 years. This affects the computation of daylength in the current routine, and
   !         thus the "phase" of the temperature curve, i.e. that e.g. the time when the temperature starts rising in the morning,
   !         may be somewhat shifted.
+  !
   SUBROUTINE instantly_from_daily_temp_2(startblk, endblk, startidx, endidx, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
-
-    IMPLICIT NONE
 
     REAL(wp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
     REAL(wp), PARAMETER :: rat1=14._wp/24._wp  ! day fraction at which maximum temperature shall occur
@@ -2181,13 +2107,12 @@ CONTAINS
     RETURN
   END SUBROUTINE INSTANTLY_FROM_DAILY_TEMP_2
 
+  ! ======================================================================================================= !
   !>
-  !! @brief calculate bottom pressure from air temperature and elevation
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: bottom pressure and only slightly adapted for jsb4 context    by Julia Nabel
+  !> calculate bottom pressure from air temperature and elevation
+  !>
   !
-  ! === bottom pressure() =======================================================================================================
+  ! docu: bottom pressure()
   !
   ! To estimate bottom pressure a so called "polytrope atmosphere" is assumed for the troposhere. Here a fixed temperature
   ! gradient "gamma" is prescribed, i.e. air temperature at height z is set to
@@ -2218,22 +2143,20 @@ CONTAINS
   !                              T(z)+z*gamma
   !
   ELEMENTAL FUNCTION bottom_pressure(elevation,air_temperature)
-    REAL(wp)              :: bottom_pressure
     REAL(wp), INTENT(IN)  :: elevation
     REAL(wp), INTENT(IN)  :: air_temperature
+    REAL(wp)              :: bottom_pressure
 
-    ! in jsb3: p0sl_bg = p_sealevel; grav = Gravity; rd = GasConstantDryAir
     bottom_pressure = &
-      & p0sl_bg * ( 1._wp - elevation*gamma /(tmelt + air_temperature + elevation*gamma))**(grav/rd/gamma)
+      & p0sl_bg * (1._wp - elevation * gamma / (tmelt + air_temperature + elevation * gamma)) ** (grav / rd / gamma)
   END FUNCTION bottom_pressure
 
+  ! ======================================================================================================= !
   !>
-  !! @brief split precipitation in snow and rain depending on mean air temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: snow_and_rain_from_precip    by Julia Nabel
+  !> split precipitation in snow and rain depending on mean air temperature
+  !>
   !
-  ! === snow_and_rain_from_precip() ==============================================================================================
+  ! docu: snow_and_rain_from_precip()
   !
   ! Precipitation is divided into rain and snow according to a method by M.S. Wigmosta, L. Vail and D.P. Lettenmaier, "A
   ! distributed hydrology-vegetation model for complex terrain", Water Resources Research 30 (1994) 1665-1679: depending on
@@ -2245,10 +2168,10 @@ CONTAINS
   ! (2)   P_rain = P-P_sn.
   !
   ELEMENTAL SUBROUTINE snow_and_rain_from_precip(rain,snow,precipitation,air_temp_daily)
-    REAL(wp),INTENT(OUT) :: rain          !! rain [kg/m^2/s]
-    REAL(wp),INTENT(OUT) :: snow          !! snow [kg/m^2/s]
-    REAL(wp),INTENT(IN)  :: precipitation !! total precipitation (rain+snow) [kg/m^2/s]
-    REAL(wp),INTENT(IN)  :: air_temp_daily!! daily mean air_temperature at surface [Celsius]
+    REAL(wp),INTENT(IN)  :: precipitation   !< total precipitation (rain+snow) [kg/m^2/s]
+    REAL(wp),INTENT(IN)  :: air_temp_daily  !< daily mean air_temperature at surface [Celsius]
+    REAL(wp),INTENT(OUT) :: rain            !< rain [kg/m^2/s]
+    REAL(wp),INTENT(OUT) :: snow            !< snow [kg/m^2/s]
 
     IF(air_temp_daily < -1.1_wp) THEN
        snow = precipitation
@@ -2261,13 +2184,13 @@ CONTAINS
     rain = precipitation - snow
   END SUBROUTINE snow_and_rain_from_precip
 
+  ! ======================================================================================================= !
   !>
-  !! @brief computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
-  !! ATTENTION: TR: there maybe considerable deviations in the daily sum of insolation if daily data is used and
-  !! if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3: mo_jsbalone_forcing: shortwave_from_direct_shortwave (+ comment parts from shortwave_from_fpar_orig)
+  !> computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
+  !>
+  !> @NOTE: TR: there maybe considerable deviations in the daily sum of insolation if daily data is used and
+  !> if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
+  !>
   !
   ! For timestep data the observed radiation is used directly;
   ! in daily version, the instantaneous flux at noon required to calculate irradiation at any
@@ -2344,27 +2267,40 @@ CONTAINS
   ! [3] R.T. Pinker & I. Laszlo, "Global distribution of photosynthetically active radiation as observed from satellites",
   ! J. Climate 5 (1992) 56-65.
   ! [4] G.W. Paltridge and C.M.R. Platt, "Radiative Processes in Meteorology and Climatology" (Elsevier, Amsterdam, 1976).
-  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(model_id,day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
-    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,fract_PAR_diffuse,rad_sw,rad_sw_pot )
+  !
+  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave( &
+    & model_id, &
+    & day_of_year, &
+    & cos_zenith, &
+    & cos_lat, &
+    & sin_lat, &
+    & air_pressure, &
+    & rad_sw_in, &
+    & rad_UV, &
+    & rad_PAR, &
+    & rad_NIR, &
+    & fract_PAR_diffuse, &
+    & rad_sw, &
+    & rad_sw_pot )
 
-    INTEGER,INTENT(in)   :: model_id
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: cos_lat          !! cosine of latitude
-    REAL(wp),INTENT(in)  :: sin_lat          !! sine of latitude
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: rad_sw_in        !! "Rtot": either timestep or daily average total solar shortwave radiation :
-                                             !! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-    REAL(wp),INTENT(out) :: rad_UV           !! "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                             !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: fract_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw,rad_sw_pot
+    INTEGER,  INTENT(in)  :: model_id           !< model ID
+    INTEGER,  INTENT(in)  :: day_of_year        !< day in year (from [1,365])
+    REAL(wp), INTENT(in)  :: cos_zenith         !< cosine of zenith angle
+    REAL(wp), INTENT(in)  :: cos_lat            !< cosine of latitude
+    REAL(wp), INTENT(in)  :: sin_lat            !< sine of latitude
+    REAL(wp), INTENT(in)  :: air_pressure       !< air pressure at bottom (depending on local elevation) [N/m^2]
+    REAL(wp), INTENT(in)  :: rad_sw_in          !< "Rtot": either timestep or daily average total solar shortwave radiation :
+                                                ! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
+    REAL(wp), INTENT(out) :: rad_UV             !< "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
+                                                ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
+    REAL(wp), INTENT(out) :: rad_PAR            !< "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
+                                                ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
+    REAL(wp), INTENT(out) :: rad_NIR            !< "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
+                                                ! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
+    REAL(wp), INTENT(out) :: fract_PAR_diffuse  !< "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
+                                                ! .. (values in [0,1])
+    REAL(wp), INTENT(out) :: rad_sw             !< ..
+    REAL(wp), INTENT(out) :: rad_sw_pot         !< ..
 
     REAL(wp) :: day_angle     !! day of year expressed as angle in radians
     REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
@@ -2443,13 +2379,12 @@ CONTAINS
 
   END SUBROUTINE shortwave_from_direct_shortwave
 
+  ! ======================================================================================================= !
   !>
-  !! @brief computes longwave from observed longwave and diural course associated with air temperature
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: longwave_from_daily_longwave    by Julia Nabel
+  !> computes longwave from observed longwave and diural course associated with air temperature
+  !>
   !
-  ! === longwave_from_daily_longwave() ====================================================================================
+  ! docu longwave_from_daily_longwave()
   !
   ! Downward long wave radiation flux "R_d" [W/m^2] is according to [1],[2] computed by
   ! (1) R_d = r_cloud * epsA * sigma * T^4,
@@ -2475,8 +2410,16 @@ CONTAINS
 
   END FUNCTION longwave_from_daily_longwave
 
-! Procedures that exist in ECHAM but not in ICON have to be defined here
 
+  ! ======================================================================================================= !
+  ! Procedures that exist in ECHAM but not in ICON have to be defined here
+  ! ======================================================================================================= !
+  
+
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !>
   FUNCTION IMerge_HMS2Sec (kh, km, ks) RESULT (ix)
     !+
     !
@@ -2496,8 +2439,12 @@ CONTAINS
 
   END FUNCTION IMerge_HMS2Sec
 
-
-  ! Do not put this in mo_jsb_time_iface. This function is only necessary in mo_jsb4_forcing.
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !>
+  !> Do not put this in mo_jsb_time_iface. This function is only necessary in mo_jsb4_forcing.
+  !>
   INTEGER FUNCTION day_in_year(date)
 
     TYPE(t_datetime), POINTER, INTENT(in)  :: date
@@ -2507,5 +2454,4 @@ CONTAINS
   END FUNCTION day_in_year
 
 #endif
-
 END MODULE mo_jsb4_forcing

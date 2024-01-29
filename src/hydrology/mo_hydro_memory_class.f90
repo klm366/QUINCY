@@ -61,6 +61,7 @@ MODULE mo_hydro_memory_class
       & runoff_retention,     & !< Runoff retention reservoir                                           [m water equivalent]
       & pond_melt,            & !< Melting of ice in pond reservoir                                     [kg m-2 s-1]
       & pond_freeze,          & !< Freezing of liquid water in pond reservoir                           [kg m-2 s-1]
+      & wtr_pond_net_flx,     & !< Net water flux into pond storage                                     [kg m-2 s-1]
       & ice_pond,             & !< Frozen water content of pond reservoir                               [m water equivalent]
       & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
@@ -358,6 +359,15 @@ CONTAINS
     CALL mem%Add_var( 'pond_freeze', mem%pond_freeze,                                &
       & hgrid, surface,                                                              &
       & t_cf('pond_freeze', 'kg m-2 s-1', 'Freezing of pond water'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'wtr_pond_net_flx', mem%wtr_pond_net_flx,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('wtr_pond_net_flx', 'kg m-2 s-1',                                       &
+      &      'Net water flux into surface water ponds'),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
