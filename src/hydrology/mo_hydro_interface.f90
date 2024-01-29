@@ -405,7 +405,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: steepness
     dsl4jsb_Real2D_onChunk :: fract_pond
-    dsl4jsb_Real2D_onChunk :: fract_pond_max
     dsl4jsb_Real2D_onChunk :: weq_pond_max
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
@@ -554,7 +553,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)    ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond_max)   ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond)       ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_pond_max)     ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)         ! inout
@@ -660,7 +658,6 @@ CONTAINS
         & skinres_canopy_max(:),          & !< Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
         & skinres_max(:),                 & !< Total capacity of the skin reservoirs, i.e. soil and canopy [m]
         & weq_pond_max(:),                & !< Total capacity of pond reservoir (water + ice) [m]
-        & fract_pond_max(:),              & !< Maximum pond fraction []
         & fract_snow(:),                  & !< surface snow fraction []
         & fract_skin(:),                  & !< skin reservoir fraction []
         & fract_pond(:),                  & !< Actual pond fraction []

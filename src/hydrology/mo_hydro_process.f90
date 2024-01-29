@@ -79,7 +79,7 @@ CONTAINS
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
     & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
-    & fract_pond_max, fract_snow, fract_skin, fract_pond,           &
+    & fract_snow, fract_skin, fract_pond,                           &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
@@ -98,7 +98,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
       & weq_rootzone_max(:), weq_soil(:)
@@ -142,7 +142,6 @@ CONTAINS
       & wtr_pond_inflow(nc),      & !< pond inflow [m]
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
-      & weq_pond(nc),             & !< total pond water storage (liquid + ice) [m]
       & pond_change_pot(nc)         !< amount of water that could potentially be frozen or thawed [m]
 
     !
