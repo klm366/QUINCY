@@ -91,7 +91,6 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, enforce_water_budget, l_organic, &
@@ -107,7 +106,6 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
-      & max_pond_depth,             &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -150,7 +148,6 @@ CONTAINS
     w_soil_crit_fract      = 0.75_wp
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
-    max_pond_depth         = 0.1_wp              ! [m]
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.

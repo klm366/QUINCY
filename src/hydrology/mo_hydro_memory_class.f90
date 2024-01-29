@@ -384,6 +384,15 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var( 'wtr_pond_net_flx', mem%wtr_pond_net_flx,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('wtr_pond_net_flx', 'kg m-2 s-1',                                       &
+      &      'Net water flux into surface water ponds'),                             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
     CALL mem%Add_var( 'infilt', mem%infilt,                                          &
       & hgrid, surface,                                                              &
       & t_cf('infilt', 'kg m-2 s-1', 'Water infiltrating into the soil'),            &
