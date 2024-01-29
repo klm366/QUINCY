@@ -191,7 +191,7 @@ CONTAINS
 
     config%l_ponds = l_ponds
     IF (l_ponds) THEN
-      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thorougly validated!!')
+      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thoroughly validated!!')
     ELSE
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
     END IF

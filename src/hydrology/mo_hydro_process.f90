@@ -366,9 +366,8 @@ CONTAINS
       wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond(:)**(1.0_wp/3.0_wp)
       ! As ponds form in depressions, no lateral outflow is assumed but
       ! rather infiltration into the soil. Here we use several assumptions:
-      ! - as only part of the cell is covered by ponds, the saturation deficit is scaled accordingly.
       ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
-      !   limitation
+      !   limitation and is scaled with pond fraction as only a part of the cell is covered by ponds
       ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
       WHERE(ice_pond(:) > 0._wp)
         wtr_pond_outflow(:) = 0._wp

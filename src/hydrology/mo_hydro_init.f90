@@ -446,7 +446,7 @@ CONTAINS
 
     ! Maximum depth and extent of surface water ponds
     IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-      ! Note, surface depression depth is given es negative value in the data, but represent
+      ! Note, surface depression depth is given as negative value in the data, but represent
       !   a storage on top of the soil --> needs to be converted to positive values!
       dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
       dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)

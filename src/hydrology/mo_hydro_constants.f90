@@ -28,7 +28,7 @@ MODULE mo_hydro_constants
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
     & Arithmetic_      = 2,                &
-    ! Temporary identifiers used for the pond dynamics scheme
+    ! Identifiers used for the pond dynamics scheme
     & Quad_            = 1,                &
     & Tanh_            = 2
 
