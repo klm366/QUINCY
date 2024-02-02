@@ -38,7 +38,6 @@ MODULE mo_sse_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -149,7 +148,6 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(VEG_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -230,8 +228,6 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      = vgrid_soil_sb%n_levels
 
     ! Get reference to variables for current block
     !

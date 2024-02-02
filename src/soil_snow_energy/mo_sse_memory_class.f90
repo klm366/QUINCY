@@ -16,9 +16,7 @@ MODULE mo_sse_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish
-  USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
