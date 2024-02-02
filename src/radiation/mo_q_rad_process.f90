@@ -60,7 +60,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model               !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib              !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy        !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_e        !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_spq      !< Vertical grid
     INTEGER                           :: ncanopy             !< number of canopy layers
     INTEGER                           :: icanopy             !< loop 1,ncanopy
     INTEGER                           :: nsnow               !< number of snow layers
@@ -138,12 +138,12 @@ CONTAINS
       RETURN
     ENDIF
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    ncanopy       =  vgrid_canopy%n_levels
-    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
-    nsnow         =  vgrid_snow_e%n_levels
+    model          => Get_model(tile%owner_model_id)
+    lctlib         => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy   => Get_vgrid('canopy_layer')
+    ncanopy        =  vgrid_canopy%n_levels
+    vgrid_snow_spq => Get_vgrid('snow_layer_spq')
+    nsnow          =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)

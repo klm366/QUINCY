@@ -60,7 +60,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model          !< the model
     TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb  !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_snow_e   !< Vertical grid snow
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_snow_spq !< Vertical grid snow
     INTEGER                               :: nsoil_sb       !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: nsnow          !< number of snow layers
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
@@ -172,12 +172,12 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    vgrid_snow_e  => Get_vgrid('snow_depth_energy') 
-    nsoil_sb      =  vgrid_soil_sb%n_levels
-    nsnow         =  vgrid_snow_e%n_levels 
+    model          => Get_model(tile%owner_model_id)
+    lctlib         => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_snow_spq => Get_vgrid('snow_layer_spq') 
+    nsoil_sb       =  vgrid_soil_sb%n_levels
+    nsnow          =  vgrid_snow_spq%n_levels 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SPQ_)
