@@ -48,7 +48,10 @@ MODULE mo_jsb_tile
     PROCEDURE :: Init           => Init_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
-    PROCEDURE :: Count_conserved_quantities => Count_conserved_quantities_on_tile
+    PROCEDURE :: Is_process_calculated       => Is_process_calculated_on_tile
+    PROCEDURE :: Is_process_active           => Is_process_active_on_tile
+    PROCEDURE :: Has_process_memory          => Has_process_memory_on_tile
+    PROCEDURE :: Count_conserved_quantities  => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables => Collect_conserved_variables_on_tile
     PROCEDURE :: Print          => Print_tile
     PROCEDURE :: Handler        => Process_task_on_tile
@@ -175,7 +178,9 @@ CONTAINS
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
       IF (ASSOCIATED(model%processes(i)%p)) THEN
-        IF (.NOT. model%processes(i)%p%config%active) CYCLE
+        IF (ASSOCIATED(model%processes(i)%p%config)) THEN
+          IF (.NOT. model%processes(i)%p%config%active) CYCLE
+        END IF
       END IF
       iproc = -1
       j = 0
@@ -252,6 +257,7 @@ CONTAINS
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
+    TYPE(t_jsb_model), POINTER            :: model
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
     CHARACTER(LEN=:), ALLOCATABLE         :: process_name
@@ -266,6 +272,7 @@ CONTAINS
 
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
+    model => this%model
     this%grid_id = grid_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
@@ -283,6 +290,11 @@ CONTAINS
       IF (this%process_action(iproc) == ON_LEAFS_) THEN
         IF (ASSOCIATED(parent_tile)) parent_tile%process_action(iproc) = AGGREGATE_
         IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
+      END IF
+
+      ! Only create / link memory for processes that have a memory
+      IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+        IF (.NOT. model%processes(iproc)%p%has_memory) CYCLE
       END IF
 
       process_name = Get_process_name(iproc)
@@ -603,6 +615,8 @@ CONTAINS
         CYCLE
       END SELECT
 
+      IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
+
       mem => this%mem(iproc)%p
       __acc_attach(mem)
       DO i=1,mem%no_of_vars
@@ -624,6 +638,57 @@ CONTAINS
     END DO
 
   END SUBROUTINE Init_vars_on_tile
+
+  ! ====================================================================================================== !
+  !> Check if a given process is to be integrated on the tile: 
+  !>  i.e. if the process action on this tile is one of ON_TILE_ or ON_SUBTREE_
+  !
+  LOGICAL FUNCTION Is_process_calculated_on_tile(this, iproc)
+
+    USE mo_util,                ONLY: one_of
+
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
+    INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_calculated_on_tile'
+
+    ! Note: It's not necessary to test for ON_LEAFS_ because, after the tile tree has been completely
+    !       set up, ON_LEAFS_ on a tile has been replaced by AGGREGATE_ and ON_TILE_ on the sub-tree.
+    Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/ON_TILE_, ON_SUBTREE_/)) > 0)
+
+  END FUNCTION Is_process_calculated_on_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Check if a given process is to be active (integrated or aggregated) on the tile: 
+  !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
+  !
+  LOGICAL FUNCTION Is_process_active_on_tile(this, iproc)
+
+    USE mo_util,                ONLY: one_of
+
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
+    INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active_on_tile'
+
+    Is_process_active_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
+    
+  END FUNCTION Is_process_active_on_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Check if the tile has memory for the process
+  !
+  LOGICAL FUNCTION Has_process_memory_on_tile(this, iproc)
+    CLASS(t_jsb_tile), INTENT(in) :: this !< tile for which the process memory is to be checked
+    INTEGER,           INTENT(in) :: iproc !< process for which it is checked if memory is available
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Has_process_memory_on_tile'
+
+    Has_process_memory_on_tile = ASSOCIATED(this%mem(iproc)%p)
+
+  END FUNCTION Has_process_memory_on_tile
 
   ! ================================================================================================================================
   !>
@@ -658,6 +723,8 @@ CONTAINS
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
+
+      IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
       ! loop over all variables in the memory of the process and count number of vars for each used type
       mem => this%mem(iproc)%p
@@ -726,6 +793,8 @@ CONTAINS
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
+
+      IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
       ! loop over all variables in the memory of the process
       mem => this%mem(iproc)%p

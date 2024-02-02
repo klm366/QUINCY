@@ -473,7 +473,7 @@ CONTAINS
     dtime = options%dtime
     is_experiment_start = is_time_experiment_start(options%current_datetime)
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -875,7 +875,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (tile%is_lake .OR. tile%is_glacier) RETURN
 
@@ -1125,7 +1125,7 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (tile%is_lake) RETURN
 
@@ -1302,7 +1302,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1417,7 +1417,7 @@ CONTAINS
     nc   = options%nc
     nsoil = 5
 
-    IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1644,7 +1644,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1779,7 +1779,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     iblk    = options%iblk
     ics     = options%ics
@@ -2015,7 +2015,7 @@ CONTAINS
 
     IF (options%nc > 0) CONTINUE ! avoid compiler warnings about dummy arguments not being used
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (tile%contains_lake) THEN
       !! Currently done in SEB process
@@ -2123,7 +2123,7 @@ CONTAINS
     steplen = options%steplen
     alpha   = options%alpha
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

@@ -83,6 +83,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
+    PROCEDURE :: Is_process_enabled
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
@@ -171,6 +172,24 @@ CONTAINS
     return_ptr => this%processes(iproc)%p
 
   END FUNCTION Get_process
+
+  LOGICAL FUNCTION Is_process_enabled(this, iproc)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    INTEGER, INTENT(in) :: iproc
+
+    Is_process_enabled = .FALSE.
+    IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+      IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+        Is_process_enabled = this%processes(iproc)%p%config%active
+      ELSE
+        ! If the process is associated but the configuration is not associated
+        ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
+        Is_process_enabled = .TRUE.
+      ENDIF
+    ENDIF
+
+  END FUNCTION Is_process_enabled
 
   SUBROUTINE Queue_task(this, iproc, name)
 

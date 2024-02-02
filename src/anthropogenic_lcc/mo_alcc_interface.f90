@@ -139,15 +139,14 @@ CONTAINS
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(alcc_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
 
     !>
-    !> Assert that PPLCC is active on the box tile
+    !> Assert that PPLCC process is active
     !>
-    CALL model%Get_top_tile(current_tile)
-    IF (.NOT. current_tile%Is_process_active(PPLCC_)) THEN
-      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to run on the box tile')
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 
     !JN-TODO: as I understand in JSBACH3 cf changes according to luh were done on a daily timestep?!

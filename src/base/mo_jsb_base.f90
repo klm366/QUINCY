@@ -193,7 +193,7 @@ CONTAINS
       END IF
 
       IF (model%Do_fractions_change()) THEN
-        IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
+        IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
           CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
         END IF
         dsl4jsb_Config(PPLCC_)%active = .TRUE.
@@ -219,11 +219,11 @@ CONTAINS
         CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
       END IF
 
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+      IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(FUEL_)) THEN
         dsl4jsb_Config(FUEL_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
       END IF
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+      IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
         dsl4jsb_Config(CARBON_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
       END IF

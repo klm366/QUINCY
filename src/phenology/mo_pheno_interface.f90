@@ -226,7 +226,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
@@ -269,7 +269,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_q_'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
 
     ! only if the present tile is a pft
@@ -403,10 +403,10 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
-    IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
@@ -445,7 +445,7 @@ CONTAINS
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
       !ASSERTION: l_forestRegrowth only possible when the CARBON process is active
-      IF ( .NOT. tile%Is_process_active(CARBON_)) THEN
+      IF (.NOT. tile%Is_process_calculated(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
       ENDIF
 
@@ -830,8 +830,8 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1007,7 +1007,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1146,7 +1146,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

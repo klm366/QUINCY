@@ -471,69 +471,69 @@ CONTAINS
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
 
       ! TBD: Loop over processes instead of explicit
-      IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(RAD_)) THEN
         CALL rad_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SEB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(SEB_)) THEN
         CALL seb_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(TURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(TURB_)) THEN
         CALL turb_init(tile)
       END IF
 
       ! Initialize PHENO_ before HYDRO_ and VEG_
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(PHENO_)) THEN
         CALL pheno_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(VEG_)) THEN
         CALL veg_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
 
       ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
-      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(SSE_)) THEN
         CALL init_soil_properties(tile)
       END IF
 
-      IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
       
-      IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(ASSIMI_)) THEN
         CALL assimi_init(tile)
         ! CALL assimi_init_bc(tile)
         ! CALL assimi_init_ic(tile)
       END IF
 
-      IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(CARBON_)) THEN
         CALL carbon_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(TCQ_)) THEN
         CALL tcq_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(FUEL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(FUEL_)) THEN
         CALL fuel_init(tile)
       END IF
       
       ! R: at the moment we do not need any initialization for disturbance:
-      ! IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      ! IF (tile%Is_process_active(DISTURB_)) THEN
       !  CALL disturb_init(tile)
       ! END IF
 
 #ifndef __NO_JSBACH_HD__
-      IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(HD_)) THEN
         CALL hd_init_bc(tile)
         CALL hd_init_ic(tile)
       END IF
@@ -656,7 +656,7 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
         IF (        tile%is_vegetation                                   &
             & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
@@ -685,11 +685,11 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(TLCC_)) THEN
         CALL tlcc_init_lcc(tile)
       END IF
 
-      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(ALCC_)) THEN
         CALL alcc_init_lcc(tile)
       END IF
 
@@ -782,12 +782,12 @@ CONTAINS
       tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
 
       ! TBD: Loop over processes instead of explicit
-      IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(CARBON_)) THEN
         IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
       END IF
 
       IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &
-        & one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        & tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_sanitize_state(tile)
       END IF
 
