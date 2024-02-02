@@ -29,13 +29,12 @@ MODULE mo_sse_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -146,7 +145,6 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(VEG_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -203,14 +201,11 @@ CONTAINS
     INTEGER :: isnow
 
     LOGICAL  :: lstart
-    INTEGER  :: isoil   ! looping
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     INTEGER                    :: nsoil, nsnow
-    INTEGER                    :: nsoil_sb
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
@@ -232,8 +227,6 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      = vgrid_soil_sb%n_levels
 
     ! Get reference to variables for current block
     !
