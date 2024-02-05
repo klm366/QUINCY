@@ -293,6 +293,21 @@ rck 0.00 1.00 0.05 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 0.00 0.00 0.00 0.00 0
 # probability for mortality                     
 mort_prob 0.00 3.00 3.00 3.75 3.00 3.00 3.00 3.00 3.00 3.00 3.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00
 
+#
+# Parameters for megan scheme emissions
+# Values for pft 17 and 18 (Tundra and Swamp) should be investiated
+#
+
+# emission factors for plant produced isoprene
+#used_pft_only_em_fac_iso 10000.0 10000.0 6000.0 3200.0 3400.0 6800.0 2000.0 350.0 2000.0 350.0 1000.0
+#placeholder_em_fac_iso x 10000.0 10000.0 6000.0 3200.0 x x x x 3400.0 6800.0 2000.0 350.0 x 2000.0 350.0 x x x 1000.0 x x
+em_fac_iso 0.0 10000.0 10000.0 6000.0 3200.0 10000.0 10000.0 3200.0 3200.0 3400.0 6800.0 2000.0 350.0 1200.0 2000.0 350.0 0.0 0.0 1000.0 1000.0 1000.0
+
+# emission factors for plant produced CO
+em_fac_CO 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0
+
+# emission factors for plant produced NO
+em_fac_NO   0.0 5.0 5.0 6.0 5.0 5.0 5.0 5.0 5.0 30.0 30.0 70.0 70.0 70.0 70.0 70.0 0.0 0.0 70.0 70.0 70.0
 
 # #######
 # Parameters for the processes of the QUINCY model (MPI-BGC Jena)

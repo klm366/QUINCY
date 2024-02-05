@@ -145,6 +145,11 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
     REAL(wp) :: WoodLitterSize       !< Yasso: size of the litter
 
+    ! --- Parameters used by the megan emission scheme ---------------------------------------------------------------------------
+    REAL(wp) :: em_fac_iso           !< Emission factors for plant produced isoprene
+    REAL(wp) :: em_fac_CO            !< Emission factors for plant produced carbonmonoxide
+    REAL(wp) :: em_fac_NO            !< Emission factors for plant produced nitricoxide
+
     ! --- Other parameters --------------------------------------------------------------------------------------------------------
     REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
@@ -799,6 +804,15 @@ CONTAINS
           CASE ('root_dist_beta')                                ! PFT-specific exponent for root distribution
              READ(line(pos:length),*) lctlib(1:nlct)%root_dist_beta
              exists_root_dist_beta = .TRUE.
+          CASE ('em_fac_iso')
+             READ(line(pos:length),*) lctlib(1:nlct)%em_fac_iso
+             exists_em_fac_iso = .TRUE.
+          CASE ('em_fac_co')
+             READ(line(pos:length),*) lctlib(1:nlct)%em_fac_CO
+             exists_em_fac_CO = .TRUE.
+          CASE ('em_fac_no')
+             READ(line(pos:length),*) lctlib(1:nlct)%em_fac_NO
+             exists_em_fac_NO = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1165,6 +1179,12 @@ CONTAINS
               CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_root_dist_beta) &
               CALL finish('init_lctlib','No data for ROOT_DIST_BETA found in '//TRIM(lctlib_file_name))
+         IF(.NOT. exists_em_fac_iso) &
+              CALL finish('init_lctlib','No data for EM_FAC_ISO found in '//TRIM(lctlib_file_name))
+         IF(.NOT. exists_em_fac_co) &
+              CALL finish('init_lctlib','No data for EM_FAC_CO found in '//TRIM(lctlib_file_name))
+         IF(.NOT. exists_em_fac_no) &
+              CALL finish('init_lctlib','No data for EM_FAC_NO found in '//TRIM(lctlib_file_name))
          !------------------------------------------------------------------------------------------
          ! kalle, 151004
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
@@ -1571,6 +1591,9 @@ CONTAINS
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%root_dist_beta, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%em_fac_iso, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%em_fac_CO, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%em_fac_NO, p_io, mpi_comm)
       END IF
 #ifndef __NO_QUINCY__
       ! model schmeme: quincy

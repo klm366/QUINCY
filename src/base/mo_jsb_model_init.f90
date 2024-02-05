@@ -389,8 +389,9 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
-      CALL model%Queue_task(TOP_,    "inundated_area") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(TOP_,    "inundated_area")    ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(CH4_,    "methane_processes") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(MEGAN_,  "megan_processes")   ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -656,6 +657,9 @@ CONTAINS
         END IF
         IF (tile%Is_process_active(CH4_)) THEN
           CALL methane_init(tile)
+        END IF
+        IF (tile%Is_process_active(MEGAN_)) THEN
+          CALL megan_init(tile)
         END IF
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)

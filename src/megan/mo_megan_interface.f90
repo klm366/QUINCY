@@ -23,16 +23,19 @@ MODULE mo_megan_interface
   USE mo_jsb_grid_class,         ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,               ONLY: Get_vgrid, Get_grid
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_process_class,      ONLY: t_jsb_process, TOP_, A2L_, RAD_, SSE_, HYDRO_, MEGAN_
+  USE mo_jsb_process_class,      ONLY: t_jsb_process, TOP_, A2L_, RAD_, SSE_, HYDRO_, PHENO_, MEGAN_
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_megan_process,          ONLY: calc_gamma_lai, calc_gamma_sm, calc_gamma_temp_iso, calc_gamma_temp_other, &
+    &                                  calc_gamma_pfd, calc_gamma_co2, calc_gamma_age, update_megan_runmean
 
   dsl4jsb_Use_processes MEGAN_
   dsl4jsb_Use_config(MEGAN_)
   dsl4jsb_Use_memory(MEGAN_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(PHENO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -69,8 +72,8 @@ CONTAINS
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tst_megan::return_ptr)
-    CALL return_ptr%Construct(name='megan', process_id=MEGAN_, owner_model_id=model_id)
+    ALLOCATE(tsk_megan::return_ptr)
+    CALL return_ptr%Construct(name='megan_processes', process_id=MEGAN_, owner_model_id=model_id)
 
   END FUNCTION Create_task_megan
 
@@ -100,17 +103,17 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_megan(tile, options)
 
-    USE mo_jsb_time,         ONLY: is_time_experiment_start, is_time_restart, is_newyear, is_newmonth, is_newday, &
-      &                             timesteps_per_day, get_date_components, get_year_length, get_month_length
-    USE mo_megan_megan,      ONLY: t_megan_specie, t_megan_ptrs
+    USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, is_newyear, is_newmonth, is_newday, &
+      &                              timesteps_per_day, get_date_components, get_year_length, get_month_length
+    USE mo_megan_memory_class, ONLY: t_megan_specie, t_megan_ptrs
     ! TODO: These are likely specific to the DWD-NWP physics and do likely not work with ECHAM physics
-    USE mo_nwp_phy_types,    ONLY: t_nwp_phy_diag
-    USE mo_nwp_phy_state,    ONLY: prm_diag
+    USE mo_nwp_phy_types,      ONLY: t_nwp_phy_diag
+    USE mo_nwp_phy_state,      ONLY: prm_diag
     ! And these likely only for ECHAM physics
-    USE mo_echam_phy_memory, ONLY: t_echam_phy_field, prm_field
+    USE mo_echam_phy_memory,   ONLY: t_echam_phy_field, prm_field
     ! <<<
-    USE mo_run_config,       ONLY: iforcing
-    USE mo_impl_constants,   ONLY: inwp
+    USE mo_run_config,         ONLY: iforcing
+    USE mo_impl_constants,     ONLY: inwp
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -122,14 +125,18 @@ CONTAINS
     dsl4jsb_Def_memory(MEGAN_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
 
     ! Pointers to variables in memory
     !
     ! Inputs
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: CO2_air
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: sw_toa_down
+    dsl4jsb_Real2D_onChunk :: lai_ta
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: temp_relax_short
     dsl4jsb_Real2D_onChunk ::  lai_relax_short
@@ -146,6 +153,11 @@ CONTAINS
       & CO,                &
       & NO
 
+    TYPE (t_megan_specie), POINTER :: &
+      & isos,                         &
+      & COs,                          &
+      & NOs
+
     !--- local declarations
     TYPE (t_nwp_phy_diag), POINTER :: atm_diag
     CLASS(t_jsb_tile_abstract), POINTER :: ptr_tile
@@ -157,9 +169,9 @@ CONTAINS
     REAL(wp) :: dtime
 
     !    Parameters
-    REAL(dp), PARAMETER :: Wm2_pfd = 4.766_wp          ! factor to convert W to umol s-1
-    REAL(dp), PARAMETER :: rho_iso = 0.96_wp           ! MEGAN model parameter
-    REAL(dp), PARAMETER :: cce = 1.00_wp               ! MEGAN canopy model factor - not yet used
+    REAL(wp), PARAMETER :: Wm2_pfd = 4.766_wp          ! factor to convert W to umol s-1
+    REAL(wp), PARAMETER :: rho_iso = 0.96_wp           ! MEGAN model parameter
+    REAL(wp), PARAMETER :: cce = 1.00_wp               ! MEGAN canopy model factor - not yet used
 
     !--- local variables ---
 
@@ -190,6 +202,7 @@ CONTAINS
     dsl4jsb_Get_memory(MEGAN_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(PHENO_)
 
     ! A2L_ variables
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)
@@ -204,11 +217,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  lai_relax_long)
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  pfd_relax_long)
 
-    ! Allocate local work arrays
-    !
-    ALLOCATE(soil_moist(nc))
-
-    IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_process)) CALL message(routine,'First instance of update_megan')
+    IF (lstart .AND. (dsl4jsb_Config(MEGAN_)%dbg_process)) CALL message(routine,'First instance of update_megan')
 
     ! Get needed time state
     lnew_year  = is_newyear (options%current_datetime,dtime)
@@ -220,8 +229,8 @@ CONTAINS
       &                       dsl4jsb_Config(MEGAN_)%relax_short,                              &
       &                       dsl4jsb_Config(MEGAN_)%relax_long,                               &
       &                                               t_air, temp_relax_short,                 &
-      &                                                 lai,  lai_relax_short, lai_relax_long, &
-      &                       swvis_srf_down+sw_nir_srf_down, pfd_relax_short, pfd_relax_long)
+      &                                              lai_ta,  lai_relax_short, lai_relax_long, &
+      &                       swvis_srf_down+swnir_srf_down,  pfd_relax_short, pfd_relax_long)
 
     IF (.NOT. lnew_day) RETURN ! Megan process is updated only once per day TODO: Check this!
 
@@ -229,7 +238,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_,   CO2_air)
     ! HYDRO_ variables
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_rootzone_rel)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)
     ! MEGAN_ variables
     dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%total_out)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%em_fac)
@@ -250,6 +259,9 @@ CONTAINS
     ELSE
       sw_toa_down => prm_field(model%id)%rsdt(ics:ice,iblk)
     ENDIF
+    isos => dsl4jsb_memory(MEGAN_)%iso
+     COs => dsl4jsb_memory(MEGAN_)%CO
+     NOs => dsl4jsb_memory(MEGAN_)%NO
 
     !--- calculate vegetation emissions
     !    Isoprene:
@@ -259,23 +271,23 @@ CONTAINS
     !         Emission = [EF][GAMMA_LAI][GAMMA_T][GAMMA_age][GAMMA_SM]*
     !                    { (1-LDF) + [LDF][GAMMA_P] }
     !--- first compute gamma factors independent of compound
-    CALL gamma_lai (lai_ta, gamma_lai)
-    CALL gamma_pfd(cos_zenith_angle, swvis_srf_down+swnir_srf_down, srf_toa_down, pfd_relax_short, gamma_pfd)
-    CALL gamma_co2(CO2_air, gamma_CO2)
-    CALL gamma_sm(wtr_rootzone_rel, gamma_sm)
+    CALL calc_gamma_lai (lai_ta, gamma_lai)
+    CALL calc_gamma_pfd(cos_zenith_angle, swvis_srf_down+swnir_srf_down, sw_toa_down, pfd_relax_short, gamma_pfd)
+    CALL calc_gamma_co2(CO2_air, gamma_CO2)
+    CALL calc_gamma_sm(wtr_rootzone_rel, gamma_sm)
 
     ! Isoprene (only one using gamma_CO2 and gamma_sm)
-    CALL gamma_temp_iso(t_air, temp_relax_short, iso%gamma_temp)
-    iso%total_out = iso%ef_fac * gamma_lai * iso%gamma_temp * iso%gamma_age * gamma_CO2 * gamma_sm * &
-                    (1._wp - iso%ldf + iso%ldf * gamma_pfd)
+    CALL calc_gamma_age(isos%cafac, lai_relax_short, lai_relax_long, temp_relax_short, iso%gamma_age)
+    CALL calc_gamma_temp_iso(t_air, temp_relax_short, iso%gamma_temp)
+    iso%total_out = iso%em_fac * gamma_lai * iso%gamma_temp * iso%gamma_age * gamma_CO2 * gamma_sm * &
+                     (1._wp - isos%ldf + isos%ldf * gamma_pfd)
     ! CO
-    CALL gamma_temp_other(t_air(:), CO%beta, CO%gamma_temp)
-    CO%total_out = CO%ef_fac * gamma_lai * CO%gamma_temp * CO%gamma_age * &
-                    (1._wp - CO%ldf + CO%ldf * gamma_pfd)
+    CALL calc_gamma_age(COs%cafac, lai_relax_short, lai_relax_long, temp_relax_short, CO%gamma_age)
+    CALL calc_gamma_temp_other(t_air(:), COs%beta, CO%gamma_temp)
+    CO%total_out = CO%em_fac * gamma_lai * CO%gamma_temp * CO%gamma_age * &
+                    (1._wp - COs%ldf + COs%ldf * gamma_pfd)
     ! NO
-    CALL gamma_temp_other(t_air(:), NO%beta, NO%gamma_temp)
-    NO%total_out = NO%ef_fac * gamma_lai * NO%gamma_temp * NO%gamma_age * &
-                    (1._wp - NO%ldf + NO%ldf * gamma_pfd)
+    NO%total_out = NO%em_fac * gamma_lai * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -309,7 +321,26 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-!    dsl4jsb_Aggregate_onChunk(MEGAN_, precip_mean_day       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, iso%total_out,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, iso%em_fac,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, iso%gamma_age,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, iso%gamma_temp,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%total_out,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%em_fac,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%gamma_age,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%gamma_temp,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  NO%total_out,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  NO%em_fac,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_lai,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_pfd,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_CO2,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_sm,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_, temp_relax_short, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  lai_relax_short, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  pfd_relax_short, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  lai_relax_long,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MEGAN_,  pfd_relax_long,  weighted_by_fract)
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
