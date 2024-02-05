@@ -813,7 +813,7 @@ CONTAINS
     REAL(wp) :: wtr_transp_corr(nc)          !< uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             !< surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
-    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< immobile soil water (supercooled or below wilting point) [m]
+    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< soil water unavailable for transpiration (supercooled or below wilting point) [m]
     REAL(wp) :: hlp1(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp4(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp2(nc)                     !< needed for ACC (avoid operations as routine arguments)
@@ -824,8 +824,8 @@ CONTAINS
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
-    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
-    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl) &
+    !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
     !
@@ -853,8 +853,8 @@ CONTAINS
         weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
         weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
 
-        !> Compute immobile water. Supercooled soil water and water below the wilting point
-        !>   should not be able to move vertically or be transpired.
+        !> Supercooled soil water and water below the wilting point
+        !>   should not be available for transpiration.
         wtr_residual_sl(ic,is) = MIN(wtr_soil_sl(ic,is), &
           &                      MAX(wtr_soil_pot_scool_sl(ic,is), wtr_p_wilt_sl(ic,is)))
       END DO
@@ -966,7 +966,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          ws_vol_sl(ic,is) = (wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is)) / dsoil(ic,is)
+          ws_vol_sl(ic,is)        = wtr_soil_sl(ic,is)      / dsoil(ic,is)
           transpiration_sl(ic,is) = transpiration_sl(ic,is) / dsoil(ic,is)
         END IF
         hlp1(ic,is) = 1._wp                           ! just need to have any values
@@ -1015,7 +1015,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_residual_sl(ic,is)
+          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is)
         END IF
       END DO
     END DO
@@ -2258,8 +2258,8 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
-          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - MAX(scool_vol(ic,is), pwp_vol(ic,is)))
-          ws_range_vol(ic,is)  = fc_vol(ic,is) - pwp_vol(ic,is)
+          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - MAX(scool_vol(ic,is), fc_vol(ic,is)))
+          ws_range_vol(ic,is)  = wsat_vol(ic,is) - fc_vol(ic,is)
         END DO
       END DO
       !$ACC END LOOP
