@@ -317,19 +317,21 @@ CONTAINS
           IF (model%processes(DISTURB_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
-          ! See comment above regarding placement of TOP_ and CH4_ processes
-          IF (model%processes(CH4_)%p%config%run_case == 2) THEN
-            IF (model%processes(TOP_)%p%config%active) THEN
-              CALL veg_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
-            END IF
-            IF (model%processes(CH4_)%p%config%active) THEN
-              CALL veg_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
-            END IF
-          ENDIF
-
             DO i=1,npft
               pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+              ! See comment above regarding placement of TOP_ and CH4_ processes
+              IF (model%processes(CH4_)%p%config%run_case == 2) THEN
+                IF (model%processes(TOP_)%p%config%active) THEN
+                  CALL pft_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
+                END IF
+                IF (model%processes(CH4_)%p%config%active) THEN
+                  CALL pft_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
+                END IF
+              ENDIF
+              IF (model%processes(MEGAN_)%p%config%active) THEN
+                CALL pft_tile%Set_process_action(MEGAN_, ON_LEAFS_, AGGREGATE_)
+              END IF
             END DO
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced

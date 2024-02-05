@@ -44,6 +44,7 @@ MODULE mo_jsb_process_factory
 #endif
   USE mo_top_memory_class,     ONLY: t_top_memory
   USE mo_ch4_memory_class,     ONLY: t_ch4_memory
+  USE mo_megan_memory_class,   ONLY: t_megan_memory
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_q_rad_interface,      ONLY: Register_rad_tasks_quincy
   USE mo_jsb_rad_interface,    ONLY: Register_rad_tasks_jsbach
@@ -99,6 +100,8 @@ MODULE mo_jsb_process_factory
   USE mo_top_config_class,      ONLY: t_top_config
   USE mo_methane_interface,     ONLY: Register_methane_tasks
   USE mo_ch4_config_class,      ONLY: t_ch4_config
+  USE mo_megan_interface,       ONLY: Register_megan_tasks
+  USE mo_megan_config_class,    ONLY: t_megan_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
@@ -111,7 +114,7 @@ MODULE mo_jsb_process_factory
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 43
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
@@ -239,6 +242,9 @@ CONTAINS
     CASE (CH4_)
       CALL Register_methane_tasks(return_ptr, model_id)
       ALLOCATE(t_ch4_config::return_ptr%config)
+    CASE (MEGAN_)
+      CALL Register_megan_tasks(return_ptr, model_id)
+      ALLOCATE(t_megan_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -280,6 +286,7 @@ CONTAINS
 #endif
     USE mo_top_memory_class,     ONLY: max_no_of_top_vars => max_no_of_vars
     USE mo_ch4_memory_class,     ONLY: max_no_of_ch4_vars => max_no_of_vars
+    USE mo_megan_memory_class,   ONLY: max_no_of_megan_vars => max_no_of_vars
 
     INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
@@ -359,6 +366,9 @@ CONTAINS
     CASE (CH4_)
       ALLOCATE(t_ch4_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_ch4_vars
+    CASE (MEGAN_)
+      ALLOCATE(t_megan_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_megan_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

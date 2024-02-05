@@ -14,9 +14,10 @@
 
 MODULE mo_megan_process
 #ifndef __NO_JSBACH__
+USE mo_kind, only: wp
 
-PUBLIC gamma_pfd, gamma_temp_iso, gamma_temp_other, gamma_age, gamma_sm, gamma_co2
-PUBLIC update_megan_runmeans
+PUBLIC calc_gamma_pfd, calc_gamma_temp_iso, calc_gamma_temp_other, calc_gamma_age, calc_gamma_sm, calc_gamma_co2
+PUBLIC update_megan_runmean
 
 CONTAINS
 !------------------------------------------------------------------------------------
@@ -63,7 +64,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
 !------------------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_lai(lai, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_lai(lai, gamma)
     ! ----- leaf area index adjustment
     REAL(wp), INTENT(in)  :: lai
     REAL(wp), INTENT(out) :: gamma
@@ -71,10 +72,10 @@ CONTAINS
     ! ### assumes that LAI is zero where not valid ! ###
     gamma = (0.49_wp * lai) / SQRT(1.0_wp + 0.2_wp * (lai**2._wp))
     
-  END SUBROUTINE gamma_lai
+  END SUBROUTINE calc_gamma_lai
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
     USE mo_jsb_math_constants, ONLY: rad2deg
     ! ----- photosynthetically active radiation adjustment
     !             GAMMA_P = 0.0         a<=0, a>=180, sin(a) <= 0.0
@@ -101,14 +102,14 @@ CONTAINS
     !             Ptoa = 3000 + 99*cos[2*3.14-( DOY-10)/365 )]
     !           where DOY = day of year
 
-    REAL(dp), INTENT(in)  :: zenith
-    REAL(dp), INTENT(in)  :: pfd, tpfd, avg_pfd
-    REAL(dp), INTENT(out) :: gamma
+    REAL(wp), INTENT(in)  :: zenith
+    REAL(wp), INTENT(in)  :: pfd, tpfd, avg_pfd
+    REAL(wp), INTENT(out) :: gamma
 
-    REAL(dp)              :: sinbeta, PHI
-    REAL(dp)              :: AAA
+    REAL(wp)              :: sinbeta, PHI
+    REAL(wp)              :: AAA
 
-    REAL(dp), PARAMETER :: conv_pfd = 4.766_wp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
+    REAL(wp), PARAMETER :: conv_pfd = 4.766_wp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
   
     ! ### assumes zenith angle in degrees
     IF (zenith < 0.0_wp) THEN   !zenith = SIN(solar angle)
@@ -133,10 +134,10 @@ CONTAINS
       gamma = 0.0_wp
     ENDIF
 
-  END SUBROUTINE gamma_pfd
+  END SUBROUTINE calc_gamma_pfd
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_temp_iso(temp, temp_relax, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_temp_iso(temp, temp_relax, gamma)
     ! ----- temperature adjustment for isoprene
     !                          Eopt*CT2*exp(CT1*x)
     !             GAMMA_T =  ------------------------
@@ -155,14 +156,14 @@ CONTAINS
 
     USE mo_physical_constants,          ONLY: argas
 
-    REAL(dp), INTENT(in)  :: temp, temp_relax ! current and average air temperature
+    REAL(wp), INTENT(in)  :: temp, temp_relax ! current and average air temperature
                                               ! at canopy level (original: "hourly" instead of current)
-    REAL(dp), INTENT(out) :: gamma
+    REAL(wp), INTENT(out) :: gamma
 
-    REAL(dp), PARAMETER   :: CT1 = 80._wp, CT2 = 200._wp
-    REAL(dp), PARAMETER   :: invR = 1.E3_wp/argas          ! (1/R) expressed in (mol K / kJ)
-    REAL(dp)              :: Eopt, Topt, X
-    REAL(dp)              :: AAA, BBB
+    REAL(wp), PARAMETER   :: CT1 = 80._wp, CT2 = 200._wp
+    REAL(wp), PARAMETER   :: invR = 1.E3_wp/argas          ! (1/R) expressed in (mol K / kJ)
+    REAL(wp)              :: Eopt, Topt, X
+    REAL(wp)              :: AAA, BBB
 
     Eopt = 1.75_wp * EXP(0.08_wp * (temp_relax - 297.0_wp))
     Topt = 313.0_wp +    (0.6_wp * (temp_relax - 297.0_wp))
@@ -173,11 +174,11 @@ CONTAINS
 
     gamma = AAA / BBB
 
-  END SUBROUTINE gamma_temp_iso
+  END SUBROUTINE calc_gamma_temp_iso
 
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_temp_other(temp, beta, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_temp_other(temp, beta, gamma)
     ! ----- temperature adjustment for non-isoprene species
     !             GAMMA_T =  exp[BETA*(T-Ts)]
     !           where BETA   = temperature dependent parameter
@@ -191,13 +192,13 @@ CONTAINS
 
     gamma = EXP(beta * (temp - Ts))
 
-  END SUBROUTINE gamma_temp_other
+  END SUBROUTINE calc_gamma_temp_other
 
 !------------------------------------------------------------------------------------
   !----- adjustment for leaf age
   !### need to verify !
   ! (unchanged from v2.04)
-  ELEMENTAL PURE SUBROUTINE gamma_age(kclass, lai, laip, tempd, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_age(kclass, lai, laip, tempd, gamma)
     !
     !             GAMMA_age = Fnew*Anew + Fgro*Agro + Fmat*Amat + Fold*Aold
     !           where Fnew = new foliage fraction
@@ -274,13 +275,13 @@ CONTAINS
 !    INTEGER, PARAMETER    :: NAGE = 4            ! new, grown, mature, old
 
 !     ! Fortran 90/95 reference: For 2D matrices, values are listed column wise.
-!     REAL(dp), PARAMETER   :: afac(NCLASS, NAGE) = &
-!                             RESHAPE(SOURCE = (/  1.0_dp,  0.05_dp,  2.0_dp,   0.4_dp,   0.05_dp,  3.5_dp,     &
-!                                                  1.0_dp,  0.6_dp,   1.8_dp,   0.6_dp,   0.6_dp,   3.0_dp,     &
-!                                                  1.0_dp,  1.25_dp,  1.0_dp,   1.0_dp,   1.0_dp,   1.0_dp,     &
-!                                                  1.0_dp,  1.0_dp,   1.05_dp,  0.95_dp,  0.9_dp,   1.2_dp /),  &
-! !                                                  1.0_dp,  1.0_dp,   1.0_dp,   1.0_dp,   1.0_dp,   1.0_dp,     &
-! !                                                  1.0_dp,  0.9_dp,   1.05_dp,  0.95_dp,  0.9_dp,   1.2_dp /),  &
+!     REAL(wp), PARAMETER   :: afac(NCLASS, NAGE) = &
+!                             RESHAPE(SOURCE = (/  1.0_wp,  0.05_wp,  2.0_wp,   0.4_wp,   0.05_wp,  3.5_wp,     &
+!                                                  1.0_wp,  0.6_wp,   1.8_wp,   0.6_wp,   0.6_wp,   3.0_wp,     &
+!                                                  1.0_wp,  1.25_wp,  1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,     &
+!                                                  1.0_wp,  1.0_wp,   1.05_wp,  0.95_wp,  0.9_wp,   1.2_wp /),  &
+! !                                                  1.0_wp,  1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,     &
+! !                                                  1.0_wp,  0.9_wp,   1.05_wp,  0.95_wp,  0.9_wp,   1.2_wp /),  &
 !                                     SHAPE = (/NCLASS, NAGE/))
     REAL(wp), PARAMETER   :: dt = 30._wp  ! original time step in MEGAN [days] (set to TSTLEN = 30.)
                                           ! ### this is unclear! See formulae for fnew and fmat below
@@ -351,19 +352,19 @@ CONTAINS
         Fmat = fac_lai + ((dt - dtm) / dt) * (1._wp - fac_lai)
       ENDIF
 
-      Fgro = 1.0._wp - Fnew - Fmat
-      Fold = 0.0._wp
+      Fgro = 1.0_wp - Fnew - Fmat
+      Fold = 0.0_wp
     ENDIF
 
     !...  Calculate GAMMA_A
-    gamma = Fnew*Anew + Fgro*Agro + Fmat*Amat + Fold*Aold
+    gamma = Fnew * Anew + Fgro * Agro + Fmat * Amat + Fold * Aold
 !    original way of assigning parameters -- buggy due to bug in matrix above
 !    pgamma(ji) = Fnew*afac(kclass,1) + Fgro*afac(kclass,2) + Fmat*afac(kclass,3) + Fold*afac(kclass,4)
 
-  END SUBROUTINE gamma_age
+  END SUBROUTINE calc_gamma_age
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_sm(soilm, gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_sm(soilm, gamma)
   ! --- adjustment for soil moisture
   !  gamma_sm = 1 in standard version of MEGAN v2.10
   !! From Guenther et al., 2012, MEGANv2.1
@@ -399,12 +400,12 @@ CONTAINS
       gamma = 0._wp
     ENDIF
  
-  END SUBROUTINE gamma_sm
+  END SUBROUTINE calc_gamma_sm
   
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE gamma_co2(co2,gamma)
+  ELEMENTAL PURE SUBROUTINE calc_gamma_co2(co2,gamma)
     USE mo_methane_constants, ONLY: CO2_consts
-    USE mo_methane_utils,     ONLY: concentration_mmr_2_vmr
+    USE mo_methane_util,      ONLY: concentration_mmr_2_vmr
    
     REAL(wp), INTENT(in)  :: co2            ! CO2 mmr
     REAL(wp), INTENT(out) :: gamma
@@ -421,13 +422,13 @@ CONTAINS
     Ci = 0.7_wp * CO2_ppm
     gamma = Ismax - ((Ismax * Ci**h) / (Cstar**h + Ci**h))
 
-  END SUBROUTINE gamma_co2
+  END SUBROUTINE calc_gamma_co2
 
   ! Update needed running means of temp, lai and pfd
-  ELEMENTAL PURE SUBROUTINE update_megan_runmeans(linit, dt,t_short,t_long,              &
-    &                                             temp,temp_relax_short,                 &
-    &                                             lai,  lai_relax_short, lai_relax_long, &
-    &                                             pfd,  pfd_relax_short, pft_relax_long) 
+  ELEMENTAL PURE SUBROUTINE update_megan_runmean(linit, dt,t_short,t_long,              &
+    &                                            temp,temp_relax_short,                 &
+    &                                            lai,  lai_relax_short, lai_relax_long, &
+    &                                            pfd,  pfd_relax_short, pfd_relax_long) 
     USE mo_top_util, ONLY: time_relaxation
     LOGICAL,  INTENT(in)    :: linit            ! Initialize means?
     REAL(wp), INTENT(in)    :: dt               ! Time step for which instantaneous data are assumed valid [s]
@@ -455,5 +456,7 @@ CONTAINS
 
 
   END SUBROUTINE update_megan_runmean
+
+#endif
 
 END MODULE mo_megan_process
