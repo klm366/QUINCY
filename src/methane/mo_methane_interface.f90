@@ -521,7 +521,10 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_NO)
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_CO)
     dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_iso)
-    dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
+    IF (dsl4jsb_Config(CH4_)%do_termite) THEN
+      dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
+      dsl4jsb_Get_var2D_onChunk(NLCC_, min_mmtemp20)
+    ENDIF
     IF (dbg) THEN
       dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)
       dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%oxid_out_sl)
@@ -892,9 +895,6 @@ use mo_util, only: i2s => int2string, r2s => real2string, l2s => logical2string
       ! Currently it only gives expected results if crop tiles are processed last.
       ! This is unsatisfactory and should be somehow replaced!!!
       IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp20(1) < 1000._wp)) THEN
-
-        ! NLCC_ variables (TODO: What if dynveg/NLCC is not active?)
-        dsl4jsb_Get_var2D_onChunk(NLCC_, min_mmtemp20)
 
         l_GPP_dep = dsl4jsb_Lctlib_param(PhenologyType)==3 .OR. dsl4jsb_Lctlib_param(C4flag) ! Crops are separate anyway
         IF (GDD_prev_year(1) < 0._wp) THEN
