@@ -114,7 +114,7 @@ CONTAINS
     REAL(wp)                    :: dz_snow(max_snow_layers)   ! width of each snow layer
     REAL(wp), ALLOCATABLE       :: depths(:), mids(:)         ! snow-layer vgrid init
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb              ! soil layers
-    TYPE(t_jsb_vgrid), POINTER  :: snow_vgrid                 ! snow layers  <- name may be consistent with jsb4
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_snow_spq             ! snow layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
 
 #ifdef __QUINCY_STANDALONE__
@@ -284,19 +284,19 @@ CONTAINS
     END DO
     mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
 
-    snow_vgrid  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
+    vgrid_snow_spq  => new_vgrid('snow_layer_spq', ZAXIS_GENERIC, nsnow,     &
       & levels  = mids                 (1:nsnow  ),                         &
       & lbounds = depths               (1:nsnow  ),                         &
       & ubounds = depths               (2:nsnow+1),                         &
       & units='m')
-    CALL register_vgrid(snow_vgrid)
-    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', snow_vgrid%lbounds
+    CALL register_vgrid(vgrid_snow_spq)
+    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_spq%lbounds
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', snow_vgrid%levels
+    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_spq%levels
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', snow_vgrid%ubounds
+    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_spq%ubounds
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', snow_vgrid%dz
+    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_spq%dz
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
 
