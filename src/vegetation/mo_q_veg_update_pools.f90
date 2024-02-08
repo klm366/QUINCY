@@ -664,8 +664,9 @@ CONTAINS
     !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
+    ! (n_processing_respiration = n_fixation_respiration + n_transform_respiration)
     net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
-      & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_transform_respiration(:)
+      & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_processing_respiration(:)
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp(:) + n_fixation(:)
 
