@@ -462,7 +462,7 @@ CONTAINS
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_spq_constants,             ONLY: w_skin_max, soil_therm_cond, soil_frozen_therm_cond, latent_heat_fusion, &
                                             w_density, water2ice_density_ratio, fact_water_supercooled, w_snow_min, snow_dens, & 
-                                            snow_heat_capa, snow_therm_cond
+                                            snow_heat_capa, snow_therm_cond, t_soil_max_increase, t_soil_max_decrease
     USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
                                             stbo, zemiss_def, grav, cpd, cpvd1, Tzero
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, q_effective, surface_dry_static_energy
@@ -539,14 +539,12 @@ CONTAINS
                                                          hlp1         , & 
                                                          hlp2
     REAL(wp), DIMENSION(nc,nsoil_sb)              :: ground_heat_flx_sl,&             !< Ground heat flux                                [J/m2/s]
-                                                     t_soil_sl_old, &                 !< soil layer temperature from previous time step  [m]
+                                                     t_soil_old_sl, &                 !< soil layer temperature from previous time step  [m]
                                                      latent_heat_freeze_flx, &        !< latent heat flux freezing                       [J/m2]
                                                      heat_excess, &                   !< Heat excess/deficit after freezing/melting      [J/m2]
                                                      latent_heat_thaw_flx, &          !< latent heat flux melting
                                                      hlp1_2d, &           
                                                      hlp2_2d
-    ! LOGICAL, DIMENSION(nc)                        :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
-    ! INTEGER, SAVE                                 :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
     REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv,s_star, q_sat_star
     REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff,evapotranspiration
     REAL(wp), DIMENSION(nc)                       :: fract_snow,fract_water,fract_fpc,fact_qsat_trans_srf
@@ -554,18 +552,14 @@ CONTAINS
     REAL(wp), DIMENSION(nc)                       :: srf_heat_capa,srf_depth,srf_dens,srf_heat_flx_old !< Local variables to define surface properties
                                                                                                        !  for implicit surface heat  exchange
 
-    INTEGER                                       :: ichunk, isoil, isnow, it   ! looping
+    INTEGER                                       :: ichunk, ic     ! loop over chunk
+    INTEGER                                       :: isoil, isnow   ! loop over layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_surface_energy_balance'
+    ! ----------------------------------------------------------------------------------------------------- !
 
-    hlp1_2d = 0._wp
-    hlp2_2d = 0._wp
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-    !> 0.1 remember old soil temperature, will be needed later
-    t_soil_sl_old(:,:) = t_soil_sl(:,:)   
+    !> 0.1 save old soil temperature, will be needed later
+    !>
+    t_soil_old_sl(:,:) = t_soil_sl(:,:)   
 
     !> 0.9 init local var
     !>
@@ -573,22 +567,23 @@ CONTAINS
     hlp2_2d   = 0.0_wp
 
     !> 1.0 calculate surface characteristic given old surface state 
-    !!    
+    !>
     q_sat(:)      = calc_spec_humidity_sat(t_air(:), press_srf(:))
     q_sat_srf(:)  = calc_spec_humidity_sat(t_srf_old(:), press_srf(:))
     wind_air(:)   = MIN(MAX(wind_10m(:), min_wind), max_wind)     
 
-    !> 1.1 Calculate heat transfer coefficient
-    !!
+    !>   1.1 Calculate heat transfer coefficient
+    !>
     heat_transfer_coefficient(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
     
-    !> 1.2 net radiation flux at the surface
-    !!
+    !>   1.2 net radiation flux at the surface
+    !>
     net_radiation(:) = sw_srf_net(:) + lw_srf_down(:) - stbo * zemiss_def * t_srf_old(:)**4._wp  
     pet(:)           = -1._wp * heat_transfer_coefficient(:) * (q_air(:) - q_sat_srf(:))
 
-    !> 1.3 calculate snow and water-saturated fraction of tile
-    !!     following JSBACH4 hydrology 
+    !>   1.3 calculate snow and water-saturated fraction of tile
+    !>     following JSBACH4 hydrology 
+    !>
     hlp1(:) = 0.0_wp
     CALL calc_wskin_fractions_veg(dtime, &
                                   steplen, & 
@@ -604,8 +599,8 @@ CONTAINS
     fract_fpc = 1.0_wp - EXP(-0.5_wp * lai(:)) 
     
      
-    !> 1.4 calculate humidity scaling factors for energy balance calculation 
-    !!
+    !>   1.4 calculate humidity scaling factors for energy balance calculation 
+    !>
     CALL update_humidity_scaling(nc, &
                                  fract_snow, fract_water, fract_fpc, &
                                  q_sat_srf, q_air, &
@@ -614,20 +609,21 @@ CONTAINS
                                  fact_q_air, fact_qsat_srf, fact_qsat_trans_srf)
 
     !> 2.0 JSBACH4: update_surface_energy_land
+    !>
 
-    !> 2.1 Compute sensitivity of surface saturation specific humidity to temperature
-    !!
+    !>   2.1 Compute sensitivity of surface saturation specific humidity to temperature
+    !>
     dQdT(:) = (calc_spec_humidity_sat(t_srf_old(:) + 0.001_wp, press_srf(:)) - q_sat_srf(:)) * 1000._wp
 
-    !> 2.2 Old dry static energy
-    !!
+    !>   2.2 Old dry static energy
+    !>
     s_old(:) = surface_dry_static_energy( &
       & t_srf_old(:), &
       & q_effective(q_sat_srf(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
     t2s_conv(:) = s_old(:) / t_srf_old(:) 
 
-    !> 2.3 solve energy balance calculation using implicit formulation (JSBACH4)
-    !!
+    !>   2.3 solve energy balance calculation using implicit formulation (JSBACH4)
+    !>
     ! calculate surface values depending on snow/bare coverage for implicit surface exchange scheme
     DO ichunk=1,nc
       nsnow_top = MAX(INT(SUM(snow_present_snl(ichunk,:))),INT(1))
@@ -670,7 +666,8 @@ CONTAINS
     q_sat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:) 
 
     !> 3.0 calculate water fluxes
-    !!   This is from JSBACH4 hydrology/mo_hydro_interface:update_evaporation
+    !>   This is from JSBACH4 hydrology/mo_hydro_interface:update_evaporation
+    !>
     q_air_eff(:)          = q_effective(0.0_wp, q_air(:), 1.0_wp, 0.0_wp)
     q_sat_srf_eff(:)      = q_effective(q_sat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
     evapotranspiration(:) = heat_transfer_coefficient(:) * (q_air_eff(:) - q_sat_srf_eff(:)) 
@@ -682,18 +679,21 @@ CONTAINS
     interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * pet(:) 
     evaporation_snow(:) = -1._wp * fract_snow(:) * pet(:) 
     ! no dew into stomates or onto canopy
-    WHERE(pet(:) > 0.0_wp)
-       transpiration(:)    = 0.0_wp
-       interception(:)     = 0.0_wp
-       evaporation_snow(:) = 0.0_wp
-    ENDWHERE
+    DO ic = 1,nc
+      IF (pet(ic) > 0.0_wp) THEN
+         transpiration(ic)    = 0.0_wp
+         interception(ic)     = 0.0_wp
+         evaporation_snow(ic) = 0.0_wp
+      END IF
+    END DO
     evaporation_bare(:) = -1._wp * evapotranspiration(:) - transpiration(:) - interception(:) - evaporation_snow(:)
     ! BPLARR @TODO, as long as there is no snow
     evaporation = evaporation_bare  ! there should be an output stream for evaporation_snow (i.e. sublimation), but
                                     ! but this cannot be added here (!), because this goes into soil hydrology calculations
 
     !> 4.0 calculate sensible and latent heat flux
-    !!  from JSBACH4 srf_energy_bal/mo_seb_land:update_surface_fluxes_land
+    !>  from JSBACH4 srf_energy_bal/mo_seb_land:update_surface_fluxes_land
+    !>
 
     ! Compute sensible heat flux
     sensible_heat_flx(:) = heat_transfer_coefficient(:) * (t_acoef(:) * s_old(:) + t_bcoef(:) - s_star(:))
@@ -702,7 +702,7 @@ CONTAINS
     latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) + & 
                          (LatentHeatSublimation - LatentHeatVaporization) * fract_snow(:) * pet(:)
 
-    !>5.0 update surface temperature and remember previous value
+    !> 5.0 update surface temperature and remember previous value
     !>
 
     ! call calc_snow_dynamics to calculate:
@@ -731,114 +731,159 @@ CONTAINS
                              snow_lay_thickness_snl)    !inout
 
     ! use surface temperature as calculated in calc_snow_dynamics()
-    ! if there is no snow: overwrite t_soil_sl(:,1) 
-    WHERE (w_snow_snl(:,1) < w_snow_min)
-      t_soil_sl(:,1)       = t_srf_new(:)
-      snow_melt_to_soil(:) = 0.0_wp         ! to make sure there is no nan passed to soil water, this should probably go somewhere else
-    END WHERE 
+    ! if there is no snow: overwrite t_soil_sl(:,1) with t_srf_new(:)
+    ! modify only soil layer: 1
+    DO ic = 1,nc
+      IF (w_snow_snl(ic,1) < w_snow_min) THEN
+        t_soil_sl(ic,1)      = t_srf_new(ic)
+        ! limit temperature changes to a certain maximum
+        ! increase by more than t_soil_max_increase
+        IF ((t_soil_sl(ic,1) - t_soil_old_sl(ic,1)) > t_soil_max_increase) THEN
+          t_soil_sl(ic,1) = t_soil_old_sl(ic,1) + t_soil_max_increase
+        ! decrease by more than t_soil_max_decrease (a negative value)
+        ELSE IF ((t_soil_sl(ic,1) - t_soil_old_sl(ic,1)) < t_soil_max_decrease) THEN
+          t_soil_sl(ic,1) = t_soil_old_sl(ic,1) + t_soil_max_decrease
+        END IF
+        ! ensure there is no NaN passed to soil water, this should probably go somewhere else
+        snow_melt_to_soil(:) = 0.0_wp
+      END IF
+    END DO
 
-    !> 5.1 calculate ground heat flux and update deep surface temperatures 
-    !!
+    !>   5.1 calculate ground heat flux and update deep surface temperatures 
+    !>
     ground_heat_flx_sl(:,:) = 0.0_wp
-    WHERE (t_soil_sl(:,:) <= Tzero)
-      therm_cond_sl(:,:) = soil_frozen_therm_cond
-    ELSEWHERE
-      therm_cond_sl(:,:) = soil_therm_cond
-    END WHERE
+    DO ic = 1,nc
+      DO isoil = 1,nsoil_sb
+        IF (t_soil_sl(ic,isoil) <= Tzero) THEN
+          therm_cond_sl(ic,isoil) = soil_frozen_therm_cond
+        ELSE
+          therm_cond_sl(ic,isoil) = soil_therm_cond
+        END IF
+      END DO
+    END DO
 
-    DO isoil = 1,nsoil_sb-1
-      WHERE(soil_depth_sl(:,isoil) > eps8)
-           ground_heat_flx_sl(:,isoil) = therm_cond_sl(:,isoil) * & 
-                                         (t_soil_sl(:,isoil+1)-t_soil_sl(:,isoil)) / & 
-                                         ((soil_depth_sl(:,isoil)+soil_depth_sl(:,isoil+1))/2.0_wp)
-      END WHERE 
-    ENDDO 
+    DO ic = 1,nc
+      DO isoil = 1,nsoil_sb-1
+        IF (soil_depth_sl(ic,isoil) > eps8) THEN
+          ground_heat_flx_sl(ic,isoil) = therm_cond_sl(ic,isoil) &
+            &                           * (t_soil_sl(ic,isoil + 1) - t_soil_sl(ic,isoil)) &
+            &                           / ((soil_depth_sl(ic,isoil) + soil_depth_sl(ic,isoil + 1)) / 2.0_wp)
+        END IF
+      END DO
+    END DO
+
     ground_heat_flx(:)     = ground_heat_flx_sl(:,1) 
     ground_heat_flx_old(:) = ground_heat_flx(:)
-    ! loop layers 2:max
-    DO isoil = 2,nsoil_sb
-      WHERE(soil_depth_sl(:,isoil) > eps8)
-         t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + &
-                              (ground_heat_flx_sl(:,isoil) - ground_heat_flx_sl(:,isoil-1)) * dtime / & 
-                              (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
-      END WHERE 
-    ENDDO
+    ! loop soil layers 2:max
+    DO ic = 1,nc
+      DO isoil = 2,nsoil_sb
+        IF(soil_depth_sl(ic,isoil) > eps8) THEN
+          t_soil_sl(ic,isoil) = t_soil_sl(ic,isoil) &
+            &                  + (ground_heat_flx_sl(ic,isoil) - ground_heat_flx_sl(ic,isoil - 1)) * dtime &
+            &                  / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil))
+          ! limit temperature changes to a certain maximum
+          ! increase by more than t_soil_max_increase
+          IF ((t_soil_sl(ic,isoil) - t_soil_old_sl(ic,isoil)) > t_soil_max_increase) THEN
+            t_soil_sl(ic,isoil) = t_soil_old_sl(ic,isoil) + t_soil_max_increase
+          ! decrease by more than t_soil_max_decrease (a negative value)
+          ELSE IF ((t_soil_sl(ic,isoil) - t_soil_old_sl(ic,isoil)) < t_soil_max_decrease) THEN
+            t_soil_sl(ic,isoil) = t_soil_old_sl(ic,isoil) + t_soil_max_decrease
+          END IF
+        END IF
+      END DO
+    END DO
 
-    !> 5.2 Check for freezing temperatures & compute freezing dynamics
-    !!
+    !>   5.2 Check for freezing temperatures & compute freezing dynamics
+    !>
     w_soil_freeze_flux(:,:) = 0.0_wp
-    w_soil_melt_flux(:,:) = 0.0_wp
-    WHERE(t_soil_sl(:,:) <= Tzero)
-      ! freezing 
-      WHERE ((w_soil_sl(:,:) - fact_water_supercooled * w_soil_pwp_sl(:,:)) > eps8)
-        ! there is water available for freezing
-        ! calculate heat deficit past freezing point 
-        hlp1_2d(:,:) = heat_capa_sl(:,:) * bulk_dens_sl(:,:) * soil_depth_sl(:,:) * (t_soil_sl(:,:) - Tzero) ! heat flux deficit
-        ! Maximum latent heat release from freezing per soil layer
-        hlp2_2d(:,:) = latent_heat_fusion * w_density * (w_soil_sl(:,:)- fact_water_supercooled * w_soil_pwp_sl(:,:))   
-        WHERE (-hlp1_2d(:,:) <= hlp2_2d(:,:)) ! if heat deficit is less than heat release of fusion of available layer soil water          
-          latent_heat_freeze_flx(:,:) = hlp1_2d(:,:)
-          w_soil_freeze_flux(:,:)     = MIN(w_soil_sl(:,:) - fact_water_supercooled * w_soil_pwp_sl(:,:), &
-                                            - latent_heat_freeze_flx(:,:) / (w_density * latent_heat_fusion))
-          w_soil_freeze_flux(:,:)     = MIN(w_soil_freeze_flux(:,:) * water2ice_density_ratio, &
-                                            w_soil_fc_sl(:,:) - w_ice_sl(:,:) * &
-                                            water2ice_density_ratio - fact_water_supercooled * w_soil_pwp_sl(:,:))
-          WHERE (t_soil_sl_old(:,:) >= Tzero) 
-            t_soil_sl(:,:)  = Tzero
-          ELSEWHERE
-            t_soil_sl(:,:)  = t_soil_sl_old(:,:) ! if temperature is already below freezing point, stays the same
-          END WHERE
-        ELSEWHERE !if heat deficit is more than heat release of fusion of all soil water
-          w_soil_freeze_flux(:,:) = MIN(water2ice_density_ratio * (w_soil_sl(:,:) - fact_water_supercooled * w_soil_pwp_sl(:,:)), &
-            &                          w_soil_fc_sl(:,:) - w_ice_sl(:,:) * water2ice_density_ratio - fact_water_supercooled * &
-            &                          w_soil_pwp_sl(:,:))
-          WHERE (t_soil_sl_old(:,:) >= Tzero)
-            heat_excess(:,:)       = hlp1_2d(:,:) + hlp2_2d(:,:)
-            ! Soil T cooles past freezing point
-            t_soil_sl(:,:) = Tzero + heat_excess(:,:) / (heat_capa_sl(:,:) * bulk_dens_sl(:,:) * soil_depth_sl(:,:))
-          ELSEWHERE
-            WHERE (t_soil_sl(:,:) < t_soil_sl_old(:,:))
-              ! heat excess needs to be redefined for this case!
-              ! not all energy available to freeze water goes into cooling the soil!
-              hlp1_2d(:,:) = heat_capa_sl(:,:) * bulk_dens_sl(:,:) * soil_depth_sl(:,:) * (t_soil_sl(:,:) - t_soil_sl_old)
-              heat_excess(:,:) = hlp1_2d(:,:) + hlp2_2d(:,:)
-              t_soil_sl(:,:) = t_soil_sl(:,:)    ! Assumption, not sure if this is needed
-            END WHERE
-          END WHERE
-        END WHERE
-      END WHERE    
-    ! thawing (t_soil_sl(:,:) > Tzero)
-    ELSEWHERE
-      WHERE (w_ice_sl > eps8)
-        ! thaw when soil T below freezing point and ice exists  
-        ! same as above the other way around 
-        hlp1_2d(:,:) = heat_capa_sl(:,:) * bulk_dens_sl(:,:) * soil_depth_sl(:,:) * (t_soil_sl(:,:) - Tzero) ! heat flux excess
-        hlp2_2d(:,:) = latent_heat_fusion * w_density * w_ice_sl(:,:)
-        WHERE (hlp1_2d(:,:) <= hlp2_2d(:,:))
-          ! Excess heat is less than latent heat of layer ice melting, -> temperature remains at Tzero
-          latent_heat_thaw_flx(:,:) = hlp1_2d(:,:)
-          w_soil_melt_flux(:,:)     = MIN(latent_heat_thaw_flx(:,:) / (w_density * latent_heat_fusion), w_ice_sl) ! unit of f_thw is [m] water not [m] ice(!)
-          t_soil_sl(:,:)            = Tzero
-        ELSEWHERE 
-          ! Excess heat is more than latent heat release of layer ice melting -> temperature continues to increase after ice melting
-          heat_excess(:,:)      = hlp1_2d(:,:) - latent_heat_fusion * w_density * w_ice_sl(:,:)
-          w_soil_melt_flux(:,:) = w_ice_sl(:,:)
-          t_soil_sl             = Tzero + heat_excess(:,:) / (heat_capa_sl(:,:) * bulk_dens_sl(:,:) * soil_depth_sl(:,:))
-        END WHERE    
-      END WHERE
-    END WHERE   ! freezing/thawing   
- 
+    w_soil_melt_flux(:,:)   = 0.0_wp
+    DO ic = 1,nc
+      DO isoil = 1,nsoil_sb
+        ! freezing 
+        IF (t_soil_sl(ic,isoil) <= Tzero) THEN
+          ! if there is water available for freezing
+          ! calculate heat deficit past freezing point 
+          IF ((w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil)) > eps8) THEN
+            hlp1_2d(ic,isoil) = heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil) &
+              &                 * (t_soil_sl(ic,isoil) - Tzero) ! heat flux deficit
+            ! Maximum latent heat release from freezing per soil layer
+            hlp2_2d(ic,isoil) = latent_heat_fusion * w_density &
+              &                 * (w_soil_sl(ic,isoil)- fact_water_supercooled * w_soil_pwp_sl(ic,isoil))   
+            ! if heat deficit is less than heat release of fusion of available layer soil water          
+            IF (-hlp1_2d(ic,isoil) <= hlp2_2d(ic,isoil)) THEN
+              latent_heat_freeze_flx(ic,isoil) = hlp1_2d(ic,isoil)
+              w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil), &
+                &                                - latent_heat_freeze_flx(ic,isoil) / (w_density * latent_heat_fusion))
+              w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_freeze_flux(ic,isoil) * water2ice_density_ratio, &
+                &                                w_soil_fc_sl(ic,isoil) - w_ice_sl(ic,isoil) &
+                &                                * water2ice_density_ratio - fact_water_supercooled * w_soil_pwp_sl(ic,isoil))
+              IF (t_soil_old_sl(ic,isoil) >= Tzero) THEN
+                t_soil_sl(ic,isoil) = Tzero
+              ! if temperature is already below freezing point, stays the same
+              ELSE
+                t_soil_sl(ic,isoil) = t_soil_old_sl(ic,isoil)
+              END IF
+            ! if heat deficit is more than heat release of fusion of all soil water
+            ELSE
+              w_soil_freeze_flux(ic,isoil) = MIN(water2ice_density_ratio &
+                &                            * (w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil)), &
+                &                            w_soil_fc_sl(ic,isoil) - w_ice_sl(ic,isoil) &
+                &                            * water2ice_density_ratio - fact_water_supercooled &
+                &                            * w_soil_pwp_sl(ic,isoil))
+              IF (t_soil_old_sl(ic,isoil) >= Tzero) THEN
+                heat_excess(ic,isoil) = hlp1_2d(ic,isoil) + hlp2_2d(ic,isoil)
+                ! Soil T cooles past freezing point
+                t_soil_sl(ic,isoil)   = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
+                  &                     * soil_depth_sl(ic,isoil))
+              ELSE
+                IF (t_soil_sl(ic,isoil) < t_soil_old_sl(ic,isoil)) THEN
+                  ! heat excess needs to be redefined for this case!
+                  ! not all energy available to freeze water goes into cooling the soil!
+                  hlp1_2d(ic,isoil)     = heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil) &
+                    &                     * (t_soil_sl(ic,isoil) - t_soil_old_sl(ic,isoil))
+                  heat_excess(ic,isoil) = hlp1_2d(ic,isoil) + hlp2_2d(ic,isoil)
+                  t_soil_sl(ic,isoil)   = t_soil_sl(ic,isoil)    ! Assumption, not sure if this is needed
+                END IF
+              END IF
+            END IF
+          END IF
+        ! thawing (t_soil_sl(ic,isoil) > Tzero)
+        ELSE
+          ! thaw when soil T below freezing point and ice exists  
+          ! same as above the other way around 
+          IF (w_ice_sl(ic,isoil) > eps8) THEN
+            ! heat flux excess
+            hlp1_2d(ic,isoil) = heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil) &
+              &                 * (t_soil_sl(ic,isoil) - Tzero)
+            hlp2_2d(ic,isoil) = latent_heat_fusion * w_density * w_ice_sl(ic,isoil)
+            ! Excess heat is less than latent heat of layer ice melting, -> temperature remains at Tzero
+            IF (hlp1_2d(ic,isoil) <= hlp2_2d(ic,isoil)) THEN
+              latent_heat_thaw_flx(ic,isoil) = hlp1_2d(ic,isoil)
+              w_soil_melt_flux(ic,isoil)     = MIN(latent_heat_thaw_flx(ic,isoil) &
+                &                              / (w_density * latent_heat_fusion), w_ice_sl(ic,isoil)) ! unit of f_thw is [m] water not [m] ice(!)
+              t_soil_sl(ic,isoil)            = Tzero
+            ! Excess heat is more than latent heat release of layer ice melting -> temperature continues to increase after ice melting
+            ELSE
+              heat_excess(ic,isoil)      = hlp1_2d(ic,isoil) - latent_heat_fusion * w_density * w_ice_sl(ic,isoil)
+              w_soil_melt_flux(ic,isoil) = w_ice_sl(ic,isoil)
+              t_soil_sl                  = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
+                &                          * soil_depth_sl(ic,isoil))
+            END IF
+          END IF
+        END IF   ! freezing/thawing   
+      END DO     ! soil layer
+    END DO       ! nc
 
     ! remember old surface temperature for next timestep 
-    ! this depends whethere there is snow or not
-    WHERE (w_snow_snl(:,1) > w_snow_min)
-      t_srf_old(:) = t_snow_snl(:,nsnow_top)
-    ELSEWHERE
-      t_srf_old(:) = t_soil_sl(:,1)  
-    ENDWHERE 
-   
+    ! this depends whethere there is snow (in snow layer 1, i.e., the one at the soil surface) or not
+    DO ic = 1,nc
+      IF (w_snow_snl(ic,1) > w_snow_min) THEN
+        t_srf_old(ic) = t_snow_snl(ic,nsnow_top)
+      ELSE
+        t_srf_old(ic) = t_soil_sl(ic,1)  
+      END IF
+    END DO
   END SUBROUTINE calc_surface_energy_balance
-
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to update_spq_physics

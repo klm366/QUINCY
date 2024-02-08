@@ -290,13 +290,13 @@ CONTAINS
       & ubounds = depths               (2:nsnow+1),                         &
       & units='m')
     CALL register_vgrid(vgrid_snow_spq)
-    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_spq%lbounds
+    WRITE(message_text, *) 'Snow layer SPQ_ (upper)  [m]: ', vgrid_snow_spq%lbounds
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_spq%levels
+    WRITE(message_text, *) 'Snow layer SPQ_ (mid)    [m]: ', vgrid_snow_spq%levels
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_spq%ubounds
+    WRITE(message_text, *) 'Snow layer SPQ_ (lower)  [m]: ', vgrid_snow_spq%ubounds
     CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_spq%dz
+    WRITE(message_text, *) 'Snow layer thickness SPQ_ [m]: ', vgrid_snow_spq%dz
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
 
@@ -315,7 +315,14 @@ CONTAINS
                       ubounds=ubounds_soil_lay_water(:), & 
                       dz=dz_water(:))
     CALL register_vgrid(vgrid_soil_sb)
-
+    WRITE(message_text, *) 'Soil layer SPQ_ (upper)   [m]: ', vgrid_soil_sb%lbounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Soil layer SPQ_ (mid)     [m]: ', vgrid_soil_sb%levels
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Soil layer SPQ_ (lower)   [m]: ', vgrid_soil_sb%ubounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Soil layer thickness SPQ_ [m]: ', vgrid_soil_sb%dz
+    CALL message(TRIM(routine), message_text)
   END SUBROUTINE Init_spq_config
 
 #endif
