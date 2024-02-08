@@ -17,7 +17,6 @@ MODULE mo_assimi_config_class
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
-  USE mo_jsb_math_constants,ONLY: eps4
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -29,22 +28,9 @@ MODULE mo_assimi_config_class
   !> ASSIMI_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-    !> common parameters used by all models
-    !>
+    LOGICAL                 :: init_running_means !< initialize npp buffer for NLCC process
     INTEGER                 :: ncanopy            !< number of canopy layers
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_JSBACH
-    !>
-    LOGICAL                 :: init_running_means ! initialize npp buffer for NLCC process
     REAL(wp), ALLOCATABLE   :: canopy_bound_lai(:)
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_QUINCY
-    !>
-    LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
-    LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
-    LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax
-    CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
-    CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -100,27 +86,14 @@ CONTAINS
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit    = position_nml('assimilation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, assimilation_ctl)
-#else
     nml_unit    = position_nml('jsb_assimi_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_assimi_nml)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                       = active
     config%ic_filename                  = ic_filename
     config%bc_filename                  = bc_filename
-    config%ncanopy                      = ncanopy_q_
-    !! MODEL_JSBACH
     config%init_running_means           = init_running_means
-    !! MODEL_QUINCY
-    config%flag_optimal_Nfraction       = flag_optimal_Nfraction
-    config%flag_t_resp_acclimation      = flag_t_resp_acclimation
-    config%flag_t_jmax_acclimation      = flag_t_jmax_acclimation
-    config%canopy_layer_scheme          = TRIM(canopy_layer_scheme)
-    config%canopy_conductance_scheme    = TRIM(canopy_conductance_scheme)
     CALL close_nml(nml_handler)
 
     config%active              = active

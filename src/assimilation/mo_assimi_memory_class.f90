@@ -16,14 +16,10 @@ MODULE mo_assimi_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-
-  ! Use of processes in this module
-  dsl4jsb_Use_processes ASSIMI_
 
   IMPLICIT NONE
   PRIVATE
@@ -35,39 +31,16 @@ MODULE mo_assimi_memory_class
   ! ======================================================================================================= !
   !> Type definition for assimi memory
   !>
-  !> include all variables use by different models
-  !> but init only the variables needed for the particular model
-  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
-    !------------------------------------------------------------------------------------------------------ !
-    !> 1.0 common variables used by all models
-    !>
-    TYPE(t_jsb_var_real2d) ::     &
-      & gross_assimilation          !< jsbach4: Gross photosynthesis on tile area at each time step
-                                    !<          [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
-                                    !< quincy: canopy-integrated gross assimilation rate [micro-mol CO2 m-2 s-1]
-
-    TYPE(t_jsb_var_real3d) ::     &
-      & gross_assimilation_cl,    & !< jsbach4: Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
-                                    !<          Note, this is the gross assimilation on the leaf area that actually exists.
-                                    !<          The influence of the lai on the existing leaf area is aready included.
-                                    !<          It is not the ground area below canopy!
-                                    !< quincy:  gross assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
-      & canopy_cond_cl,           & !< jsbach4: Canopy conductance per layer and per leaf area
-                                    !< quincy:  conductance for water per canopy layer [m s-1]
-      & co2_conc_leaf_cl            !< jsbach4: CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
-                                    !< quincy:  internal leaf CO2 concentration per canopy layer [ppm]
-
-    !------------------------------------------------------------------------------------------------------ !
-    !> 2.0 variables used only by JSBACH
-    !>
-    ! t_canopy_sum variables
+     ! t_canopy_sum variables
     TYPE(t_jsb_var_real2d) ::     &
       gross_assimilation_ca,      & ! Gross photosynthesis at each time step
                                     ! [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
                                     ! Note, this is the gross assimilation on the ground below canopy area.
                                     ! This area is independent of the LAI. So even when the LAI is below 1 this area remains
                                     ! the same (it is still "covered").
+      gross_assimilation,         & ! ...on tile area
+                                    ! quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
@@ -112,6 +85,7 @@ MODULE mo_assimi_memory_class
 !                                                                           ! (disturbance?)
 !
 
+
     ! t_canopy variables
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
@@ -126,7 +100,9 @@ MODULE mo_assimi_memory_class
       & carbox_rate_max_cl,       & ! [ mol(co2)/(m^2(leaf area) * s) ]
       & e_transport_rate_max_cl,  &
       & carbox_rate_cl,           &
-      & e_transport_rate_cl
+      & e_transport_rate_cl,      &
+      & CO2_conc_leaf_cl            ! CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
+                                    ! quincy: internal leaf CO2 concentration per canopy layer [ppm]
 
     TYPE(t_jsb_var_real2d) ::     &
       & canopy_cond_unlimited,    & ! Canopy conductance without water limit  [m/s] (mean value)
@@ -136,60 +112,6 @@ MODULE mo_assimi_memory_class
     !    However it has to exist on each pft, therefore I put it to this process for now!
     TYPE(t_jsb_var_real2d) :: &
       & cover_fract_pot             ! Potential Natural Land Cover Fraction
-
-    !------------------------------------------------------------------------------------------------------ !
-    !> 3.0 variables used only by QUINCY
-    !>
-    ! fluxes
-    TYPE(t_jsb_var_real2d)    :: &
-      & gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [micro-mol 13CO2 m-2 s-1]
-      & gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [micro-mol 14CO2 m-2 s-1]
-      & net_assimilation          , &  !< canopy-integrated net assimilation rate [micro-mol CO2 m-2 s-1]
-      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [micro-mol CO2 m-2 s-1]
-      & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [micro-mol CO2 m-2 s-1]
-
-    TYPE(t_jsb_var_real3d)    :: &
-      & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
-      & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [micro-mol CO2 m-2 s-1]
-
-    ! other
-    TYPE(t_jsb_var_real2d)    :: &
-      & beta_air       , &  !< scaling factor to account for air humidity effects on conductance [unitless]
-      & beta_soa       , &  !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, calculated from soa_tsoa_mavg [unitless]
-      & beta_soil_ps   , &  !< scaling factor to account for soil moisture constraints on photosynthesis [unitless]
-      & beta_soil_gs   , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
-      & canopy_cond    , &  !< canopy-integrated conductance for water [m s-1]
-      & co2_conc_leaf  , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-      & t_jmax_opt     , &  !< optimal temperature for electron transport of photosynthesis [degC]
-      & vpd                 !< 2m air vapour pressure deficit [Pa]
-
-    ! diagnostics
-    TYPE(t_jsb_var_real3d)    :: &
-      & jmax_cl                   , &  !< maximum rate of electron transport [micro-mol CO2 m-2 s-1]
-      & vcmax_cl                  , &  !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
-      & chlfl_yield_cl                 !< steady-state chlorophyll fluorescence yield [unitless]
-
-    ! averaging
-    TYPE(t_jsb_var_real2d)    :: &
-      & soa_tsoa_mavg                  !< state of acclimation, used to calculate beta_soa
-
-    TYPE(t_jsb_var_real2d)    :: &
-      & beta_air_daytime          , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
-      & beta_air_daytime_dacc     , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
-      & beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
-      & beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
-      & beta_soa_tphen_mavg            !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, time-averaged from beta_soa [unitless]
-
-    TYPE(t_jsb_var_real2d)    :: &
-      & beta_soil_ps_daytime      , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
-      & beta_soil_ps_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
-      & beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
-      & beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-      & beta_soil_gs_daytime      , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
-      & beta_soil_gs_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
-      & beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-      & beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-      & beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
 
   CONTAINS
     PROCEDURE :: Init => Init_assimi_memory
@@ -203,51 +125,14 @@ CONTAINS
   !> initialize memory (variables) for the process: assimilation
   !>
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
-    USE mo_jsb_class,         ONLY: Get_model
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),      INTENT(in)            :: prefix
-    CHARACTER(len=*),      INTENT(in)            :: suffix
-    INTEGER,               INTENT(in)            :: lct_ids(:)
-    INTEGER,               INTENT(in)            :: model_id
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),  POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
-    ! ----------------------------------------------------------------------------------------------------- !
-    model        => Get_model(model_id)
 
-    SELECT CASE (model%config%model_scheme)
-    !------------------------------------------------------------------------------------------------------ !
-    !> 1.0 mem init for JSBACH model
-    !>
-    CASE(MODEL_JSBACH)
-      CALL Init_assimi_memory_jsbach(mem, prefix, suffix, lct_ids, model_id)
-    !------------------------------------------------------------------------------------------------------ !
-    !> 2.0 mem init for QUINCY model
-    !>
-    CASE(MODEL_QUINCY)
-      CALL Init_assimi_memory_quincy(mem, prefix, suffix, lct_ids, model_id)
-    !------------------------------------------------------------------------------------------------------ !
-    !> 3.0 error handling
-    !>
-    CASE DEFAULT
-      WRITE(message_text,'(2a)') 'invalid model_scheme', model%config%model_scheme
-      CALL finish(routine, message_text)
-    END SELECT
-  END SUBROUTINE Init_assimi_memory
-
-  ! ======================================================================================================= !
-  !>initialize memory (variables) for the process assimilation of the JSBACH model
-  !>
-  SUBROUTINE Init_assimi_memory_jsbach(mem, prefix, suffix, lct_ids, model_id)
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
-    ! ----------------------------------------------------------------------------------------------------- !
+
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)            :: prefix
     CHARACTER(len=*),      INTENT(in)            :: suffix
@@ -281,13 +166,7 @@ CONTAINS
       & output_level=BASIC,                                                        &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
-      & hgrid, surface,                                                                                           &
-      & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) / s', 'Gross photosynthesis on tile area'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                       &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
 
     CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
       & hgrid, surface,                                                                                           &
@@ -417,21 +296,21 @@ CONTAINS
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
     CALL mem%Add_var('dark_respiration_cl', mem%dark_respiration_cl,                                                         &
-      & hgrid, vgrid_canopy,                                                                                                 &
+      & hgrid, canopy_layer,                                                                                                 &
       & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leaf area) / s', 'Dark respiration of leaf per canopy layer on leaf area'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
       & prefix, suffix,                                                                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
     CALL mem%Add_var('carbox_rate_max_cl', mem%carbox_rate_max_cl,                                                &
-      & hgrid, vgrid_canopy,                                                                                      &
+      & hgrid, canopy_layer,                                                                                      &
       & t_cf('carbox_rate_max_cl', 'mol(CO2)/m^2(leaf area) / s', 'Maximum carboxylation rate per canopy layer'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
     CALL mem%Add_var('e_transport_rate_max_cl', mem%e_transport_rate_max_cl,       &
-      & hgrid, vgrid_canopy,                                                       &
+      & hgrid, canopy_layer,                                                       &
       & t_cf('e_transport_rate_max_cl', 'dimensionen',                             &
       'Maximum electron transport rate per canopy layer'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
@@ -439,14 +318,14 @@ CONTAINS
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL mem%Add_var('carbox_rate_cl', mem%carbox_rate_cl,                                                   &
-      & hgrid, vgrid_canopy,                                                                                 &
+      & hgrid, canopy_layer,                                                                                 &
       & t_cf('carbox_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual carboxylation rate per canopy layer'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
       & prefix, suffix,                                                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
     CALL mem%Add_var('e_transport_rate_cl', mem%e_transport_rate_cl,                                                   &
-      & hgrid, vgrid_canopy,                                                                                           &
+      & hgrid, canopy_layer,                                                                                           &
       & t_cf('e_transport_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual electron transport rate per canopy layer'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
       & prefix, suffix,                                                                                                &

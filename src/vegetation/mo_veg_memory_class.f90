@@ -411,7 +411,7 @@ CONTAINS
     TYPE(t_jsb_model),                POINTER :: model                      !< model
     TYPE(t_jsb_grid),                 POINTER :: hgrid                      !< Horizontal grid
     TYPE(t_jsb_vgrid),                POINTER :: surface                    !< Vertical grid
-    TYPE(t_jsb_vgrid),                POINTER :: vgrid_canopy               !< Vertical grid
+    TYPE(t_jsb_vgrid),                POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
     TYPE(t_jsb_vgrid),                POINTER :: vgrid_soil_sb              !< Vertical grid
     CHARACTER(len=30)                         :: unit_veg_pool              !< unit of element var
     CHARACTER(len=30)                         :: unit_veg_flux              !< unit of element var
@@ -424,12 +424,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(model_id)
-    table         =  tables(1)
-    hgrid         => Get_grid(model%grid_id)
-    surface       => Get_vgrid('surface')
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    model                 => Get_model(model_id)
+    table                 =  tables(1)
+    hgrid                 => Get_grid(model%grid_id)
+    surface               => Get_vgrid('surface')
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
 
@@ -538,7 +538,7 @@ CONTAINS
 
       ! add variables to bgc_material
       CALL mem%Add_var(mem%veg_bgcm_main%vegbpool, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -546,7 +546,7 @@ CONTAINS
         & lrestart = .TRUE.,                                                                           &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbgrowth, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -554,7 +554,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegblitterfall, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -562,7 +562,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbfrac_alloc, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -570,7 +570,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbtotal_biomass, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -578,7 +578,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbexudation, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -586,7 +586,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbestablishment, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -594,7 +594,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbreserve_use, &
-        & hgrid, surface, vgrid_canopy,                                                                &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = MEDIUM,                                                                       &
@@ -1114,7 +1114,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lai_cl', mem%lai_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1125,7 +1125,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1224,7 +1224,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1235,7 +1235,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1246,7 +1246,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1257,7 +1257,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1268,7 +1268,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1279,7 +1279,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1290,7 +1290,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1807,7 +1807,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_daytime_cl', '', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1884,7 +1884,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -2093,7 +2093,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -2159,7 +2159,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_tcnl_mavg_cl', '', 'fraction of sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

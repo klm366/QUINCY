@@ -18,7 +18,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 !NEC$ options "-finline-max-function-size=100"
 
-MODULE mo_jsb_assimi_interface
+MODULE mo_assimi_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -45,11 +45,11 @@ MODULE mo_jsb_assimi_interface
   dsl4jsb_Use_config(ASSIMI_)
 
   ! Use of process memories (t_assimi_memory)
+  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -59,84 +59,64 @@ MODULE mo_jsb_assimi_interface
   PRIVATE
   PUBLIC ::  Register_assimi_tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_interface'
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation_scaling_factors task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_assimilation_scaling_factors
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation_scaling_factors    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation_scaling_factors !< Aggregates computed task variables
   END TYPE   tsk_assimilation_scaling_factors
+
   !> Constructor interface for assimilation_scaling_factors task
-  !>
   INTERFACE   tsk_assimilation_scaling_factors
     PROCEDURE Create_task_assimilation_scaling_factors         !< Constructor function for task
   END INTERFACE   tsk_assimilation_scaling_factors
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_unstressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_unstressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_unstressed
+
   !> Constructor interface for canopy_cond_unstressed task
-  !>
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_unstressed
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_stressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_stressed
+
   !> Constructor interface for canopy_cond_stressed task
-  !>
   INTERFACE tsk_canopy_cond_stressed
     PROCEDURE Create_task_canopy_cond_stressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_stressed
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_assimilation
     PROCEDURE Create_task_assimilation     !< Constructor function for task
   END INTERFACE tsk_assimilation
 
-  ! ======================================================================================================= !
   !> Type definition for NPP buffer task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_npp_buffer
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_npp_buffer    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_npp_buffer !< Aggregates computed task variables
   END TYPE tsk_npp_buffer
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_npp_buffer
     PROCEDURE Create_task_npp_buffer     !< Constructor function for task
   END INTERFACE tsk_npp_buffer
@@ -307,9 +287,9 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-    USE mo_orbit_solar,         ONLY: inquire_declination
-    USE mo_jsb_grid,            ONLY: Get_grid
-    USE mo_jsb_assimi_process,  ONLY: calc_assimilation_scaling_factors
+    USE mo_orbit_solar,    ONLY: inquire_declination
+    USE mo_jsb_grid,       ONLY: Get_grid
+    USE mo_assimi_process, ONLY: calc_assimilation_scaling_factors
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -447,7 +427,7 @@ CONTAINS
   !!
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
 
-    USE mo_jsb_assimi_process,  ONLY: calc_assimilation_waterunlimited
+    USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1267,7 +1247,7 @@ CONTAINS
   !!
   SUBROUTINE update_npp_buffer(tile, options)
 
-    USE mo_jsb_assimi_process,  ONLY: calc_NPPbuf
+    USE mo_assimi_process,      ONLY: calc_NPPbuf
     USE mo_jsb_time,            ONLY: is_newyear
 
     ! Arguments

@@ -46,18 +46,18 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration 
     USE mo_q_veg_canopy,            ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(ASSIMI_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(RAD_)
@@ -70,7 +70,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy           !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy_q_assimi  !< Vertical grid
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
     INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
@@ -90,11 +90,11 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(A2L_) 
-    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
@@ -111,7 +111,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: fract_par_diffuse
-    ! ASSIMI_ 2D
+    ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soa
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -263,21 +263,21 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
-    ncanopy       =  vgrid_canopy%n_levels
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    model                 => Get_model(tile%owner_model_id)
+    lctlib                => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')    
+    ncanopy               =  vgrid_canopy_q_assimi%n_levels
+    nsoil_sb              =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(A2L_) 
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
@@ -303,17 +303,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)                                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)                  ! in
-    ! ASSIMI_ 2D
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                        ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                        ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                    ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                    ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)          ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)                ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)                     ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)              ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)          ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)          ! in
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air)                      ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa)                      ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps)                  ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)                  ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)        ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation)              ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air_tcnl_mavg)            ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps_tcnl_mavg)        ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tcnl_mavg)        ! in
     ! SB_ 3D
     dsl4jsb_Get_var3D_onChunk(SB_, nh4_solute)                          ! in
     dsl4jsb_Get_var3D_onChunk(SB_, no3_solute)                          ! in ?
@@ -451,7 +451,7 @@ CONTAINS
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
-    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+    SELECT CASE(TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
         lctlib_g1 = lctlib%g1_medlyn
       CASE ("ballberry")
@@ -558,9 +558,9 @@ CONTAINS
       CALL calc_dir_optimal_cn_leaf( &   
         & nc                                                      , & ! in
         & ncanopy                                                 , &
-        & vgrid_canopy%dz(:)                                      , &
-        & vgrid_canopy%lbounds(:)                                 , &
-        & vgrid_canopy%ubounds(:)                                 , &
+        & vgrid_canopy_q_assimi%dz(:)                             , &
+        & vgrid_canopy_q_assimi%lbounds(:)                        , &
+        & vgrid_canopy_q_assimi%ubounds(:)                        , &
         & lctlib%ps_pathway                                       , &
         & lctlib%k0_fn_struc                                      , &
         & lctlib%fn_oth_min                                       , &
@@ -571,8 +571,8 @@ CONTAINS
         & lctlib_g1                                               , &
         & lctlib%t_jmax_omega                                     , &
         & lctlib%tau_leaf                                         , &
-        & dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction          , &
-        & TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , & ! ASSIMI_ config
+        & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction          , &
+        & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme) , & ! Q_ASSIMI_ config
         & growing_season(:)                                       , &
         & veg_pool_mt(ix_leaf, ixC, :)                            , &  
         & veg_pool_mt(ix_leaf, ixN, :)                            , &
@@ -647,9 +647,9 @@ CONTAINS
     CALL calc_marginal_canopy_flux_increment( &
       & nc                                                      , & ! in
       & ncanopy                                                 , &
-      & vgrid_canopy%dz(:)                                      , &
-      & vgrid_canopy%lbounds(:)                                 , &
-      & vgrid_canopy%ubounds(:)                                 , &
+      & vgrid_canopy_q_assimi%dz(:)                             , &
+      & vgrid_canopy_q_assimi%lbounds(:)                        , &
+      & vgrid_canopy_q_assimi%ubounds(:)                        , &
       & lctlib%ps_pathway                                       , &
       & lctlib%sla                                              , &
       & lctlib%k0_fn_struc                                      , &
@@ -661,8 +661,8 @@ CONTAINS
       & lctlib_g1                                               , &
       & lctlib%t_jmax_omega                                     , &
       & lctlib%sigma_vis                                        , &
-      & dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction          , &
-      & TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , &
+      & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction          , &
+      & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme) , &
       & t_air(:)                                                , &
       & press_srf(:)                                            , &
       & q_air(:)                                                , &

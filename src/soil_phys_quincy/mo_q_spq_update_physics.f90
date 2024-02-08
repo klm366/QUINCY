@@ -42,14 +42,14 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SPQ_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, Q_ASSIMI_, RAD_, SPQ_, VEG_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(ASSIMI_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
@@ -73,7 +73,7 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
@@ -151,7 +151,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: t_snow_snl
     dsl4jsb_Real3D_onChunk                :: snow_lay_thickness_snl
     dsl4jsb_Real3D_onChunk                :: w_liquid_snl
-    ! ASSIMI_
+    ! Q_ASSIMI_
     dsl4jsb_Real2D_onChunk                :: canopy_cond
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
@@ -182,7 +182,7 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
@@ -261,7 +261,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, snow_present_snl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_liquid_snl)             ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)        ! inout

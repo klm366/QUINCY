@@ -1,22 +1,22 @@
-!> QUINCY assimilation process interface
+!> Summary: QUINCY assimilation process interface
 !>
-!> ICON-Land
+!>#### ICON-Land
 !>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+!> ------------------------------------------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
 !>#### definition and init of tasks for the assimilation process (photosynthesis) incl. update and aggregate routines
 !>
 MODULE mo_q_assimi_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
@@ -41,7 +41,7 @@ MODULE mo_q_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition: reset_q_assimi_fluxes task
-  !>
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_q_assimi_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_reset_q_assimi_fluxes     !< Advances task computation for one timestep
@@ -55,7 +55,7 @@ MODULE mo_q_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition: canopy_fluxes task
-  !>
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_fluxes    !< Advances task computation for one timestep
@@ -69,7 +69,7 @@ MODULE mo_q_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition: time_average_assimilation task
-  !>
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_time_average_q_assimilation    !< Advances task computation for one timestep
@@ -96,7 +96,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_canopy_fluxes task
-  !>
+  !> 
   FUNCTION Create_task_canopy_fluxes(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
@@ -107,7 +107,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> Constructor: tsk_time_average_assimilation task
-  !>
+  !> 
   FUNCTION Create_task_time_average_assimilation(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
@@ -141,7 +141,7 @@ CONTAINS
   SUBROUTINE update_reset_q_assimi_fluxes(tile, options)
     USE mo_q_assimi_util, ONLY: reset_q_assimi_fluxes
     dsl4jsb_Use_processes Q_ASSIMI_
-
+  
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -161,7 +161,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> Implementation of "aggregate": reset_q_assimi_fluxes task
-  !>
+  !> 
   SUBROUTINE aggregate_reset_q_assimi_fluxes(tile, options)
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -196,7 +196,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_reset_q_assimi_fluxes
-
+  
   ! ======================================================================================================= !
   !> Implementation of "update": canopy_fluxes task
   !>
@@ -298,7 +298,7 @@ CONTAINS
     END IF
 
     CALL calculate_time_average_q_assimilation(tile, options)
-
+    
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE update_time_average_q_assimilation
 
@@ -325,7 +325,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
 
-    ! Q_ASSIMI_
+    ! Q_ASSIMI_ 
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soa_tphen_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg     , weighted_by_fract)

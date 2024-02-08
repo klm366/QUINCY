@@ -1,22 +1,22 @@
-!> QUINCY assimilation variables init
+!> Summary: QUINCY assimilation variables init
 !>
-!> ICON-Land
+!>#### ICON-Land
 !>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+!> ------------------------------------------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
 !>#### initialization of assimilation memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_assimi_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message
@@ -106,14 +106,14 @@ CONTAINS
     beta_soa_tphen_mavg(:,:)          = 1.0_wp
     beta_soil_ps(:,:)                 = 1.0_wp
     beta_soil_gs(:,:)                 = 1.0_wp
-
+    
     beta_air_daytime(:,:)             = 1.0_wp
     beta_air_daytime_dacc(:,:)        = 1.0_wp
     beta_soil_ps_daytime(:,:)         = 1.0_wp
     beta_soil_ps_daytime_dacc(:,:)    = 1.0_wp
     beta_soil_gs_daytime(:,:)         = 1.0_wp
     beta_soil_gs_daytime_dacc(:,:)    = 1.0_wp
-
+    
     beta_air_tfrac_mavg(:,:)          = 1.0_wp
     beta_air_tcnl_mavg(:,:)           = 1.0_wp
     beta_soil_ps_tfrac_mavg(:,:)      = 1.0_wp
@@ -124,6 +124,6 @@ CONTAINS
 
     t_jmax_opt(:,:)                   = t_jmax_opt_min
   END SUBROUTINE q_assimi_init
-
+  
 #endif
 END MODULE mo_q_assimi_init

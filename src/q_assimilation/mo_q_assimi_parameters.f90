@@ -1,22 +1,22 @@
-!> QUINCY assimilation parameters
+!> Summary: QUINCY assimilation parameters
 !>
-!> ICON-Land
+!>#### ICON-Land
 !>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> ------------------------------------------------------------------------
+!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+!> Contact information: <https://icon-model.org>
 !>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
+!> See AUTHORS.TXT for a list of authors  
+!> See LICENSES/ for license information  
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
+!> ------------------------------------------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
 !>#### declare and init assimilation parameters
 !>
 MODULE mo_q_assimi_parameters
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
@@ -99,7 +99,7 @@ MODULE mo_q_assimi_parameters
     & thermal_dissipation_enrg_constitutive_max_rate  = def_parameters, &   !< maximum value for rate constant of energy constitutive thermal dissipation
     & thermal_dissipation_enrg_constitutive_param_1   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
     & thermal_dissipation_enrg_constitutive_param_2   = def_parameters, &   !< parameter for calculating the rate coefficient for thermal dissipation
-    & k_photochemistry_rate                           = def_parameters      !< rate coefficient for photochemistry
+    & k_photochemistry_rate                           = def_parameters      !< rate coefficient for photochemistry    
 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_assimi_parameters'
@@ -132,7 +132,7 @@ CONTAINS
     E1v             = 65330.0_wp                        !< Bernacchi 2001
     t_jmax_offset   = 17.0_wp                           !< Friend 2009
     t_jmax_slope    = 0.35_wp                           !< Friend 2009
-    t_jmax_opt_min  = t_jmax_offset                     !<
+    t_jmax_opt_min  = t_jmax_offset                     !< 
     t_jmax_opt_max  = 38.0_wp                           !< Friend 2009
     Tref_pepc       = 25._wp                            !< Friend 2009
     Tbase_pepc      = 10._wp                            !< Friend 2009
@@ -155,7 +155,7 @@ CONTAINS
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
     ka            = 0.005_wp                            !< .. reference
     kn            = 0.11_wp                             !< .. reference
-
+    
     ! ...
     soa_b         = -0.5_wp                             !< .. reference
     soa_t_s       = 5.0_wp                              !< .. reference

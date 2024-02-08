@@ -57,16 +57,16 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER   :: model               !< the model
-    TYPE(t_lctlib_element), POINTER   :: lctlib              !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy        !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_spq      !< Vertical grid
-    INTEGER                           :: ncanopy             !< number of canopy layers
-    INTEGER                           :: icanopy             !< loop 1,ncanopy
-    INTEGER                           :: nsnow               !< number of snow layers
-    INTEGER                           :: iblk, ics, ice, nc  !< dimensions
-    INTEGER                           :: ic                  !< looping
-    REAL(wp)                          :: dtime               !< timestep
+    TYPE(t_jsb_model),      POINTER   :: model                  !< the model
+    TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy_q_assimi  !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_spq         !< Vertical grid
+    INTEGER                           :: ncanopy                !< number of canopy layers
+    INTEGER                           :: icanopy                !< loop 1,ncanopy
+    INTEGER                           :: nsnow                  !< number of snow layers
+    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: ic                     !< looping
+    REAL(wp)                          :: dtime                  !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -138,12 +138,12 @@ CONTAINS
       RETURN
     ENDIF
     ! ----------------------------------------------------------------------------------------------------- !
-    model          => Get_model(tile%owner_model_id)
-    lctlib         => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy   => Get_vgrid('canopy_layer')
-    ncanopy        =  vgrid_canopy%n_levels
-    vgrid_snow_spq => Get_vgrid('snow_layer_spq')
-    nsnow          =  vgrid_snow_spq%n_levels
+    model                 => Get_model(tile%owner_model_id)
+    lctlib                => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    ncanopy               =  vgrid_canopy_q_assimi%n_levels
+    vgrid_snow_spq        => Get_vgrid('snow_layer_spq')
+    nsnow                 =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)

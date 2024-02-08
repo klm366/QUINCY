@@ -1071,15 +1071,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi        ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_spectral               ! Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        ! ...
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
-    table        = tables(1)
-    hgrid        => Get_grid(mem%grid_id)
-    surface      => Get_vgrid('surface')
-    vgrid_canopy => Get_vgrid('canopy_layer')
+    table                 = tables(1)
+    hgrid                 => Get_grid(mem%grid_id)
+    surface               => Get_vgrid('surface')
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
 #ifdef __QUINCY_STANDALONE__
     vgrid_spectral => Get_vgrid('spectral_bands')
 #endif
@@ -1349,7 +1349,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_sunlit_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1360,7 +1360,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_shaded_cl', mem%ppfd_shaded_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_shaded_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1371,7 +1371,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_sunlit_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1382,7 +1382,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_shaded_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1393,7 +1393,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_sunlit_daytime_dacc_cl', 'micro-mol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1404,7 +1404,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_shaded_daytime_dacc_cl', 'micro-mol m-2 d-1', &
         &      'daily accumulated PPFD on shaded leaves of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
@@ -1416,7 +1416,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_sunlit_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1427,7 +1427,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_shaded_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1438,7 +1438,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_sunlit_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1449,7 +1449,7 @@ CONTAINS
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('ppfd_shaded_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1460,7 +1460,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('arad_sunlit_vis_cl', 'W m-2', 'absorbed radiation in visible band on sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1471,7 +1471,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('arad_shaded_vis_cl', 'W m-2', 'absorbed radiation in visible band on shaded leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1482,7 +1482,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_vis_cl', 'unitless', 'fraction of leaves that are sunlit in VIS band'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1493,7 +1493,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('arad_sunlit_nir_cl', 'W m-2', 'absorbed radiation in NIR band on sunlit leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1504,7 +1504,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('arad_shaded_nir_cl', 'W m-2', 'absorbed radiation in NIR band on shaded leaves'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1515,7 +1515,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
-        & hgrid, vgrid_canopy, &
+        & hgrid, vgrid_canopy_q_assimi, &
         & t_cf('fleaf_sunlit_nir_cl', 'unitless', 'fraction of leaves that are sunlit in NIR band'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
