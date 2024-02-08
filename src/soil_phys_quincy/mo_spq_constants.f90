@@ -184,8 +184,8 @@ CONTAINS
     f_psensi_bulk_density         = 1.0_wp
 
     ! surface energy balance
-    t_soil_max_increase           = 2.0_wp        !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
-    t_soil_max_decrease           = -2.0_wp       !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
+    t_soil_max_increase           = 5.0_wp        !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
+    t_soil_max_decrease           = -5.0_wp       !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
 
   END SUBROUTINE init_spq_constants
 

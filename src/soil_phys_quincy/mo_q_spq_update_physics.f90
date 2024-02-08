@@ -736,14 +736,6 @@ CONTAINS
     DO ic = 1,nc
       IF (w_snow_snl(ic,1) < w_snow_min) THEN
         t_soil_sl(ic,1)      = t_srf_new(ic)
-        ! limit temperature changes to a certain maximum
-        ! increase by more than t_soil_max_increase
-        IF ((t_soil_sl(ic,1) - t_soil_old_sl(ic,1)) > t_soil_max_increase) THEN
-          t_soil_sl(ic,1) = t_soil_old_sl(ic,1) + t_soil_max_increase
-        ! decrease by more than t_soil_max_decrease (a negative value)
-        ELSE IF ((t_soil_sl(ic,1) - t_soil_old_sl(ic,1)) < t_soil_max_decrease) THEN
-          t_soil_sl(ic,1) = t_soil_old_sl(ic,1) + t_soil_max_decrease
-        END IF
         ! ensure there is no NaN passed to soil water, this should probably go somewhere else
         snow_melt_to_soil(:) = 0.0_wp
       END IF
@@ -782,6 +774,7 @@ CONTAINS
             &                  + (ground_heat_flx_sl(ic,isoil) - ground_heat_flx_sl(ic,isoil - 1)) * dtime &
             &                  / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil))
           ! limit temperature changes to a certain maximum
+          ! TODO https://gitlab.dkrz.de/jsbach/jsbach/-/issues/192
           ! increase by more than t_soil_max_increase
           IF ((t_soil_sl(ic,isoil) - t_soil_old_sl(ic,isoil)) > t_soil_max_increase) THEN
             t_soil_sl(ic,isoil) = t_soil_old_sl(ic,isoil) + t_soil_max_increase
