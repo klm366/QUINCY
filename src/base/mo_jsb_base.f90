@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_rad_parameters,      ONLY: init_rad_parameters_quincy, init_rad_parameters_jsbach
     USE mo_atmland_constants,   ONLY: init_atmland_constants
-    USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
+    USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
@@ -149,7 +149,7 @@ CONTAINS
          CASE (MODEL_QUINCY)
            CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
            CALL init_rad_parameters_quincy
-           CALL init_assimi_parameters_quincy
+           CALL init_q_assimi_parameters
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_sb_constants
@@ -158,7 +158,6 @@ CONTAINS
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
            CALL init_pheno_parameters
-           CALL init_assimi_parameters_jsbach
            CALL init_rad_parameters_jsbach
          END SELECT
        END IF

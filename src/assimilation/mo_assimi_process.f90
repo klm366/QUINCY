@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_jsb_assimi_process
+MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
@@ -23,7 +23,7 @@ MODULE mo_jsb_assimi_process
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
     &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
 
 CONTAINS
 
@@ -99,7 +99,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_parameters                                    ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_constants                                     ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     LOGICAL,  INTENT(in) ::   &
@@ -423,7 +423,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_parameters                                     ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
@@ -756,7 +756,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_parameters,   ONLY: f_aut_leaf, cCost
+    USE mo_assimi_constants,   ONLY: f_aut_leaf, cCost
 
     ! Arguments
     !$claw model-data
@@ -837,4 +837,4 @@ CONTAINS
   END SUBROUTINE calc_NPPbuf
 
 #endif
-END MODULE mo_jsb_assimi_process
+END MODULE mo_assimi_process

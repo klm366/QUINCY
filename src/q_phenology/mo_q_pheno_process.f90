@@ -48,11 +48,11 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, ASSIMI_, VEG_
+    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, Q_ASSIMI_, VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(ASSIMI_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -65,7 +65,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -74,7 +74,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
-    ! ASSIMI_ 2D
+    ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
@@ -104,16 +104,16 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
     ! Q_PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)                 ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                            ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                    ! inout
-    ! ASSIMI_ 2D
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)               ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                          ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                  ! inout
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg)     ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_srf_tphen_mavg)            ! in

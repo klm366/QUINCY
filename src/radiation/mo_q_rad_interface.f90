@@ -226,15 +226,15 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy_q_assimi  !< Vertical grid
     TYPE(t_jsb_model),      POINTER         :: model
-    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store           !< the bgcm store of this tile
-    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
-    LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
-    INTEGER                                 :: icanopy              !< looping
-    INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
-    INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
-    REAL(wp)                                :: dtime                !< timestep
+    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store             !< the bgcm store of this tile
+    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
+    LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
+    INTEGER                                 :: icanopy                !< looping
+    INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
+    INTEGER                                 :: iblk, ic, ics, ice, nc !< dimensions, looping
+    REAL(wp)                                :: dtime                  !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -275,9 +275,9 @@ CONTAINS
     IF (tile%lcts(1)%lib_id == 0)               RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    ncanopy       =  vgrid_canopy%n_levels
+    model                 => Get_model(tile%owner_model_id)
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    ncanopy               =  vgrid_canopy_q_assimi%n_levels
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)

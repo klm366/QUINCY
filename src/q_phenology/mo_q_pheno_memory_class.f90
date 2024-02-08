@@ -75,14 +75,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi        ! Vertical grid
     INTEGER                     :: table                        ! ...
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    table        = tables(1)
-    hgrid        => Get_grid(mem%grid_id)
-    surface      => Get_vgrid('surface')
-    vgrid_canopy => Get_vgrid('canopy_layer')
+    table                 = tables(1)
+    hgrid                 => Get_grid(mem%grid_id)
+    surface               => Get_vgrid('surface')
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
