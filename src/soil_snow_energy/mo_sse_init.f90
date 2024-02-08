@@ -741,7 +741,6 @@ CONTAINS
               &                                  wtr_soil_sl         (ic,is,ib)   , &
               &                                  ice_soil_sl         (ic,is,ib)   , &
               &                                  vol_porosity_sl     (ic,is,ib)   , &
-              &                                  vol_field_cap_sl    (ic,is,ib)   , &
               &                                  fract_org_sl        (ic,is,ib)   , &
               &                                  vol_porosity_org_tmp(ic,is,ib)   , &
               &                                  hcond_org_tmp       (ic,is,ib)   , &

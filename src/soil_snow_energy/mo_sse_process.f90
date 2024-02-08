@@ -86,7 +86,6 @@ CONTAINS
   ! @param      water                   The water
   ! @param      ice                     The ice
   ! @param      porosity                Volumentric porosity of soil, including soil mineral and organic part
-  ! @param      vol_field_cap           The volume field capability
   ! @param      fract_organic           The fract organic
   ! @param      layer_depth             The layer depth
   ! @param      dz                      { parameter_description }
@@ -100,7 +99,7 @@ CONTAINS
   FUNCTION calc_thermal_conductivity( &
     & heat_cond_soil_mineral,                        &
     & water, ice,                                    &
-    & porosity, vol_field_cap,                       &
+    & porosity,                                      &
     & fract_organic,                                 &
     & vol_porosity_org, hcond_org, hcond_dry_org,    &
     & layer_depth,                                   &
@@ -111,7 +110,7 @@ CONTAINS
     USE mo_sse_constants,          ONLY: hcond_water, hcond_ice, hcond_bedrock
 
 
-    REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, &
+    REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, &
                           & fract_organic, vol_porosity_org, hcond_org, hcond_dry_org, layer_depth, dz
     REAL(wp)             :: heat_cond
 
@@ -120,7 +119,7 @@ CONTAINS
       & porosity_mineral, & !< Volumentric porosity of mineral soil part
       & hcond_dry_min,    & !< Dry thermal conductivity soil (including mineral soil and pores)
       & hcond_dry,        & !< Dry thermal conductivity of soil (including mineral and organic soil and pores)
-      & vpor_sat,         & !< Effective porosity for saturated soil computation (pores remaining if soil is saturated)
+      & sat_scal,         & !< Scaling factor to account for empty pore space
       & saturation,       & !< Degree of saturation
       & kersten,          & !< Kersten number
       & hcond_soil,       & !< Thermal conductivity of soil solids (mineral and organic)
@@ -194,11 +193,13 @@ CONTAINS
           !   kersten = 0._wp
           ! END IF
         END IF
-        ! @todo: vol_field_cap should probably be replaced by MIN(vol_field_cap, liquid_max/layer_depth) if l_supercool=T
-        vpor_sat = porosity - vol_field_cap  ! Empty pores remaining if soil is saturated
-        fract_water = water / (1._wp - vpor_sat) / layer_depth ! Water fraction rel. to completely saturated soil
-        fract_ice   =   ice / (1._wp - vpor_sat) / layer_depth ! Ice fraction rel. to completely saturated soil
-        hcond_sat =   hcond_soil      ** (1._wp-fract_water-fract_ice) &
+        ! The scaling is changed compared to earlier versions. The current implementation interpretes the fractions
+        ! of the individual components such that fract_water + fract_ice equals porosity, which is also supported by
+        ! Nikoosokhan et al (2016), equation 4
+        sat_scal    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
+        fract_water = (water / layer_depth) * sat_scal ! Water fraction rel. to completely saturated soil
+        fract_ice   = (  ice / layer_depth) * sat_scal ! Ice fraction rel. to completely saturated soil
+        hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice
 
