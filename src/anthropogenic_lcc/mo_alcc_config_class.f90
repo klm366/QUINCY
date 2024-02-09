@@ -105,6 +105,8 @@ CONTAINS
     SELECT CASE (TRIM(config%scheme))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
+    CASE ('transitions')
+      CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT

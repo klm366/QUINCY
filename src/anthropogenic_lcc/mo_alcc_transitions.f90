@@ -5,5 +5,5 @@
 !!                in the interface.f90 define the connection with the ICON_LAND infrastructure, such as inout and outout the the process you are implementing
 
 
-!! incline comments of Stefanie is in branch feature/landuse_transitions
+!! inline comments of Stefanie is in branch feature/landuse_transitions
 !! my own developing branch is a outbranch of land4icon_mpim: feature/Landuse_transitions
