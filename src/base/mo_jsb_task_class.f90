@@ -119,7 +119,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
-    ! If process the task belongs to is not active on this tile, do nothing.
+    ! If process the task belongs to is not to be calculated or aggregated on this tile, do nothing.
     IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
 
     SELECT TYPE (this)

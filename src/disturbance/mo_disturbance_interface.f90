@@ -224,8 +224,8 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(DISTURB_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -380,7 +380,7 @@ CONTAINS
 
       END IF
 
-      IF ( tile%Is_process_active(CARBON_) ) THEN
+      IF (tile%Is_process_active(CARBON_)) THEN
 
         ! Calculate carbon relocation connected with damages and fires
         ! R: hier sollen nur die Variablen übergeben werden, die von dieser Prozedur hier im Folgenden benötigt werden.
@@ -577,7 +577,7 @@ CONTAINS
     !dsl4jsb_Aggregate_onChunk(DISTURB_, prev_day_max_wind_10m,  weighted_by_fract)
     !dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m,           weighted_by_fract)
 
-    IF ( tile%Is_process_active(CARBON_) ) THEN
+    IF (tile%Is_process_active(CARBON_)) THEN
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)

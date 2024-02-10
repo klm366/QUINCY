@@ -115,7 +115,6 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
-    PROCEDURE                              :: Is_process_active
     PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
@@ -145,6 +144,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
+    PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
@@ -177,6 +179,14 @@ MODULE mo_jsb_tile_class
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     END SUBROUTINE Init_vars_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    LOGICAL FUNCTION Check_on_process(this, iproc)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+      INTEGER, INTENT(in) :: iproc
+    END FUNCTION Check_on_process
   END INTERFACE
 
   ABSTRACT INTERFACE
@@ -265,23 +275,6 @@ CONTAINS
     END IF
 
   END FUNCTION Get_parent_memory
-
-  FUNCTION Is_process_active(this, iproc) RESULT(return_value)
-
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-    INTEGER,                    INTENT(in) :: iproc
-    LOGICAL                                :: return_value
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active'
-
-    return_value = .FALSE.
-
-    SELECT TYPE (this)
-    CLASS IS (t_jsb_tile_abstract)
-      return_value = ASSOCIATED(this%mem(iproc)%p)
-    END SELECT
-
-  END FUNCTION Is_process_active
 
   SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
 

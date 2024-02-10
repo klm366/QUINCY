@@ -77,7 +77,7 @@ CONTAINS
     ! Get fuel memory of the tile
     !dsl4jsb_Get_memory(FUEL_)
 
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
     CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
 
@@ -108,7 +108,7 @@ CONTAINS
     !dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_config(FUEL_)
 
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
     CALL message(TRIM(routine), 'Setting fuel initial conditions for tile '//TRIM(tile%name))
 

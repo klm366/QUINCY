@@ -37,7 +37,8 @@ MODULE mo_jsb_process_class
     CLASS(t_jsb_config), POINTER  :: config => NULL()
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_list(:)
     INTEGER                       :: owner_model_id
-    LOGICAL                       :: l_changes_fractions=.FALSE.  !< Does this process change tile fractions?
+    LOGICAL                       :: l_changes_fractions = .FALSE.  !< Does this process change tile fractions?
+    LOGICAL                       :: has_memory = .TRUE.  !< Does this process has an own memory module
     TYPE(t_jsb_lcc_proc)          :: lcc_relocations ! pointers required for relocations
   CONTAINS
     PROCEDURE :: Configure => Configure_process

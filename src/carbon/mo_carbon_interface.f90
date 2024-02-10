@@ -290,8 +290,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_green_bio
     dsl4jsb_Real2D_onChunk :: sla
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     iblk  = options%iblk
     ics   = options%ics

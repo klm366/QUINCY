@@ -143,13 +143,12 @@ CONTAINS
     lcc_relocations => model%processes(process_id)%p%lcc_relocations ! JN-TODO: DSL?
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(TLCC_)) RETURN
 
-    ! Assert, that PPLCC is active on the box tile
-    CALL model%Get_top_tile(current_tile)
-    IF (.NOT. current_tile%Is_process_active(PPLCC_)) THEN
-      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to run on the box tile')
+    ! Assert, that PPLCC is active
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 
     ! If not newday, do nothing
@@ -272,7 +271,7 @@ CONTAINS
       !>         e.g. by calling transfer_from_active_to_passive_var_onChunk for named variables 
       !>
       ! 
-      ! IF (last_involved_tile%Is_process_active(TCQ_)) THEN
+      ! IF (last_involved_tile%Is_process_calculated(TCQ_)) THEN
       !   ! For the test cq a_veg is simply put in a_dead ...
       !   active_var_name = 'a_veg_c_tcq'
       !   passive_var_name = 'a_dead_c_tcq'

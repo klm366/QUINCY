@@ -177,8 +177,8 @@ CONTAINS
     
     model => Get_model(tile%owner_model_id)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PPLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
@@ -209,9 +209,9 @@ CONTAINS
 
             ! therefore the conversion factor needs to be adapted
             ! -> Assert that PHENO is active for this tile
-            IF (.NOT. tile%Is_process_active(PHENO_)) THEN
-              CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for conversion, ' &
-                & //' but pheno is not active for '// trim(tile%name))
+            IF (.NOT. tile%Is_process_calculated(PHENO_)) THEN
+              CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for pplcc conversion, ' &
+                & //' but pheno memory is not available for '// trim(tile%name))
             ENDIF
 
             !- Set pointers to memory on the current tile
@@ -298,8 +298,8 @@ CONTAINS
     
     model => Get_model(tile%owner_model_id)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PPLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
@@ -326,10 +326,10 @@ CONTAINS
             ENDIF
 
             ! in jsb4 the carbon variables are specified as mol per canopy, therefore adapt the conversion factor
-            ! -> Assert that PHENO is active for this tile
-            IF (.NOT. tile%Is_process_active(PHENO_)) THEN
+            ! -> Assert that PHENO memory is available on this tile
+            IF (.NOT. tile%Is_process_calculated(PHENO_)) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for conversion, ' &
-                & //' but pheno is not active for '// trim(tile%name))
+                & //' but pheno memory is not available for '// trim(tile%name))
             ENDIF
 
             !- Set pointers to memory on the current tile

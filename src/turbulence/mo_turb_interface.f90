@@ -221,7 +221,7 @@ CONTAINS
     nc      = options%nc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -407,8 +407,8 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -433,7 +433,7 @@ CONTAINS
     config_rough_snow      = dsl4jsb_Config(TURB_)%roughness_snow
     config_rough_water     = dsl4jsb_Config(TURB_)%roughness_water
 
-    IF (tile%Is_process_active(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
+    IF (tile%Has_process_memory(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
 
@@ -721,7 +721,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -740,7 +740,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
-      IF (tile%Is_process_active(ASSIMI_)) THEN
+      IF (tile%Is_process_calculated(ASSIMI_)) THEN
         dsl4jsb_Get_memory(ASSIMI_)
       END IF
     END IF
@@ -782,7 +782,7 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
-      IF (tile%Is_process_active(ASSIMI_)) THEN
+      IF (tile%Is_process_calculated(ASSIMI_)) THEN
         dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited)         ! in
       ELSE
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in

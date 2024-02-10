@@ -129,7 +129,7 @@ CONTAINS
 
     dsl4jsb_Get_config(RAD_)
 
-    IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(RAD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
 

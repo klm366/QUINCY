@@ -147,6 +147,8 @@ CONTAINS
 
   SUBROUTINE interface_hd_ocean(tile, options)
 
+    USE mo_fortran_tools, ONLY: init
+
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
     TYPE(t_jsb_task_options),   INTENT(in) :: options
 
@@ -197,7 +199,14 @@ CONTAINS
     write_coupler_restart = .FALSE.
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
-    buffer(:,:) = 0.0_wp
+    !$ACC DATA CREATE(buffer)
+!$OMP PARALLEL
+    CALL init(buffer(:,:))
+!$OMP END PARALLEL
+
+!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
       IF (iblk /= grid%nblks) THEN
@@ -205,13 +214,15 @@ CONTAINS
       ELSE
        nlen = grid%npromz
       END IF
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) COPYOUT(buffer(nn+1:nn+nlen, 1:1))
+      !$ACC LOOP GANG VECTOR
       DO n = 1, nlen
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO
-      !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
     END DO
+    !$ACC END PARALLEL
+    !$ACC UPDATE HOST(buffer) ASYNC(1)
+    !$ACC WAIT(1)
+!$OMP END PARALLEL DO
 
     nbr_hor_cells = grid%ntotal
     collection_size = 1
@@ -226,6 +237,7 @@ CONTAINS
        CALL message(TRIM(routine), 'YAC says it is put for restart')
     ENDIF
 
+    !$ACC END DATA
     DEALLOCATE(buffer)
 
   END SUBROUTINE interface_hd_ocean
