@@ -92,6 +92,7 @@ MODULE mo_hydro_memory_class
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
+      & vol_resi_wtr,         & !< Volumetric residual water content                                   [m/m]
       & pore_size_index,      & !< Soil pore size distribution index                                   []
       & bclapp,               & !< Exponent B in Clapp and Hornberger
       & matrix_pot,           & !< Matrix potential [m]
@@ -115,6 +116,7 @@ MODULE mo_hydro_memory_class
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
       & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
       & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
+      & vol_resi_wtr_sl,      & !< Volumetric residual water content                                        [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
       & matrix_pot_sl,        & !< Matrix potential                                                         [m]
@@ -580,6 +582,22 @@ CONTAINS
       CALL mem%Add_var( 'vol_porosity_sl', mem%vol_porosity_sl,                &
         & hgrid, soil_w,                                                       &
         & t_cf('vol_porosity_sl', 'm/m', 'Volumetric soil porosity'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'vol_resi_wtr', mem%vol_resi_wtr,                      &
+        & hgrid, surface,                                                      &
+        & t_cf('vol_resi_wtr', 'm/m', 'Volumetric residual water content'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'vol_resi_wtr_sl', mem%vol_resi_wtr_sl,                &
+        & hgrid, soil_w,                                                       &
+        & t_cf('vol_resi_wtr_sl', 'm/m', 'Volumetric residual water content'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &

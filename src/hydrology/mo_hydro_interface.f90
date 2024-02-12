@@ -836,9 +836,10 @@ CONTAINS
   SUBROUTINE update_soil_properties(tile, options)
 
     USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
-      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_porosity_org_below, &
-      & hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, pore_size_index_org_below, &
-      & vol_field_cap_org_below, vol_p_wilt_org_below, thresh_org, beta_perc
+      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_resi_wtr_org_top, &
+      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, &
+      & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below, vol_resi_wtr_org_below, &
+      & thresh_org, beta_perc
 
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -857,7 +858,8 @@ CONTAINS
       & matrix_pot,           &
       & pore_size_index,      &
       & vol_field_cap,        &
-      & vol_p_wilt
+      & vol_p_wilt,           &
+      & vol_resi_wtr
     dsl4jsb_Real3D_onChunk :: &
       & fract_org_sl,         &
       & hyd_cond_sat_sl,      &
@@ -866,7 +868,8 @@ CONTAINS
       & matrix_pot_sl,        &
       & pore_size_index_sl,   &
       & vol_field_cap_sl,     &
-      & vol_p_wilt_sl
+      & vol_p_wilt_sl,        &
+      & vol_resi_wtr_sl
 
     ! Locally allocated vectors
     !
@@ -888,6 +891,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_resi_wtr_org(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
@@ -920,6 +924,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_resi_wtr)       ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
       &  dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)    ! out
@@ -929,6 +934,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_resi_wtr_sl)    ! out
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is=1,nsoil
@@ -940,6 +946,7 @@ CONTAINS
         pore_size_index_sl(ic,is) = pore_size_index(ic)
         vol_field_cap_sl  (ic,is) = vol_field_cap(ic)
         vol_p_wilt_sl     (ic,is) = vol_p_wilt(ic)
+        vol_resi_wtr_sl   (ic,is) = vol_resi_wtr(ic)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -952,6 +959,7 @@ CONTAINS
       ALLOCATE(pore_size_index_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_resi_wtr_org(SIZE(hyd_cond_sat),nsoil))
 
       ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways
       ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
@@ -959,7 +967,7 @@ CONTAINS
 
       !$ACC DATA &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
-      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
+      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org, vol_resi_wtr_org)
 
       ! Use different parameters for top layer and deeper layers
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -971,6 +979,7 @@ CONTAINS
         pore_size_index_org(ic,1) = pore_size_index_org_top
         vol_field_cap_org(ic,1) = vol_field_cap_org_top
         vol_p_wilt_org(ic,1) = vol_p_wilt_org_top
+        vol_resi_wtr_org(ic,1) = vol_resi_wtr_org_top
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -983,11 +992,12 @@ CONTAINS
           pore_size_index_org(ic,is) = pore_size_index_org_below
           vol_field_cap_org(ic,is) = vol_field_cap_org_below
           vol_p_wilt_org(ic,is) = vol_p_wilt_org_below
+          vol_resi_wtr_org(ic,is) = vol_resi_wtr_org_below
         END DO
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! Saturated hydraulic conductivity following percolation theory 
+      ! Saturated hydraulic conductivity following percolation theory
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -1031,6 +1041,8 @@ CONTAINS
             &                       + fract_org_sl(ic,is) * vol_field_cap_org(ic,is)
           vol_p_wilt_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_p_wilt_sl     (ic,is) &
             &                       + fract_org_sl(ic,is) * vol_p_wilt_org(ic,is)
+          vol_resi_wtr_sl   (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_resi_wtr_sl   (ic,is) &
+            &                       + fract_org_sl(ic,is) * vol_resi_wtr_org(ic,is)
         END DO
       END DO
       !$ACC END LOOP
@@ -1046,6 +1058,7 @@ CONTAINS
       DEALLOCATE(pore_size_index_org)
       DEALLOCATE(vol_field_cap_org)
       DEALLOCATE(vol_p_wilt_org)
+      DEALLOCATE(vol_resi_wtr_org)
 
       DEALLOCATE(fract_perc)
       DEALLOCATE(fract_uncon)
@@ -1093,6 +1106,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, pore_size_index_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_field_cap_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_resi_wtr_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_org_sl,       weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1212,6 +1226,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_resi_wtr_sl   ),     & !< residual soil water content [m m-1]
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), & !< potentially supercooled water
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     & !< evaporation - already calculated
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     & !< transpiration - already calculated
