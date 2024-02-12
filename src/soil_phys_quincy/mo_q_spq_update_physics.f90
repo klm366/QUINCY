@@ -737,7 +737,7 @@ CONTAINS
       IF (w_snow_snl(ic,1) < w_snow_min) THEN
         t_soil_sl(ic,1)      = t_srf_new(ic)
         ! ensure there is no NaN passed to soil water, this should probably go somewhere else
-        snow_melt_to_soil(:) = 0.0_wp
+        snow_melt_to_soil(ic) = 0.0_wp
       END IF
     END DO
 
