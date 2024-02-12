@@ -17,7 +17,7 @@ MODULE mo_jsb_config_class
   USE mo_kind,               ONLY: wp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
-  USE mo_exception,          ONLY: message
+  USE mo_exception,          ONLY: message, finish
   USE mo_jsb_io_netcdf,      ONLY: t_input_file
 
   IMPLICIT NONE
@@ -40,7 +40,8 @@ MODULE mo_jsb_config_class
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
-    LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
+    LOGICAL                        :: relative_fractions_in_file   ! true: tile fractions in fract_filename are relative
+                                                                   !       to parent tile
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
     CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
     TYPE(t_input_file)             :: ifs_input_file
@@ -170,6 +171,12 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%relative_fractions_in_file = relative_fractions_in_file
+
+    ! Currently, no absolute fraction files are available. Assert, the flag was not set accidentally.
+    IF(.NOT. relative_fractions_in_file) THEN
+      CALL finish(TRIM(routine), 'relative_fractions_in_file was set to false, however, currently' &
+      & // ' no absolute fraction files are available, please check your settings.')
+    ENDIF
 
     IF (enforce_water_budget) THEN
       CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &

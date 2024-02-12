@@ -28,7 +28,7 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-      & PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, VEG_
+      & PPLCC_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -54,7 +54,7 @@ MODULE mo_jsb_process_class
 
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
-      & FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, VEG_
+      & FUEL_, PPLCC_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
   END ENUM
 
   ! Process actions
@@ -103,12 +103,12 @@ CONTAINS
       return_value = 'fuel'
     CASE (PPLCC_)
       return_value = 'pplcc'
-    CASE (TLCC_)
-      return_value = 'tlcc'
-    CASE (TCQ_)
-      return_value = 'tcq'
     CASE (ALCC_)
       return_value = 'alcc'
+    CASE (FLCC_)
+      return_value = 'flcc'
+    CASE (WLCC_)
+      return_value = 'wlcc'
     CASE (NLCC_)
       return_value = 'nlcc'
     CASE (VEG_)
@@ -155,12 +155,12 @@ CONTAINS
       return_value = FUEL_
     CASE ('pplcc')
       return_value = PPLCC_
-    CASE ('tlcc')
-      return_value = TLCC_
-    CASE ('tcq')
-      return_value = TCQ_
     CASE ('alcc')
       return_value = ALCC_
+    CASE ('flcc')
+      return_value = FLCC_
+    CASE ('wlcc')
+      return_value = WLCC_
     CASE ('nlcc')
       return_value = NLCC_
     CASE ('veg')

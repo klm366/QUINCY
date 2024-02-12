@@ -42,8 +42,14 @@ MODULE mo_pplcc_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
+  USE mo_jsb_time,          ONLY: is_newday
+  USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
+    &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+
+  USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
+
   ! Use of processes in this module
-  dsl4jsb_Use_processes PPLCC_, PHENO_
+  dsl4jsb_Use_processes PPLCC_, PHENO_, CARBON_
 
   ! Use of process configurations
   !  dsl4jsb_Use_config(PPLCC_)
@@ -141,9 +147,6 @@ CONTAINS
   !
   SUBROUTINE update_pplcc_pre_lcc(tile, options)
 
-    USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
-
     IMPLICIT NONE
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -158,7 +161,7 @@ CONTAINS
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
-    CHARACTER(len=:), ALLOCATABLE :: thisUnit, expectedUnit
+    CHARACTER(len=:), ALLOCATABLE :: this_unit, expected_string_in_unit
     
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(PHENO_)
@@ -196,7 +199,7 @@ CONTAINS
         ! conversion depends on the cq type
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -204,10 +207,10 @@ CONTAINS
                 & //' but found on '// trim(tile%name))
             ENDIF
 
-            ! in jsb4 the carbon variables are specified as mol per canopy
-            expectedUnit = 'mol(C) m-2(canopy)'
+            ! in jsb4 the carbon variables are specified per canopy
+            expected_string_in_unit = 'm-2(canopy)'
 
-            ! therefore the conversion factor needs to be adapted
+            ! therefore, PHENO variables are required to determine the conversion factor
             ! -> Assert that PHENO is active for this tile
             IF (.NOT. tile%Is_process_calculated(PHENO_)) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for pplcc conversion, ' &
@@ -232,11 +235,11 @@ CONTAINS
           
         ! Convert all variables of this type
         DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
-          ! Assertion: variable needs to have the unit expected for this type
-          thisUnit = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%unit
-          IF (.NOT. TRIM(thisUnit) .EQ. expectedUnit) THEN
-            CALL finish(TRIM(routine), 'Violation of assertion: variable does not have the expected unit ' &
-              & // expectedUnit // ' but '// trim(thisUnit))
+          ! Assertion: variable needs to contain substring expected for this type
+          this_unit = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%unit
+          IF (.NOT. INDEX(TRIM(this_unit), expected_string_in_unit) > 0) THEN
+            CALL finish(TRIM(routine), 'Violation of assertion: variable does not have the expected unit, ' &
+              & // 'unit is expected to contain ' // expected_string_in_unit // ' but '// trim(this_unit) // ' does not.')
           ENDIF
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
@@ -262,11 +265,9 @@ CONTAINS
   !>
   !> Task "pplcc_post_lcc" does a postprocessing after all lcc processes were executed 
   !> -- for now: convert all cq vars back to their initial reference area.
+  !> -- and if the carbon process is active: recalculate ta variables
   !
   SUBROUTINE update_pplcc_post_lcc(tile, options)
-
-    USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
 
     IMPLICIT NONE
 
@@ -317,7 +318,7 @@ CONTAINS
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
 
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -365,6 +366,11 @@ CONTAINS
 
         ENDDO
       ENDDO
+
+      IF (tile%Is_process_calculated(CARBON_)) THEN
+        CALL recalc_carbon_per_tile_vars(tile, options)
+      END IF
+
     END IF
 
     IF (tile%name .EQ. 'box') CALL pplcc_fraction_diagnostics(tile, options)

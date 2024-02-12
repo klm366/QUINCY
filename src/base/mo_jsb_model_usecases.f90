@@ -18,7 +18,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-                                    FUEL_, ALCC_, NLCC_, VEG_, PPLCC_, TLCC_, TCQ_
+                                    FUEL_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, PPLCC_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -280,6 +280,12 @@ CONTAINS
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
+          IF (model%processes(FLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(WLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+          END IF
           !
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
@@ -298,16 +304,9 @@ CONTAINS
           !$ACC ENTER DATA COPYIN(veg_tile)
         ENDIF
 
-        IF (model%processes(TLCC_)%p%config%active) THEN
-          CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
-        END IF
-
           !
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
-          END IF
-          IF (model%processes(TCQ_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(TCQ_, ON_LEAFS_, AGGREGATE_)
           END IF
           IF (model%processes(FUEL_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)

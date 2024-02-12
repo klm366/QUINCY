@@ -224,9 +224,11 @@ CONTAINS
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-        IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
-          l_fractions_change = .TRUE.
-          EXIT
+        IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+          IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+            l_fractions_change = .TRUE.
+            EXIT
+          END IF
         END IF
       END IF
     END DO
@@ -670,6 +672,8 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
@@ -732,6 +736,8 @@ CONTAINS
         CASE (SKIP_, INHERIT_)
           CYCLE
         END SELECT
+
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars

@@ -64,7 +64,8 @@ CONTAINS
     !dsl4jsb_Real2D_onDomain      :: swpar_fdiffuse
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_calculated(A2L_)) RETURN
+    IF (ASSOCIATED(tile%parent_tile)) RETURN ! should only run on the uppermost tile of the hierarchy
+
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of atm2land memory (quincy) for tile '// &
       &                          TRIM(tile%name))
     ! ---------------------------

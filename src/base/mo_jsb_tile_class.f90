@@ -21,6 +21,7 @@ MODULE mo_jsb_tile_class
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
+  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
@@ -133,6 +134,7 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
     PROCEDURE                              :: Cache_GPU_pointers
@@ -1149,7 +1151,7 @@ CONTAINS
 
     CLASS(t_State), POINTER :: next
 
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_first_child_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_first_child_tile'
 
     next => this%first_child
     IF (.NOT. ASSOCIATED(next)) THEN
@@ -1203,6 +1205,34 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Collect the names of the children of this tile
+  !
+  SUBROUTINE Get_children_names(this, children_names)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
+    CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
+
+    INTEGER :: i_tile, nr_of_children
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+
+    nr_of_children = this%Get_no_of_children()
+
+    IF (nr_of_children /= size(children_names)) &
+      & CALL finish(routine, 'Call with invalid array size (size does not equal nr of children).')
+
+    current_tile => this%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      children_names(i_tile) = current_tile%name
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+  END SUBROUTINE Get_children_names
+
 
   ! If conserved quantities were collected for this tile
   FUNCTION Has_conserved_quantities(this) RESULT(return_value)

@@ -599,7 +599,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     use_tmx = model%config%use_tmx
-    tile_is_carbon_active = tile%Is_process_calculated(CARBON_)
+    tile_is_carbon_active = tile%Is_process_active(CARBON_)
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
