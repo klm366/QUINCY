@@ -1321,29 +1321,14 @@ CONTAINS
 
     !> 3.4 Diagnose "soil root water potential"
     !>
-    !>     This is what plants 'see' as water stress for photosynthesis and growth
-    !>     calculated from layered "soil water potential" and the soil layer depth
+    !>   i.e., the soil water potential that the plants detect for growth and scenescence
     !>
-    !>     @TODO: with water sensitive roots (VEG_ config: flag_dynroots_h2o_n_limit)
-    !>            this should be changed to be weighted by the fraction of roots per layer
+    !>   this is calculated assuming plants are more sensitive to the soil moisture 
+    !>   where they have more root mass
     !>
-    IF (flag_dynamic_roots) THEN
-      hlp1(:) = 0.0_wp
-      hlp2(:) = 0.0_wp
-      DO isoil = 1,nsoil_sb
-        WHERE( root_fraction_sl(:,isoil) > eps8)
-          hlp1(:) = hlp1(:) + w_soil_pot_sl(:,isoil) * soil_depth_sl(:,isoil)
-          hlp2(:) = hlp2(:) + soil_depth_sl(:,isoil)
-        ENDWHERE
-      ENDDO
-      WHERE(hlp2(:) > eps8)
-        w_soil_root_pot(:) = hlp1(:) / hlp2(:)
-      ELSEWHERE
-        w_soil_root_pot(:) = 0.0_wp
-      ENDWHERE
-    ELSE
-      w_soil_root_pot(:) = SUM(w_soil_pot_sl(:,:) * root_fraction_sl(:,:), DIM=2)
-    END IF
+    !>   the soil root water potential is thus weighted by the fraction of roots per layer
+    !>
+    w_soil_root_pot(:) = SUM(w_soil_pot_sl(:,:) * root_fraction_sl(:,:), DIM=2)
 
     !> 3.5 Diagnostic fraction of water mass lost from the soil colum per second
     !!
