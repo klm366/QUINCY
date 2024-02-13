@@ -448,13 +448,13 @@ CONTAINS
     & soilhydmodel, interpol_mean,                                                       &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, vol_resi_wtr_sl, wtr_soil_pot_scool_sl,           &
+    & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,               &
     & evapotrans_soil, transpiration,                                                    &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
     ! out
-    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
-      drain_lat, wtr_transp_down, wtr_soilhyd_res                                        &
+    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, infilt_over, drainage,  &
+    & drain_rock, drain_lat, wtr_transp_down, wtr_soilhyd_res                            &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -469,7 +469,7 @@ CONTAINS
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! if tile fraction is > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
-      & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_resi_wtr_sl, wtr_soil_pot_scool_sl
+      & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                              &
       & evapotrans_soil, transpiration
@@ -481,7 +481,7 @@ CONTAINS
       & infilt_over, drainage,             &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_transp_down
+      & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, wtr_transp_down
 
     ! Local variables
     REAL(wp) ::                       &
@@ -508,6 +508,7 @@ CONTAINS
     ! wtr_wsat_sl: max water that fits into soil layer
     ! wtr_field_cap_sl: water content at field capacity
     ! wtr_p_wilt_sl: water content at wilting point
+    ! wtr_wres_sl: residual water content without ice volume
     ! soil ice is not considered as it cannot move and hence is not considered
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -515,9 +516,11 @@ CONTAINS
         IF (vol_porosity_sl(ic,is) > 0._wp) THEN
           wtr_field_cap_sl(ic,is) = wtr_wsat_sl(ic,is) * (vol_field_cap_sl(ic,is) / vol_porosity_sl(ic,is))
           wtr_p_wilt_sl(ic,is)    = wtr_wsat_sl(ic,is) * (vol_p_wilt_sl(ic,is)    / vol_porosity_sl(ic,is))
+          wtr_wres_sl(ic,is)      = wtr_wsat_sl(ic,is) * (vol_wres_sl(ic,is)      / vol_porosity_sl(ic,is))
         ELSE
           wtr_field_cap_sl(ic,is) = 0._wp
           wtr_p_wilt_sl(ic,is)    = 0._wp
+          wtr_wres_sl(ic,is)      = 0._wp
         END IF
       END DO
     END DO
@@ -554,14 +557,14 @@ CONTAINS
 
     ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
-      &     soil_depth_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,             &
-      &     hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,       &
-      &     vol_resi_wtr_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
-      &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
-      &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
-      &     infilt, infilt_over, drain_rock, drain_lat_sl, wtr_transp_down,          &
-      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res,                            &
-      &     ltpe_closed, ltpe_open)
+      &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl, &
+      &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,        &
+      &    vol_wres_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
+      &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
+      &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
+      &    infilt, infilt_over, drain_rock, drain_lat_sl, wtr_transp_down,           &
+      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res,                             &
+      &    ltpe_closed, ltpe_open)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
@@ -744,10 +747,10 @@ CONTAINS
   SUBROUTINE soilhyd(                                              &
     & nc, l_fract, lat, lon, nsoil, dtime,                         &
     & soilhydmodel, interpol_mean,                                 &
-    & dsoil, wtr_p_wilt_sl,                                        &
+    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                           &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,              &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,            &
-    & vol_resi_wtr_sl,                                             &
+    & vol_wres_sl,                                                 &
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
@@ -764,6 +767,7 @@ CONTAINS
     INTEGER,  INTENT(in)            :: interpol_mean              !< lateral interpolation scheme
     REAL(wp), INTENT(IN)            :: dtime                      !< model time step legth [s]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 !< soil depth until bedrock within each layer [m]
+    REAL(wp), INTENT(IN)            :: wtr_wres_sl(:,:)           !< residual water content of soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_p_wilt_sl(:,:)         !< wilting point of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      !< field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           !< saturation capacity of the soil layer (reduced by ice) [m]
@@ -771,7 +775,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       !< Volumetric soil porosity [m/m]
     REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      !< Volumetric field capacity [m/m]
     REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         !< Volumetric permanent wilting point [m/m]
-    REAL(wp), INTENT(IN)            :: vol_resi_wtr_sl(:,:)       !< Volumetric residual water content [m/m]
+    REAL(wp), INTENT(IN)            :: vol_wres_sl(:,:)           !< Volumetric residual water content [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             !< exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matrix_pot_sl(:,:)         !< matrix potential [m]
     REAL(wp), INTENT(IN)            :: pore_size_index_sl(:,:)    !< soil pore size distribution index used in Van Genuchten
@@ -826,6 +830,7 @@ CONTAINS
     REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
     REAL(wp) :: wtr_flux_top(nc)             !< water flux entering a soil layer from above [m]
     REAL(wp) :: wtr_unavail_sl(nc,nsoil)     !< soil water unavailable for transpiration (supercooled or below wilting point) [m]
+    REAL(wp) :: wtr_residual_sl(nc,nsoil)    !< immobile soil water (supercooled or below residual water content) [m]
     REAL(wp) :: hlp1(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp4(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp2(nc)                     !< needed for ACC (avoid operations as routine arguments)
@@ -836,7 +841,7 @@ CONTAINS
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, wtr_flux_top) &
-    !$ACC   CREATE(wtr_unavail_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl) &
+    !$ACC   CREATE(wtr_unavail_sl, wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl) &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
@@ -864,12 +869,14 @@ CONTAINS
         weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * dsoil(ic,is)
         weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
         weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
-        weq_wres_sl     (ic,is) = vol_resi_wtr_sl(ic,is)  * dsoil(ic,is)
+        weq_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * dsoil(ic,is)
 
-        !> Supercooled soil water and water below the wilting point
-        !>   should not be available for transpiration.
+        !> Supercooled soil water and water below the wilting point / residual water content
+        !>   should not be available for transpiration / vertical water movement.
         wtr_unavail_sl(ic,is) = MIN(wtr_soil_sl(ic,is), &
           &                     MAX(wtr_soil_pot_scool_sl(ic,is), wtr_p_wilt_sl(ic,is)))
+        wtr_residual_sl(ic,is) = MIN(wtr_soil_sl(ic,is), &
+          &                      MAX(wtr_soil_pot_scool_sl(ic,is), wtr_wres_sl(ic,is)))
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -984,7 +991,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          ws_vol_sl(ic,is)        = wtr_soil_sl(ic,is)      / dsoil(ic,is)
+          ws_vol_sl(ic,is)        = (wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is)) / dsoil(ic,is)
           transpiration_sl(ic,is) = transpiration_sl(ic,is) / dsoil(ic,is)
         END IF
         hlp1(ic,is) = 1._wp                           ! just need to have any values
@@ -1033,7 +1040,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
-          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is)
+          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_residual_sl(ic,is)
         END IF
       END DO
     END DO
@@ -2111,7 +2118,7 @@ CONTAINS
             & soilhydmodel, interpol_mean,          &
             & nc, nsoil, dsoil,                     &
             & wtr, ice, wscools,                    &
-            & wsat, fc, pwp, wcres,                 &
+            & wsat, fc, pwp, wres,                  &
             & k_sat, mpot_sat, bclapp, ps_index,    &
             & dt, last_soil_layer,                  &
             & ice_impedance, K, D, K_inter,         &
@@ -2132,7 +2139,7 @@ CONTAINS
     REAL(wp), INTENT(in)            :: wsat(:,:)          !< soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: fc(:,:)            !< field capacity [m]
     REAL(wp), INTENT(in)            :: pwp(:,:)           !< plant wilting point [m]
-    REAL(wp), INTENT(in)            :: wcres(:,:)         !< residual water content [m]
+    REAL(wp), INTENT(in)            :: wres(:,:)          !< residual water content [m]
     REAL(wp), INTENT(in)            :: k_sat(:,:)         !< hydraaulic conductivity
     REAL(wp), INTENT(in)            :: mpot_sat(:,:)      !< matric potential
     REAL(wp), INTENT(in)            :: bclapp(:,:)        !< clapp & Hornberger exponent
@@ -2154,12 +2161,12 @@ CONTAINS
     REAL(wp) :: wtr_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil),     &
              &  nvgn(nc,nsoil), mvgn(nc,nsoil), ws_rel_vol(nc,nsoil),          &
              &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), fc_vol(nc,nsoil),  &
-             &  pwp_vol(nc,nsoil), wcres_vol(nc,nsoil), ws_free_vol(nc,nsoil), &
+             &  pwp_vol(nc,nsoil), wres_vol(nc,nsoil), ws_free_vol(nc,nsoil),  &
              &  ice_imp(nc,nsoil)
 
     !$ACC DATA &
     !$ACC   CREATE(wtr_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
-    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, wcres_vol, ws_free_vol, ice_imp, dt)
+    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, wres_vol, ws_free_vol, ice_imp, dt)
 
     ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
@@ -2183,7 +2190,7 @@ CONTAINS
           wsat_vol(ic,is)  =  wsat(ic,is)                     / dsoil(ic,is)
           fc_vol(ic,is)    =  fc(ic,is)                       / dsoil(ic,is)
           pwp_vol(ic,is)   =  pwp(ic,is)                      / dsoil(ic,is)
-          wcres_vol(ic,is) =  wcres(ic,is)                    / dsoil(ic,is)
+          wres_vol(ic,is)  =  wres(ic,is)                     / dsoil(ic,is)
         ELSE
           wtr_vol(ic,is)   =  0._wp
           ice_vol(ic,is)   =  0._wp
@@ -2191,7 +2198,7 @@ CONTAINS
           wsat_vol(ic,is)  =  0._wp
           fc_vol(ic,is)    =  0._wp
           pwp_vol(ic,is)   =  0._wp
-          wcres_vol(ic,is) =  0._wp
+          wres_vol(ic,is)  =  0._wp
         END IF
       END DO
     END DO
@@ -2290,8 +2297,8 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
-          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - MAX(scool_vol(ic,is), wcres_vol(ic,is)))
-          ws_range_vol(ic,is)  = wsat_vol(ic,is) - wcres_vol(ic,is)
+          ws_free_vol(ic,is)   = MAX(0._wp, wtr_vol(ic,is) - MAX(scool_vol(ic,is), wres_vol(ic,is)))
+          ws_range_vol(ic,is)  = wsat_vol(ic,is) - wres_vol(ic,is)
         END DO
       END DO
       !$ACC END LOOP
@@ -2379,7 +2386,7 @@ CONTAINS
         IF (dt > 0._wp) THEN
           !$ACC LOOP GANG VECTOR
           DO ic = 1, nc
-            K(ic,1) = MIN(K(ic,1), MAX(0._wp,(wtr(ic,1)-wcres(ic,1)) / dt))
+            K(ic,1) = MIN(K(ic,1), MAX(0._wp,(wtr(ic,1)-wres(ic,1)) / dt))
           END DO
           !$ACC END LOOP
         END IF

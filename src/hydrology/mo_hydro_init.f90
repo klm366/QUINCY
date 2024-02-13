@@ -89,10 +89,10 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
 
   ! residual soil moisture (fraction of volume; Maidment, Handbook of Hydrology, 1993)
-  REAL(wp), PARAMETER ::  resi_sand = 0.020_wp  ! (type sand)
-  REAL(wp), PARAMETER ::  resi_silt = 0.015_wp  ! (type silt loam)
-  REAL(wp), PARAMETER ::  resi_clay = 0.090_wp  ! (type clay)
-  REAL(wp), PARAMETER ::  resi_oc = 0.090_wp    ! (currently set to clay)
+  REAL(wp), PARAMETER ::  wres_sand = 0.020_wp  ! (type sand)
+  REAL(wp), PARAMETER ::  wres_silt = 0.015_wp  ! (type silt loam)
+  REAL(wp), PARAMETER ::  wres_clay = 0.090_wp  ! (type clay)
+  REAL(wp), PARAMETER ::  wres_oc   = 0.150_wp  ! (Letts et al., 2000)
 
   PUBLIC :: hydro_init, hydro_sanitize_state
 
@@ -109,7 +109,7 @@ MODULE mo_hydro_init
       & pore_size_index  (:,:) => NULL(), &
       & vol_field_cap    (:,:) => NULL(), &
       & vol_p_wilt       (:,:) => NULL(), &
-      & vol_resi_wtr     (:,:) => NULL(), &
+      & vol_wres         (:,:) => NULL(), &
       & root_depth       (:,:) => NULL(), &
       & weq_snow_soil    (:,:) => NULL(), &
       & wtr_soil_sl    (:,:,:) => NULL(), &
@@ -172,7 +172,7 @@ CONTAINS
       & hydro_init_vars%pore_size_index ,       &
       & hydro_init_vars%vol_field_cap   ,       &
       & hydro_init_vars%vol_p_wilt      ,       &
-      & hydro_init_vars%vol_resi_wtr    ,       &
+      & hydro_init_vars%vol_wres        ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%fract_org_sl    ,       &
       & hydro_init_vars%weq_snow_soil)
@@ -243,7 +243,7 @@ CONTAINS
       & hydro_init_vars%pore_size_index (nproma, nblks),       &
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
-      & hydro_init_vars%vol_resi_wtr    (nproma, nblks),       &
+      & hydro_init_vars%vol_wres        (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
       & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
       & )
@@ -258,7 +258,7 @@ CONTAINS
       hydro_init_vars%pore_size_index(:,:)   = missval
       hydro_init_vars%vol_field_cap  (:,:)   = missval
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
-      hydro_init_vars%vol_resi_wtr   (:,:)   = missval
+      hydro_init_vars%vol_wres       (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%weq_snow_soil  (:,:)   = missval
 
@@ -364,11 +364,11 @@ CONTAINS
         IF (input_file%Has_var('residual_water')) THEN
           ptr_2D => input_file%Read_2d(                  &
             & variable_name='residual_water',             &
-            & fill_array=hydro_init_vars%vol_resi_wtr)
+            & fill_array=hydro_init_vars%vol_wres)
         ELSE
           ptr_2D => input_file%Read_2d(                  &
             & variable_name='wilting_point',             &
-            & fill_array=hydro_init_vars%vol_resi_wtr)
+            & fill_array=hydro_init_vars%vol_wres)
           WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use wilting point instead '
           CALL message (TRIM(routine), message_text)
         END IF
@@ -492,10 +492,10 @@ CONTAINS
 
         ! calculate residual soil water content of mineral soil
         CALL soil_init_from_texture( &
-           resi_sand, resi_silt, resi_clay, resi_oc,                                                                &
+           wres_sand, wres_silt, wres_clay, wres_oc,                                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%vol_resi_wtr(:,:))
+           hydro_init_vars%vol_wres(:,:))
 
         ! calculate matrix potential of mineral soil
         CALL soil_init_from_texture( &
@@ -697,7 +697,14 @@ CONTAINS
       END DO
 
       ! Volumetric residual water contant
-      dsl4jsb_var_ptr(HYDRO_, vol_resi_wtr) = hydro_init_vars%vol_resi_wtr
+      dsl4jsb_var_ptr(HYDRO_, vol_wres) = hydro_init_vars%vol_wres
+
+      ! Get absolute residual water content by multiplying with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
+      DO i=1,nsoil
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_res_sl) (:,i,:) = hydro_init_vars%vol_wres(:,:) * &
+          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+      END DO
 
       ! Get water holding capacity (water content at saturation) by multiplying volumetric porosity with soil layer thicknesses
       ! Note: At this point a potential ice fraction is ignored.
@@ -715,9 +722,10 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_fc_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_res_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_field_cap)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_p_wilt)) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_resi_wtr)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_wres)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, pore_size_index)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, bclapp)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, matrix_pot)) &
@@ -905,13 +913,17 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) = MAX(0._wp,                                          &
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_p_wilt_sl)    * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_res_sl) = MAX(0._wp,                                          &
+        & dsl4jsb_var3D_onDomain(HYDRO_, vol_wres_sl)      * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
+        & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
 
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))      &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))      &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))   &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))  &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_res_sl))
     END IF
 
     IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
@@ -992,9 +1004,9 @@ CONTAINS
     ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
     USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
-      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_resi_wtr_org_top, &
+      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_wres_org_top, &
       & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, &
-      & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below, vol_resi_wtr_org_below
+      & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below, vol_wres_org_below
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -1012,7 +1024,7 @@ CONTAINS
       & pore_size_index,       &
       & vol_field_cap,         &
       & vol_p_wilt,            &
-      & vol_resi_wtr
+      & vol_wres
     dsl4jsb_Real3D_onDomain :: &
       & fract_org_sl,          &
       & hyd_cond_sat_sl,       &
@@ -1022,7 +1034,7 @@ CONTAINS
       & pore_size_index_sl,    &
       & vol_field_cap_sl,      &
       & vol_p_wilt_sl,         &
-      & vol_resi_wtr_sl
+      & vol_wres_sl
 
     ! Locally allocated vectors
     !
@@ -1030,7 +1042,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     REAL(wp) ::  hyd_cond_sat_org, vol_porosity_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
-      & vol_field_cap_org, vol_p_wilt_org, vol_resi_wtr_org
+      & vol_field_cap_org, vol_p_wilt_org, vol_wres_org
 
     INTEGER  :: nsoil, i
 
@@ -1058,7 +1070,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)    ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)      ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)         ! in
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_resi_wtr)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_wres)           ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
      &   dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)  ! in
     dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)    ! out
@@ -1068,7 +1080,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_resi_wtr_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_wres_sl)        ! out
 
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
@@ -1077,7 +1089,7 @@ CONTAINS
     pore_size_index_sl(:,:,:) = SPREAD(pore_size_index(:,:), DIM=2, ncopies=nsoil)
     vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
-    vol_resi_wtr_sl   (:,:,:) = SPREAD(vol_resi_wtr   (:,:), DIM=2, ncopies=nsoil)
+    vol_wres_sl       (:,:,:) = SPREAD(vol_wres       (:,:), DIM=2, ncopies=nsoil)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ! Update soil parameters with organic fractions for deep and top soil layers
       ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
@@ -1090,7 +1102,7 @@ CONTAINS
           pore_size_index_org = pore_size_index_org_top
           vol_field_cap_org   = vol_field_cap_org_top
           vol_p_wilt_org      = vol_p_wilt_org_top
-          vol_resi_wtr_org    = vol_resi_wtr_org_top
+          vol_wres_org        = vol_wres_org_top
         ELSE
           hyd_cond_sat_org    = hyd_cond_sat_org_below
           vol_porosity_org    = vol_porosity_org_below
@@ -1099,7 +1111,7 @@ CONTAINS
           pore_size_index_org = pore_size_index_org_below
           vol_field_cap_org   = vol_field_cap_org_below
           vol_p_wilt_org      = vol_p_wilt_org_below
-          vol_resi_wtr_org    = vol_resi_wtr_org_below
+          vol_wres_org        = vol_wres_org_below
         END IF
 
         hyd_cond_sat_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * hyd_cond_sat_sl   (:,i,:) &
@@ -1116,15 +1128,15 @@ CONTAINS
           & + fract_org_sl(:,i,:) * vol_field_cap_org
         vol_p_wilt_sl     (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_p_wilt_sl     (:,i,:) &
           & + fract_org_sl(:,i,:) * vol_p_wilt_org
-        vol_resi_wtr_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_resi_wtr_sl   (:,i,:) &
-          & + fract_org_sl(:,i,:) * vol_resi_wtr_org
+        vol_wres_sl       (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_wres_sl       (:,i,:) &
+          & + fract_org_sl(:,i,:) * vol_wres_org
       END DO
     END IF
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
     !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
-    !$ACC   DEVICE(vol_p_wilt_sl, vol_resi_wtr_sl)
+    !$ACC   DEVICE(vol_p_wilt_sl, vol_wres_sl)
 
   END SUBROUTINE init_soil_properties
 

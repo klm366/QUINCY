@@ -39,7 +39,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 90
+  INTEGER, PARAMETER :: max_no_of_vars = 95
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -92,7 +92,7 @@ MODULE mo_hydro_memory_class
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
-      & vol_resi_wtr,         & !< Volumetric residual water content                                   [m/m]
+      & vol_wres,             & !< Volumetric residual water content                                   [m/m]
       & pore_size_index,      & !< Soil pore size distribution index                                   []
       & bclapp,               & !< Exponent B in Clapp and Hornberger
       & matrix_pot,           & !< Matrix potential [m]
@@ -116,7 +116,7 @@ MODULE mo_hydro_memory_class
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
       & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
       & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
-      & vol_resi_wtr_sl,      & !< Volumetric residual water content                                        [m/m]
+      & vol_wres_sl,          & !< Volumetric residual water content                                        [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
       & matrix_pot_sl,        & !< Matrix potential                                                         [m]
@@ -129,6 +129,7 @@ MODULE mo_hydro_memory_class
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
+      & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice             [m]
       & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
 
     ! Additional variables for PFT lct_type
@@ -598,17 +599,17 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'vol_resi_wtr', mem%vol_resi_wtr,                      &
+      CALL mem%Add_var( 'vol_wres', mem%vol_wres,                              &
         & hgrid, surface,                                                      &
-        & t_cf('vol_resi_wtr', 'm/m', 'Volumetric residual water content'),    &
+        & t_cf('vol_wres', 'm/m', 'Volumetric residual water content'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'vol_resi_wtr_sl', mem%vol_resi_wtr_sl,                &
+      CALL mem%Add_var( 'vol_wres_sl', mem%vol_wres_sl,                        &
         & hgrid, soil_w,                                                       &
-        & t_cf('vol_resi_wtr_sl', 'm/m', 'Volumetric residual water content'), &
+        & t_cf('vol_wres_sl', 'm/m', 'Volumetric residual water content'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -832,6 +833,15 @@ CONTAINS
         & hgrid, soil_w,                                                                 &
         & t_cf('wtr_soil_pwp_sl', 'm',                                                   &
         &      'Water content in soil layers at permanent wilting point'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & loutput=.TRUE.,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_soil_res_sl', mem%wtr_soil_res_sl,                          &
+        & hgrid, soil_w,                                                                 &
+        & t_cf('wtr_soil_res_sl', 'm',                                                   &
+        &      'Residual water content in soil layers'),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &

@@ -61,7 +61,7 @@ MODULE mo_hydro_constants
     & vol_porosity_org_top    = 0.95_wp,       & !< volumetric porosity of organic part of soil layer [m/m]
     & vol_field_cap_org_top   = 0.95_wp,       & !< volumetric field capacity of organic layer [m/m]
     & vol_p_wilt_org_top      = 0.255_wp,      & !< volumetric wilting point of organic layer [m/m]
-    & vol_resi_wtr_org_top    = 0.090_wp,      & !< volumetric residual water content of organic layer [m/m]
+    & vol_wres_org_top        = 0.050_wp,      & !< volumetric residual water content of organic layer [m/m] (Letts et al., 2000)
     & hyd_cond_sat_org_top    = 0.0001_wp,     & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_top          = 4._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
     & matrix_pot_org_top      = -0.1_wp,       & !< Matrix potential of organic part of soil layer [m]
@@ -71,7 +71,7 @@ MODULE mo_hydro_constants
     & vol_porosity_org_below  = 0.82_wp,       & !< volumetric porosity of organic part of soil layer [m/m]
     & vol_field_cap_org_below = 0.82_wp,       & !< volumetric field capacity of organic layer [m/m]
     & vol_p_wilt_org_below    = 0.255_wp,      & !< volumetric wilting point of organic layer [m/m]
-    & vol_resi_wtr_org_below  = 0.090_wp,      & !< volumetric residual water content of organic layer [m/m]
+    & vol_wres_org_below      = 0.150_wp,      & !< volumetric residual water content of organic layer [m/m] (Letts et al., 2000)
     & hyd_cond_sat_org_below  = 0.00000001_wp, & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_below        = 8._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
     & matrix_pot_org_below    = -1.0_wp,       & !< Matrix potential of organic part of soil layer [m]
