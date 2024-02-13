@@ -454,7 +454,7 @@ CONTAINS
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
-      drain_lat, wtr_soilhyd_res                                                         &
+      drain_lat, wtr_transp_down, wtr_soilhyd_res                                        &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -481,7 +481,7 @@ CONTAINS
       & infilt_over, drainage,             &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
+      & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_transp_down
 
     ! Local variables
     REAL(wp) ::                       &
@@ -559,8 +559,9 @@ CONTAINS
       &     vol_resi_wtr_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
-      &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
-      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     infilt, infilt_over, drain_rock, drain_lat_sl, wtr_transp_down,          &
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res,                            &
+      &     ltpe_closed, ltpe_open)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
@@ -603,6 +604,11 @@ CONTAINS
       evapo_deficit(ic) = evapo_deficit(ic) * rhoh2o / dtime
     END DO
     !$ACC END PARALLEL LOOP
+
+    ! TODO check GPU implementation
+    DO ic = 1, nc
+      wtr_transp_down(ic,:) = wtr_transp_down(ic,:) * rhoh2o / dtime
+    END DO
 
     !$ACC WAIT(1)
     !$ACC END DATA
@@ -745,7 +751,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
-    & infilt, infilt_over, drain_rock, drain_lat,                  &
+    & infilt, infilt_over, drain_rock, drain_lat, wtr_transp_down, &
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                &
     & ltpe_closed, ltpe_open)
 
@@ -781,6 +787,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             !< overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)            !< error with Terra-World setup
     REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           !< Water evaporated from unintended sources [m]
+    REAL(wp), INTENT(OUT)           :: wtr_transp_down(:,:)       !< Vertical water transport into the next deeper soil layer [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         !< Residual error of the vertical transport scheme
     LOGICAL, INTENT(IN) :: ltpe_closed    ! @TODO move up to the other "IN" arguments
     LOGICAL, INTENT(IN) :: ltpe_open      ! @TODO move up to the other "IN" arguments
@@ -795,6 +802,7 @@ CONTAINS
     ! units for all fluxes should be [m/timestep] @TODO
     REAL(wp) :: weq_soil(nc)                 !< total column soil moisture (water + ice) [m/s]
     REAL(wp) :: ws_inter_sl(nc,nsoil)        !< soil moisture with infiltration added to first layer [m] of liquid water
+    REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     !< soil moisture state prior to lateral transport [m]
     REAL(wp) :: ws_vol_sl(nc,nsoil)          !< volumetric soil mositure (scaled with layer thickness - ratio of one meter soil column filled by water)
     REAL(wp) :: ice_impedance_sl(nc,nsoil)   !< ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        !< hydraulic conductivity of a layer [m/s]
@@ -816,6 +824,7 @@ CONTAINS
     REAL(wp) :: wtr_transp_corr(nc)          !< uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             !< surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
+    REAL(wp) :: wtr_flux_top(nc)             !< water flux entering a soil layer from above [m]
     REAL(wp) :: wtr_unavail_sl(nc,nsoil)     !< soil water unavailable for transpiration (supercooled or below wilting point) [m]
     REAL(wp) :: hlp1(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
     REAL(wp) :: hlp4(nc,nsoil)               !< needed for ACC (avoid operations as routine arguments)
@@ -824,9 +833,9 @@ CONTAINS
     REAL(wp) :: hlp5                         !< needed for ACC (avoid operations as routine arguments)
 
     !$ACC DATA &
-    !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
+    !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
-    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
+    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, wtr_flux_top) &
     !$ACC   CREATE(wtr_unavail_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl) &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
@@ -872,6 +881,8 @@ CONTAINS
       wtr_exwsat(ic)   = 0._wp
       !> Initialize active layers
       last_soil_layer(ic) = 0
+      !> Initialize vertical water transport
+      wtr_transp_down(ic,:) = 0._wp   ! @todo check GPU stuff
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -946,6 +957,9 @@ CONTAINS
     !>       of the top layer) or too low if the soil is not fully saturated. Smart ideas are needed here!
     !>
     DO ic = 1, nc
+      ! Store soil moisture state for later diagnosis of lateral water fluxes
+      wtr_soil_sl_t0(ic,:) = wtr_soil_sl(ic,:)
+
       ! infilt(ic)       = MIN(infilt(ic), hyd_cond_sl(ic,1) * dtime)   ! @TODO
 
       ! Any water exceeding the infiltration capacity is given to the surface runoff (Horton runoff)
@@ -1145,6 +1159,16 @@ CONTAINS
       END IF
     END DO
 #endif
+
+    ! Diagnose lateral water transport
+    ! @todo GPU stuff
+    DO ic = 1, nc
+      wtr_flux_top(ic) = infilt(ic) + evapo_soil_sl1(ic)
+      DO is = 1, last_soil_layer(ic)
+        wtr_transp_down(ic,is) = wtr_soil_sl_t0(ic,is) - wtr_soil_sl(ic,is) + wtr_flux_top(ic) + transpiration_sl(ic,is)
+        wtr_flux_top(ic)       = wtr_transp_down(ic,is)
+      END DO
+    END DO
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 

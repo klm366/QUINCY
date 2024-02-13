@@ -1245,6 +1245,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     & !< = drain_rock + drain_lat; over all soil layers
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     & !< water outflow vertical into rock
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     & !< water outflow horizontally
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & !< lateral downards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      & !< numerical error with water transport
       & )
 
@@ -1305,6 +1306,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
