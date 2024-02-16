@@ -1325,7 +1325,7 @@ CONTAINS
           IF (is == nsoil-1 .OR. is == nsoil) THEN
             IF (dsoil(ic,is) > 0._wp) THEN
               ! keep the two lowest soil layers always very wet
-              wtr_soil_sl(ic,is) = MAX(wtr_soil_sl(ic,is),wtr_field_cap_sl(ic,is) * 0.9_wp)
+              wtr_soil_sl(ic,is) = MAX(wtr_soil_sl(ic,is), wtr_wsat_sl(ic,is) * 0.9_wp)
             END IF
           END IF
         END DO
@@ -2251,18 +2251,16 @@ CONTAINS
     END IF
     !$ACC END PARALLEL
 
-    ! Compute impedance factor due to soil ice
+    ! Compute impedance factor due to soil ice (e.g. Hansson et al., 2004)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        IF (fc_vol(ic,is) + ice_vol(ic,is) > 1.0e-10_wp) THEN
-          ! @TODO equation from CLM ?
-          ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is) ) &
-            & / (fc_vol(ic,is) + ice_vol(ic,is)))
+        IF (wsat_vol(ic,is) > 1.0e-10_wp) THEN
+          ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is)) / wsat_vol(ic,is))
         ELSE
-          ice_imp(ic,is) = 1._wp
+          ice_imp(ic,is)  = 1._wp
         END IF
       END DO
       !$ACC END LOOP
