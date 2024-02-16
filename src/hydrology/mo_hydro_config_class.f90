@@ -52,7 +52,7 @@ MODULE mo_hydro_config_class
                                 !   TODO might be removed and set to TRUE as default after the old snow scheme is removed
     INTEGER               :: &
       & soilhydmodel,        & !< select the soil hydrological model for calc soil hydraulic properties:
-                               !  'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
+                               !  'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
       & interpol_mean          !< select interpolation scheme to obtain K & D at layer interface:
                                !  'upstream' (default) or 'arithmetic' mean
 
@@ -71,7 +71,7 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
@@ -131,7 +131,7 @@ CONTAINS
     l_soil_texture         = .FALSE.
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
-    soilhydmodel           = "BrooksCorey"
+    soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -192,15 +192,15 @@ CONTAINS
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
-    CASE("brookscorey")
-      config%soilhydmodel = BrooksCorey_
-      CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
-    CASE("clapphornberger")
-      config%soilhydmodel = ClappHornberger_
-      CALL message(TRIM(routine), 'Soil hydrology uses the Clapp & Hornberger model')
     CASE("vangenuchten")
       config%soilhydmodel = VanGenuchten_
       CALL message(TRIM(routine), 'Soil hydrology uses the Van Genuchten model')
+    CASE("brookscorey")
+      config%soilhydmodel = BrooksCorey_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
+    CASE("campbell")
+      config%soilhydmodel = Campbell_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Clapp & Hornberger model')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology model '//TRIM(soilhydmodel)//' not implemented')
     END SELECT

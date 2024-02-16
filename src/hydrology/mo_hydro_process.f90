@@ -2125,7 +2125,7 @@ CONTAINS
             & D_inter, mpot_act                     &
             )
 
-    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
     INTEGER,  INTENT(in)            :: soilhydmodel       !< Approaches to determine conductivites & diffusivities (KD)
@@ -2281,9 +2281,9 @@ CONTAINS
       !$ACC END LOOP
     END IF
 
-    ! Compute relative soil moisture depending on soil hydrological model - default is "Brooks & Corey"
+    ! Compute relative soil moisture depending on soil hydrological model - default is "Van Genuchten"
     ! Clapp Hornberger
-    IF (soilhydmodel == ClappHornberger_) THEN  ! @TODO remove underscore and maybe all large caps 'ClappHornberger_'
+    IF (soilhydmodel == Campbell_) THEN  ! @TODO remove underscore and maybe all large caps 'Campbell_'
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
@@ -2342,7 +2342,7 @@ CONTAINS
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == Campbell_) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
         DO is = 1, nsoil
           DO ic = 1, nc
@@ -2398,7 +2398,7 @@ CONTAINS
     ! Compute hydrological diffusivity (D) for every layer
     IF (PRESENT(D)) THEN
 
-      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == Campbell_) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is = 1, nsoil
           DO ic = 1, nc
@@ -2523,7 +2523,7 @@ CONTAINS
       DO is = 1, nsoil
         DO ic = 1, nc
           IF (ws_rel_vol(ic,is) > 0._wp) THEN
-            IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+            IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == Campbell_) THEN
               mpot_act(ic,is) = mpot_sat(ic,is) * (ws_rel_vol(ic,is)**(-bclapp(ic,is)))
             ELSE
               mpot_act(ic,is) = mpot_sat(ic,is) * (ws_rel_vol(ic,is)**(-1._wp/mvgn(ic,is)) - 1._wp)**(1._wp/nvgn(ic,is))
