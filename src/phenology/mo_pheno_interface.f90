@@ -226,7 +226,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
@@ -269,7 +269,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_q_'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
 
     ! only if the present tile is a pft
@@ -292,7 +292,8 @@ CONTAINS
 
     ! Declarations
     USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
-      &                                calculate_current_c_ta_state_sum, check_carbon_conservation
+      &                                calculate_current_c_ta_state_sum, check_carbon_conservation, &
+      &                                recalc_carbon_per_tile_vars
     USE mo_pheno_process,        ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
       &                                calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                track_max_green_pool, derive_maxlai_according_to_allometric_relationships
@@ -403,10 +404,10 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
-    IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
@@ -445,7 +446,7 @@ CONTAINS
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
       !ASSERTION: l_forestRegrowth only possible when the CARBON process is active
-      IF ( .NOT. tile%Is_process_active(CARBON_)) THEN
+      IF (.NOT. tile%Has_process_memory(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
       ENDIF
 
@@ -571,9 +572,10 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! redistribute
+        CALL recalc_carbon_per_tile_vars(tile, options)
         CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
+        ! redistribute
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -830,8 +832,8 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1007,7 +1009,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1146,7 +1148,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

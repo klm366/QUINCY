@@ -140,11 +140,6 @@ CONTAINS
 
   END FUNCTION get_relative_humidity_air
 
-  ! R: TBD: I copied this subroutine from MO_JSB4_FORCING, because
-  !    this mo is not compiled with icon/echam.
-  !    Reiner has to decide if we change config or the place of this procedure.
-  !    I made some changes because the dimensions (vector lenghts) were unnecessary
-  !    cryptic. We could even skip "nc" if we would change the DO loop below...
   !>
   !! Returns saturation specific humidity for given temperature and pressure
   !!

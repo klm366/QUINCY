@@ -44,8 +44,7 @@ MODULE mo_alcc_interface
   PUBLIC :: Register_alcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'alcc'
-  
+
   !> Type definition for alcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
   CONTAINS
@@ -71,7 +70,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_alcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=ALCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
     
@@ -99,7 +98,6 @@ CONTAINS
 
     USE mo_util,              ONLY: one_of
     USE mo_jsb_time,          ONLY: is_newday, is_newyear
-    USE mo_jsb_process_class, ONLY: Get_process_id
     USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
 
@@ -118,7 +116,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
-    INTEGER  :: i_tile, iblk, ics, ice, nc, process_id, nr_of_tiles
+    INTEGER  :: i_tile, iblk, ics, ice, nc, nr_of_tiles
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
     REAL(wp), DIMENSION(options%nc) :: cf_diff
@@ -134,20 +132,18 @@ CONTAINS
     dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
-    process_id = Get_process_id(procname)
 
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(alcc_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
 
     !>
-    !> Assert that PPLCC is active on the box tile
+    !> Assert that PPLCC process is active
     !>
-    CALL model%Get_top_tile(current_tile)
-    IF (.NOT. current_tile%Is_process_active(PPLCC_)) THEN
-      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to run on the box tile')
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 
     !JN-TODO: as I understand in JSBACH3 cf changes according to luh were done on a daily timestep?!
@@ -171,7 +167,7 @@ CONTAINS
     !>
     !> 1. Get lcc structure
     !>
-    lcc_relocations => model%processes(process_id)%p%lcc_relocations ! JN-TODO: DSL?
+    dsl4jsb_Get_lcc_relocations(ALCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
     ! Allocate area vectors

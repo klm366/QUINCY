@@ -29,7 +29,8 @@ MODULE mo_jsb_lcc_class
   PRIVATE
 
   PUBLIC :: t_jsb_lcc_proc, t_jsb_lcc_var, t_jsb_lcc_var_p, &
-    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk
+    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk, &
+    & copy_from_active_to_passive_var_onChunk
 
   !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation 
   TYPE :: t_jsb_lcc_var
@@ -74,24 +75,30 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Relocates content of a specific given active to a specific given passive var
+  !> Relocates a certain fraction of the content of a specific given active to a specific given passive var
   !
   SUBROUTINE transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
-      &                                                  active_var_name, passive_var_name)
+      &                                                  active_var_name, passive_var_name, transfer_fract, &
+      &                                                  conversion_fact)
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations
         !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
-    INTEGER,                    INTENT(in)    :: i_tile  
-        !< index of the tile in the lcc structure for which the relocation should be conducted 
+    INTEGER,                    INTENT(in)    :: i_tile
+        !< index of the tile in the lcc structure for which the relocation should be conducted
     TYPE(t_jsb_task_options),   INTENT(in)    :: options !< run-time parameters
     CHARACTER(len=*), INTENT(in)    :: active_var_name   !< (active) source var
     CHARACTER(len=*), INTENT(in)    :: passive_var_name  !< (passive) sink var
+    REAL(wp),  INTENT(in), OPTIONAL :: transfer_fract
+        !< fraction of matter transferred from active to passive var - if not given: 1.0 is assumed
+    REAL(wp),  INTENT(in), OPTIONAL :: conversion_fact
+        !< conversion fraction if active var has different unit then passive var - if not given: 1.0 is assumed
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':transfer_from_active_to_passive_var_onChunk'
 
-    INTEGER :: i_active, i_passive, ics, ice, iblk
+    REAL(wp) :: this_transfer_fract, this_conversion_fact
+    INTEGER  :: i_active, i_passive, ics, ice, iblk
     ! -------------------------------------------------------------------------------------------------- !
 
     IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
@@ -119,15 +126,104 @@ CONTAINS
     ice = options%ice
     iblk = options%iblk
 
-    ! Add active content to passive var 
-    lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
-      & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
-      & + lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk)
+    IF (PRESENT(transfer_fract)) THEN
+      this_transfer_fract = transfer_fract
+    ELSE
+      this_transfer_fract = 1.0
+    ENDIF
 
-    ! And set active to zero
-    lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) = 0.0_wp
+    IF (PRESENT(conversion_fact)) THEN
+      this_conversion_fact = conversion_fact
+    ELSE
+      this_conversion_fact = 1.0
+    ENDIF
+
+    ! Add fraction of active content to be transferred to passive var,
+    ! potentially converting to the unit of the passive var
+    lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk)       &
+      & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
+      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk)  &
+      &    * this_transfer_fract * this_conversion_fact)
+
+    ! And subtract from active - of course using the unit of the active var (i.e. no conversion)
+    lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk)        &
+      & = lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk)  &
+      & - (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) &
+      &    * this_transfer_fract)
 
   END SUBROUTINE transfer_from_active_to_passive_var_onChunk
+
+
+  ! ====================================================================================================== !
+  !
+  !> Copies a fraction of the content of a given active to a given passive var -> for diagnostic vars!
+  !
+  !
+  SUBROUTINE copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
+    &                                   active_var_name, passive_var_name, copy_fract, conversion_fact)
+
+    IMPLICIT NONE
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations !< lcc structure of the calling lcc process
+    INTEGER,                    INTENT(in)    :: i_tile
+        !< index of the tile in the lcc structure for which the actoon should be conducted
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< run-time parameters
+    CHARACTER(len=*), INTENT(in)    :: active_var_name   !< (active) source var
+    CHARACTER(len=*), INTENT(in)    :: passive_var_name  !< (passive) sink var
+    REAL(wp),  INTENT(in), OPTIONAL :: copy_fract
+        !< fraction of matter copied from active to passive var - if not given: 1.0 is assumed
+    REAL(wp),  INTENT(in), OPTIONAL :: conversion_fact
+        !< conversion fraction if active var has different unit then passive var - if not given: 1.0 is assumed
+    ! -------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':copy_from_active_to_passive_var_onChunk'
+
+    REAL(wp) :: this_copy_fract, this_conversion_fact
+    INTEGER  :: i_active, i_passive, ics, ice, iblk
+    ! -------------------------------------------------------------------------------------------------- !
+
+    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
+
+    i_active = one_of( active_var_name , lcc_relocations%active_vars_names)
+    i_passive = one_of( passive_var_name , lcc_relocations%passive_vars_names)
+
+    !>
+    !> Assertion source variable needs to be active variable for this lcc process
+    !>
+    IF (i_active < 0) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: Passed active var ' // TRIM(active_var_name) &
+        & // ' is not an active var in lcc structure for ' // lcc_relocations%name )
+    ENDIF
+
+    !>
+    !> Assertion sink variable needs to be passive variable for this lcc process
+    !>
+    IF (i_passive < 0) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: Passed passive var ' // TRIM(passive_var_name) &
+        & // ' is not a passive var in lcc structure for ' // lcc_relocations%name )
+    ENDIF
+
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+
+    IF (PRESENT(copy_fract)) THEN
+      this_copy_fract = copy_fract
+    ELSE
+      this_copy_fract = 1.0
+    ENDIF
+
+    IF (PRESENT(conversion_fact)) THEN
+      this_conversion_fact = conversion_fact
+    ELSE
+      this_conversion_fact = 1.0
+    ENDIF
+
+    ! Add active content to passive var
+    lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
+      & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
+      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) * this_copy_fract * conversion_fact)
+
+  END SUBROUTINE copy_from_active_to_passive_var_onChunk
 
 
   SUBROUTINE collect_matter_of_active_vars_onChunk(collected_matter, lcc_relocations, i_tile, options, active_var_names)

@@ -55,7 +55,6 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_jsb_cqt_class,     ONLY: Get_cqt_name
     USE mo_carbon_constants,  ONLY: carbon_potential_active_vars, carbon_required_passive_vars
-    USE mo_tcq_constants,     ONLY: tcq_potential_active_vars, tcq_required_passive_vars
 
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*),  INTENT(in) :: process_name      !< name of the encompassing lcc process  
@@ -109,23 +108,11 @@ CONTAINS
     lcc_relocations%name = TRIM(process_name) // "_lcc"
     lcc_relocations%tile_names = involved_child_tiles(:)
 
-    !>
-    !> Assertion: active and passive cqts are not allowed to overlap
-    !>
-    DO i_cqt = 1,SIZE(active_cqts(:))
-      IF (ANY(active_cqts(i_cqt) == passive_cqts(:) )) THEN
-          CALL finish(TRIM(routine), &
-            & 'Violation of assertion: Conceptually each CQT type can only be active or passive ' &
-            & //'for one lcc proc! If further distinctions are required new sub-types need to be implemented. ' &
-            & //'CQ type which was active and passive: '// Get_cqt_name(active_cqts(i_cqt)) //'. Please check.')
-      ENDIF
-    ENDDO
-
     nr_of_active_vars = 0
     nr_of_passive_vars = 0
     nr_of_procs_with_active_vars = 0
 
-    ! Iterate over the children of the tile to collect the CQ variables of 
+    ! Iterate over the children of the tile to collect the CQ variables of
     ! the actively and passively relocated CQTs
     nr_of_children = tile%Get_no_of_children()
     child => tile%Get_first_child_tile()
@@ -149,7 +136,8 @@ CONTAINS
           IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
             nr_of_active_vars = nr_of_active_vars &
               & + child%conserved_quantities(i_cqt)%p%no_of_vars
-          ELSEIF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          ENDIF
+          IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             nr_of_passive_vars = nr_of_passive_vars &
               & + child%conserved_quantities(i_cqt)%p%no_of_vars
           ENDIF
@@ -192,8 +180,9 @@ CONTAINS
                 & lcc_relocations%active_vars, lcc_relocations%active_vars_names)
 
             ENDDO 
+          ENDIF
           ! and separately for the passive cqts
-          ELSEIF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             nr_of_vars = child%conserved_quantities(i_cqt)%p%no_of_vars
             DO i_var = 1,nr_of_vars
               i_passive = i_passive + 1
@@ -204,6 +193,7 @@ CONTAINS
 
             ENDDO 
           ENDIF !... for active or passive CQTs
+
         ENDDO !... for all CQTs
 
         ! Collect the names of the processes carrying variables that are actively relocated by this lcc process
@@ -233,7 +223,8 @@ CONTAINS
             CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, child%name, &
               & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
               & lcc_relocations%active_vars, lcc_relocations%nr_of_active_vars, 'active')
-          ELSEIF(ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          ENDIF
+          IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, child%name, &
               & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
               & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
@@ -317,9 +308,6 @@ CONTAINS
 
       ! and check them
       SELECT CASE(tolower(this_proc_name))
-      CASE ('tcq')
-        CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, tcq_potential_active_vars)
-        CALL check_passive_lcc_vars(lcc_relocations, this_proc_name, passive_vars_this_proc, tcq_required_passive_vars)
 
       CASE ('carbon')
         CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, carbon_potential_active_vars)
@@ -449,6 +437,14 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Lost area exceeds available area! Please check!')
     ENDIF
 
+    !>
+    !> NOTE: in the current implementation it is crucial that the active vars are filled first,
+    !>       because implementation of flcc made it necessary that variables can be active and passive
+    !>       and currently active vars are relocated first and then passive vars are relocated
+    !> HOWEVER: as soon as lcc is realised as passive -> active -> passive relocation via bare tile
+    !>          it'll of course be the other way round
+    !>
+    !@TODO: switch order as soon as lcc is realised as passive -> active -> passive relocation via bare tile
     CALL collect_to_be_transferred_matter(options, lost_area, initial_area, &
       & nr_of_tiles, lcc_relocations%nr_of_active_vars, lcc_relocations%active_vars)
 
@@ -532,7 +528,6 @@ CONTAINS
   !> Attempts to relocate content of active to passive vars by calling functions on the encompassing processes
   !
   SUBROUTINE transfer_active_to_passive_onChunk(lcc_relocations, tile, i_tile, options)
-    USE mo_tcq_interface,       ONLY: tcq_transfer_from_active_to_passive_vars_onChunk
     USE mo_carbon_interface,    ONLY: carbon_transfer_from_active_to_passive_vars_onChunk
 
     IMPLICIT NONE
@@ -575,8 +570,6 @@ CONTAINS
       IF(has_non_zero_active_var) THEN
 
         SELECT CASE(tolower(this_proc_name))
-        CASE ('tcq')
-          CALL tcq_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
 
         CASE ('carbon')
           CALL carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)

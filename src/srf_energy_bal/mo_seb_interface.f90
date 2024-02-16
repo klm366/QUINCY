@@ -199,7 +199,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
@@ -323,7 +323,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
@@ -464,7 +464,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
@@ -541,7 +541,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 

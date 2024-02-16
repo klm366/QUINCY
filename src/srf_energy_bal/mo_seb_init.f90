@@ -116,7 +116,7 @@ CONTAINS
     ! Get seb config
     ! dsl4jsb_Get_config(SEB_)
 
-    ! IF (.NOT. dsl4jsb_Config(SEB_)%active) RETURN
+    ! IF (.NOT. model%Is_process_enabled(SEB_)) RETURN
 
     ! Get seb memory of the tile
     !dsl4jsb_Get_memory(SEB_)

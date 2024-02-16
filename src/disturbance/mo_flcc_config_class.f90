@@ -1,4 +1,4 @@
-!> tlcc config
+!> flcc (lcc due to fire) config
 !>
 !> ICON-Land
 !>
@@ -11,79 +11,80 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain namelist info for the test lcc proc
-!>
-!> currently of no use beyond being required by the infrastructure
-!>
-MODULE mo_tlcc_config_class
+MODULE mo_flcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_tlcc_config
+  PUBLIC :: t_flcc_config
 
-  TYPE, EXTENDS(t_jsb_config) :: t_tlcc_config
+  TYPE, EXTENDS(t_jsb_config) :: t_flcc_config
+      LOGICAL :: separate
+    CONTAINS
+      PROCEDURE :: Init => Init_flcc_config
+  END type t_flcc_config
 
-   CONTAINS
-     PROCEDURE :: Init => Init_tlcc_config
-  END type t_tlcc_config
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_tlcc_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_config_class'
 
 CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Initialize tlcc process
+  !> Initialize flcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize tlcc process
+  !> Initialize flcc process
   !!
-  !! @param[inout]     config     Configuration type of process (t_tlcc_config)
-  !!  
-  SUBROUTINE Init_tlcc_config(config)
+  !! @param[inout]     config     Configuration type of process (t_flcc_config)
+  !!
+  SUBROUTINE Init_flcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_tlcc_config), INTENT(inout) :: config !<Configuration type of process (t_tlcc_config)
+    CLASS(t_flcc_config), INTENT(inout) :: config !<Configuration type of process (t_flcc_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    LOGICAL                       :: active
+    CHARACTER(len=filename_max)   :: ic_filename, bc_filename
+    LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
     ! -------------------------------------------------------------------------------------------------- !
 
-    NAMELIST /jsb_tlcc_nml/      &
+    NAMELIST /jsb_flcc_nml/           &
          active,                      &
          ic_filename,                 &
-         bc_filename
+         bc_filename,                 &
+         separate
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tlcc_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_flcc_config'
 
-    CALL message(TRIM(routine), 'Starting tlcc configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting flcc configuration')
 
     ! Set defaults
+    separate            = .TRUE.
     active              = .FALSE.
-    bc_filename         = 'bc_land_tlcc.nc'
-    ic_filename         = 'ic_land_tlcc.nc'
+    bc_filename         = 'bc_land_flcc.nc'
+    ic_filename         = 'ic_land_flcc.nc'
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('jsb_tlcc_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_tlcc_nml)
+    nml_unit = position_nml('jsb_flcc_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_flcc_nml)
 
     CALL close_nml(nml_handler)
 
+    config%separate            = separate
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    
-  END SUBROUTINE Init_tlcc_config
+
+  END SUBROUTINE Init_flcc_config
 
 #endif
-END MODULE mo_tlcc_config_class
+END MODULE mo_flcc_config_class

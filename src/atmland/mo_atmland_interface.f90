@@ -606,7 +606,7 @@ CONTAINS
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    IF (tile%Is_process_active(CARBON_)) THEN
+    IF (tile_is_carbon_active) THEN
       dsl4jsb_Get_memory(CARBON_)
     END IF
 

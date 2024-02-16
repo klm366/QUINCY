@@ -149,11 +149,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. tile%Is_process_active(HD_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HD_)) RETURN
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
@@ -375,7 +375,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -796,7 +796,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
