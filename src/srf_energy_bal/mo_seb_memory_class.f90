@@ -52,7 +52,6 @@ MODULE mo_seb_memory_class
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
-      & heat_cap_old,           & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
@@ -193,15 +192,6 @@ CONTAINS
       & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & output_level=BASIC, &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'heat_cap_old', mem%heat_cap_old,                              &
-      & hgrid, surface,                                                              &
-      & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
 
