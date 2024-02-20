@@ -17,7 +17,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 !NEC$ options "-finline-max-function-size=100"
 
-MODULE mo_jsb_rad_interface
+MODULE mo_rad_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ MODULE mo_jsb_rad_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_rad_tasks_jsbach
+  PUBLIC :: Register_rad_tasks
 
   !> Type definition for radiation_surface task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_radiation
@@ -93,7 +93,7 @@ MODULE mo_jsb_rad_interface
     PROCEDURE Create_task_albedo
   END INTERFACE tsk_albedo
   
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_rad_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
 
 CONTAINS
 
@@ -149,7 +149,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> Register tasks for radiation process
   !>
-  SUBROUTINE Register_rad_tasks_jsbach(this, model_id)
+  SUBROUTINE Register_rad_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
@@ -158,7 +158,7 @@ CONTAINS
     CALL this%Register_task(tsk_radiation_par         (model_id))
     CALL this%Register_task(tsk_albedo                (model_id))
 
-  END SUBROUTINE Register_rad_tasks_jsbach
+  END SUBROUTINE Register_rad_tasks
 
   ! ================================================================================================================================
   !>
@@ -170,7 +170,7 @@ CONTAINS
   !!
   SUBROUTINE update_surface_radiation(tile, options)
 
-    USE mo_jsb_rad_process, ONLY: calc_radiation_surface_net
+    USE mo_rad_process, ONLY: calc_radiation_surface_net
 #ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
 #endif
@@ -403,7 +403,7 @@ CONTAINS
   SUBROUTINE update_radiation_par(tile, options)
 
     ! Use declarations
-    USE mo_jsb_rad_process,    ONLY: calc_par
+    USE mo_rad_process,    ONLY: calc_par
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1273,4 +1273,4 @@ CONTAINS
   END SUBROUTINE aggregate_albedo
 
 #endif
-END MODULE mo_jsb_rad_interface
+END MODULE mo_rad_interface

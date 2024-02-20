@@ -36,9 +36,9 @@ MODULE mo_q_veg_interface
   USE mo_q_veg_growth,                ONLY: update_veg_growth
   USE mo_q_veg_update_pools,          ONLY: update_veg_pools
 
-  dsl4jsb_Use_processes VEG_, RAD_, SB_
+  dsl4jsb_Use_processes VEG_, Q_RAD_, SB_
   dsl4jsb_Use_memory(VEG_)
-  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(Q_RAD_)
   dsl4jsb_Use_memory(SB_)
 
   IMPLICIT NONE
@@ -537,7 +537,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(Q_RAD_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -553,7 +553,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(Q_RAD_)
 
     ! VEG_ 2D
     dsl4jsb_Aggregate_onChunk(VEG_, diameter                            , weighted_by_fract)
@@ -605,10 +605,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, lai_cl                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, cumm_lai_cl                 , weighted_by_fract)
-    ! RAD_
-    dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl   , weighted_by_fract)
+    ! Q_RAD_
+    dsl4jsb_Aggregate_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_RAD_, ppfd_sunlit_tfrac_mavg_cl   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_RAD_, ppfd_shaded_tfrac_mavg_cl   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_veg_pools

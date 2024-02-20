@@ -563,6 +563,10 @@ CONTAINS
 #endif
       END SELECT
 
+      IF (tile%Is_process_active(Q_RAD_)) THEN
+        CALL q_rad_init(tile)
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(SEB_)) THEN

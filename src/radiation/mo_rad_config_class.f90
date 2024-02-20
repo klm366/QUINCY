@@ -14,7 +14,7 @@
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message, message_text, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -29,12 +29,6 @@ MODULE mo_rad_config_class
   !> RAD_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-    !> common parameters used by all models
-    !>
-    ! ...
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_JSBACH
-    !> 
     LOGICAL ::                     &
       & use_alb_veg_simple,        &  !< Use the simplified albedo calculations for vegetation tiles
       & use_alb_soil_scheme,       &  !< For vegetation and bare soil tiles:
@@ -70,10 +64,6 @@ MODULE mo_rad_config_class
       & AlbedoCanopySnow              ! Snow albedo for snow on canopy. This configuration value is not read in from
                                       ! the namelist. It is calculated in subroutine rad_init_ic, but should nevertheless
                                       ! placed here!
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_QUINCY
-    !> 
-    ! ...
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -92,9 +82,7 @@ CONTAINS
   !>
   SUBROUTINE Init_rad_config(config)
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
-    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
-    ! ----------------------------------------------------------------------------------------------------- !
+
     CLASS(t_rad_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
@@ -106,21 +94,19 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /radiation_ctl/ &
-#else
-    NAMELIST /jsb_rad_nml/ &
-#endif
-      & active,                      &
-      & ic_filename,                 &
-      & bc_filename,                 &
-      & use_alb_veg_simple,          &
-      & use_alb_mineralsoil_const,   &
-      & use_alb_soil_organic_C,      &
-      & use_alb_soil_litter,         &
-      & use_alb_soil_scheme,         &
-      & use_alb_canopy,              &
-      & albedo_age_weight
+
+    NAMELIST /jsb_rad_nml/            &
+         active,                      &
+         ic_filename,                 &
+         bc_filename,                 &
+         use_alb_veg_simple,          &
+         use_alb_mineralsoil_const,   &
+         use_alb_soil_organic_C,      &
+         use_alb_soil_litter,         &
+         use_alb_soil_scheme,         &
+         use_alb_canopy,              &
+         albedo_age_weight
+
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -140,13 +126,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('radiation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, radiation_ctl)
-#else
+
     nml_unit = position_nml('jsb_rad_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_rad_nml)
-#endif
+
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
@@ -161,60 +144,7 @@ CONTAINS
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
 
-    !> model-specific routines
-    !>
-    SELECT CASE (config%model_config%model_scheme)
-    !------------------------------------------------------------------------------------------------------ !
-    !> 1.0 config init for JSBACH model
-    !>
-    CASE(MODEL_JSBACH)
-      ! ...
-    !------------------------------------------------------------------------------------------------------ !
-    !> 2.0 config init for QUINCY model
-    !>
-    CASE(MODEL_QUINCY)
-      CALL Init_rad_config_quincy(config)
-    !------------------------------------------------------------------------------------------------------ !
-    !> 3.0 error handling
-    !>
-    CASE DEFAULT
-      WRITE(message_text,'(2a)') 'invalid model_scheme', config%model_config%model_scheme
-      CALL finish(routine, message_text) 
-    END SELECT
   END SUBROUTINE Init_rad_config
-
-  ! ======================================================================================================= !
-  !> config for the process assimilation specific to the QUINCY model
-  !>
-  SUBROUTINE Init_rad_config_quincy(config)
-    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,              ONLY: Register_vgrid
-    USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_rad_config), INTENT(inout) :: config
-    ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                     :: nspec
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config_quincy'
-
-    ! number of spectal bands (3rd dimension of 'vgrid_spectral')
-    nspec = 2162
-
-    !>Create vertical axis - spectral bands
-    !>  spectral bands of the light for RAD_ variables
-    !> 
-#ifdef __QUINCY_STANDALONE__
-    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
-                      longname='Number of spectral bands the light is divided into, from RAD_ QUINCY') !, &
-                      ! units=''  , &
-                      ! levels=   , &
-                      ! lbounds=  , & 
-                      ! ubounds=  , &
-                      ! dz=       )
-    CALL register_vgrid(vgrid_spectral)
-#endif
-
-  END SUBROUTINE Init_rad_config_quincy
 
 #endif
 END MODULE mo_rad_config_class

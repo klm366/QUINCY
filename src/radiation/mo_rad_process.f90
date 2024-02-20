@@ -26,7 +26,7 @@ MODULE mo_rad_process
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_rad_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_process'
 
 CONTAINS
 
@@ -479,7 +479,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     ! Use declarations
-    USE mo_rad_parameters,         ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
+    USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
@@ -541,7 +541,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     ! Use declarations
-    USE mo_rad_parameters,ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
+    USE mo_rad_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
                                 AlbedoGlacierVisMax,  & ! Albedo of glacier in the visible range at hard frost
                                 TempAlbedoGlacierMax, & ! Maximum glacier albedo at this temperature below melting point of H2O
                                 AlbedoGlacierNirMin,  & ! Albedo of glacier in the NIR range at at the melting point
@@ -625,7 +625,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     ! Use declarations
-    USE mo_rad_parameters,ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for
+    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
@@ -758,7 +758,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     ! Declarations
-    USE mo_rad_parameters,ONLY: &
+    USE mo_rad_constants, ONLY: &
       & ZenithAngleFactor,      & ! Factor in solar zenith angle dependence of snow albedo
                                   ! (the increase of snow albedo is the higher this factor)
       & AlbedoSnowVisMax_age,   &
@@ -879,7 +879,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     ! Declarations
-    USE mo_rad_parameters,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
+    USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
 
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
@@ -1139,7 +1139,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
-    USE mo_rad_parameters,          ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
+    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
       &                                   AlbedoLakeWater, AlbedoLakeIceMin
 
     ! Arguments
@@ -1248,4 +1248,4 @@ CONTAINS
   END FUNCTION Has_minimal_radiation_1
 
 #endif
-END MODULE mo_jsb_rad_process
+END MODULE mo_rad_process

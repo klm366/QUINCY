@@ -14,6 +14,8 @@
 MODULE mo_rad_constants
 #ifndef __NO_JSBACH__
 
+  USE mo_kind, ONLY: wp
+
   IMPLICIT NONE
   PUBLIC
 
