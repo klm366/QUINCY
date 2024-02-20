@@ -29,7 +29,7 @@ MODULE mo_jsb_process_class
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-    &       Q_PHENO_, Q_ASSIMI_
+    &       Q_PHENO_, Q_ASSIMI_, Q_RAD_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -55,7 +55,7 @@ MODULE mo_jsb_process_class
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-      &           Q_PHENO_, Q_ASSIMI_
+      &           Q_PHENO_, Q_ASSIMI_, Q_RAD_
   END ENUM
 
   ! Process actions
@@ -88,6 +88,8 @@ CONTAINS
       return_value = 'hydro'
     CASE (RAD_)
       return_value = 'rad'
+    CASE (Q_RAD_)
+      return_value = 'q_rad'
     CASE (ASSIMI_)
       return_value = 'assimi'
     CASE (Q_ASSIMI_)
@@ -154,6 +156,8 @@ CONTAINS
       return_value = HYDRO_
     CASE ('rad')
       return_value = RAD_
+    CASE ('q_rad')
+      return_value = Q_RAD_
     CASE ('assimi')
       return_value = ASSIMI_
     CASE ('q_assimi')

@@ -21,7 +21,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, &
-    &                   Q_PHENO_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
@@ -191,6 +191,7 @@ CONTAINS
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_q_rad_init,          ONLY: q_rad_init
     USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
@@ -489,7 +490,7 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
       CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
-      CALL model%Queue_task(RAD_, "radiation_quincy")             ! ALL
+      CALL model%Queue_task(Q_RAD_, "q_radiation")                ! ALL
       CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
@@ -509,7 +510,7 @@ CONTAINS
       ENDIF
 
       !-- averaging variables in time
-      CALL model%Queue_task(RAD_, "tavrg_radiation_quincy")       ! ALL
+      CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
       CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
@@ -583,6 +584,10 @@ CONTAINS
       ! TBD: Loop over processes instead of explicit
       IF (tile%Is_process_active(RAD_)) THEN
         CALL rad_init(tile)
+      END IF
+
+      IF (tile%Is_process_active(Q_RAD_)) THEN
+        CALL q_rad_init(tile)
       END IF
 
       SELECT CASE (model%config%model_scheme)
