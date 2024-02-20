@@ -365,14 +365,12 @@ CONTAINS
           ptr_2D => input_file%Read_2d(                  &
             & variable_name='residual_water',             &
             & fill_array=hydro_init_vars%vol_wres)
+          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='wilting_point',             &
-            & fill_array=hydro_init_vars%vol_wres)
-          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use wilting point instead '
+          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
           CALL message (TRIM(routine), message_text)
+          hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
         END IF
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! soil-matric potential
         ptr_2D => input_file%Read_2d(                  &
