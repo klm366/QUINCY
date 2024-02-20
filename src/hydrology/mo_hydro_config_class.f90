@@ -53,8 +53,10 @@ MODULE mo_hydro_config_class
     INTEGER               :: &
       & soilhydmodel,        & !< select the soil hydrological model for calc soil hydraulic properties:
                                !  'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
-      & interpol_mean          !< select interpolation scheme to obtain K & D at layer interface:
+      & interpol_mean,       & !< select interpolation scheme to obtain K & D at layer interface:
                                !  'upstream' (default) or 'arithmetic' mean
+      & hydro_scale            !< either use 'catchment' scale (default) parametrizations for soil in- and outflows
+                              !   or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -72,7 +74,7 @@ CONTAINS
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_
+      &                              Upstream_, Arithmetic_, Catchment_, Point_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -80,7 +82,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
+    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, hydro_scale
     LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
       &                            l_soil_texture, l_glac_in_soil, l_infil_subzero
 
@@ -101,7 +103,8 @@ CONTAINS
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & soilhydmodel,               &
-      & interpol_mean
+      & interpol_mean,              &
+      & hydro_scale
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -133,6 +136,7 @@ CONTAINS
     l_infil_subzero        = .TRUE.
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
+    hydro_scale            = "Catchment"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -214,6 +218,17 @@ CONTAINS
       CALL message(TRIM(routine), 'Soil diffusivity/conductivity interpolation uses arithmetic means')
     CASE default
       CALL finish(TRIM(routine), 'Soil diffusivity/conductivity interpolation method '//TRIM(interpol_mean)//' not implemented')
+    END SELECT
+
+    SELECT CASE(TRIM(tolower(hydro_scale)))
+    CASE("catchment")
+      config%hydro_scale = Catchment_
+      CALL message(TRIM(routine), 'Using catchment scale parametrization (ARNO scheme) for soil hydrological fluxes')
+    CASE("point")
+      config%hydro_scale = Point_
+      CALL message(TRIM(routine), 'Using point scale process implementation for hydrological fluxes (still experimental)')
+    CASE default
+      CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT
 
     CALL close_nml(nml_handler)

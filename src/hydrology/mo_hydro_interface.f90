@@ -1217,6 +1217,7 @@ CONTAINS
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    & !< different ways to calculate soil parameters
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & !< how to avrg parameter over soil layers
+      & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & !< choice of hydrological scale scheme
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & !< soil layer thickness
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     & !< root depth across soil layers
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
@@ -1243,9 +1244,8 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     & !< wilting point
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & !< wilting point
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     & !< infiltration overflow - water that does not fit into soil layers
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     & !< = drain_rock + drain_lat; over all soil layers
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     & !< water outflow vertical into rock
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     & !< water outflow horizontally
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     & !< total subsurface drainage
+      & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & !< subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & !< lateral downards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      & !< numerical error with water transport
       & )
@@ -1304,8 +1304,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down, weighted_by_fract)

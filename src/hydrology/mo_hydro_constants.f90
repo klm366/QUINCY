@@ -26,7 +26,10 @@ MODULE mo_hydro_constants
     & Campbell_        = 3,                &
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
-    & Arithmetic_      = 2
+    & Arithmetic_      = 2,                &
+    ! Identifiers used for hydrological scale parametrizations
+    & Catchment_       = 1,                &
+    & Point_           = 2
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction
@@ -50,6 +53,9 @@ MODULE mo_hydro_constants
     ! Parameters describing orographic steepness in infiltration computation
     & oro_var_min = 100._wp,               &
     & oro_var_max = 1000._wp,              &
+    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & ! factor for slow drainage (~ 10 hours)
+    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & ! factor for fast drainage (~ 4 days)
+    & drain_exp   = 1.5_wp, &
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<

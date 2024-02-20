@@ -60,9 +60,7 @@ MODULE mo_hydro_memory_class
       & infilt,               & !< infiltration
       & runoff,               & !< surface runoff
       & infilt_over,          & !< overflow of top soil layer
-      & drainage,             & !< total drainage
-      & drain_rock,           & !< bottom drainage
-      & drain_lat,            & !< subsurface lateral drainage
+      & drainage,             & !< total subsurface drainage
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain          !< internal drain
@@ -125,6 +123,7 @@ MODULE mo_hydro_memory_class
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
+      & drainage_sl,          & !< Subsurface drainage from soil layers                                     [kg m-2 s-1]
       & wtr_transp_down,      & !< Lateral water transport into next-deeper soil layer                      [kg m-2 s-1]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
@@ -334,22 +333,6 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & loutput=.TRUE., output_level=BASIC,                                          &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'drain_rock', mem%drain_rock,                                  &
-      & hgrid, surface,                                                              &
-      & t_cf('drain_rock', 'kg m-2 s-1', 'Bottom drainage'),                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'drain_lat', mem%drain_lat,                                    &
-      & hgrid, surface,                                                              &
-      & t_cf('drain_lat', 'kg m-2 s-1', 'Subsurface lateral drainage'),              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'wtr_transp_down', mem%wtr_transp_down,                        &
@@ -808,6 +791,14 @@ CONTAINS
       CALL mem%Add_var( 'ice_melt_sl', mem%ice_melt_sl,                                  &
         & hgrid, soil_w,                                                                 &
         & t_cf('ice_melt_sl', 'kg m-2 s-1', 'Melting ice flux in soil layers'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE.,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'drainage_sl', mem%drainage_sl,                                  &
+        & hgrid, soil_w,                                                                 &
+        & t_cf('drainage_sl', 'kg m-2 s-1', 'Subsurface drainage on soil layers'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
