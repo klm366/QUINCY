@@ -77,11 +77,11 @@ CONTAINS
   PURE &
 #endif
   SUBROUTINE calc_surface_hydrology_land (                          &
-    & lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,       &
-    & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
-    & t_air, skinres_canopy_max, skinres_max, fract_snow, fract_wet,&
-    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max,                               &
+    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
+    & l_infil_subzero, snow_depth_max, steepness, t_soil_sl1,       &
+    & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
+    & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot,       &
+    & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & q_snocpymlt, snow_accum, snowmelt_soil,                       &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
@@ -89,11 +89,12 @@ CONTAINS
 
     ! snow parameters needed for cases w/o dynamic snow calculation
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
-    USE mo_hydro_constants,        ONLY: InterceptionEfficiency
+    USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Catchment_, Point_
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     ! TODO: Separate variables on individual lines and document with FORD stabdard
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
+    INTEGER,  INTENT(in) :: hydro_scale
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
@@ -306,7 +307,8 @@ CONTAINS
         ! Thus all water goes to the soil
         infilt(ic) = water_to_soil(ic)
 
-      ELSE
+      ! Compute fluxes based on catchment scale approach
+      ELSE IF (hydro_scale == Catchment_) THEN
         ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
         ! Infiltration takes place in the root zone and what doesn't fit goes to the runoff
         ! Runoff has two components:
@@ -316,6 +318,13 @@ CONTAINS
           &              water_to_soil(ic), weq_rootzone(ic),    &
           &              steepness(ic), weq_rootzone_max(ic),    &
           &              runoff(ic), infilt(ic))
+
+      ! Compute fluxes based on point approach. Currently, all surface runoff is computed either as infiltration
+      ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
+      ! Q-Arctic project. The following is rather a placeholder than a real implementation.
+      ELSE IF (hydro_scale == Point_) THEN
+        runoff(ic) = 0._wp
+        infilt(ic) = water_to_soil(ic)
 
       END IF
 
@@ -877,8 +886,8 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      !> Initialize runoff and drainage components
-      wtr_exinfcap(ic) = infilt(ic)
+      !> Initialize different runoff and drainage components
+      wtr_exinfcap(ic) = 0._wp
       wtr_exwsat(ic)   = 0._wp
       drain_bot(ic)    = 0._wp
       !> Initialize active layers
@@ -916,6 +925,15 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !> improve function name @TODO
+    !>  Attention: the diagnostic for transpiration needs to be consistent with the water_stress
+    !>  computation. Next to assumptions about not accessible amounts of water (below wilting point
+    !>  or supercooled), this also comprises the treatment of soil ice.
+    CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, root_depth_sl,                    &
+      &                      dsoil, wtr_unavail_sl, transpiration_in_m, evapo_soil_in_m,     &
+      &                      wtr_soil_sl, evapo_deficit, evapo_soil_sl1,                     &
+      &                      transpiration_sl, deficit_sevap, deficit_trans)
+
     ! Determining hydraulic conductivity (velocity water moving downwards)
     !   and diffusivity (water moving any direction) on layers and at layer interfaces
     !   Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
@@ -933,14 +951,20 @@ CONTAINS
           & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &   ! optional out
           )
 
-    !> improve function name @TODO
-    !>  Attention: the diagnostic for transpiration needs to be consistent with the water_stress
-    !>  computation. Next to assumptions about not accessible amounts of water (below wilting point
-    !>  or supercooled), this also comprises the treatment of soil ice.
-    CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, root_depth_sl,                    &
-      &                      dsoil, wtr_unavail_sl, transpiration_in_m, evapo_soil_in_m,     &
-      &                      wtr_soil_sl, evapo_deficit, evapo_soil_sl1,                     &
-      &                      transpiration_sl, deficit_sevap, deficit_trans)
+    !> Limit infitration to maximum infiltration capacity - only for point scale parametrization
+    IF (hydro_scale == Point_) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !> Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
+      !>   However, this is very simplified and needs to be improved
+      DO ic = 1, nc
+        wtr_exinfcap(ic) = infilt(ic)
+        infilt(ic)       = MIN(infilt(ic), hyd_cond_sl(ic,1) * dtime)
+        ! Any water exceeding the infiltration capacity is given to the surface runoff (Horton runoff)
+        !   Currently zero, as it is already included in the surface runoff from the ARNO scheme
+        wtr_exinfcap(ic) = MAX(wtr_exinfcap(ic) - infilt(ic), 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     !> Compute subsurface drainage from each layer - only for catchment scale parametrization
     IF (hydro_scale == Catchment_) THEN
@@ -979,28 +1003,9 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 
-    !> infiltration (is already computed at this point)
-    !>   @TODO will be (later) computed here, computing it explicitly
-    !>
-
-    !> Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
-    !> @todo this is implicitely done already within the ARNO scheme, thus it cannot be re-applied here.
-    !>       As soon as the Arno Scheme is retired and the different soil properties associated with
-    !>       orography are explizitly resolved, infiltration could be computed based on the conductivity instead.
-    !>       However, that with the current model configuration this approach either results in too high
-    !>       infiltration (if top layer conductivity is not constraint with the amout of water + infiltration
-    !>       of the top layer) or too low if the soil is not fully saturated. Smart ideas are needed here!
-    !>
     DO ic = 1, nc
       ! Store soil moisture state for later diagnosis of lateral water fluxes
       wtr_soil_sl_t0(ic,:) = wtr_soil_sl(ic,:)
-
-      ! infilt(ic)       = MIN(infilt(ic), hyd_cond_sl(ic,1) * dtime)   ! @TODO
-
-      ! Any water exceeding the infiltration capacity is given to the surface runoff (Horton runoff)
-      !   Currently zero, as it is already included in the surface runoff from the ARNO scheme
-      wtr_exinfcap(ic) = MAX(wtr_exinfcap(ic) - infilt(ic), 0._wp)
-
       !> store actual soil water state, infiltration (upper boundary condition) and evaporation
       !>  to compute the residual transport error
       !>  so we are able to correct for computational precision erros later
@@ -1305,41 +1310,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !>
-    !> Lateral Drainage (i.e. drainage from upper soil layers)
-    !>   soil water flow in vertical direction to "baseflow storage of HD model" or "into another tile - Q-Arctic project"
-    !>
-    !>  @TODO improve and then move up here in this routine -> to vertical water transport calc
-    !>
-    ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
-    !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
-    !      In this implementation all water above field capacity is added to the drainage. However,
-    !      this is a very simplistic assumption. For e.g. high resolution simulations it might
-    !      be worthwile to consider lateral drainage as a reservoir outflow with a predefined
-    !      lagtime to allow for oversaturation of soils.
-    ! @todo In the current model configuration lateral drainage seems to deteriorate river
-    !      discharge while it has little effect on evapotranspiration. Therefore it is
-    !      disabled, but this should be revised, e.g. for high resolution simulations.
-    ! DO is = nsoil, 1, -1
-    !   ! If maximum moisture is exceeded, add the excess water to lateral drainage
-    !   IF (wtr_soil_sl(ic,is) > wtr_field_cap_sl(ic,is)) THEN
-    !     drain_sl(ic)      = wtr_soil_sl(ic,is) - wtr_field_cap_sl(ic,is) ! Put excess water in lateral drainage
-    !     wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) - drain_sl(ic)      ! remove lateral drainage of the layer from soil moisture
-    !     IF (.NOT. ltpe_closed) THEN
-    !       ! Add excess water to lateral drainage
-    !       drain_lat(ic,is)   = drain_lat(ic,is)  + drain_sl(ic)
-    !     ELSE
-    !       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-    !       tpe_overflow(ic) = tpe_overflow(ic) + drain_sl(ic)
-    !     END IF
-    !   ELSE IF (ltpe_closed) THEN
-    !     ! refill soil moisture from overflow pool
-    !     remoist(ic)       = MIN(tpe_overflow(ic), wtr_field_cap_sl(ic,is) - wtr_soil_sl(ic,is))
-    !     wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) + remoist(ic)
-    !     tpe_overflow(ic)  = tpe_overflow(ic) - remoist(ic)
-    !   END IF
-    ! END DO
-
     !> TPE: used with terra planet setup
     !>      usually not used; water balance is not closed; just for testing
     !>
@@ -1356,6 +1326,26 @@ CONTAINS
               wtr_soil_sl(ic,is) = MAX(wtr_soil_sl(ic,is), wtr_wsat_sl(ic,is) * 0.9_wp)
             END IF
           END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL
+
+    ELSE IF (ltpe_closed) THEN
+      !$ACC LOOP GANG VECTOR
+      ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
+      DO ic = 1, nc
+        tpe_overflow(ic) = tpe_overflow(ic) + SUM(drainage_sl(ic,:))
+      END DO
+      !$ACC END PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO is = nsoil, 1, -1
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          ! refill soil moisture from overflow pool
+          remoist(ic)        = MIN(tpe_overflow(ic), wtr_field_cap_sl(ic,is) - wtr_soil_sl(ic,is))
+          wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) + remoist(ic)
+          tpe_overflow(ic)   = tpe_overflow(ic) - remoist(ic)
         END DO
       END DO
       !$ACC END PARALLEL

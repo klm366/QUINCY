@@ -456,6 +456,8 @@ CONTAINS
     REAL(wp) :: &
       & w_skin_max_config, &
       & snow_depth_max_config
+    INTEGER  :: &
+      & hydro_scale
     LOGICAL  :: &
       & is_experiment_start,    &
       & l_compat401_config,     & ! @todo: For backward compatibility with quite old ICON setup. Do we still need it?
@@ -485,6 +487,7 @@ CONTAINS
     w_skin_max_config      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
     snow_depth_max_config  = dsl4jsb_Config(HYDRO_)%snow_depth_max
     l_infil_subzero_config = dsl4jsb_Config(HYDRO_)%l_infil_subzero
+    hydro_scale            = dsl4jsb_Config(HYDRO_)%hydro_scale ! choice of hydrological scale scheme
 
     dsl4jsb_Get_config(SSE_)
     l_dynsnow_config = dsl4jsb_Config(SSE_)%l_dynsnow
@@ -697,7 +700,8 @@ CONTAINS
         ! in
         & is_experiment_start,            & !< in
         & dtime,                          & !< in
-        & ltpe_closed     ,               & !< in
+        & ltpe_closed,                    & !< in
+        & hydro_scale,                    & !< choice of hydrological scale scheme
         & l_dynsnow_config,               & !< in
         & l_infil_subzero_config,         & !< in
         & snow_depth_max_config,          & !< in
