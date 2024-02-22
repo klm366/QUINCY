@@ -16,7 +16,7 @@ MODULE mo_jsb_base
 
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_exception,   ONLY: message
+  USE mo_exception,   ONLY: message, finish
   USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
@@ -55,7 +55,7 @@ CONTAINS
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -63,6 +63,7 @@ CONTAINS
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FAGE_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
@@ -75,6 +76,7 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
@@ -159,6 +161,7 @@ CONTAINS
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
+      dsl4jsb_Get_config(FAGE_)
       dsl4jsb_Get_config(WLCC_)
       dsl4jsb_Get_config(FLCC_)
       dsl4jsb_Get_config(PPLCC_)
@@ -241,6 +244,22 @@ CONTAINS
       IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
         dsl4jsb_Config(CARBON_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
+      END IF
+
+      IF (model%Is_process_enabled(FAGE_) &
+          & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
+        CALL finish(routine, &
+          & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
+      END IF
+      IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+          & .AND. .NOT. model%Is_process_enabled(FLCC_)) THEN
+        CALL finish(routine, &
+           & 'When FAGE is enabled and disturbances are active, flcc should be active, too! Please check!')
+      END IF
+      IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+          & .AND. .NOT. model%Is_process_enabled(WLCC_)) THEN
+        CALL finish(routine, &
+          & 'When FAGE is enabled and disturbances are active, wlcc should be active, too! Please check!')
       END IF
 
     END DO

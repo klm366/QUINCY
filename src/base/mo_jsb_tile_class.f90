@@ -29,6 +29,7 @@ MODULE mo_jsb_tile_class
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
+  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
 
 #ifdef _OPENACC
   USE openacc
@@ -93,15 +94,19 @@ MODULE mo_jsb_tile_class
     REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
-                                                                   !! must be either "fract[_max]_"//tile%name, or specified by
-                                                                   !! fract_varname.
+                                                                   !< must be either "fract[_max]_"//tile%name, or specified by
+                                                                   !< fract_varname.
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
-    INTEGER                                :: nr_of_cqts = 0          ! number of conserved quantity types in use on the tile 
-    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) ! list of conserved quantities sort by type
+
+    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile
+    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
+    TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
-    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
+    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
+    CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
+
     ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
     CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
@@ -134,6 +139,7 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_prev_sibling_tile
     PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
@@ -933,7 +939,7 @@ CONTAINS
           END DO
         END IF
       END DO
-      
+
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -1208,15 +1214,53 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
+  !> Returns the previous sibling of this tile, if it has a previous sibling
+  !
+  FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_State), POINTER :: prev
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    prev => this%prev_sibling
+    IF (.NOT. ASSOCIATED(prev)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (prev)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => prev
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(prev)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find previous sibling tile')
+
+  END FUNCTION Get_prev_sibling_tile
+
+  ! ====================================================================================================== !
+  !
   !> Collect the names of the children of this tile
   !
   SUBROUTINE Get_children_names(this, children_names)
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
     CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
-
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: i_tile, nr_of_children
     CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+    ! -------------------------------------------------------------------------------------------------- !
 
     nr_of_children = this%Get_no_of_children()
 
@@ -1242,7 +1286,7 @@ CONTAINS
 
     return_value = this%nr_of_cqts /= 0
 
-  END FUNCTION Has_conserved_quantities  
+  END FUNCTION Has_conserved_quantities
 
   LOGICAL FUNCTION Is_last_process_tile(this, process_id)
 
@@ -1337,7 +1381,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Cache_GPU_pointers
-    
 
 #endif
 END MODULE mo_jsb_tile_class

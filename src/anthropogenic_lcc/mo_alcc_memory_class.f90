@@ -87,12 +87,12 @@ CONTAINS
     !JN-TODO: if changes are to be done on a daily basis maybe other field more interesting?
     !           e.g. target_cf ? or better remember something else e.g. "required_cf_change"?
     !         then also change out_level to BASIC and lrestart to TRUE
-    CALL mem%Add_var('cf_current_year', mem%cf_current_year,                 &
-      & hgrid, pft_vgrid,                                                                            &
+    CALL mem%Add_var('cf_current_year', mem%cf_current_year,                              &
+      & hgrid, pft_vgrid,                                                                 &
       & t_cf('This years target cfs derived from an annually read land use data file.'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
       
   END SUBROUTINE Init_alcc_memory

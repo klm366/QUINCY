@@ -56,7 +56,7 @@ MODULE mo_pheno_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pheno_tasks, global_phenology_diagnostics
+  PUBLIC :: Register_pheno_tasks, global_phenology_diagnostics, merge_pheno_variables_upon_ageing
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
@@ -1087,6 +1087,88 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_fpc
+
+
+  ! ====================================================================================================== !
+  !
+  !> Handles merging for those pheno variables which need to be merged upon ageing (FAGE process)
+  !
+  SUBROUTINE merge_pheno_variables_upon_ageing(target, source, options, moved_area)
+
+    USE mo_fage_process,     ONLY : weighted_avg_var_upon_area_movement, &
+      &                             weighted_avg_per_canopy_var_upon_area_movement
+    USE mo_carbon_interface, ONLY : rescale_carbon_vars_upon_ageing_induced_ref_area_change
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract),      INTENT(inout) :: target     !< target age class
+    CLASS(t_jsb_tile_abstract),      INTENT(inout) :: source     !< source age class
+    TYPE(t_jsb_task_options),        INTENT(in)    :: options    !< Additional run-time parameters
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER  :: iblk, ics, ice
+
+    dsl4jsb_Def_memory_tile(PHENO_, target)
+    dsl4jsb_Def_memory_tile(PHENO_, source)
+
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction_source
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction_target
+    dsl4jsb_Real2D_onChunk :: lai_source
+    dsl4jsb_Real2D_onChunk :: lai_target
+    dsl4jsb_Real2D_onChunk :: day_npp_sum_source
+    dsl4jsb_Real2D_onChunk :: day_npp_sum_target
+
+    REAL(wp), DIMENSION(options%nc) :: old_veg_fract_correction_target, target_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':merge_pheno_variables_upon_ageing'
+    ! -------------------------------------------------------------------------------------------------- !
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For target '//TRIM(target%name)//' ...')
+
+    CALL target%Get_fraction(ics, ice, iblk, fract=target_fract(:))
+
+    dsl4jsb_Get_memory_tile(PHENO_, source)
+    dsl4jsb_Get_memory_tile(PHENO_, target)
+
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, source)
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, target)
+
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, source)
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, target)
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, source)
+    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, target)
+
+    ! There are pheno variables that need to be merged upon ageing 
+    ! because they are used for bookkeeping by various processes but are not conserved
+    ! (i.e. they are not automatically dealed with by pplcc and the lcc framework)
+    ! For the pheno process these are lai and the day_npp_sum
+    ! [According to the specifications in Reick et al. (2021) the LAI is to be interpreted as leaf area 
+    ! "per canopy area", where canopy area is defined as area covered by a hypothetical tile without canopy gaps.]
+    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:), &
+      &  veg_fract_correction_source(:), veg_fract_correction_target(:), lai_source(:), lai_target(:))
+    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:), &
+      &  veg_fract_correction_source(:), veg_fract_correction_target(:), day_npp_sum_source(:), day_npp_sum_target(:))
+
+    ! Upon ageing also the veg_fract_correction which accounts for gaps in the canopy in JSBACH needs to be merged
+    old_veg_fract_correction_target(:) = veg_fract_correction_target(:)
+    CALL weighted_avg_var_upon_area_movement( target_fract(:), moved_area(:), &
+      &                                       veg_fract_correction_source(:), veg_fract_correction_target(:))
+
+    ! This change in reference area, however, induces changes in those per canopy variables that need
+    ! to be merged upon ageing because they are used for bookkeeping by various processes
+    ! but are not conserved (i.e. not automatically dealed with by pplcc and the lcc framework)
+    ! As stated above, for the pheno process these are lai and the day_npp_sum
+    lai_target(:)          = lai_target(:)          &
+      &                      * (old_veg_fract_correction_target(:) / veg_fract_correction_target(:))
+    day_npp_sum_target(:)  = day_npp_sum_target(:)  &
+      &                      * (old_veg_fract_correction_target(:) / veg_fract_correction_target(:))
+
+    ! And for carbon these are also several
+    CALL rescale_carbon_vars_upon_ageing_induced_ref_area_change(target, options, &
+      &                                                        old_veg_fract_correction_target(:))
+
+  END SUBROUTINE merge_pheno_variables_upon_ageing
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate time moving averages for PHENO_

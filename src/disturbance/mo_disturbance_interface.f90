@@ -37,8 +37,6 @@ MODULE mo_disturb_interface
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
-  dsl4jsb_Use_config(FLCC_)
-  dsl4jsb_Use_config(WLCC_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_disturb_memory)
@@ -159,7 +157,6 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
-    dsl4jsb_Def_config(CARBON_)
 
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
     dsl4jsb_Real2D_onChunk :: q_air
@@ -207,7 +204,6 @@ CONTAINS
 
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
-    dsl4jsb_Get_config(CARBON_)
 
     ! Get process memories
     dsl4jsb_Get_memory(DISTURB_)
@@ -375,13 +371,12 @@ CONTAINS
   !
   SUBROUTINE update_natural_disturbances(tile, options)
 
-    USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums,  &
                                       & calculate_current_c_ta_state_sum, check_carbon_conservation, &
                                       & recalc_carbon_per_tile_vars
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
+    USE mo_jsb_time,              ONLY: is_newday
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -390,7 +385,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum_ta, dummy_flux
 
-    INTEGER :: iblk, nc, ics, ice
+    INTEGER :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
@@ -398,8 +393,6 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_config(DISTURB_)
-    dsl4jsb_Def_config(FLCC_)
-    dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(CARBON_)
 
     ! Declare pointers to variables in memory
@@ -444,7 +437,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
@@ -464,9 +456,6 @@ CONTAINS
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
-    !
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)     ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)                  ! inout
@@ -561,6 +550,7 @@ CONTAINS
                 & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
 
               ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp
+              dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)
               dummy_flux = 0._wp
               CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
                 & dummy_flux(:), cconservation_wind(:))
@@ -632,7 +622,7 @@ CONTAINS
 
               ! For conservation test: negate currently positve co2flux_fire_all_2_atm_ta (flux away from land!)
               ! and convert from CO2 flux to carbon change per day
-
+              dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
               CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
                 & -co2flux_fire_all_2_atm_ta(:) * sec_per_day / molarMassCO2_kg, cconservation_fire(:))
 

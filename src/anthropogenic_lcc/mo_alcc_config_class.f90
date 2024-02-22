@@ -44,10 +44,6 @@ CONTAINS
   !> Initialize alcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize alcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_alcc_config)
-  !!  
   SUBROUTINE Init_alcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml

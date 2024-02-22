@@ -38,10 +38,6 @@ CONTAINS
   !> Initialize wlcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize wlcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_wlcc_config)
-  !!
   SUBROUTINE Init_wlcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
