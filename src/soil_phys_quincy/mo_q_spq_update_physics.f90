@@ -807,22 +807,22 @@ CONTAINS
               latent_heat_freeze_flx(ic,isoil) = hlp1_2d(ic,isoil)
               w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil), &
                 &                                - latent_heat_freeze_flx(ic,isoil) / (w_density * latent_heat_fusion))
-              w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_freeze_flux(ic,isoil) * water2ice_density_ratio, &
+              w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_freeze_flux(ic,isoil), &
                 &                                w_soil_fc_sl(ic,isoil) - w_ice_sl(ic,isoil) &
                 &                                * water2ice_density_ratio - fact_water_supercooled * w_soil_pwp_sl(ic,isoil))
               IF (t_soil_old_sl(ic,isoil) >= Tzero) THEN
                 t_soil_sl(ic,isoil) = Tzero
               ! if temperature is already below freezing point, stays the same
               ELSE
-                t_soil_sl(ic,isoil) = t_soil_old_sl(ic,isoil)
+                t_soil_sl(ic,isoil) = t_soil_sl(ic,isoil)
               END IF
             ! if heat deficit is more than heat release of fusion of all soil water
             ELSE
-              w_soil_freeze_flux(ic,isoil) = MIN(water2ice_density_ratio &
-                &                            * (w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil)), &
-                &                            w_soil_fc_sl(ic,isoil) - w_ice_sl(ic,isoil) &
-                &                            * water2ice_density_ratio - fact_water_supercooled &
-                &                            * w_soil_pwp_sl(ic,isoil))
+              w_soil_freeze_flux(ic,isoil)     = MIN(w_soil_sl(ic,isoil) - fact_water_supercooled * w_soil_pwp_sl(ic,isoil), &
+                &                                w_soil_fc_sl(ic,isoil) - w_ice_sl(ic,isoil) &
+                &                                * water2ice_density_ratio - fact_water_supercooled &
+                &                                * w_soil_pwp_sl(ic,isoil))
+              latent_heat_freeze_flx(ic,isoil) = latent_heat_fusion * w_density * w_soil_freeze_flux(ic,isoil)
               IF (t_soil_old_sl(ic,isoil) >= Tzero) THEN
                 heat_excess(ic,isoil) = hlp1_2d(ic,isoil) + hlp2_2d(ic,isoil)
                 ! Soil T cooles past freezing point
@@ -830,12 +830,8 @@ CONTAINS
                   &                     * soil_depth_sl(ic,isoil))
               ELSE
                 IF (t_soil_sl(ic,isoil) < t_soil_old_sl(ic,isoil)) THEN
-                  ! heat excess needs to be redefined for this case!
-                  ! not all energy available to freeze water goes into cooling the soil!
-                  hlp1_2d(ic,isoil)     = heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil) &
-                    &                     * (t_soil_sl(ic,isoil) - t_soil_old_sl(ic,isoil))
-                  heat_excess(ic,isoil) = hlp1_2d(ic,isoil) + hlp2_2d(ic,isoil)
-                  t_soil_sl(ic,isoil)   = t_soil_sl(ic,isoil)    ! Assumption, not sure if this is needed
+                  t_soil_sl(ic,isoil) = t_soil_sl(ic,isoil) + latent_heat_freeze_flx(ic,isoil) &
+                    &                   / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) * soil_depth_sl(ic,isoil))
                 END IF
               END IF
             END IF
