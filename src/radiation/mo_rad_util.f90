@@ -41,7 +41,7 @@ CONTAINS
   !> is day/night based on shortwave radiation
   !>
   ELEMENTAL FUNCTION Has_minimal_radiation_sw(sw) RESULT(l_day)
-    USE mo_rad_parameters,    ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
+    USE mo_rad_constants,    ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
     REAL(wp), INTENT(in) :: sw
     LOGICAL              :: l_day
@@ -54,7 +54,7 @@ CONTAINS
   !> is day/night based on shortwave "vis + nir" radiation
   !>
   ELEMENTAL FUNCTION Has_minimal_radiation_swvis_swnir(swvis, swnir) RESULT(l_day)
-    USE mo_rad_parameters,    ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
+    USE mo_rad_constants,    ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
     REAL(wp), INTENT(in) :: swvis
     REAL(wp), INTENT(in) :: swnir

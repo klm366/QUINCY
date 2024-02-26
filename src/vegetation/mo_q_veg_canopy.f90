@@ -53,7 +53,7 @@ CONTAINS
     & lctlib_g1, &
     & lctlib_t_jmax_omega, &
     & flag_optimal_Nfraction, &
-    & canopy_cond_scheme, & ! ASSIMI_ config
+    & canopy_cond_scheme, & ! Q_ASSIMI_ config
     & leaf_nitrogen, &
     & lai, &
     & ppfd_sunlit_cl, &
@@ -83,8 +83,8 @@ CONTAINS
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, &
       &                                   jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
       &                                   jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
-    USE mo_assimi_parameters,       ONLY: kn, chl2n, jmax2n, k1_fn_struc, vcmax2n
-    USE mo_assimi_constants,        ONLY: ic4phot
+    USE mo_q_assimi_parameters,     ONLY: kn, chl2n, jmax2n, k1_fn_struc, vcmax2n
+    USE mo_q_assimi_constants,      ONLY: ic4phot
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_jsb_math_constants,      ONLY: eps8, eps12
     ! ----------------------------------------------------------------------------------------------------- !
@@ -384,7 +384,7 @@ CONTAINS
                                                lctlib_g1                  , &
                                                lctlib_t_jmax_omega        , &
                                                lctlib_ps_pathway          , & ! lctlib
-                                               TRIM(canopy_cond_scheme)   , & ! ASSIMI_ config
+                                               TRIM(canopy_cond_scheme)   , & ! Q_ASSIMI_ config
                                                lai_cl(:,icanopy)          , & ! in
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
@@ -427,7 +427,7 @@ CONTAINS
                                     g1                        , &
                                     t_jmax_omega              , &
                                     ps_pathway                , &   ! lctlib
-                                    canopy_cond_scheme        , &   ! ASSIMI_ config
+                                    canopy_cond_scheme        , &   ! Q_ASSIMI_ config
                                     lai_cl                    , &
                                     leaf_nitrogen_cl          , &
                                     ppfd_sunlit_cl            , &
@@ -526,7 +526,7 @@ CONTAINS
                                  g1                            , &
                                  t_jmax_omega                  , &
                                  ps_pathway                    , &  ! lctlib
-                                 canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
+                                 canopy_cond_scheme            , &  ! Q_ASSIMI_ config (medlyn/ballberry)
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
@@ -575,7 +575,7 @@ CONTAINS
       ! re-calculate photosynthesis
       CALL calc_photosynthesis( &
                gmin, g0, g1, t_jmax_omega, ps_pathway, &
-               canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
+               canopy_cond_scheme, &  ! Q_ASSIMI_ config (medlyn/ballberry)
                t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
                beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -611,7 +611,7 @@ CONTAINS
         ! re-calculate photosynthesis
         CALL calc_photosynthesis( &
                  gmin, g0, g1, t_jmax_omega, ps_pathway, &
-                 canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
+                 canopy_cond_scheme, &  ! Q_ASSIMI_ config (medlyn/ballberry)
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
                  beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -675,7 +675,7 @@ CONTAINS
                                                      fn_pepc_opt_cl)
 
     USE mo_jsb_math_constants,          ONLY: eps8
-    USE mo_assimi_constants,            ONLY: ic4phot
+    USE mo_q_assimi_constants,          ONLY: ic4phot
 
     IMPLICIT NONE
     ! ---------------------------
@@ -750,7 +750,7 @@ CONTAINS
                                                fn_pepc_cl)
 
     USE mo_jsb_math_constants,          ONLY: eps8
-    USE mo_assimi_constants,            ONLY: ic4phot
+    USE mo_q_assimi_constants,          ONLY: ic4phot
 
     IMPLICIT NONE
     ! ---------------------------
@@ -840,7 +840,7 @@ CONTAINS
                                                   lctlib_t_jmax_omega     , &
                                                   lctlib_sigma_vis        , &
                                                   flag_optimal_Nfraction  , &
-                                                  canopy_cond_scheme      , & ! ASSIMI_ config
+                                                  canopy_cond_scheme      , & ! Q_ASSIMI_ config
                                                   t_air                   , &
                                                   press_srf               , &
                                                   q_air                   , &
@@ -873,8 +873,8 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: eps8
     USE mo_jsb_physical_constants, ONLY: r_gas_dryair
-    USE mo_rad_parameters,         ONLY: rad2ppfd, kbl0_vis
-    USE mo_assimi_constants,       ONLY: ic3phot, ic4phot
+    USE mo_q_rad_parameters,       ONLY: rad2ppfd, kbl0_vis
+    USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
     USE mo_atmland_util,           ONLY: calc_spec_humidity_sat
 
     IMPLICIT NONE
@@ -1013,7 +1013,7 @@ CONTAINS
                             lctlib_g1               = lctlib_g1                   , &
                             lctlib_t_jmax_omega     = lctlib_t_jmax_omega         , &
                             flag_optimal_Nfraction  = flag_optimal_Nfraction      , &
-                            canopy_cond_scheme      = canopy_cond_scheme          , & !   ASSIMI_ config
+                            canopy_cond_scheme      = canopy_cond_scheme          , & !   Q_ASSIMI_ config
                             leaf_nitrogen           = leaf_nitrogen_new(:)        , &
                             lai                     = lai_new(:)                  , & ! in
                             ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(:,:)     , & ! inout
@@ -1045,7 +1045,7 @@ CONTAINS
                                     lctlib_g1                       , &
                                     lctlib_t_jmax_omega             , &
                                     lctlib_ps_pathway               , &
-                                    canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
+                                    canopy_cond_scheme              , & ! Q_ASSIMI_ config (medlyn/ballberry)
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -1129,7 +1129,7 @@ CONTAINS
                                         lctlib_t_jmax_omega           , &
                                         lctlib_tau_leaf               , &
                                         flag_optimal_Nfraction        , &
-                                        canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
+                                        canopy_cond_scheme            , &  ! Q_ASSIMI_ config (medlyn/ballberry)
                                         growing_season                , &
                                         veg_pool_leaf_carbon          , & 
                                         veg_pool_leaf_nitrogen        , &
@@ -1304,7 +1304,7 @@ CONTAINS
                           lctlib_g1               = lctlib_g1                           , &
                           lctlib_t_jmax_omega     = lctlib_t_jmax_omega                 , &
                           flag_optimal_Nfraction  = flag_optimal_Nfraction              , &
-                          canopy_cond_scheme      = canopy_cond_scheme                  , & !   ASSIMI_ config
+                          canopy_cond_scheme      = canopy_cond_scheme                  , & !   Q_ASSIMI_ config
                           leaf_nitrogen           = leaf_nitrogen_new(ic)               , &
                           lai                     = lai(ic)                             , & ! in
                           ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(ic,:)            , & ! inout
@@ -1344,7 +1344,7 @@ CONTAINS
                        lctlib_g1                                 , &
                        lctlib_t_jmax_omega                       , &
                        lctlib_ps_pathway                         , &
-                       canopy_cond_scheme                        , &  ! ASSIMI_ config (medlyn/ballberry)
+                       canopy_cond_scheme                        , &  ! Q_ASSIMI_ config (medlyn/ballberry)
                        t_air_tcnl_mavg(ic)                       , &  ! in
                        press_srf_tcnl_mavg(ic)                   , &
                        co2_mixing_ratio_tcnl_mavg(ic)            , &

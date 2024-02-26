@@ -88,9 +88,9 @@ CONTAINS
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
     USE mo_jsb_grid_class,                ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,                      ONLY: Get_grid, Get_vgrid
-    USE mo_assimi_constants,              ONLY: IC3PHOT
+    USE mo_q_assimi_constants,            ONLY: IC3PHOT
     USE mo_q_assimi_process,              ONLY: discrimination_ps
-    USE mo_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_q_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_atmland_constants,             ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_sb_constants,                  ONLY: microbial_cue_max, microbial_nue, microbial_pue, microbial_cn, microbial_np, &

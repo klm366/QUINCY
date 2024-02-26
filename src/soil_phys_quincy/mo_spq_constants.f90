@@ -89,12 +89,16 @@ MODULE mo_spq_constants
     w_snow_max                  !> maximum water content of snow layer, should be function of snow grid depth attribute [m]
   ! constants used as factor for multiplication with namelist parameters (spq_config) when "parameter sensitivity" is enabled
   ! see spq_config & mo_qs_set_parameters:Modify_quincy_namelist_parameter
-  REAL(wp) :: & 
+  REAL(wp) :: &
     f_psensi_soil_sand, &
     f_psensi_soil_silt, &
     f_psensi_soil_awc_prescribe, &
     f_psensi_bulk_density
 
+  ! surface energy balance
+  REAL(wp) :: &
+    t_soil_max_increase, &      !< max increase in soil temperature per layer and timestep [K]
+    t_soil_max_decrease         !< max decrease in soil temperature per layer and timestep; a negative number [K]
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_spq_constants'
 
@@ -178,6 +182,10 @@ CONTAINS
     f_psensi_soil_silt            = 1.0_wp
     f_psensi_soil_awc_prescribe   = 1.0_wp
     f_psensi_bulk_density         = 1.0_wp
+
+    ! surface energy balance
+    t_soil_max_increase           = 5.0_wp        !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
+    t_soil_max_decrease           = -5.0_wp       !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
 
   END SUBROUTINE init_spq_constants
 
