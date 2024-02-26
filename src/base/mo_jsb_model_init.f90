@@ -498,7 +498,7 @@ CONTAINS
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF(model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+          CALL model%Queue_task(SB_, "sb_jsm")           ! LAND ONLY
         ENDIF
         CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
       ENDIF
