@@ -512,6 +512,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(new%lbounds) ASYNC(1) IF(present(lbounds))
     !$ACC UPDATE DEVICE(new%ubounds) ASYNC(1) IF(present(ubounds))
     !$ACC UPDATE DEVICE(new%dz) ASYNC(1) IF(present(dz))
+    !$ACC WAIT(1)
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)

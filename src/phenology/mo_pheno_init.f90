@@ -227,6 +227,7 @@ CONTAINS
       END IF
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE pheno_init_bc
 
@@ -341,6 +342,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE pheno_init_ic
 

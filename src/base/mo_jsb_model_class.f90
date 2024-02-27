@@ -805,6 +805,8 @@ CONTAINS
 
     END DO
 
+    !$ACC WAIT(1)
+
   END SUBROUTINE Sync_vars_from_cpu_to_gpu
 #endif
 

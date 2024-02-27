@@ -673,6 +673,9 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     IF (tile%Is_process_active(CARBON_)) THEN
+
+      CALL weighted_by_fract%BeginAggregate()
+      
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)
@@ -689,6 +692,9 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
+
+       CALL weighted_by_fract%EndAggregate()
+
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

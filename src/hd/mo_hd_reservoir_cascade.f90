@@ -15,9 +15,9 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                   ONLY: wp
-
-  USE mo_jsb_time,              ONLY: get_day_length
+  USE mo_kind,        ONLY: wp
+  USE mo_jsb_time,    ONLY: get_day_length
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -60,10 +60,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_cascade'
 
     day_length = get_day_length()
+    nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
 
-    !$ACC DATA CREATE(nres_int, akdiv, inflow_cascade)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(amod)
+    !$ACC PARALLEL DEFAULT(PRESENT) &
+    !$ACC  CREATE(nres_int, akdiv, inflow_cascade) &
+    !$ACC  ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod) 
     DO ic = 1, nc
       IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]
@@ -77,14 +79,11 @@ CONTAINS
       !
       nres_int(ic) = NINT(nres(ic))
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END LOOP
 
-    nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
-
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO res = 1, nres_max
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (res <= nres_int(ic)) THEN
           res_content(ic,res) = res_content(ic,res) + inflow_cascade(ic)
@@ -98,17 +97,13 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END LOOP
-    !$ACC END PARALLEL
 
     ! conversions: [m3] -> [m3/s]
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       outflow(ic) = outflow(ic) / steplen
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$ACC END DATA
-    !$ACC WAIT(1)
 
   END SUBROUTINE reservoir_cascade
 

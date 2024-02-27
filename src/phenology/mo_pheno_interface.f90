@@ -22,7 +22,7 @@
 MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -301,7 +301,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !$ACC DATA CREATE(t_air_in_Celcius, LaiMax_corrected) &
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(t_air_in_Celcius, LaiMax_corrected) &
     !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
 
     ! Set model
@@ -399,7 +400,7 @@ CONTAINS
     timestep = timestep_in_days(options%dtime)
     day_of_year  = INT(get_year_day(options%current_datetime))
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       t_air_in_Celcius(ic) = t_air(ic) - tmelt  ! convert Kelvin in Celcius
     END DO
@@ -416,7 +417,7 @@ CONTAINS
     ! after this routine. At the start of a new day, we here divide the sum by the day length to get
     ! previous_day_NPP_pot_rate_ca (needed in this subroutine) and reset it to zero.
     IF (l_newday) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._wp
         day_NPP_sum(ic) = 0._wp
@@ -431,7 +432,7 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear(options%current_datetime, options%dtime)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           veg_fract_correction_old(ic) = veg_fract_correction(ic)
 
@@ -459,22 +460,18 @@ CONTAINS
         ! redistribute
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           dummy_flux(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
-        ! todo: adapt for GPU
-        !$ACC UPDATE HOST(old_c_state_sum_ta) ASYNC(1)
-        !$ACC WAIT(1)
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
           & dummy_flux(:), cconservation_allom(:))
-        !$ACC UPDATE DEVICE(cconservation_allom) ASYNC(1)
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday(options%current_datetime, options%dtime)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL track_max_green_pool(       &
             & c_green(ic),                 & ! in
@@ -524,15 +521,15 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-       LaiMax_corrected(:) = maxLAI_allom(ic)
+       LaiMax_corrected(ic) = maxLAI_allom(ic)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-       LaiMax_corrected(:) = MaxLAI_param
+       LaiMax_corrected(ic) = MaxLAI_param
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -540,7 +537,7 @@ CONTAINS
     ! Secure minimum Max-LAI
 
     LAI_negligible_tmp = pheno_param_jsbach%all%LAI_negligible
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO i = 1, nc
       IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
         LaiMax_corrected(i) = LAI_negligible_tmp
@@ -556,7 +553,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         CALL calc_summergreen_phenology(    &
           & day_of_year,                    & ! in
@@ -580,7 +577,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         CALL calc_evergreen_phenology(      &
           & day_of_year,                    & ! in
@@ -602,7 +599,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         CALL calc_crop_phenology(             &
           & day_of_year,                      & ! in
@@ -631,7 +628,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         CALL calc_raingreen_phenology(        &
           & timestep,                         & ! in
@@ -648,7 +645,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         CALL calc_grass_phenology(            &
           & t_air_in_Celcius(ic),             & ! in
@@ -663,7 +660,7 @@ CONTAINS
     END IF
 
     ! Calculated LAI relative to the tile area
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       lai_ta(ic) = lai(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
@@ -672,7 +669,6 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
    END SUBROUTINE update_phenology_logrop
@@ -723,7 +719,7 @@ CONTAINS
     lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       lai(ic) = REAL(wgt1,wp) * lai_mon(ic,nmw1) + REAL(wgt2,wp) * lai_mon(ic,nmw2)
     END DO
@@ -767,6 +763,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
@@ -781,6 +779,9 @@ CONTAINS
         ! and other processes (NPP alloc of carbon) aggregate them
       ENDIF
     ENDIF
+
+    CALL weighted_by_fract%EndAggregate()
+
     !X Implementation: Start your process scheme here...
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -844,7 +845,7 @@ CONTAINS
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           fract_fpc(ic) = get_foliage_projected_cover(fract_fpc_max(ic), lai(ic), 1._wp)
         END DO
@@ -852,7 +853,7 @@ CONTAINS
       ELSE
         fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
         END DO
@@ -861,14 +862,12 @@ CONTAINS
     ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fract_fpc(ic) = get_foliage_projected_cover(fract_fpc_max(ic), lai(ic), ClumpinessFactor)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -897,7 +896,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

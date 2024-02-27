@@ -735,6 +735,8 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
     END IF
 
+    !$ACC WAIT(1)
+
   END SUBROUTINE hydro_init_bc
 
 
@@ -942,6 +944,7 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
 
     END IF ! Tile with vegetation
+    !$ACC WAIT(1)
 
   END SUBROUTINE hydro_init_ic
 
@@ -1075,6 +1078,7 @@ CONTAINS
     !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
     !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl)
+    !$ACC WAIT(1)
 
   END SUBROUTINE init_soil_properties
 
@@ -1163,6 +1167,7 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(root_depth, root_depth_sl) ASYNC(1)
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE hydro_sanitize_state
 

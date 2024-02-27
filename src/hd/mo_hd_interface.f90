@@ -32,6 +32,7 @@ MODULE mo_hd_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_jsb_math_constants, ONLY: deg2rad
+  USE mo_jsb_control,        ONLY: acc_stream
 
   dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -195,10 +196,10 @@ CONTAINS
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
-      !$ACC DATA CREATE(inflow, local_budget_old)
+      !$ACC DATA CREATE(inflow, local_budget_old) ASYNC(acc_stream)
 
       ! local reservoir content for water balance check
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         local_budget_old(ic) = local_budget(ic)
       END DO
@@ -206,21 +207,21 @@ CONTAINS
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
       !
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         inflow(ic) = runoff(ic) * tile_fract(ic) * area(ic) / rhoh2o
       END DO
       !$ACC END PARALLEL LOOP
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         inflow(ic) = drainage(ic) * tile_fract(ic) * area(ic) / rhoh2o
       END DO
       !$ACC END PARALLEL LOOP
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         inflow(ic) = discharge(ic)
       END DO
@@ -229,7 +230,7 @@ CONTAINS
 
       ! 1. Check water balance locally
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Reservoir content  [m3]
         local_budget(ic) =  SUM(overlflow_res(ic,:)) & !< water in overland flow reservoirs
@@ -256,7 +257,7 @@ CONTAINS
       ! dummy version of HD model
       !
       ! unit conversion: [kg m-2 s-1] -> [m3/s]
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         discharge(ic) = tile_fract(ic) * (runoff(ic) + drainage(ic)) * area(ic) / rhoh2o
       END DO
@@ -266,7 +267,7 @@ CONTAINS
       !
       ! even more dummy: set discharge to zero
       !
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         discharge(ic) = 0._wp
       END DO
@@ -416,7 +417,7 @@ CONTAINS
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma,nblks), ztemp(nproma,nblks))
     !$ACC DATA CREATE(in_domain, ztemp)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         IF (is_in_domain(jc,blk)) THEN
@@ -436,7 +437,7 @@ CONTAINS
       CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:))
       CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           discharge(jc,blk) = 0._wp
@@ -451,7 +452,7 @@ CONTAINS
       ! outflow_count(:,:) = nsplit(:,:)
       !dbg<<
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = (outflow_runoff(jc,blk) + outflow_drainage(jc,blk) + outflow_rivers(jc,blk)) * in_domain(jc,blk)
@@ -462,7 +463,7 @@ CONTAINS
 
       IF (debug_hd) THEN
         ! Consistency check: There should not be outflow in pure ocean cells
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             IF (NINT(hd_mask(jc,blk)) == -1) THEN
@@ -488,7 +489,7 @@ CONTAINS
         jcs = grid%get_col_start(blk)
         jce = grid%get_col_end(blk)
         DO n = 1, nneigh
-          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) &
+          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream) &
           !$ACC   PRIVATE(jc_us, blk_us)
           !$ACC LOOP GANG VECTOR
           DO jc = jcs, jce
@@ -531,7 +532,6 @@ CONTAINS
             END IF
           END DO
           !$ACC END PARALLEL
-          !$ACC WAIT(1)
         END DO
       END DO
 
@@ -571,7 +571,7 @@ CONTAINS
       ! END DO
       !dbg<<
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           IF (NINT(hd_mask(jc,blk)) <= 0) THEN
@@ -592,7 +592,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! global integrals
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
@@ -600,7 +600,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       global_discharge       = global_sum_array(ztemp, lacc=.TRUE.)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = internal_drain(jc,blk) * in_domain(jc,blk)
@@ -608,7 +608,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       global_internal_drain  = global_sum_array(ztemp, lacc=.TRUE.)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge_ocean(jc,blk) * in_domain(jc,blk)
@@ -637,7 +637,7 @@ CONTAINS
       ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
       factor = 1._wp + global_internal_drain / global_discharge_ocean
       IF (global_discharge_ocean > 0._wp) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             discharge_ocean(jc,blk) = discharge_ocean(jc,blk) * factor
@@ -653,7 +653,7 @@ CONTAINS
       IF (debug_hd) THEN
         ! water conservation test
         CALL message (routine, 'check re-distribution of water from internal drainage')
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             ztemp(jc,blk) = discharge_ocean(jc,blk) * in_domain(jc,blk)
@@ -669,7 +669,7 @@ CONTAINS
 
       ! Dummy discharge: the discharge is distributed to all coastal ocean cells, weighted by cosine of latitude
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
@@ -678,7 +678,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       global_discharge = global_sum_array(ztemp, lacc=.TRUE.)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2) PRIVATE(cos_lat)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2) PRIVATE(cos_lat)
       DO blk = 1, nblks
         DO jc = 1, nproma
           cos_lat = MERGE(COS(deg2rad * grid%lat(jc,blk)), 0._wp, coast_ocean(jc,blk) > 0.5_wp)  ! coast_ocean is either 0. or 1.
@@ -687,7 +687,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       sum_weights = global_sum_array(ztemp, lacc=.TRUE.)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2) &
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2) &
       !$ACC   PRIVATE(cos_lat)
       DO blk = 1, nblks
         DO jc = 1, nproma
@@ -704,7 +704,7 @@ CONTAINS
 
     CASE ('zero')
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           discharge_ocean(jc,blk) = 0._wp
@@ -720,8 +720,6 @@ CONTAINS
 
     !$ACC END DATA
     DEALLOCATE (in_domain, ztemp)
-
-    !$ACC WAIT(1)
 
   END SUBROUTINE hd_lateral_flow
 
@@ -839,10 +837,10 @@ CONTAINS
     water_error_gsum => dsl4jsb_memory(HD_)%water_error_gsum%ptr(:) ! out
 
     ALLOCATE (in_domain(nproma, nblks), ztemp(nproma, nblks))
-    !$ACC ENTER DATA CREATE(in_domain, ztemp)
+    !$ACC ENTER DATA CREATE(in_domain, ztemp) ASYNC(acc_stream) 
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         IF (is_in_domain(jc,blk)) THEN
@@ -856,7 +854,7 @@ CONTAINS
 
     IF (TRIM(dsl4jsb_Config(HD_)%routing_scheme) /= 'full') THEN
       IF (diag_water_budget) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
@@ -872,9 +870,9 @@ CONTAINS
     END IF
 
     ALLOCATE (water_budget_old(nproma, nblks))
-    !$ACC ENTER DATA CREATE(water_budget_old)
+    !$ACC ENTER DATA CREATE(water_budget_old) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         water_budget_old(jc,blk) = water_budget(jc,blk) * in_domain(jc,blk)
@@ -885,7 +883,7 @@ CONTAINS
 
     ! Calculate global land water budget
     !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         water_budget(jc,blk) = &  ! [m3]
@@ -900,7 +898,7 @@ CONTAINS
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water budget:')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = SUM(overlflow_res(jc,:,blk)) * in_domain(jc,blk)
@@ -909,7 +907,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   overlandflow reservoir: ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
       CALL message(routine, message_text)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = SUM(baseflow_res(jc,:,blk)) * in_domain(jc,blk)
@@ -918,7 +916,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   baseflow reservoir    : ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
       CALL message(routine, message_text)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = SUM(riverflow_res(jc,:,blk)) * in_domain(jc,blk)
@@ -927,7 +925,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   riverflow reservoir   : ', global_sum_array(ztemp, lacc=.TRUE.), ' m3'
       CALL message(routine, message_text)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
@@ -942,9 +940,9 @@ CONTAINS
 
     tile_fract => tile%fract
     ALLOCATE(water_flux(nproma, nblks))
-    !$ACC ENTER DATA CREATE(water_flux)
+    !$ACC ENTER DATA CREATE(water_flux) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         water_flux(jc,blk) = &
@@ -954,12 +952,11 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
     global_water_flux = global_sum_array(water_flux(:,:), lacc=.TRUE.)
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water fluxes during time interval:')
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = runoff(jc,blk) / rhoh2o * area(jc,blk) * tile_fract(jc,blk) * in_domain(jc,blk)
@@ -968,7 +965,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
       CALL message(routine, message_text)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = drainage(jc,blk) / rhoh2o * area(jc,blk) * tile_fract(jc,blk) * in_domain(jc,blk)
@@ -977,7 +974,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   drainage              : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
       CALL message(routine, message_text)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge_ocean(jc,blk) * in_domain(jc,blk)
@@ -991,7 +988,7 @@ CONTAINS
     END IF
 
     IF (diag_water_budget) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           ztemp(jc,blk) = discharge_ocean(jc,blk) * in_domain(jc,blk)
@@ -1002,23 +999,20 @@ CONTAINS
       CALL message (TRIM(routine),message_text)
     END IF
 
-    !$ACC EXIT DATA DELETE(in_domain, ztemp)
+    !$ACC EXIT DATA DELETE(in_domain, ztemp) ASYNC(acc_stream)
     DEALLOCATE (in_domain, ztemp)
 
-    !$ACC WAIT(1)
 
     IF (is_time_experiment_start(options%current_datetime)) THEN
-      !$ACC EXIT DATA DELETE(water_budget_old, water_flux)
+      !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
       DEALLOCATE (water_budget_old, water_flux)
-
-      !$ACC WAIT(1)
       RETURN
     END IF
     !
     ! 3. Global water balance check
     !
     ! Note: the different parts of the following equation have already been multiplied with in_domain
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
         water_budget_change(jc,blk) = water_budget_old(jc,blk) + water_flux(jc,blk) * steplen - water_budget(jc,blk)
@@ -1048,10 +1042,8 @@ CONTAINS
     IF (dsl4jsb_memory(HD_)%water_error_gsum%is_in_output) &
       & water_error_gsum = global_water_error
 
-    !$ACC EXIT DATA DELETE(water_budget_old, water_flux)
+    !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
     DEALLOCATE (water_budget_old, water_flux)
-
-    !$ACC WAIT(1)
 
   END SUBROUTINE hd_check_water_budget
 

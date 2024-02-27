@@ -298,6 +298,7 @@ CONTAINS
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE rad_init_ic
 

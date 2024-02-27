@@ -26,7 +26,7 @@ MODULE mo_seb_land
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
-  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
@@ -265,13 +265,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(qsat_srf_old, s_old, dQdT, t2s_conv, heat_tcoef, t_star, liquid_max) &
     !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     IF (use_tmx) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         is_glacier(ic) = tile%is_glacier
       END DO
@@ -280,7 +280,7 @@ CONTAINS
       IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
         DO ilct=1,SIZE(tile%lcts)
           IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic=1,nc
               is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._wp
             END DO
@@ -289,7 +289,7 @@ CONTAINS
           END IF
         END DO
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           is_glacier(ic) = .FALSE.
         END DO
@@ -299,9 +299,12 @@ CONTAINS
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
-    tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
-    !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=ics,ice
+      tile_fract_zero(ic) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._wp
+    END DO
+    !$ACC END PARALLEL LOOP
+
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
@@ -309,7 +312,7 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(t_air_in_Celcius)
     DO ic=1,nc
 
@@ -343,7 +346,7 @@ CONTAINS
     l_freeze_config        = dsl4jsb_Config(SSE_)%l_freeze
     l_supercool_config     = dsl4jsb_Config(SSE_)%l_supercool
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
 
       ! Save old surface temperature and saturation spec. humidity
@@ -400,6 +403,7 @@ CONTAINS
 
     ! Compute surface drag and exchange coefficients for standalone simulations
     IF (jsb_standalone) THEN
+      !$ACC WAIT
       !TODO: GPU adaptation still missing!
       !$ACC DATA &
       !$ACC   CREATE(rough_h_srf, rough_m_srf, t_srf_upd)
@@ -423,7 +427,7 @@ CONTAINS
 
       ! Compute the updated surface temperature to be used for a filtered drag computation
       ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
         frozen_fract(ic) = fract_snow(ic)
@@ -474,7 +478,7 @@ CONTAINS
       !$ACC END DATA
     END IF ! jsbach_runs_standalone
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
 
       ! Transfer coefficient
@@ -505,14 +509,13 @@ CONTAINS
 
     IF (use_tmx .AND. .NOT. lstart) THEN
       DO iter=1,dsl4jsb_Config(SEB_)%niter_tmx
-        !$ACC WAIT(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
         END DO
         !$ACC END PARALLEL LOOP
         CALL update_exchange_coefficients(tile, options)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL surface_temp_implicit(                           & ! in
             alpha,                                              & ! in
@@ -528,9 +531,8 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END DO
     END IF
-    !$ACC WAIT(1)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(soil_depth_sl_vol_porosity_sl_tmp)
     DO ic=1,nc
 
@@ -640,12 +642,11 @@ CONTAINS
 #endif
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       t_eff4(ic) = t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     !$ACC END DATA
 
@@ -792,7 +793,7 @@ CONTAINS
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       IF (eps > 0._wp) THEN
         t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))
@@ -805,7 +806,6 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -903,8 +903,8 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract) ASYNC(acc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
 
       s_air(ic) = t_acoef(ic) * s_star(ic) + t_bcoef(ic)
@@ -938,7 +938,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')

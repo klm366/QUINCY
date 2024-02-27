@@ -14,6 +14,7 @@
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
+  USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
@@ -1412,7 +1413,7 @@ CONTAINS
 
     INTEGER :: ic
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(fract_fpc_max)
       Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO

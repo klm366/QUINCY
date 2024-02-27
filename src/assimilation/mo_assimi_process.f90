@@ -14,7 +14,8 @@
 MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control,  ONLY: acc_stream
+  USE mo_kind,         ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -58,7 +59,7 @@ CONTAINS
 
     nc = SIZE(lai)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(cos_zenith_noon, k12)
     DO ic=1,nc
 
@@ -493,7 +494,7 @@ CONTAINS
 
     nc = SIZE(apar_per_lai_cl)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc
@@ -762,7 +763,7 @@ CONTAINS
 
     nc = SIZE(gross_assimilation_ca)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(growthRespiration, maintenanceRespiration)
     DO ic=1,nc
       maintenanceRespiration = dark_respiration_ca(ic) / f_aut_leaf

@@ -40,6 +40,7 @@ MODULE mo_jsb_interface
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
   PUBLIC :: jsbach_get_var
+  PUBLIC :: invalidate_cuda_graphs
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -48,6 +49,11 @@ MODULE mo_jsb_interface
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
+  ! TODO: This is kind of a hack, but for now this is sufficient.
+  ! If this variable is set (should be done during jsbach_start_timestep),
+  ! the step will not run with a CUDA graph, and new graphs will be captured starting
+  ! with the following step
+  LOGICAL :: invalidate_cuda_graphs
 
 CONTAINS
 
@@ -639,6 +645,9 @@ CONTAINS
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
     ENDIF
+
+    ! If this is .true., old graphs will be invalidated and the new ones will be captured
+    invalidate_cuda_graphs = .false.
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

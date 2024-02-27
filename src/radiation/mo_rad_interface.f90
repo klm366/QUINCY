@@ -24,7 +24,7 @@ MODULE mo_rad_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, acc_stream
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
 
@@ -253,7 +253,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
-      !$ACC DATA CREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+      !$ACC DATA CREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice) ASYNC(acc_stream)
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
@@ -286,7 +286,7 @@ CONTAINS
           & lw_net=lw_net_lice(:)        & ! out
           & )
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           rad_srf_net(ic) = (1._wp - fract_lice(ic)) * rad_net_lwtr(ic) + fract_lice(ic) * rad_net_lice(ic)
           sw_srf_net (ic) = (1._wp - fract_lice(ic)) * sw_net_lwtr(ic)  + fract_lice(ic) * sw_net_lice(ic)
@@ -294,7 +294,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           rad_srf_net(ic) = rad_net_lwtr(ic)
           sw_srf_net (ic) = sw_net_lwtr (ic)
@@ -330,8 +330,6 @@ CONTAINS
         & lw_net    = lw_srf_net(:)     & ! out
         & )
     END IF
-
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -504,9 +502,9 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    !$ACC DATA CREATE(B4_layer_above)
+    !$ACC DATA CREATE(B4_layer_above) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO icanopy=1,ncanopy
       DO ic=1,nc
         apar_per_lai_cl(ic,icanopy) = 0._wp
@@ -514,7 +512,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       par_down_mol(ic)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
       soil_reflectivity_par(ic) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
@@ -531,14 +529,12 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
-
     ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and
     ! lai_cl (leaf area index for each canopy layer)
     DO icanopy=1,ncanopy
         canopy_bound_lai_tmp = canopy_bound_lai(icanopy)
         canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
        !NEC$ ivdep
         DO ic=1,nc
           CALL calc_par(                 &
@@ -579,7 +575,7 @@ CONTAINS
     ! END DO
 
     ! Create faPAR
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
       !$ACC LOOP GANG VECTOR
@@ -606,7 +602,6 @@ CONTAINS
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -808,8 +803,8 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
-        !$ACC ENTER DATA CREATE(c_bg_sum)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC ENTER DATA CREATE(c_bg_sum) ASYNC(acc_stream)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           c_bg_sum(ic) = 0._wp                           ! dummy
         END DO
@@ -843,11 +838,11 @@ CONTAINS
     ! Go
 
     ALLOCATE(l_day(nc))
-    !$ACC ENTER DATA CREATE(l_day)
+    !$ACC ENTER DATA CREATE(l_day) ASYNC(acc_stream)
 
     !> 0.9  Set day-or-night-switch
-    !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !! 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
     END DO
@@ -865,7 +860,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         CALL calc_snow_albedo(    &
           & l_day(ic),            & ! in
@@ -899,7 +894,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         CALL calc_alb_lwtr( &
           & l_day(ic),       & ! in
@@ -913,7 +908,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL calc_alb_lice(    &
             & l_day(ic),         & ! in
@@ -924,7 +919,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           IF(l_day(ic)) THEN
             alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
@@ -933,7 +928,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           IF(l_day(ic)) THEN
             alb_vis(ic) = albedo_lwtr(ic)
@@ -946,7 +941,7 @@ CONTAINS
     !> 3.0 glacier
     !!
     ELSE IF (tile%is_glacier) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         CALL calc_glacier_albedo(  &
           & l_day(ic),             & ! in
@@ -973,7 +968,7 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         !NEC$ ivdep
         DO ic=1,nc
           CALL calc_soil_albedo(                        &
@@ -1005,7 +1000,7 @@ CONTAINS
       END IF
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         alb_vis_lnd(ic) = fract_snow_soil(ic)                                       * alb_vis_snow(ic) &
                      & + (1.0_wp - fract_snow_soil(ic)) * fract_pond(ic)            * alb_vis_pond(ic) &
@@ -1040,7 +1035,7 @@ CONTAINS
       !!
       !! TRUE for jsbach_lite, FALSE for jsbach_pfts
       IF (use_alb_veg_simple) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           alb_vis_lnd(ic) = get_surface_albedo_simple( &
             & t_unfilt(ic),                            &
@@ -1073,7 +1068,7 @@ CONTAINS
 
           specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
           AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           !NEC$ ivdep
           DO ic=1,nc
             CALL calc_soil_albedo(                        &
@@ -1104,8 +1099,6 @@ CONTAINS
           END IF
         END IF
 
-        !$ACC WAIT(1)
-
         ! Get the fractions of the vegetation tile that is bare soil from the sky point of view
         ! Needed later for merging the contributing snow-, bare soil- and canopy-albedos for this vegetation tile
         dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract)       ! inout
@@ -1117,7 +1110,7 @@ CONTAINS
         !> 5.2.2 calc sky-view fractions
         !!
         StemArea_param = dsl4jsb_Lctlib_param(StemArea)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL calc_sky_view_fractions(       &
             & l_day(ic),                      & ! in
@@ -1134,7 +1127,7 @@ CONTAINS
         !> 5.2.3 merge albedos of snow, soil and canopy into land
         !!
         ForestFlag_param = dsl4jsb_Lctlib_param(ForestFlag)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL Merge_albedos_of_vegtile(        &
             & l_day(ic),                        & ! in
@@ -1162,14 +1155,12 @@ CONTAINS
       END IF ! use_alb_veg_simple
 
     END IF   ! IF (tile%is_vegetation)
-    !$ACC WAIT(1)
-
     !> 6.0 pass the "land albedo" to the "tile albedo"
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly
     !! but for vegetation, bare and glacier, the "land albedo" is calculated
     !!
     IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_vegetation) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         alb_vis(ic) = alb_vis_lnd(ic)
         alb_nir(ic) = alb_nir_lnd(ic)
@@ -1177,17 +1168,15 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
-
     !> 7.0 deallocate a pointer
     !!
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) THEN
-        !$ACC EXIT DATA DELETE(c_bg_sum)
+        !$ACC EXIT DATA DELETE(c_bg_sum) ASYNC(acc_stream)
         DEALLOCATE(c_bg_sum)
       END IF
     END IF
-    !$ACC EXIT DATA DELETE(l_day)
+    !$ACC EXIT DATA DELETE(l_day) ASYNC(acc_stream)
     DEALLOCATE(l_day)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1235,6 +1224,8 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    
+    CALL weighted_by_fract%BeginAggregate()
 
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
@@ -1253,6 +1244,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
     ENDIF
 
+    CALL weighted_by_fract%EndAggregate()
+    
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_albedo

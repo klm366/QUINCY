@@ -58,6 +58,7 @@ CONTAINS
 
     !$ACC ENTER DATA CREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
     !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE Register_grid
 
@@ -103,6 +104,7 @@ CONTAINS
 
     !$ACC ENTER DATA CREATE(vgrid, vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz)
     !$ACC UPDATE DEVICE(vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz) ASYNC(1)
+    !$ACC WAIT(1)
   END SUBROUTINE Register_vgrid
 
   FUNCTION Get_grid(id) RESULT(grid)

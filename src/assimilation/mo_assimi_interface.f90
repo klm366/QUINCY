@@ -25,7 +25,7 @@ MODULE mo_assimi_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
@@ -304,6 +304,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    !!# !$ACC DATA CREATE(declination) ASYNC(acc_stream)
     CALL inquire_declination(declination) ! out
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
@@ -317,7 +318,7 @@ CONTAINS
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO i=1,ncanopy
         !$ACC LOOP GANG VECTOR
@@ -327,6 +328,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL
     END IF
+    !!# !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -365,7 +367,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(ASSIMI_, scaling_fact_cl, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -463,7 +469,7 @@ CONTAINS
 
     ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
     DO icanopy=1,ncanopy
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
@@ -483,13 +489,11 @@ CONTAINS
     END DO
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -530,8 +534,12 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_unlimited, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -615,9 +623,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
-    !$ACC DATA CREATE(ratio_lim_over_unlim)
+    !$ACC DATA CREATE(ratio_lim_over_unlim) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
       q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
@@ -632,10 +640,10 @@ CONTAINS
 
     ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
     ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC LOOP VECTOR
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         ! canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
          canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * ratio_lim_over_unlim(ic)
@@ -644,8 +652,6 @@ CONTAINS
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
-
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -682,8 +688,12 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_limited, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,      weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -831,7 +841,7 @@ CONTAINS
         & )
     END DO
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       ! convert from leaf area of layer to canopy ground area
       gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
@@ -848,7 +858,7 @@ CONTAINS
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
     END DO
@@ -1046,6 +1056,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(ASSIMI_, seconds_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_sum_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_mean_5year,           weighted_by_fract)
@@ -1056,6 +1068,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, bclimit_min_temprange,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, bclimit_min_gdd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, tau_c_woods,              weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

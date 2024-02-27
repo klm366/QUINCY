@@ -14,7 +14,8 @@
 MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control, ONLY: acc_stream
+  USE mo_kind,        ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -74,7 +75,7 @@ CONTAINS
 
     nc = SIZE(swvis_down)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
     DO ic=1,nc
 

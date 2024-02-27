@@ -21,7 +21,7 @@ MODULE mo_carbon_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
@@ -720,6 +720,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
 
     !@todo Those commented out are currently not calculated
@@ -786,6 +788,8 @@ CONTAINS
     ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1489,7 +1493,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       current_c_state_sum_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic) + c_crop_harvest_ta(ic) + &
         & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
@@ -1501,7 +1505,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !$ACC END PARALLEL LOOP
 
     IF (PRESENT(c_sum_veg_ta)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         c_sum_veg_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic)
       END DO
@@ -1509,7 +1513,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     END IF
 
     IF (PRESENT(c_sum_litter_ag_ta)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         c_sum_litter_ag_ta(ic) = &
           & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
@@ -1519,7 +1523,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ENDIF
 
     IF (PRESENT(c_sum_litter_bg_ta)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         c_sum_litter_bg_ta(ic) = &
           & c_acid_bg1_ta(ic) + c_water_bg1_ta(ic) + c_ethanol_bg1_ta(ic) + c_nonsoluble_bg1_ta(ic) + &
@@ -1529,7 +1533,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     END IF
 
     IF (PRESENT(c_sum_humus_ta)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         c_sum_humus_ta(ic) = c_humus_1_ta(ic)  + c_humus_2_ta(ic)
       END DO
@@ -1609,7 +1613,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       c_bg_sum(ic) = c_acid_bg1(ic) + c_water_bg1(ic) + c_ethanol_bg1(ic) + c_nonsoluble_bg1(ic) + &
               & c_acid_bg2(ic) + c_water_bg2(ic) + c_ethanol_bg2(ic) + c_nonsoluble_bg2(ic) + &
@@ -1905,8 +1909,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(cflux_ta)
       Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)
     END DO

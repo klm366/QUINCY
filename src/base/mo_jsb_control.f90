@@ -34,7 +34,7 @@ MODULE mo_jsb_control
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
-  PUBLIC :: max_no_of_models
+  PUBLIC :: max_no_of_models, acc_stream
 
   ! Needed for inlining timer_on and debug_on on NEC.
   PUBLIC :: debug_level, timer_level
@@ -48,6 +48,7 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
   LOGICAL,           SAVE :: l_force_from_obs
+  INTEGER,           SAVE :: acc_stream = 1
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0

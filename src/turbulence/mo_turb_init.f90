@@ -181,6 +181,7 @@ CONTAINS
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h))
+      !$ACC WAIT(1)
 
     END IF
 

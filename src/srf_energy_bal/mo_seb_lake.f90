@@ -24,7 +24,7 @@ MODULE mo_seb_lake
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
 
   dsl4jsb_Use_processes SEB_, TURB_, RAD_, HYDRO_, A2L_
   dsl4jsb_Use_config(SEB_)
@@ -236,15 +236,15 @@ CONTAINS
       END IF
 
       ALLOCATE(hcap_ice(nc))
-      !$ACC ENTER DATA CREATE(hcap_ice)
+      !$ACC ENTER DATA CREATE(hcap_ice) ASYNC(acc_stream)
     ELSE
       ALLOCATE(hflx_form_ice(nc))
-      !$ACC ENTER DATA CREATE(hflx_form_ice)
+      !$ACC ENTER DATA CREATE(hflx_form_ice) ASYNC(acc_stream)
     END IF
 
-    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
+    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       zero            (ic) = 0._wp
       hcap_wtr        (ic) = 0._wp
@@ -262,10 +262,10 @@ CONTAINS
       forc_hflx       (ic) = 0._wp ! Always zero for lake
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
+      !$ACC WAIT
       !TODO: Adaptation to GPUs only started. It is still very incomplete!
       !$ACC DATA &
       !$ACC   CREATE(fact_q_air, fact_qsat_srf, rough_h_srf, rough_m_srf, pch_wtr)
@@ -299,7 +299,7 @@ CONTAINS
     END IF
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       CALL calc_lake_wtr_temp( &
         & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
@@ -314,7 +314,6 @@ CONTAINS
         & min_ice_depth)                                    !< in;    Minimum ice thickness
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! TODO How to put this on GPU? The following block is wrong!
 
@@ -340,7 +339,7 @@ CONTAINS
 
       ! Calculate new ice thickness
       ! Tendency = freezing + conductive heat flux - ice melting + sublimation/deposition
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         CALL calc_lice_thickness(                           &
           & depth_lice(ic),                                 & !< inout; Ice thickness [m]
@@ -357,10 +356,9 @@ CONTAINS
           & )
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       ! Calculate new water temperature for the case of complete ice melting
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL calc_lake_wtr_temp( &
             & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
@@ -375,11 +373,10 @@ CONTAINS
             & min_ice_depth)                                    !< in;    Minimum ice thickness
         END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
       !$ACC   PRIVATE(lhflx_tmp)
       DO ic=1,nc
         lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
@@ -400,11 +397,10 @@ CONTAINS
           & dtime)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
       s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd_or_cvd, jsb_standalone)
@@ -412,7 +408,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (config_l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
@@ -429,11 +425,10 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(hcap_ice)
+      !$ACC EXIT DATA DELETE(hcap_ice) ASYNC(acc_stream)
       DEALLOCATE(hcap_ice)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         t(ic) = t_lwtr(ic)
         t_unfilt(ic) = t(ic)
@@ -448,8 +443,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(hflx_form_ice)
+      !$ACC EXIT DATA DELETE(hflx_form_ice) ASYNC(acc_stream)
       DEALLOCATE(hflx_form_ice)
     END IF
 
@@ -782,7 +776,7 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(s_air, heat_tcoef)
     DO ic=1,nc
 
@@ -804,7 +798,7 @@ CONTAINS
     ! Surface fluxes for lake ice
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR PRIVATE(s_air, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR PRIVATE(s_air, heat_tcoef)
       DO ic=1,nc
 
         IF (use_tmx) THEN
@@ -826,7 +820,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         sensible_hflx(ic) = sensible_hflx_wtr(ic)
         latent_hflx  (ic) = latent_hflx_wtr  (ic)

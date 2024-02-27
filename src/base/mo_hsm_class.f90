@@ -927,6 +927,7 @@ CONTAINS
   ! State machine engine
   !
   SUBROUTINE Process_message_hsm(this, msg, debug)
+    USE mo_jsb_control, ONLY: acc_stream
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
 !!$    CLASS(t_Message), POINTER       :: msg
@@ -942,6 +943,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_hsm'
 
     INTEGER :: no_omp_thread
+    INTEGER :: original_stream, stream
+    INTEGER :: dummy
 
 #ifdef _OPENMP
     no_omp_thread = omp_get_thread_num() + 1
@@ -958,6 +961,13 @@ CONTAINS
 
     SELECT CASE (this%mode)
     CASE (HSM_simple)
+      ! Prepare OpenACC streams for multi-stream processing
+      original_stream = acc_stream
+      acc_stream = 1
+
+      IF (msg%action%name /= "INTEGRATE") THEN
+        CALL finish(TRIM(routine), "routines should start with INTEGRATE")
+      ENDIF
 
       ! Transitions are only taken to parent, next sibling or first child
       ALLOCATE(new_msg, source=msg)
@@ -966,6 +976,26 @@ CONTAINS
       DO WHILE (ASSOCIATED(state))
         ! Process message on current state
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
+
+        IF (new_msg%action%name /= "INTEGRATE") THEN
+          ! Join all the streams before the first non-integration task
+          IF (original_stream /= -1) THEN
+            DO stream = 2, acc_stream
+              !$ACC WAIT(stream) ASYNC(original_stream)
+            ENDDO
+            ! Dummy kernel for the faster graph dependency resolution
+            !$ACC PARALLEL ASYNC(original_stream)
+            dummy = 1
+            !$ACC END PARALLEL
+            acc_stream = original_stream
+            original_stream = -1
+          ENDIF
+        ELSE
+          ! Use a separate stream for each INTEGRATE task
+          acc_stream = acc_stream + 1
+          !$ACC WAIT(original_stream) ASYNC(acc_stream)
+        ENDIF
+
         tmp_msg => state%Process_message(new_msg)
         IF (ASSOCIATED(new_msg)) THEN
           DEALLOCATE(new_msg)
