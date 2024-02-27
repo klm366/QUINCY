@@ -30,6 +30,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
   USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
+  USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
@@ -62,6 +63,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_pplcc_interface,       ONLY: Register_pplcc_tasks
   USE mo_pplcc_config_class,    ONLY: t_pplcc_config
+  USE mo_fage_interface,        ONLY: Register_fage_tasks
+  USE mo_fage_config_class,     ONLY: t_fage_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
   USE mo_flcc_interface,        ONLY: Register_flcc_tasks
@@ -75,7 +78,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -143,6 +146,10 @@ CONTAINS
     CASE (PPLCC_)
       CALL Register_pplcc_tasks(return_ptr, model_id)
       ALLOCATE(t_pplcc_config::return_ptr%config)
+    CASE (FAGE_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_fage_tasks(return_ptr, model_id)
+      ALLOCATE(t_fage_config::return_ptr%config)
     CASE (ALCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
@@ -191,6 +198,7 @@ CONTAINS
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
     USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
+    USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
@@ -246,6 +254,9 @@ CONTAINS
     CASE (PPLCC_)
       ALLOCATE(t_pplcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_pplcc_vars
+    CASE (FAGE_)
+      ALLOCATE(t_fage_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_fage_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars

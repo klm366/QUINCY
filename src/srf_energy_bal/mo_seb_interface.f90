@@ -257,7 +257,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)

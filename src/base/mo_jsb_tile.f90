@@ -109,6 +109,7 @@ CONTAINS
     END IF
 
     ! Initialize further components of t_jsb_tile_abstract extended type
+    return_ptr%self_tile => return_ptr
 
     ALLOCATE(return_ptr%process_action(max_no_of_processes))
 
@@ -247,7 +248,6 @@ CONTAINS
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_grid,            ONLY: Get_vgrid
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -274,6 +274,9 @@ CONTAINS
 
     model => this%model
     this%grid_id = grid_id
+
+    ! Allocate pointer array to collect lcc structures for lcc procs
+    ALLOCATE(this%lcc_processes(max_no_of_processes))
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -414,43 +417,43 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction', '',                                                                          &
+    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                                    &
+      & hgrid, surface,                                                                                       &
+      & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     CALL this%Set_fract_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
-    CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                                                &
+      & hgrid, surface,                                                                                       &
+      & t_cf('tile_fraction_max', '',                                                                         &
+      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
-    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_old', '',                                                                          &
-      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                                &
+      & hgrid, surface,                                                                                       &
+      & t_cf('tile_fraction_old', '',                                                                         &
+      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                    &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
-    CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_max_old', '',                                                                          &
-      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                                            &
+      & hgrid, surface,                                                                                       &
+      & t_cf('tile_fraction_max_old', '',                                                                     &
+      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                    &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -470,6 +473,18 @@ CONTAINS
       CALL this%Set_fraction(fract=tmp_fract(:,:))
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
+    ELSE IF (this%fract_varname == 'allFirst') THEN
+        IF(ASSOCIATED(this%parent_tile)) THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          IF (.NOT. this%Is_first_child()) THEN
+            tmp_fract(:,:) = 0._wp
+          END IF
+        ELSE
+          tmp_fract(:,:) = 1._wp
+        END IF
+        CALL this%Set_fraction(fract=tmp_fract(:,:))
+        tmp_fract(:,:) = 1._wp
+        CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
 
@@ -700,13 +715,12 @@ CONTAINS
   SUBROUTINE Count_conserved_quantities_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_jsb_cqt_class,       ONLY: Get_cqt_name, max_cqt_name_length
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
     CLASS(t_jsb_memory), POINTER   :: mem
-    INTEGER                        :: iproc, i, child_no, id, ind
+    INTEGER                        :: iproc, i, id, ind
     LOGICAL                        :: consQuanTypeInUse
     TYPE(t_jsb_consQuan), POINTER  :: consQuanType
     CHARACTER(len=max_cqt_name_length) :: thisCQTName
@@ -772,14 +786,12 @@ CONTAINS
   SUBROUTINE Collect_conserved_variables_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
     CLASS(t_jsb_memory), POINTER  :: mem
-    INTEGER                       :: iproc, i, child_no, id, ind, last_index, nrOfConsQuans
-    LOGICAL                       :: consQuanTypeInUse    
-    TYPE(t_jsb_consQuan), POINTER :: consQuanType
+    INTEGER                       :: iproc, i, id, ind, last_index, nrOfConsQuans
+    LOGICAL                       :: consQuanTypeInUse
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
 
