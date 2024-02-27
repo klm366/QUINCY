@@ -30,33 +30,28 @@ MODULE mo_hydro_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
     REAL(wp)            :: &
-      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins
-                             ! (very thin, 0.2 mm, sheet of water on soil, leafes and all kind of surfaces), as well as
+      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins, as well as
                              !  maximum snow depth on leaves  [m water equivalent]
-      & w_soil_limit,      & !< Upper limit for maximum soil moisture content   TODO is this used anymore ?
-      & snow_depth_max       !< Limit for snow depth (sum of layer thicknesses) [m water equivalent] to avoid grid cells with
+      & w_soil_limit,      & !< Upper limit for maximum soil moisture content
+      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
                              !  infinitely growing snow depth; -1. for no limitation
     CHARACTER(len=10)     :: &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
-      & enforce_water_budget, & !< stop the simulation in case of water conservation problem [T,F]
-                                !  this is the global setting, there are three individual switches
-                                !  used across the code, this global switch does set all other ones
-                                !  but modifications of the individual ones overwrite the global one
-      & l_organic,            & !< Use organic component of soil layers for HYDRO_ calculations
-      & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction (from input data)
-      & l_soil_texture,       & !< calculate soil hydrological parameters from soil texture (silt, clay, sand)
-      & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile   TODO not used anymore - remove
-      & l_infil_subzero         !< allow infiltration of water into uppermost soil layer at soil temperatures below zero degC
-                                !   TODO might be removed and set to TRUE as default after the old snow scheme is removed
+      & enforce_water_budget, & !< stop in case of water conservation problem
+      & l_organic,            & !< Use organic component of soil layers
+      & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
+      & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
+      & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
+      & l_infil_subzero         !< Allow infiltration at soil temperatures below 0degC
     INTEGER               :: &
-      & soilhydmodel,        & !< select the soil hydrological model for calc soil hydraulic properties:
+      & soilhydmodel,        & !< Choice of soil hydrological model for calc soil hydraulic properties:
                                !  'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
-      & interpol_mean,       & !< select interpolation scheme to obtain K & D at layer interface:
-                               !  'upstream' (default) or 'arithmetic' mean
+      & interpol_mean,       & !< Interpolation scheme to obtain K & D at layer interface:
+                               !     'upstream' (default) or 'arithmetic' mean
       & hydro_scale            !< either use 'catchment' scale (default) parametrizations for soil in- and outflows
-                              !   or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
+                               !   or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -243,7 +238,6 @@ CONTAINS
     IF (l_organic .AND. nsoil < 3) &
       & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
-    ! calculate mid-points of each soil layer
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp

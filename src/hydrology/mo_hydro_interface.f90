@@ -380,8 +380,7 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land        ! with soil
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_glacier     ! no soil
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
@@ -410,7 +409,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
-    dsl4jsb_Real2D_onChunk :: steepness       ! std deviation orography (high value: much relief | low: rather flat)
+    dsl4jsb_Real2D_onChunk :: steepness
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -441,8 +440,8 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & skinres_max,        &       ! skinres max high (a.k.a. water column)  == 0.2 mm // water that is not actually able to move because it sticks to the surface
-      & skinres_canopy_max, &       ! same for canopy, but can accumulate to larger values depeding on LAI
+      & skinres_max,        &
+      & skinres_canopy_max, &
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & trans_tmp
@@ -460,7 +459,7 @@ CONTAINS
       & hydro_scale
     LOGICAL  :: &
       & is_experiment_start,    &
-      & l_compat401_config,     & ! @todo: For backward compatibility with quite old ICON setup. Do we still need it?
+      & l_compat401_config,     &
       & l_dynsnow_config,       &
       & l_infil_subzero_config, &
       & ltpe_closed
@@ -481,7 +480,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    l_compat401_config = model%config%l_compat401 ! @todo: The backward compatibility is used to disable snow with dynamic density
+    l_compat401_config = model%config%l_compat401
 
     dsl4jsb_Get_config(HYDRO_)
     w_skin_max_config      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
@@ -499,13 +498,11 @@ CONTAINS
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
-    !> lake tile (no soil or anyhing below the lake)
-    !>
-    ! compute runoff (P-E) for lakes here and exit
-    ! Note: for the purpose of the water balance it is assumed here that all rain and snow fall is going into runoff
-    ! @todo: compute actual water balance (snow/ice melt) in lake model and use for runoff. The corresponding energy
-    ! fluxes and snow/ice budgets are already computed in the lake model.
     IF (tile%is_lake) THEN
+      ! compute runoff (P-E) for lakes here and exit
+      ! Note: for the purpose of the water balance it is assumed here that all rain and snow fall is going into runoff
+      ! @todo: compute actual water balance (snow/ice melt) in lake model and use for runoff. The corresponding energy
+      ! fluxes and snow/ice budgets are already computed in the lake model.
       dsl4jsb_Get_var2D_onChunk(A2L_,   rain)               ! in
       dsl4jsb_Get_var2D_onChunk(A2L_,   snow)               ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)         ! in
@@ -518,10 +515,8 @@ CONTAINS
       IF (model%config%use_tmx) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)        ! out
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
-      ! actual calculation
-      ! very simple scheme !
       DO ic=1,nc
-        runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)   ! can be negative runoff value w/o precipitation - but it is a diagnostic for land (might take some water from ocean)
+        runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)
         infilt(ic)   = 0._wp
         drainage(ic) = 0._wp
         weq_snow(ic) = 0._wp
@@ -568,10 +563,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
-    !> glacier tile
-    !>   just get the vatiables needed
-    !>   as there is no soil beneath glacier, some variables not needed
-    !>
     IF (tile%is_glacier) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_glac)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
@@ -596,9 +587,6 @@ CONTAINS
       END IF
     END IF
 
-    ! start without snow
-    !   @TODO modify if an ic input file is present
-    !
     IF (is_experiment_start) THEN ! Start of experiment
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
@@ -607,8 +595,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !> calculate for glacier tile
-    !>
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
@@ -625,10 +611,9 @@ CONTAINS
           & weq_glac(ic),                    & !< inout
           & q_snocpymlt(ic),                 & !< out
           & snowmelt(ic),                    & !< out
-          & runoff_glac(ic),                 & !< out, diagnostic, water that really melt form the glacier
+          & runoff_glac(ic),                 & !< out
           & pme_glacier = runoff(ic)         & !< out, P-E ... used as runoff for HD model
           & )
-        ! no soil or snow at glacier tile, so set relevant values to zero
         infilt(ic)   = 0._wp
         drainage(ic) = 0._wp
         weq_snow_soil(ic) = 0._wp
@@ -641,9 +626,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
-    !>
-    !> land surface hydrology (with soil underneath)
-    !>
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
       !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), field_cap_sl_tmp(1:nc,1:nsoil))
@@ -674,8 +656,6 @@ CONTAINS
         &  weq_rootzone_max(:))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      ! 'skin reservoir max' == height value
-      ! to detect skin reservoir overflow (after precipitation) -> water for infiltration and surface runoff etc. ...
       DO ic=1,nc
         IF (tile%is_vegetation .OR. tile%is_land) THEN
           skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
@@ -1152,8 +1132,6 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
-    ! + area: used together with l_fract - avoid calculation over ocean
-    ! + lat & lon: diagnostics
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     LOGICAL :: l_fract(options%nc)
@@ -1168,11 +1146,10 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
-    ! no soil with lakes
     IF (tile%is_lake) RETURN
 
     ! Runoff and drainage for glaciers already computed in update_surface_hydrology
-    ! no soil with glaciers
+    ! Glaciers have no water in soil
     IF (tile%is_glacier) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -1189,22 +1166,16 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    ! Terra-Planet setup (pure terra planet)
-    !  switch: water balance may be forced to be closed
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
-    ! there is always a numerical error with water transport
-    ! this variable stores this error
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
 
     !$ACC DATA CREATE(l_fract, tile_fract)
 
-    ! avoid calculation over ocean
-    ! l_fract - fraction must be larger zero
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
     !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
@@ -1219,11 +1190,11 @@ CONTAINS
       & nsoil, &
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
-      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    & !< different ways to calculate soil parameters
-      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & !< how to avrg parameter over soil layers
+      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
+      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & !< choice of hydrological scale scheme
-      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & !< soil layer thickness
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     & !< root depth across soil layers
+      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
@@ -1232,29 +1203,29 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & !< volumetric residual soil water content [m m-1]
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), & !< potentially supercooled water
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     & !< evaporation - already calculated
-      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     & !< transpiration - already calculated
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     & !< migth be corrected in this routine
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     & !< migth be corrected in this routine
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     & !< soil water
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     & !< soil ice
-      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     & !< error with Terra-World setup
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     & !< diagnostic (all water forced to transpire from soil to match transpiration & evapotranspiration input)
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     & !< saturtation
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     & !< field capacity
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     & !< wilting point
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & !< wilting point
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     & !< infiltration overflow - water that does not fit into soil layers
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     & !< total subsurface drainage
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & !< residual soil water content
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & !< subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & !< lateral downards transport of water
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      & !< numerical error with water transport
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
 
-    ! Convert soil hydrology balance error to volume (as all other variables are in volume unit too)
+    ! Convert soil hydrology balance error to volume
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
@@ -2135,8 +2106,6 @@ CONTAINS
   !!
   SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
-    ! Update of fract_snow and fract_wet are needed to determine potential evaporation of water to the atmosphere
-
     ! Use declarations
     USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
@@ -2267,7 +2236,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
 #ifndef _OPENACC
-    ! Test of sainity of temperature to prevent inunderstandable errors later - currently checks are not GPU-compatible
     IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
       IF (ANY(t(:) < 50._wp)) THEN
         ic = MINLOC(t(:), DIM=1)
@@ -2284,20 +2252,18 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
-      ! Maximum capacity of canopy skin reservoir for tiles with canopy
+      ! Maximum capacity of skin reservoir (soil + canopy)
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
       ELSE
         skinres_canopy_max(ic) = 0._wp
       END IF
-      ! Maximum total skin reservoir capacity for tiles with soil is to total of soil and canopy capacity
       IF (tile%contains_soil) THEN
         skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
       ELSE
         skinres_max(ic) = 0._wp
       END IF
 
-      ! Glacier surface is treated as if the are entirely covered with snow without depth
       IF (tile%is_glacier) THEN
         fract_snow(ic)      = 1._wp
         fract_snow_soil(ic) = 1._wp
@@ -2321,11 +2287,10 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Vegetated tiles
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_can)       ! in
       CALL calc_wskin_fractions_veg( &
-        & dtime,                     & ! in, Time step [s]
+        & dtime,                     & ! in
         & model%config%use_tmx,      & ! in
         & skinres_max(:),            & ! in
         & oro_stddev(:),             & ! in
@@ -2348,7 +2313,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Bare tiles (not yet in use)
     IF (tile%is_bare) THEN
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in

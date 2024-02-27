@@ -36,10 +36,7 @@ MODULE mo_hydro_init
   IMPLICIT NONE
   PRIVATE
 
-  ! TODO move the below parameters to constants / parameter module
-
-  ! parameter used from TERRA model
-  ! for sand, loam (here called silt), clay, peat (here called oc)
+  ! parameter taken from TERRA for sand, loam (here called silt), clay, peat (here called oc), respectively
   ! (s. sfc_terra_data.f90)
 
   ! pore volume (fraction of volume, called cporv in TERRA)
@@ -79,7 +76,6 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  bclapp_oc = 4._wp       ! (type 12 in Beringer)
 
   ! soil-matric potential (s. Beringer et al 2001)
-  ! TODO rename/correct matrix -> matric
   REAL(wp), PARAMETER ::  matrix_pot_sand = -0.04729_wp ! (type 1 in Beringer)
   REAL(wp), PARAMETER ::  matrix_pot_silt = -0.45425_wp ! (type 5 in Beringer)
   REAL(wp), PARAMETER ::  matrix_pot_clay = -0.633_wp   ! (type 10 in Beringer)
@@ -96,7 +92,6 @@ MODULE mo_hydro_init
 
   PUBLIC :: hydro_init, hydro_sanitize_state
 
-  ! variables we read from ic/bc files
   TYPE t_hydro_init_vars
     REAL(wp), POINTER ::                  &
       & elevation        (:,:) => NULL(), &
@@ -143,17 +138,14 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! read variables from ic/bc file
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL hydro_read_init_vars(tile)
     END IF
 
-    ! init variables
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
 
     ! TODO This is not correct if hydro runs on veg tile!
-    ! deallocate local variables
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
@@ -190,9 +182,6 @@ CONTAINS
 
   END SUBROUTINE hydro_finalize_init_vars
 
-  !>
-  !> read variables from ic/bc file
-  !>
   SUBROUTINE hydro_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -248,7 +237,6 @@ CONTAINS
       & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
       & )
 
-      ! init variables
       hydro_init_vars%oro_stddev     (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
@@ -297,10 +285,6 @@ CONTAINS
 
     !----------
 
-    !> read variables for all tiles
-    !>
-
-    ! open input file - bc_sso
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
 
     ! Orography ...
@@ -316,15 +300,10 @@ CONTAINS
       & fill_array = hydro_init_vars%oro_stddev)
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
-    ! close bc_sso input file
     CALL input_file%Close()
 
-    !>
-    !> read variables only if on soil tile
-    !>
     IF (tile%contains_soil) THEN
 
-      ! open input file - bc
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
 
       ! Total soil depth until bedrock
@@ -360,7 +339,7 @@ CONTAINS
           & fill_array=hydro_init_vars%vol_p_wilt)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        ! Volumetric residual water content (if missing replace with wilting point)
+        ! Volumetric residual water content (if missing deduce from porosity)
         IF (input_file%Has_var('residual_water')) THEN
           ptr_2D => input_file%Read_2d(                  &
             & variable_name='residual_water',             &
@@ -376,7 +355,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='moisture_pot',              &
           & fill_array = hydro_init_vars%matrix_pot)
-        ! TODO  Currently, the matrix potential is given with a positiv sign in the bc data while
+        ! @todo Currently, the matrix potential is given with a positiv sign in the bc data while
         !       it should be negativ from a soil physics perspective and is expected as such from
         !       the soil hydrology routine. As matrix potential should be corrected in the bc data
         !       at some point in the future, we check here for negative or positive values and
@@ -391,9 +370,6 @@ CONTAINS
         WHERE(ABS(ptr_2D(:,:)) > 1.0e+20_wp)
           ptr_2D(:,:) = 0._wp
         ENDWHERE
-        !> check if all values are negative or positive (negative values are needed)
-        !>   and convert positive -> negative values
-        !>   TODO please revise if still is correct and necessary with current ic/bc files
         IF (ALL(ptr_2D(:,:) < 1.0e-10_wp)) THEN
           ! Correct: all values are negative
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), -0.2_wp, ptr_2D(:,:) <= 0._wp)
@@ -420,8 +396,8 @@ CONTAINS
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
       ELSE   ! l_soil_texture
-        !> read soil-texture information and calculate soil properties from it
-        !>
+
+        ! Soil texture information
 
         ! fraction of sand upper soil
         ptr_2D => input_file%Read_2d(                  &
@@ -542,7 +518,8 @@ CONTAINS
         hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
 
       CALL input_file%Close()
-    END IF ! l_soil_texture
+
+    END IF
 
     IF (tile%contains_soil) THEN
 
