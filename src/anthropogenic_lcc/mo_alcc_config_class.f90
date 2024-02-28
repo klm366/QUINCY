@@ -85,8 +85,10 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
+    ! Mingyue Zhang: Set defaults for transition data nc file prefix 
+    alcc_transition_filename_prefix = "LUH_scaled_transitions_T63_"
     nr_of_pfts           = 11
-    scheme               = 'maps'
+    scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -99,6 +101,8 @@ CONTAINS
     config%ic_filename          = ic_filename
     config%bc_filename          = bc_filename
     config%alcc_filename_prefix = alcc_filename_prefix
+    ! Mingyue Zhang: add config for transition data nc file prefix 
+    config%alcc_transition_filename_prefix = alcc_transition_filename_prefix
     config%scheme               = scheme
     config%nr_of_pfts           = nr_of_pfts
 
