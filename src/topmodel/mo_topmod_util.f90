@@ -33,7 +33,7 @@ CONTAINS
   !        Either dt and t_relax or nstep must be present
   !
   !!
-  PURE ELEMENTAL SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
+  PURE SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
     REAL(wp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
     REAL(wp),           INTENT(inout) :: relax   ! Mean value to update [?]
     REAL(wp), OPTIONAL, INTENT(in)    :: dt      ! Time step between updates [s]
@@ -63,7 +63,7 @@ CONTAINS
   !------------------------------------------------------------------------------------
 
   !   Returns the incomplete gamma function P (a, x).
-  PURE ELEMENTAL FUNCTION gamm_p(a,x)
+  PURE FUNCTION gamm_p(a,x)
     REAL(wp), INTENT(in) :: a, x
     REAL(wp)             :: gamm_p
     !   USES gcf, gser
@@ -86,7 +86,7 @@ CONTAINS
   END FUNCTION gamm_p
 
   !------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION gamm_inv_p(p, a)
+  PURE FUNCTION gamm_inv_p(p, a)
 
     REAL(wp), INTENT(IN) :: p, a
     REAL(wp)             :: gamm_inv_p
@@ -154,7 +154,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
-  PURE ELEMENTAL FUNCTION gamm_q(a,x)
+  PURE FUNCTION gamm_q(a,x)
     REAL(wp), INTENT(in) :: a,x
     REAL(wp) :: gamm_q
     ! USES gcf,gser
@@ -179,7 +179,7 @@ CONTAINS
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function P (a, x) evaluated by its series representation as
   !   gamser . Also RETURNs ln Γ(a) as gln.
-  PURE ELEMENTAL SUBROUTINE gser(gamser,a,x,gln)
+  PURE SUBROUTINE gser(gamser,a,x,gln)
     REAL(wp), INTENT(inout) :: gamser, gln
     REAL(wp), INTENT(in)    :: a, x
 
@@ -216,7 +216,7 @@ CONTAINS
   !   sentation as gammcf. Also RETURNs ln Γ(a) as gln.
   !   Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative accu-
   !   racy; FPMIN is a number near the smallest representable floating-point number.
-  PURE ELEMENTAL SUBROUTINE gcf(gammcf,a,x,gln)
+  PURE SUBROUTINE gcf(gammcf,a,x,gln)
     REAL(wp), INTENT(inout) :: gammcf, gln
     REAL(wp), INTENT(in)    :: a,x
 
@@ -258,7 +258,7 @@ CONTAINS
   END SUBROUTINE gcf
 
   !------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION gamm_ln(xx)
+  PURE FUNCTION gamm_ln(xx)
     REAL(wp), INTENT(in) :: xx
     REAL(wp)             :: gamm_ln
     ! Returns the value ln[Γ(xx )] for xx > 0.

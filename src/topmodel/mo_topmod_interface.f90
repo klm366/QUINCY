@@ -188,7 +188,7 @@ CONTAINS
     REAL(wp) :: water_table_t, frac_liquid_top_t
     LOGICAL,  POINTER :: PE_mask(:)
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
-    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i
+    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
     INTEGER  :: year, month, summer_state, ylen, mlen
     REAL(wp) :: dtime, sw, si, swmx, simx, wtmx
 
@@ -276,31 +276,35 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_volume)
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_flux)
 
-      CALL update_aet(tmelt,t_air,rad_srf_net,aet)
+      DO ic = 1, nc
+        CALL update_aet(tmelt,t_air(ic),rad_srf_net(ic),aet(ic))
+      ENDDO
 
       ! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
-      CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
-        & dsl4jsb_Config(TOP_)%peat_runoff_fac,            & ! Configuration parameters
-        & dsl4jsb_Config(TOP_)%peat_runoff_exp,            &
-        & rain(:)+snow(:), frac_liquid_top(:),             & ! Input variables from other parts of the model
-        & fract_snow(:), snowmelt(:),                      &
-        & aet(:),                                          &
-        & peat_water_volume(:), peat_water_table(:),       & ! In/out variables
-        & peat_water_flux(:)                               &
-      )
+      DO ic = 1, nc
+        CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
+          & dsl4jsb_Config(TOP_)%peat_runoff_fac,            & ! Configuration parameters
+          & dsl4jsb_Config(TOP_)%peat_runoff_exp,            &
+          & rain(ic)+snow(ic), frac_liquid_top(ic),          & ! Input variables from other parts of the model
+          & fract_snow(ic), snowmelt(ic),                    &
+          & aet(ic),                                         &
+          & peat_water_volume(ic), peat_water_table(ic),     & ! In/out variables
+          & peat_water_flux(ic)                              &
+        )
+      ENDDO
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
-        CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                  &
-          &                      lnew_year,lnew_month,lnew_day,                                             &
-          &                      mlen,ylen,tspd,                                                            &
-          &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                             &
-          &                      dsl4jsb_Config(TOP_)%relaxation_time*tspd,                                 &
-          &                      rain(:),snow(:),  precip_sum_day (:),precip_mean_day (:), precip_relax(:), &
-          &                      aet(:),              aet_sum_day (:),   aet_mean_day (:),    aet_relax(:), &
-          &                      poaet_mean_day(:), poaet_sum_year(:), poaet_mean_year(:),                  &
-          &                      poaet_lt(:)                                                                &
-        )
+        DO ic = 1, nc
+          CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
+            &                      lnew_year,lnew_month,lnew_day,                                                  &
+            &                      mlen,ylen,tspd,                                                                 &
+            &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                                  &
+            &                      dsl4jsb_Config(TOP_)%relaxation_time*tspd,                                      &
+            &                      rain(ic),snow (ic),  precip_sum_day(ic),precip_mean_day (ic), precip_relax(ic), &
+            &                      aet (ic),               aet_sum_day(ic),   aet_mean_day (ic),    aet_relax(ic), &
+            &                      poaet_mean_day(ic), poaet_sum_year (ic), poaet_mean_year(ic),     poaet_lt(ic))
+        ENDDO
       ENDIF
 
     ENDIF
@@ -318,9 +322,15 @@ CONTAINS
       IF (is_newmonth(options%current_datetime,dtime)) THEN
         CALL get_date_components(options%current_datetime,MONTH=month)
         frac_inun_clim => dsl4jsb_memory(TOP_)%frac_inun_clim(ics:ice,iblk,:)
-        CALL get_climatological_inun(frac_inun_clim(:,month),frac_inun(:),wt_inun(:))
+        DO ic = 1, nc
+          CALL get_climatological_inun(frac_inun_clim(ic,month),frac_inun(ic),wt_inun(ic))
+        ENDDO
       ENDIF
-      IF (lstart) frac_inun_pre(:) = frac_inun(:) 
+      IF (lstart) THEN
+        DO ic = 1, nc
+          frac_inun_pre(ic) = frac_inun(ic)
+        ENDDO
+      ENDIF
     ELSE
 
       ! Variables only available if not inun_prescribed
@@ -355,68 +365,73 @@ CONTAINS
 
       ! Calculate water table
       !
-      DO i = 1, nc
-        water_table      (i  ) = 0._wp
-        frac_liquid_top  (i  ) = 0._wp
+      DO ic = 1, nc
+        water_table      (ic  ) = 0._wp
+        frac_liquid_top  (ic  ) = 0._wp
       ENDDO
 
-      DO i = 1, nc
+      DO ic = 1, nc
         ! Secure calculations are done on contiguous data - may be faster
-        t_soil  (:) = t_soil_sl  (i,:)
-        wtr_soil(:) = wtr_soil_sl(i,:)
-        ice_soil(:) = ice_soil_sl(i,:)
+        t_soil  (:) = t_soil_sl  (ic,:)
+        wtr_soil(:) = wtr_soil_sl(ic,:)
+        ice_soil(:) = ice_soil_sl(ic,:)
+      ENDDO
 
+      DO ic = 1, nc
         ! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
         CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
-          &  soil_depth(i),dsl4jsb_Config(TOP_)%soil_depth_min,                                 &
+          &  soil_depth(ic),dsl4jsb_Config(TOP_)%soil_depth_min,                                &
           &  soil_e%dz(:),soil_e%ubounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
-          &  vol_field_cap(i),                                                                  &
+          &  vol_field_cap(ic),                                                                 &
           &  t_soil(:),wtr_soil(:),ice_soil(:),                                                 &
           &  water_table_t, frac_liquid_top_t                                                   &
           &  )
 
-        water_table    (i  ) = water_table_t
-        frac_liquid_top(i  ) = frac_liquid_top_t
-!        frac_liquid_sl (i,:) = frac_liquid_t_sl(:)
+        water_table    (ic  ) = water_table_t
+        frac_liquid_top(ic  ) = frac_liquid_top_t
+!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
       ENDDO
-      DO i=1, nc
-        frac_liquid_top_uncorr(i) =            frac_liquid_top(i)
-        frac_liquid_top       (i) = MAX(0.1_wp,frac_liquid_top(i))
+      DO ic = 1, nc
+        frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
+        frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
       ENDDO
-      DO i=1, nc
-        IF (aet_relax(i) > 0._wp) THEN
-          PE_mask(i) = (precip_relax(i) / aet_relax(i)) > dsl4jsb_Config(TOP_)%wetland_threshold
+      DO ic = 1, nc
+        IF (aet_relax(ic) > 0._wp) THEN
+          PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
         ELSE
-          PE_mask(i) = precip_relax(i) > 0._wp
+          PE_mask(ic) = precip_relax(ic) > 0._wp
         ENDIF
       ENDDO
 
       ! Calculate inundated area
-      CALL update_inun_frac(                         &
-        & dsl4jsb_Config(TOP_)%soil_depth_min,       & ! Scalar parameters
-        & dsl4jsb_Config(TOP_)%use_cti_basin,        &
-        & dsl4jsb_Config(TOP_)%use_cti_flood,        &
-        & dsl4jsb_Config(TOP_)%use_cti_max,          &
-        & dsl4jsb_Config(TOP_)%use_wt_max,           &
-        & dsl4jsb_Config(TOP_)%use_openwater,        &
-        & dsl4jsb_Config(TOP_)%cti_min,              &
-        & dsl4jsb_Config(TOP_)%cti_max,              &
-        & dsl4jsb_Config(TOP_)%cti_min_flooding,     &
-        & dsl4jsb_Config(TOP_)%efold,                &
-        & dsl4jsb_Config(TOP_)%wt_min,               &
-        & dsl4jsb_Config(TOP_)%wt_max,               &
-        & soil_depth(:),                             & ! Geographical dependent parameters
-        & cti_mean(:),cti_basin(:),cti_openwater(:), &
-        & cti_phi(:),cti_mu(:),cti_chi(:),           &
-        & PE_mask(:),                                &
-        & water_table(:),frac_liquid_top(:),         & ! Variable inputs
-        & frac_inun(:),frac_inun_uncorr(:),          & ! Outputs
-        & wt_inun(:) &
-      )
+      DO ic = 1, nc
+        CALL update_inun_frac(                            &
+          & dsl4jsb_Config(TOP_)%soil_depth_min,          & ! Scalar parameters
+          & dsl4jsb_Config(TOP_)%use_cti_basin,           &
+          & dsl4jsb_Config(TOP_)%use_cti_flood,           &
+          & dsl4jsb_Config(TOP_)%use_cti_max,             &
+          & dsl4jsb_Config(TOP_)%use_wt_max,              &
+          & dsl4jsb_Config(TOP_)%use_openwater,           &
+          & dsl4jsb_Config(TOP_)%cti_min,                 &
+          & dsl4jsb_Config(TOP_)%cti_max,                 &
+          & dsl4jsb_Config(TOP_)%cti_min_flooding,        &
+          & dsl4jsb_Config(TOP_)%efold,                   &
+          & dsl4jsb_Config(TOP_)%wt_min,                  &
+          & dsl4jsb_Config(TOP_)%wt_max,                  &
+          & soil_depth(ic),                               & ! Geographical dependent parameters
+          & cti_mean(ic),cti_basin(ic),cti_openwater(ic), &
+          & cti_phi(ic),cti_mu(ic),cti_chi(ic),           &
+          & PE_mask(ic),                                  &
+          & water_table(ic),frac_liquid_top(ic),          & ! Variable inputs
+          & frac_inun(ic),frac_inun_uncorr(ic),           & ! Outputs
+          & wt_inun(ic) &
+        )
 
-      frac_inun(:) = MIN(1._wp,MAX(0._wp,frac_inun(:) * dsl4jsb_Config(TOP_)%scale_inun))
+        frac_inun(ic) = MIN(1._wp,MAX(0._wp,frac_inun(ic) * dsl4jsb_Config(TOP_)%scale_inun))
 
-      IF (lstart) frac_inun_pre(:) = frac_inun(:) 
+        IF (lstart) frac_inun_pre(ic) = frac_inun(ic)
+
+      ENDDO
 
     ENDIF
 
@@ -446,18 +461,20 @@ CONTAINS
       ENDIF
 
       IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
-        CALL update_topmodel_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                      &
-          &                          lnew_year,lnew_month,lnew_day,                                 &
-          &                          mlen,ylen,tspd,summer_state,                                   &
-          &                          REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                 &
-          &                          lat(:)>dsl4jsb_Config(TOP_)%lat_const_wetland_type,            &
-          &                          frac_inun(:), frac_inun_sum_month(:), frac_inun_mean_month(:), &
-          &                          frac_inun_min_year(:), frac_inun_min_lt(:),                    &
-          &                          frac_inun_summ_year(:), frac_inun_summ_lt(:),                  &
-          &                          frac_permanent_wetland(:),                                     &
-          &                          wt_inun(:), wt_inun_sum_month(:), wt_inun_mean_month(:),       &
-          &                          wt_inun_min_year(:), wt_inun_min_lt(:)                         &
-        )
+        DO ic = 1, nc
+          CALL update_topmodel_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                         &
+            &                          lnew_year,lnew_month,lnew_day,                                    &
+            &                          mlen,ylen,tspd,summer_state,                                      &
+            &                          REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                    &
+            &                          lat(ic)>dsl4jsb_Config(TOP_)%lat_const_wetland_type,              &
+            &                          frac_inun(ic), frac_inun_sum_month(ic), frac_inun_mean_month(ic), &
+            &                          frac_inun_min_year(ic), frac_inun_min_lt(ic),                     &
+            &                          frac_inun_summ_year(ic), frac_inun_summ_lt(ic),                   &
+            &                          frac_permanent_wetland(ic),                                       &
+            &                          wt_inun(ic), wt_inun_sum_month(ic), wt_inun_mean_month(ic),       &
+            &                          wt_inun_min_year(ic), wt_inun_min_lt(ic)                          &
+          )
+        ENDDO
       ENDIF
 
     ENDIF

@@ -34,7 +34,7 @@ CONTAINS
   !
   !!
   !!
-  PURE ELEMENTAL SUBROUTINE update_aet( &
+  PURE SUBROUTINE update_aet( &
     & tmelt, &
     & temp_air, net_radiation, &
     & aet &
@@ -70,7 +70,7 @@ CONTAINS
   !
   !!
   !!
-  PURE ELEMENTAL SUBROUTINE update_water_balance_peatland( &
+  PURE SUBROUTINE update_water_balance_peatland(           &
     & tspd, delta_time,                                    &
     & peat_runoff_fac, peat_runoff_exp,                    &
     & precipitation, frac_liquid_water, frac_snow,         &
@@ -242,7 +242,7 @@ CONTAINS
   ! @brief      Updates inundated area
   !
   !!
-  ELEMENTAL PURE SUBROUTINE update_inun_frac(    &
+  PURE SUBROUTINE update_inun_frac(              &
     & soil_depth_min,                            &
     & use_cti_basin, use_cti_flood, use_cti_max, &
     & use_wt_max, use_openwater,                 &
@@ -355,7 +355,7 @@ CONTAINS
   ! @brief      Updates necessary averages for the topmodel
   !
   !!
-  ELEMENTAL PURE SUBROUTINE update_topmodel_runmean(        &
+  PURE SUBROUTINE update_topmodel_runmean(                  &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
     & summer_state,                                         &
@@ -461,7 +461,7 @@ CONTAINS
   ! @brief      Updates necessary averages for peatland calculations
   !
   !!
-  ELEMENTAL PURE SUBROUTINE update_peat_runmean(            &
+  PURE SUBROUTINE update_peat_runmean(                      &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
     & nyear_lt, nstep_relaxation,                           &
@@ -535,9 +535,9 @@ CONTAINS
   !
   !!
   !!
-  PURE ELEMENTAL SUBROUTINE get_climatological_inun( &
-    & frac_inun_clim,                                & ! Input
-    & frac_inun, wt_inun                             & ! Output
+  PURE SUBROUTINE get_climatological_inun( &
+    & frac_inun_clim,                      & ! Input
+    & frac_inun, wt_inun                   & ! Output
   )
 
     ! Interface parameters
