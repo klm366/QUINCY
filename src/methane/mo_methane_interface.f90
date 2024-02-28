@@ -104,29 +104,40 @@ CONTAINS
 
   END SUBROUTINE Register_methane_tasks
 
-  SUBROUTINE reset_chem_specie(specie,dbg)
+  SUBROUTINE reset_chem_specie(specie,nc,nsoil,dbg)
 
     USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
 
     TYPE (t_chem_ptrs), INTENT(inout) :: specie
+    INTEGER,            INTENT(in)    :: nc, nsoil
     LOGICAL, OPTIONAL,  INTENT(in)    :: dbg
 
-    specie%diff_out    = 0._wp
-    specie%prod_out    = 0._wp
-    specie%plant_out   = 0._wp
-    specie%oxid_out    = 0._wp
-    specie%total_out   = 0._wp
-    specie%total_final = 0._wp
-!    IF (ASSOCIATED(specie%other_out)) THEN
-!      specie%other_out   = 0._wp
-!    ENDIF
+    INTEGER :: ic, is
+
+    DO ic = 1, nc
+      specie%diff_out   (ic) = 0._wp
+      specie%prod_out   (ic) = 0._wp
+      specie%plant_out  (ic) = 0._wp
+      specie%oxid_out   (ic) = 0._wp
+      specie%total_out  (ic) = 0._wp
+      specie%total_final(ic) = 0._wp
+!      IF (ASSOCIATED(specie%other_out)) THEN
+!        specie%other_out(ic)   = 0._wp
+!      ENDIF
+    ENDDO
     IF (PRESENT(dbg)) THEN
       IF (dbg) THEN
-        specie%prod_out_sl = 0._wp
-        specie%plant_out_sl= 0._wp
-        specie%oxid_out_sl = 0._wp
-        specie%test2d      = 0._wp
-!        specie%test3d      = 0._wp
+        DO ic = 1, nc
+          specie%test2d(ic)       = 0._wp
+        ENDDO
+        DO is = 1, nsoil
+          DO ic = 1, nc
+            specie%prod_out_sl (ic,is) = 0._wp
+            specie%plant_out_sl(ic,is) = 0._wp
+            specie%oxid_out_sl (ic,is) = 0._wp
+!            specie%test3d(ic,is)       = 0._wp
+          ENDDO
+        ENDDO
       ENDIF
     ENDIF
 
@@ -300,7 +311,7 @@ CONTAINS
     INTEGER  :: hour, minute, sec
     LOGICAL  :: is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep
     LOGICAL  :: lissue, lissue_tst, dbg
-    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i, lt
+    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, lt, ic, is
     INTEGER  :: iWetness, iWetness_st, iWetness_en
     REAL(wp) :: dt
     REAL(wp) :: acro_height, frac_inun_loc, frac
@@ -352,8 +363,10 @@ CONTAINS
     IF (.NOT. ASSOCIATED(frac_non_crop) .AND. dsl4jsb_Config(CH4_)%do_termite) THEN
       ALLOCATE(frac_non_crop(grid%nproma,grid%nblks))
       ALLOCATE(sum_non_crop (grid%nproma,grid%nblks))
-      frac_non_crop(:,:) = 0._wp
-      sum_non_crop (:,:) = 0._wp
+      DO ic = 1, nc
+        frac_non_crop(ic,:) = 0._wp
+        sum_non_crop (ic,:) = 0._wp
+      ENDDO
     ENDIF
 
     ! Allocate local work arrays
@@ -563,29 +576,39 @@ CONTAINS
     IF (dbg) &
       CH4_wet%test3d = CH4_wet%oxid_out_sl
 
-    CALL reset_chem_specie(CH4_wet,dbg)
-    CALL reset_chem_specie(CO2_wet,dbg)
-    CALL reset_chem_specie( O2_wet,dbg)
-    CALL reset_chem_specie(CH4_dry,dbg)
-    CALL reset_chem_specie(CO2_dry,dbg)
-    CALL reset_chem_specie( O2_dry,dbg)
+    CALL reset_chem_specie(CH4_wet,nc,nsoil,dbg)
+    CALL reset_chem_specie(CO2_wet,nc,nsoil,dbg)
+    CALL reset_chem_specie( O2_wet,nc,nsoil,dbg)
+    CALL reset_chem_specie(CH4_dry,nc,nsoil,dbg)
+    CALL reset_chem_specie(CO2_dry,nc,nsoil,dbg)
+    CALL reset_chem_specie( O2_dry,nc,nsoil,dbg)
 
     IF (lstart .AND. dbg .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
 
     IF (dsl4jsb_Config(CH4_)%GHG_from_atm) THEN
       IF (.FALSE.) THEN ! TODO: Some test for atmospheric CH4 concentration available
         CH4_air_ptr => dsl4jsb_var2D_onChunk(CH4_, CH4_air)
-        CH4_air(:) = concentration_mmr_2_mol_m3(CH4_consts,CH4_air_ptr)
+        DO ic = 1, nc
+          CH4_air(ic) = concentration_mmr_2_mol_m3(CH4_consts,CH4_air_ptr(ic))
+        ENDDO
       ELSE
-        CH4_air(:) = dsl4jsb_Config(CH4_)%CH4_conc ! Equal to below
+        DO ic = 1, nc
+          CH4_air(ic) = dsl4jsb_Config(CH4_)%CH4_conc ! Equal to below
+        ENDDO
       ENDIF
       CO2_air_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
-      CO2_air(:) = concentration_mmr_2_mol_m3(CO2_consts,CO2_air_ptr)
+      DO ic = 1, nc
+        CO2_air(ic) = concentration_mmr_2_mol_m3(CO2_consts,CO2_air_ptr(ic))
+      ENDDO
     ELSE
-      CH4_air(:) = dsl4jsb_Config(CH4_)%CH4_conc
-      CO2_air(:) = dsl4jsb_Config(CH4_)%CO2_conc
+      DO ic = 1, nc
+        CH4_air(ic) = dsl4jsb_Config(CH4_)%CH4_conc
+        CO2_air(ic) = dsl4jsb_Config(CH4_)%CO2_conc
+      ENDDO
     ENDIF
-    O2_air(:) = dsl4jsb_Config(CH4_)%O2_conc
+    DO ic = 1, nc
+      O2_air(ic) = dsl4jsb_Config(CH4_)%O2_conc
+    ENDDO
 
     ! determine carbon input during time step for oxic and anoxic conditions
     ! convert respiration flux, respiration is defined NEGATIVE
@@ -595,9 +618,13 @@ CONTAINS
     is_peat = .FALSE. ! StW, TODO: Previous no peatland tiles are defined - to be replaced with some lctlib-constant
 
     IF (is_peat) THEN ! StW: Where to get is_peat?
-      water_table(:) = peat_water_table(:)
+      DO ic = 1, nc
+        water_table(ic) = peat_water_table(ic)
+      ENDDO
     ELSE
-      water_table(:) = wt_inun(:)
+      DO ic = 1, nc
+        water_table(ic) = wt_inun(ic)
+      ENDDO
     ENDIF
 
     ! Is tile any kind of vegentation? Should always be the case in JSB4 since this process is only active on veg-tiles
@@ -625,61 +652,61 @@ CONTAINS
       ! Debug information
       lissue = .FALSE.
 
-      DO i=1,nc
+      DO ic = 1, nc
 
         is_wet = .TRUE. ! StW, TODO: This is a workaround for is_wet not yet properly defined
-        nly = INT(mxlay_above_rock(i))
+        nly = INT(mxlay_above_rock(ic))
         CALL plant_setup(is_wet, dsl4jsb_Lctlib_param(woody_PFT), &
                                  dsl4jsb_Lctlib_param(MaxLAI),    &
-                         nly, lai(i), c_green(i),                 &
-                         root_dist_sl(i,:), tiller_area_sl(:))
+                         nly, lai(ic), c_green(ic),               &
+                         root_dist_sl(ic,:), tiller_area_sl(:))
 
         compute_flag = .TRUE.
         IF (nly < dsl4jsb_Config(CH4_)%minimum_no_layers) THEN
           compute_flag = .FALSE.
-          CH4_out_net(i) = 0._wp
-          CO2_out_net(i) = -(OxicDecompCarbon(i) + AnoxDecompCarbon(i)) / dt
+          CH4_out_net(ic) = 0._wp
+          CO2_out_net(ic) = -(OxicDecompCarbon(ic) + AnoxDecompCarbon(ic)) / dt
         ENDIF
 
-        IF (frac_tile(i) < dsl4jsb_Config(CH4_)%tile_threshold) THEN
+        IF (frac_tile(ic) < dsl4jsb_Config(CH4_)%tile_threshold) THEN
           compute_flag = .FALSE.
-          CH4_out_net(i) = 0._wp
-          CO2_out_net(i) = -(OxicDecompCarbon(i) + AnoxDecompCarbon(i)) / dt
+          CH4_out_net(ic) = 0._wp
+          CO2_out_net(ic) = -(OxicDecompCarbon(ic) + AnoxDecompCarbon(ic)) / dt
 
           ! flush stored C out and reset to ensure conservation
           stored_C_sum = 0._wp
-          IF (frac_inun_pre(i) < 1._wp) THEN
+          IF (frac_inun_pre(ic) < 1._wp) THEN
             stored_C_sum = stored_C_sum + &
-                           (SUM(CO2_dry%dens_sl(i,1:nly)) +   &
-                            SUM(CH4_dry%dens_sl(i,1:nly))) *  &
-                            (1._wp - frac_inun_pre(i))
+                           (SUM(CO2_dry%dens_sl(ic,1:nly)) +   &
+                            SUM(CH4_dry%dens_sl(ic,1:nly))) *  &
+                            (1._wp - frac_inun_pre(ic))
           END IF
-          IF (frac_inun_pre(i) > 0._wp) THEN
+          IF (frac_inun_pre(ic) > 0._wp) THEN
             stored_C_sum = stored_C_sum + &
-                           (SUM(CO2_wet%dens_sl(i,1:nly)) +   &
-                            SUM(CH4_wet%dens_sl(i,1:nly))) *  &
-                            frac_inun_pre(i)
+                           (SUM(CO2_wet%dens_sl(ic,1:nly)) +   &
+                            SUM(CH4_wet%dens_sl(ic,1:nly))) *  &
+                            frac_inun_pre(ic)
           END IF
 
-          CO2_out_net(i) = CO2_out_net(i) + stored_C_sum / dt
+          CO2_out_net(ic) = CO2_out_net(ic) + stored_C_sum / dt
 
-          CO2_dry%dens_sl(i,1:nly) = 0._wp
-          CO2_wet%dens_sl(i,1:nly) = 0._wp
-          CH4_dry%dens_sl(i,1:nly) = 0._wp
-          CH4_wet%dens_sl(i,1:nly) = 0._wp
-          O2_dry%dens_sl (i,1:nly) = 0._wp
-          O2_wet%dens_sl (i,1:nly) = 0._wp
+          CO2_dry%dens_sl(ic,1:nly) = 0._wp
+          CO2_wet%dens_sl(ic,1:nly) = 0._wp
+          CH4_dry%dens_sl(ic,1:nly) = 0._wp
+          CH4_wet%dens_sl(ic,1:nly) = 0._wp
+          O2_dry%dens_sl (ic,1:nly) = 0._wp
+          O2_wet%dens_sl (ic,1:nly) = 0._wp
         ENDIF
 
         IF (compute_flag) THEN
 
-          frac_inun_loc = frac_inun(i)
-          CALL init_gas_pools(is_peat, nly,                                                        &
-                              dsl4jsb_Config(CH4_)%frac_inun_min, frac_inun_loc, frac_inun_pre(i), &
-                              CH4_dry%dens_sl(i,:), CO2_dry%dens_sl(i,:), O2_dry%dens_sl(i,:),     &
-                              CH4_wet%dens_sl(i,:), CO2_wet%dens_sl(i,:), O2_wet%dens_sl(i,:),     &
-                              CH4_dry_sl     (  :), CO2_dry_sl     (  :), O2_dry_sl     (  :),     &
-                              CH4_wet_sl     (  :), CO2_wet_sl     (  :), O2_wet_sl     (  :))
+          frac_inun_loc = frac_inun(ic)
+          CALL init_gas_pools(is_peat, nly,                                                         &
+                              dsl4jsb_Config(CH4_)%frac_inun_min, frac_inun_loc, frac_inun_pre(ic), &
+                              CH4_dry%dens_sl(ic,:), CO2_dry%dens_sl(ic,:), O2_dry%dens_sl(ic,:),   &
+                              CH4_wet%dens_sl(ic,:), CO2_wet%dens_sl(ic,:), O2_wet%dens_sl(ic,:),   &
+                              CH4_dry_sl     (   :), CO2_dry_sl     (   :), O2_dry_sl     (   :),   &
+                              CH4_wet_sl     (   :), CO2_wet_sl     (   :), O2_wet_sl     (   :))
 
           ! setup for wetness loop:
           ! For mineral soil ignore wet fraction, if inundated fraction too small (inun_frac_loc = 0)
@@ -692,58 +719,60 @@ CONTAINS
 
             is_Wet = iWetness == 2
 
-            O2_other_sl  (:) = 0._wp
-            CH4_ebul_sl  (:) = 0._wp
-            CH4_prod_sl  (:) = 0._wp
-            CH4_plant_sl (:) = 0._wp
-            CH4_oxid_sl  (:) = 0._wp
-            CO2_prod_sl  (:) = 0._wp
-            CO2_plant_sl (:) = 0._wp
-            CO2_oxid_sl  (:) = 0._wp
-            O2_prod_sl   (:) = 0._wp
-            O2_plant_sl  (:) = 0._wp
-            O2_oxid_sl   (:) = 0._wp
-!            CH4_excess_sl(:) = 0._wp
-!            CO2_excess_sl(:) = 0._wp
-!            O2_excess_sl (:) = 0._wp
+            DO is = 1, nsoil
+              O2_other_sl  (is) = 0._wp
+              CH4_ebul_sl  (is) = 0._wp
+              CH4_prod_sl  (is) = 0._wp
+              CH4_plant_sl (is) = 0._wp
+              CH4_oxid_sl  (is) = 0._wp
+              CO2_prod_sl  (is) = 0._wp
+              CO2_plant_sl (is) = 0._wp
+              CO2_oxid_sl  (is) = 0._wp
+              O2_prod_sl   (is) = 0._wp
+              O2_plant_sl  (is) = 0._wp
+              O2_oxid_sl   (is) = 0._wp
+!              CH4_excess_sl(is) = 0._wp
+!              CO2_excess_sl(is) = 0._wp
+!              O2_excess_sl (is) = 0._wp
+            ENDDO
 
-            ! Select correct state variables and save initial state (StW: latter only for debug?)
-            IF (is_Wet) THEN
-              CH4_act   = CH4_wet_sl
-              CO2_act   = CO2_wet_sl
-               O2_act   =  O2_wet_sl
-              CH4_wet%total_initial(i) = SUM(CH4_wet%dens_sl(i,1:nly))
-              CO2_wet%total_initial(i) = SUM(CO2_wet%dens_sl(i,1:nly))
-               O2_wet%total_initial(i) = SUM( O2_wet%dens_sl(i,1:nly))
-            ELSE
-              CH4_act   = CH4_dry_sl
-              CO2_act   = CO2_dry_sl
-               O2_act   =  O2_dry_sl
-              CH4_dry%total_initial(i) = SUM(CH4_dry%dens_sl(i,1:nly))
-              CO2_dry%total_initial(i) = SUM(CO2_dry%dens_sl(i,1:nly))
-               O2_dry%total_initial(i) = SUM( O2_dry%dens_sl(i,1:nly))
-            ENDIF
+              ! Select correct state variables and save initial state (StW: latter only for debug?)
+              IF (is_Wet) THEN
+                CH4_act(:)   = CH4_wet_sl(:)
+                CO2_act(:)   = CO2_wet_sl(:)
+                 O2_act(:)   =  O2_wet_sl(:)
+                CH4_wet%total_initial(ic) = SUM(CH4_wet%dens_sl(ic,1:nly))
+                CO2_wet%total_initial(ic) = SUM(CO2_wet%dens_sl(ic,1:nly))
+                 O2_wet%total_initial(ic) = SUM( O2_wet%dens_sl(ic,1:nly))
+              ELSE
+                CH4_act(:)   = CH4_dry_sl(:)
+                CO2_act(:)   = CO2_dry_sl(:)
+                 O2_act(:)   =  O2_dry_sl(:)
+                CH4_dry%total_initial(ic) = SUM(CH4_dry%dens_sl(ic,1:nly))
+                CO2_dry%total_initial(ic) = SUM(CO2_dry%dens_sl(ic,1:nly))
+                 O2_dry%total_initial(ic) = SUM( O2_dry%dens_sl(ic,1:nly))
+              ENDIF
 
             ! set up soil column 
 
             ! set up acrotelm height (= 0 for mineral soil)
             acro_height = 0._wp
             IF (is_peat) THEN
-              acro_height = acrotelm_height_ag(i)+acrotelm_height_bg(i)
+              acro_height = acrotelm_height_ag(ic)+acrotelm_height_bg(ic)
             END IF
 
-            CALL soil_column_setup(dsl4jsb_Config(SSE_)%l_freeze, is_peat, is_Wet, nly,              &
-                                   soil_w%dz(:), (soil_w%lbounds(:)+soil_w%ubounds(:))*0.5_wp,       &
-                                   soil_w%ubounds(:), soil_depth(i), vol_porosity(i),                &
-                                   water_table(i), acro_height, wtr_soil_sl(i,:), ice_soil_sl(i,:),  &
-                                   relative_moist_sl(:), relative_ice_sl(:), relative_porevol_sl(:), &
-                                   relative_pore_air_sl(:), relative_pore_moist_sl(:),               &
+            CALL soil_column_setup(dsl4jsb_Config(SSE_)%l_freeze, is_peat, is_Wet, nly,                &
+                                   soil_w%dz(:), (soil_w%lbounds(:)+soil_w%ubounds(:))*0.5_wp,         &
+                                   soil_w%ubounds(:), soil_depth(ic), vol_porosity(ic),                &
+                                   water_table(ic), acro_height, wtr_soil_sl(ic,:), ice_soil_sl(ic,:), &
+                                   relative_moist_sl(:), relative_ice_sl(:), relative_porevol_sl(:),   &
+                                   relative_pore_air_sl(:), relative_pore_moist_sl(:),                 &
                                    dens2conc_sl(:), conc2dens_sl(:), mxlay_above_wt, mxlay_acrotelm)
 
             ! Calculate the diffusivities for each gas and for water
             ! and air once and then allocate it as necessary
-            CALL diffusion_setup(is_peat, nly, mxlay_above_wt, bclapp(i),                         &
-                                 relative_porevol_sl(:), relative_pore_air_sl(:), t_soil_sl(i,:), &
+            CALL diffusion_setup(is_peat, nly, mxlay_above_wt, bclapp(ic),                         &
+                                 relative_porevol_sl(:), relative_pore_air_sl(:), t_soil_sl(ic,:), &
                                  D_CH4, D_CO2, D_O2, D_CH4_surface, D_CO2_surface, D_O2_surface)
 
             ! CH4 / CO2 production
@@ -751,9 +780,9 @@ CONTAINS
                             dsl4jsb_Config(CH4_)%frac_CH4_anox_mineral, &
                             dsl4jsb_Config(CH4_)%frac_CH4_anox_organic, &
                             dsl4jsb_Config(CH4_)%meth_q10,              &
-                            root_dist_sl(i,:),                          &
-                            frac_inun_loc, t_soil_sl(i,:),              &
-                            OxicDecompCarbon(i), AnoxDecompCarbon(i),   &
+                            root_dist_sl(ic,:),                         &
+                            frac_inun_loc, t_soil_sl(ic,:),             &
+                            OxicDecompCarbon(ic), AnoxDecompCarbon(ic), &
                             CH4_prod_sl(:), CO2_prod_sl(:),             &
                             O2_prod_sl(:), CH4_prod_ratio)
 
@@ -763,29 +792,29 @@ CONTAINS
             ! PLANT TRANSPORT
             ! PLANT TRANSPORT OF CH4
             CALL plant_transport(CH4_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,   &
-                                 dt, t_soil_sl(i,:), relative_porevol_sl(:),                         &
+                                 dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_CH4_surface, &
-                                 CH4_air(i), CH4_act(:), CH4_Plant_sl(:)) !, CH4_excess_sl(:))
+                                 CH4_air(ic), CH4_act(:), CH4_Plant_sl(:)) !, CH4_excess_sl(:))
 
             ! PLANT TRANSPORT OF CO2
             CALL plant_transport(CO2_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,   &
-                                 dt, t_soil_sl(i,:), relative_porevol_sl(:),                         &
+                                 dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_CO2_surface, &
-                                 CO2_air(i), CO2_act(:), CO2_Plant_sl(:)) !, CO2_excess_sl(:))
+                                 CO2_air(ic), CO2_act(:), CO2_Plant_sl(:)) !, CO2_excess_sl(:))
 
             ! PLANT TRANSPORT OF O2
             CALL plant_transport(O2_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,    &
-                                 dt, t_soil_sl(i,:), relative_porevol_sl(:),                         &
+                                 dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_O2_surface,  &
-                                 O2_air(i), O2_act(:), O2_Plant_sl(:)) !, O2_excess_sl(:))
+                                 O2_air(ic), O2_act(:), O2_Plant_sl(:)) !, O2_excess_sl(:))
 
             ! EBULLITION OF CH4
 
             ! Ebullition only happens in wet part of cell (in CH4_wet field "other" is actually "ebullition")
             IF (is_Wet) THEN
-              CALL ebullition(is_peat, nly, mxlay_above_wt, t_soil_sl(i,:), press_srf(i),   &
+              CALL ebullition(is_peat, nly, mxlay_above_wt, t_soil_sl(ic,:), press_srf(ic), &
                               dsl4jsb_memory(CH4_)%layer_midpoint_dz(:),                    &
-                              relative_porevol_sl(:), water_table(i),                       &
+                              relative_porevol_sl(:), water_table(ic),                      &
                               dens2conc_sl(:), conc2dens_sl(:), CH4_act(:), CH4_ebul_sl(:))
             ELSE
               CH4_ebul_sl(:) = 0._wp
@@ -794,16 +823,18 @@ CONTAINS
             ! -------------------------------------------------------------------------------------------
             ! OXIDATION OF CH4
             ! TODO: Pass relevant constants for only wet or dry conditions. No distinguishing between cases in subroutine
-            CALL oxidation_mm(is_Wet,  dt,                                                &
-                              dsl4jsb_Config(CH4_)%scale_oxid_dry,                        &
-                              dsl4jsb_Config(CH4_)%scale_oxid_wet,                        &
-                              dsl4jsb_Config(CH4_)%oxid_q10,                              &
-                              t_soil_sl (i,1:nly), relative_moist_sl             (1:nly), &
-                              dens2conc_sl(1:nly), conc2dens_sl                  (1:nly), &
-                              CH4_act     (1:nly), CO2_act    (1:nly), O2_act    (1:nly), &
-                              O2_prod_sl  (1:nly),                                        &
-                              CH4_oxid_sl (1:nly), CO2_oxid_sl(1:nly), O2_oxid_sl(1:nly), &
-                              O2_other_sl (1:nly))
+            DO is = 1, nly
+              CALL oxidation_mm(is_Wet,  dt,                                       &
+                                dsl4jsb_Config(CH4_)%scale_oxid_dry,               &
+                                dsl4jsb_Config(CH4_)%scale_oxid_wet,               &
+                                dsl4jsb_Config(CH4_)%oxid_q10,                     &
+                                t_soil_sl(ic,is), relative_moist_sl          (is), &
+                                dens2conc_sl(is), conc2dens_sl               (is), &
+                                CH4_act     (is), CO2_act    (is), O2_act    (is), &
+                                O2_prod_sl  (is),                                  &
+                                CH4_oxid_sl (is), CO2_oxid_sl(is), O2_oxid_sl(is), &
+                                O2_other_sl (is))
+            ENDDO
 
             ! -------------------------------------------------------------------------------------------
             ! REACTION-DIFFUSION OF ALL GASES
@@ -811,14 +842,14 @@ CONTAINS
             CALL reaction_diffusion(dsl4jsb_Config(CH4_)%nstep_diffusion,             &
                                     dsl4jsb_Config(CH4_)%implicit_contrib,            &
                                     dt, nly, mxlay_above_wt,                          &
-                                    soil_w%dz(:), t_soil_sl(i,:),                     &
+                                    soil_w%dz(:), t_soil_sl(ic,:),                    &
                                     relative_porevol_sl(:),                           &
                                     dens2conc_sl(:), conc2dens_sl(:),                 &
                                     CH4_prod_sl (:), CO2_prod_sl (:),                 &
                                     CH4_plant_sl(:), CO2_plant_sl(:), O2_plant_sl(:), &
                                     D_CH4,           D_CO2,           D_O2,           &
                                     D_CH4_surface,   D_CO2_surface,   D_O2_surface,   &
-                                    CH4_air     (i), CO2_air     (i), O2_air     (i), &
+                                    CH4_air     (ic), CO2_air   (ic), O2_air    (ic), &
                                     CH4_act     (:), CO2_act     (:), O2_act     (:), &
                                     CH4_oxid_sl (:), CO2_oxid_sl (:), O2_oxid_sl (:), &
                                     CH4_ebul_sl (:),                  O2_other_sl(:), &
@@ -829,64 +860,66 @@ CONTAINS
             ! Fill global memory for output (fluxes in s-1)
             IF (is_Wet) THEN
               IF (dbg) THEN
-                CH4_wet%test2d(i) = REAL(mxlay_above_wt,wp)
-!                CH4_wet%test3d(i,:) = D_CH4(:)
-                CO2_wet%test3d(i,:) = D_CO2(:)
-                 O2_wet%test3d(i,:) = D_O2(:)
+                CH4_wet%test2d(ic) = REAL(mxlay_above_wt,wp)
+!                CH4_wet%test3d(ic,:) = D_CH4(:)
+                CO2_wet%test3d(ic,:) = D_CO2(:)
+                 O2_wet%test3d(ic,:) = D_O2(:)
               ENDIF
               frac = frac_inun_loc
-              CALL update_chem_specie(dt,nly,i,frac,CH4_wet,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl, &
+              CALL update_chem_specie(dt,nly,ic,frac,CH4_wet,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl, &
                                       dbg,CH4_ebul_sl,1)
-              CALL update_chem_specie(dt,nly,i,frac,CO2_wet,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
-              CALL update_chem_specie(dt,nly,i,frac, O2_wet, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
-              CH4_prod_ratio_out_wet(i) = CH4_prod_ratio
+              CALL update_chem_specie(dt,nly,ic,frac,CO2_wet,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,ic,frac, O2_wet, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
+              CH4_prod_ratio_out_wet(ic) = CH4_prod_ratio
             ELSE
               IF (dbg) THEN
-                CH4_dry%test2d(i) = REAL(mxlay_above_wt,wp)
-                CH4_dry%test3d(i,:) = D_CH4(:)
-                CO2_dry%test3d(i,:) = D_CO2(:)
-                 O2_dry%test3d(i,:) = D_O2(:)
+                CH4_dry%test2d(ic  ) = REAL(mxlay_above_wt,wp)
+                CH4_dry%test3d(ic,:) = D_CH4(:)
+                CO2_dry%test3d(ic,:) = D_CO2(:)
+                 O2_dry%test3d(ic,:) = D_O2(:)
               ENDIF
               frac = 1._wp-frac_inun_loc
-              CALL update_chem_specie(dt,nly,i,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,dbg)
-              CALL update_chem_specie(dt,nly,i,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
-              CALL update_chem_specie(dt,nly,i,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
+              CALL update_chem_specie(dt,nly,ic,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,ic,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
+              CALL update_chem_specie(dt,nly,ic,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
             ENDIF
 
             ! Peatlands updates densities differently
             IF (is_peat) THEN
-              frac_inun_pre  (i)   = 1._wp
-              CH4_dry%dens_sl(i,:) = 0._wp
-              CO2_dry%dens_sl(i,:) = 0._wp
-               O2_dry%dens_sl(i,:) = 0._wp
-              CH4_wet%dens_sl(i,:) = CH4_act(:)
-              CO2_wet%dens_sl(i,:) = CO2_act(:)
-               O2_wet%dens_sl(i,:) =  O2_act(:)
+              frac_inun_pre  (ic)   = 1._wp
+              CH4_dry%dens_sl(ic,:) = 0._wp
+              CO2_dry%dens_sl(ic,:) = 0._wp
+               O2_dry%dens_sl(ic,:) = 0._wp
+              CH4_wet%dens_sl(ic,:) = CH4_act(:)
+              CO2_wet%dens_sl(ic,:) = CO2_act(:)
+               O2_wet%dens_sl(ic,:) =  O2_act(:)
             ELSE
-              frac_inun_pre(i) = frac_inun_loc
+              frac_inun_pre(ic) = frac_inun_loc
             ENDIF
 
           ENDDO ! iWetness
 
         ENDIF ! Compute flag
 
-!        CH4_tot%out          (i) = CH4_dry%out          (i) * (1._wp-frac_inun_loc) + CH4_wet%out          (i) * frac_inun_loc
-!        CH4_tot%prod_out     (i) = CH4_dry%prod_out     (i) * (1._wp-frac_inun_loc) + CH4_wet%prod_out     (i) * frac_inun_loc
-!        CH4_tot%oxid_out     (i) = CH4_dry%oxid_out     (i) * (1._wp-frac_inun_loc) + CH4_wet%oxid_out     (i) * frac_inun_loc
-!        CH4_tot%diff_out     (i) = CH4_dry%diff_out     (i) * (1._wp-frac_inun_loc) + CH4_wet%diff_out     (i) * frac_inun_loc
-!        CH4_tot%other_out    (i) =                                                    CH4_wet%other_out    (i) * frac_inun_loc
-!        CH4_tot%plant_out    (i) = CH4_dry%plant_out    (i) * (1._wp-frac_inun_loc) + CH4_wet%plant_out    (i) * frac_inun_loc
-!        CH4_tot%total_out    (i) = CH4_dry%total_out    (i) * (1._wp-frac_inun_loc) + CH4_wet%total_out    (i) * frac_inun_loc
-!        CH4_tot%total_initial(i) = CH4_dry%total_initial(i) * (1._wp-frac_inun_loc) + CH4_wet%total_initial(i) * frac_inun_loc
-!        CH4_tot%total_final  (i) = CH4_dry%total_final  (i) * (1._wp-frac_inun_loc) + CH4_wet%total_final  (i) * frac_inun_loc
+!        CH4_tot%out          (ic) = CH4_dry%out          (ic) * (1._wp-frac_inun_loc) + CH4_wet%out          (ic) * frac_inun_loc
+!        CH4_tot%prod_out     (ic) = CH4_dry%prod_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%prod_out     (ic) * frac_inun_loc
+!        CH4_tot%oxid_out     (ic) = CH4_dry%oxid_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%oxid_out     (ic) * frac_inun_loc
+!        CH4_tot%diff_out     (ic) = CH4_dry%diff_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%diff_out     (ic) * frac_inun_loc
+!        CH4_tot%other_out    (ic) =                                                    CH4_wet%other_out    (ic) * frac_inun_loc
+!        CH4_tot%plant_out    (ic) = CH4_dry%plant_out    (ic) * (1._wp-frac_inun_loc) + CH4_wet%plant_out    (ic) * frac_inun_loc
+!        CH4_tot%total_out    (ic) = CH4_dry%total_out    (ic) * (1._wp-frac_inun_loc) + CH4_wet%total_out    (ic) * frac_inun_loc
+!        CH4_tot%total_initial(ic) = CH4_dry%total_initial(ic) * (1._wp-frac_inun_loc) + CH4_wet%total_initial(ic) * frac_inun_loc
+!        CH4_tot%total_final  (ic) = CH4_dry%total_final  (ic) * (1._wp-frac_inun_loc) + CH4_wet%total_final  (ic) * frac_inun_loc
 
-      ENDDO ! i = landpoints
+      ENDDO ! ic = landpoints
 
       ! Other methane processes
 
       !   Fire
       IF (dsl4jsb_Config(CH4_)%do_fire) THEN
-        CALL calc_methane_fire(co2flux_fire_all_2_atm(:),lt,CH4_out_fire(:),fire_em_NO(:),fire_em_CO(:),fire_em_iso(:))
+        DO ic = 1, nc
+          CALL calc_methane_fire(co2flux_fire_all_2_atm(ic),lt,CH4_out_fire(ic),fire_em_NO(ic),fire_em_CO(ic),fire_em_iso(ic))
+        ENDDO
       ENDIF
 
       !   Termites
@@ -901,21 +934,29 @@ CONTAINS
         ELSE
           GDD => GDD_prev_year ! Any other year: Use sum of previous year
         ENDIF
-        CALL calc_methane_termites(dsl4jsb_Lctlib_param(CropFlag),                                     &
-                                   frac_tile(:), GPP_prev_year(:), GDD(:), min_mmtemp20(:), l_GPP_dep, &
-                                   termite_biomass(:), CH4_out_termite(:),                             &
-                                   frac_non_crop(ics:ice,iblk), sum_non_crop(ics:ice,iblk))
+        DO ic = 1, nc
+          CALL calc_methane_termites(dsl4jsb_Lctlib_param(CropFlag),                                         &
+                                     frac_tile(ic), GPP_prev_year(ic), GDD(ic), min_mmtemp20(ic), l_GPP_dep, &
+                                     termite_biomass(ic), CH4_out_termite(ic),                               &
+                                     frac_non_crop(ics+ic-1,iblk), sum_non_crop(ics+ic-1,iblk))
+        ENDDO
         IF (.NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
-          frac_non_crop(ics:ice,iblk) = 0._wp
-          sum_non_crop (ics:ice,iblk) = 0._wp
+          DO ic = ics, ice
+            frac_non_crop(ic,iblk) = 0._wp
+            sum_non_crop (ic,iblk) = 0._wp
+          ENDDO
         ENDIF
-        CH4_out_termite(:) = CH4_out_termite(:) * dsl4jsb_Config(CH4_)%scale_termite
+        DO ic = 1, nc
+          CH4_out_termite(ic) = CH4_out_termite(ic) * dsl4jsb_Config(CH4_)%scale_termite
+        ENDDO
       ENDIF
  
       !   Herbivores
       IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
-        CALL calc_methane_herbivores(cflux_herb_2_atm(:),dsl4jsb_Lctlib_param(woody_pft),CH4_out_herbivore(:))
-        CH4_out_herbivore(:) = CH4_out_herbivore(:) * dsl4jsb_Config(CH4_)%scale_herbivore
+        DO ic = 1, nc
+          CALL calc_methane_herbivores(cflux_herb_2_atm(ic),dsl4jsb_Lctlib_param(woody_pft),CH4_out_herbivore(ic))
+          CH4_out_herbivore(ic) = CH4_out_herbivore(ic) * dsl4jsb_Config(CH4_)%scale_herbivore
+        ENDDO
       ENDIF
 
     ELSE ! Vegetation tile

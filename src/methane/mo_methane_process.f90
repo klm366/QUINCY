@@ -172,11 +172,13 @@ CONTAINS
     REAL(wp) :: D_O2_water (mxlay_above_rock)        ! diffusivity of O2 in water [m2 s-1]
 
     REAL(wp) :: conv                                            ! conversion factor
-    INTEGER  :: iLayer                                          ! layer counter
+    INTEGER  :: is                                              ! layer counter
 
-    CALL calc_diffusivity(CH4_consts,Tsoil(1:mxlay_above_rock),D_CH4_air(:),D_CH4_water(:))
-    CALL calc_diffusivity(CO2_consts,Tsoil(1:mxlay_above_rock),D_CO2_air(:),D_CO2_water(:))
-    CALL calc_diffusivity( O2_consts,Tsoil(1:mxlay_above_rock),D_O2_air (:),D_O2_water (:))
+    DO is = 1, mxlay_above_rock
+      CALL calc_diffusivity(CH4_consts,Tsoil(is),D_CH4_air(is),D_CH4_water(is))
+      CALL calc_diffusivity(CO2_consts,Tsoil(is),D_CO2_air(is),D_CO2_water(is))
+      CALL calc_diffusivity( O2_consts,Tsoil(is),D_O2_air (is),D_O2_water (is))
+    ENDDO
 
     D_CH4 = 0._wp
     D_CO2 = 0._wp
@@ -191,34 +193,34 @@ CONTAINS
     ! Original Wania code assigns D_GAS_air, if relative_pore_air(iLayer) > 0.05
     ! We assume that this is the case ABOVE the water table
 
-    DO iLayer = 1, mxlay_above_wt
+    DO is = 1, mxlay_above_wt
       IF (.NOT. is_peatland) THEN
         ! Moldrup et al. diffusivity modification for soil pore air in mineral soils
-        conv = ((relative_pore_air(iLayer) * relative_porevol(iLayer)) ** 2._wp) * (relative_pore_air(iLayer) ** (3._wp/bclapp))
+        conv = ((relative_pore_air(is) * relative_porevol(is)) ** 2._wp) * (relative_pore_air(is) ** (3._wp/bclapp))
       ELSE
         ! Millington & Quirk diffusivity modification for soil pore air in organic soils
-        conv = ((relative_pore_air(iLayer) * relative_porevol(iLayer)) ** (10._wp/3._wp)) / (relative_porevol(iLayer) ** 2._wp)
+        conv = ((relative_pore_air(is) * relative_porevol(is)) ** (10._wp/3._wp)) / (relative_porevol(is) ** 2._wp)
       END IF
-      D_CH4(iLayer) = D_CH4_air(iLayer) * conv
-      D_CO2(iLayer) = D_CO2_air(iLayer) * conv
-      D_O2 (iLayer) = D_O2_air (iLayer) * conv
+      D_CH4(is) = D_CH4_air(is) * conv
+      D_CO2(is) = D_CO2_air(is) * conv
+      D_O2 (is) = D_O2_air (is) * conv
     END DO
-    DO iLayer = (mxlay_above_wt + 1), mxlay_above_rock
+    DO is = (mxlay_above_wt + 1), mxlay_above_rock
       ! Moldrup et al. diffusivity modification for soil pore water
-      conv = relative_porevol(iLayer) ** 2._wp
-      D_CH4(iLayer) = D_CH4_water(iLayer) * conv
-      D_CO2(iLayer) = D_CO2_water(iLayer) * conv
-      D_O2 (iLayer) = D_O2_water (iLayer) * conv
+      conv = relative_porevol(is) ** 2._wp
+      D_CH4(is) = D_CH4_water(is) * conv
+      D_CO2(is) = D_CO2_water(is) * conv
+      D_O2 (is) = D_O2_water (is) * conv
     END DO
 
     ! Ensure that layer diffusivity is not larger than for layer(s) above
-    DO iLayer = 2, mxlay_above_rock
-      IF (D_CH4(iLayer) > D_CH4(iLayer-1)) &
-          D_CH4(iLayer) = D_CH4(iLayer-1)
-      IF (D_CO2(iLayer) > D_CO2(iLayer-1)) &
-          D_CO2(iLayer) = D_CO2(iLayer-1)
-      IF (D_O2 (iLayer) > D_O2 (iLayer-1)) &
-          D_O2 (iLayer) = D_O2 (iLayer-1)
+    DO is = 2, mxlay_above_rock
+      IF (D_CH4(is) > D_CH4(is-1)) &
+          D_CH4(is) = D_CH4(is-1)
+      IF (D_CO2(is) > D_CO2(is-1)) &
+          D_CO2(is) = D_CO2(is-1)
+      IF (D_O2 (is) > D_O2 (is-1)) &
+          D_O2 (is) = D_O2 (is-1)
     END DO
 
     ! Diffusivity to the air is assumed to be the same as for the upper soil layer
@@ -628,8 +630,8 @@ CONTAINS
   ! @brief     oxidation following Michaelis-Menten kinetics
   !
   !!
-  PURE ELEMENTAL SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, oxid_q10, Tsoil, rel_soil_moist, &
-                                         dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod,           &
+  PURE SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, oxid_q10, Tsoil, rel_soil_moist, &
+                                         dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod, &
                                          CH4_Oxid, CO2_Oxid, O2_Oxid, O2_Other)
 
     USE mo_jsb_physical_constants, ONLY: tmelt
@@ -757,32 +759,37 @@ CONTAINS
     REAL(wp) :: kHCC                  (mxlay_above_rock) ! Henry factor relating gaseous to aqueous concentration []
     REAL(wp) :: effective_layer_volume(mxlay_above_rock) ! effective volume of layer [m]
     REAL(wp) :: J                                        ! GAS flux in layer [mol m-2 s-1]
-    INTEGER  :: iLayer                                   ! layer counter
+    INTEGER  :: is                                       ! layer counter
 
     GAS_conc   = 0._wp
     GAS_Plant  = 0._wp
     IF (PRESENT(GAS_excess)) GAS_excess = 0._wp
 
-    effective_layer_volume = conc2dens(1:mxlay_above_rock)
+    DO is = 1, mxlay_above_rock
+      effective_layer_volume(is) = conc2dens(is)
 
-    kHCC = determine_Henry_cc(GAS, Tsoil(1:mxlay_above_rock))
+      kHCC(is) = determine_Henry_cc(GAS, Tsoil(is))
 
-    ! Convert GAS densities [mol layer-1] to concentrations [mol m-3]
-    GAS_conc(1:mxlay_above_rock) = GAS_dens(1:mxlay_above_rock) * dens2conc(1:mxlay_above_rock)
+      ! Convert GAS densities [mol layer-1] to concentrations [mol m-3]
+      GAS_conc(is) = GAS_dens(is) * dens2conc(is)
+    ENDDO
 
     ! determine concentration of gas in gaseous form: Below water table this is GAS_conc/kHCC
-    GAS_conc_gaseous = GAS_conc
-    GAS_conc_gaseous(mxlay_above_wt+1:mxlay_above_rock) = GAS_conc(mxlay_above_wt+1:mxlay_above_rock) / &
-                                                          kHCC(mxlay_above_wt+1:mxlay_above_rock)
+    DO is = 1, mxlay_above_wt
+      GAS_conc_gaseous(is) = GAS_conc(is)
+    ENDDO
+    DO is = mxlay_above_wt+1, mxlay_above_rock
+      GAS_conc_gaseous(is) = GAS_conc(is) / kHCC(is)
+    ENDDO
 
-    DO iLayer = 1, mxlay_above_rock
-      IF (relative_porevol(iLayer) > minimum_porevol) THEN
-        J = -D_GAS * tiller_area(iLayer) * (GAS_conc_gaseous(iLayer) - GAS_conc_atm) / (layer_depth(iLayer) * root_length_ratio)
-        GAS_Plant(iLayer) = J * dt * (effective_layer_volume(iLayer) / layer_thick(iLayer))
+    DO is = 1, mxlay_above_rock
+      IF (relative_porevol(is) > minimum_porevol) THEN
+        J = -D_GAS * tiller_area(is) * (GAS_conc_gaseous(is) - GAS_conc_atm) / (layer_depth(is) * root_length_ratio)
+        GAS_Plant(is) = J * dt * (effective_layer_volume(is) / layer_thick(is))
         IF (PRESENT(GAS_excess)) THEN
-          IF (GAS_Plant(iLayer) + GAS_dens(iLayer) < 0._wp) THEN
-            GAS_excess = GAS_Plant(iLayer) + GAS_dens(iLayer)
-            GAS_Plant(iLayer) = -GAS_dens(iLayer)
+          IF (GAS_Plant(is) + GAS_dens(is) < 0._wp) THEN
+            GAS_excess(is) =  GAS_dens(is) + GAS_Plant(is)
+            GAS_Plant (is) = -GAS_dens(is)
           ENDIF
         ENDIF
       END IF
@@ -831,7 +838,7 @@ CONTAINS
     REAL(wp)              :: effective_layer_volume(mxlay_above_rock) ! effective pore volume of layer [m]
     REAL(wp)              :: water_height               ! height of water at current layer
     REAL(wp)              :: hydro_press                ! [Pa] hydrostatic pressure caused by water above layer
-    INTEGER               :: iLayer                     ! layer counter
+    INTEGER               :: is                         ! layer counter
     LOGICAL               :: newebul_flag               ! swich to Wania's new ebullotion scheme
     REAL(wp)              :: CH4_gas_vol
     REAL(wp)              :: CH4_ebul_vol
@@ -839,18 +846,22 @@ CONTAINS
 
     newebul_flag = .FALSE. ! StW: TODO: should this be a configurable parameter?
 
-    effective_layer_volume = conc2dens(1:mxlay_above_rock)
-    CH4_Ebul = 0._wp
-    CH4_diss = 0._wp
-    CH4_gas  = 0._wp
-
+    DO is = 1, mxlay_above_rock
+      effective_layer_volume(is) = conc2dens(is)
+      CH4_Ebul(is) = 0._wp
+      CH4_diss(is) = 0._wp
+      CH4_gas (is) = 0._wp
+    ENDDO
+  
     ! water height is >= 0
     ! water table should be > 0 in inundated areas, <= 0 in peatlands
     ! water height is height of wt above surface
     water_height = MAX(water_table, 0._wp)
 
-    CH4_diss = dissolved_gas(CH4_consts, Tsoil(1:mxlay_above_rock), CH4_dens(1:mxlay_above_rock), dens2conc(1:mxlay_above_rock))
-    CH4_gas  = CH4_dens(1:mxlay_above_rock) - CH4_diss(1:mxlay_above_rock)
+    DO is = 1, mxlay_above_rock
+      CH4_diss(is) = dissolved_gas(CH4_consts, Tsoil(is), CH4_dens(is), dens2conc(is))
+      CH4_gas (is) = CH4_dens(is) - CH4_diss(is)
+    ENDDO
 
     ! SOLUBILITY OF CH4
     ! -----------------
@@ -860,14 +871,14 @@ CONTAINS
     ! dissolubility increases again when using the eqn below.
     ! UNITS: [ml CH4 per ml H20]
 
-    DO iLayer = mxlay_above_wt+1, mxlay_above_rock
+    DO is = mxlay_above_wt+1, mxlay_above_rock
 
-      CH4_diss_max = 0.05708_wp - 0.001545_wp * (MAX(tmelt, Tsoil(iLayer)) - tmelt) + &
-                      0.00002069_wp * ((MAX(tmelt, Tsoil(iLayer)) - tmelt) ** 2._wp) ![ml CH4 ml-1 H2O]
+      CH4_diss_max = 0.05708_wp - 0.001545_wp * (MAX(tmelt, Tsoil(is)) - tmelt) + &
+                     0.00002069_wp * ((MAX(tmelt, Tsoil(is)) - tmelt) ** 2._wp) ![ml CH4 ml-1 H2O]
 
       ! below water table: increase water_height by layer thickness
-      IF (iLayer > mxlay_above_wt) THEN
-        water_height = water_height + Dz(iLayer)  ![m]
+      IF (is > mxlay_above_wt) THEN ! TODO: Isn't this by definition fullfilled?
+        water_height = water_height + Dz(is)  ![m]
       END IF
 
       ! Calculate hydrostatic pressure
@@ -878,14 +889,14 @@ CONTAINS
       ! the layer's water content V_water.
       ! We use effective_layer_volume
       ! -----------------------------------------------------------
-      CH4_diss_max_m3 = CH4_diss_max * effective_layer_volume(iLayer) ![m3 CH4 layer-1]
+      CH4_diss_max_m3 = CH4_diss_max * effective_layer_volume(is) ![m3 CH4 layer-1]
 
       ! Use the Ideal Gas Law to convert [m3 CH4 layer-1] to [mol CH4 layer-1]
       ! Add hydrostatic pressure to atmospheric pressure.
       ! pressure is in [Pa], which is [N m-2], so hydro_press
       ! has to be divided by 1m2 to have the units [N m-2] or [Pa]
       ! ----------------------------------------------------------
-      CH4_diss_max_mol = CH4_diss_max_m3 * (surface_air_pressure + hydro_press) / (UniversalGasConstant * Tsoil(iLayer))
+      CH4_diss_max_mol = CH4_diss_max_m3 * (surface_air_pressure + hydro_press) / (UniversalGasConstant * Tsoil(is))
 
       ! If the total density of CH4 is higher than what can be
       ! dissolved in the given water volume times the
@@ -896,25 +907,25 @@ CONTAINS
       ! ------------------------------------------------------
       ! determine dissolved CH4
       IF (newebul_flag) THEN
-        CH4_diss(iLayer) = MIN(CH4_dens(iLayer), CH4_diss_max_mol) ![mol CH4 layer-1]
+        CH4_diss(is) = MIN(CH4_dens(is), CH4_diss_max_mol) ![mol CH4 layer-1]
 
         ! determine CH4 as gas in layer
-        CH4_gas(iLayer) = CH4_dens(iLayer) - CH4_diss(iLayer) ![mol CH4 m-2]
+        CH4_gas(is) = CH4_dens(is) - CH4_diss(is) ![mol CH4 m-2]
 
         ! ebullition flux is gas density in layer (but negative as flux removes from soil)
-        CH4_Ebul(iLayer) = -CH4_gas(iLayer) ! [mol CH4 layer-1 timestep-1] 
-        CH4_gas(iLayer) = 0.0_wp
+        CH4_Ebul(is) = -CH4_gas(is) ! [mol CH4 layer-1 timestep-1] 
+        CH4_gas (is) = 0.0_wp
       ELSE
 
-        CH4_gas_vol = CH4_gas(iLayer) * ((UniversalGasConstant * Tsoil(iLayer)) / (surface_air_pressure + hydro_press))
-        CH4_vgc     = CH4_gas_vol / effective_layer_volume(iLayer)
+        CH4_gas_vol = CH4_gas(is) * ((UniversalGasConstant * Tsoil(is)) / (surface_air_pressure + hydro_press))
+        CH4_vgc     = CH4_gas_vol / effective_layer_volume(is)
 
         IF (CH4_vgc > vgc_high*bubble_CH4_frac) THEN
-          CH4_ebul_vol = (CH4_vgc - (vgc_low*bubble_CH4_frac)) * effective_layer_volume(iLayer)
+          CH4_ebul_vol = (CH4_vgc - (vgc_low*bubble_CH4_frac)) * effective_layer_volume(is)
           CH4_vgc      = vgc_low*bubble_CH4_frac
-          CH4_gas_vol  = CH4_vgc * effective_layer_volume(iLayer)
-          CH4_gas(iLayer)  =  CH4_gas_vol  / ((UniversalGasConstant * Tsoil(iLayer)) / (surface_air_pressure + hydro_press))
-          CH4_Ebul(iLayer) = -CH4_ebul_vol / ((UniversalGasConstant * Tsoil(iLayer)) / (surface_air_pressure + hydro_press))
+          CH4_gas_vol  = CH4_vgc * effective_layer_volume(is)
+          CH4_gas (is) =  CH4_gas_vol  / ((UniversalGasConstant * Tsoil(is)) / (surface_air_pressure + hydro_press))
+          CH4_Ebul(is) = -CH4_ebul_vol / ((UniversalGasConstant * Tsoil(is)) / (surface_air_pressure + hydro_press))
         END IF
 
       END IF
@@ -993,59 +1004,61 @@ CONTAINS
     REAL(wp) :: CO2_source (mxlay_above_rock)         ! CO2 source / sink on layer [mol m-2 ts-1]
     REAL(wp) :: O2_source  (mxlay_above_rock)         ! O2  source / sink on layer [mol m-2 ts-1]
     REAL(wp) :: kHCC       (mxlay_above_rock)         ! Henry coefficient relating aqueous to gaseous concentration []
-    INTEGER :: iLayer, nissue_loc
+    INTEGER :: is, nissue_loc
     LOGICAL :: lissue_loc, lissue_tst
 
-    CH4_source = 0._wp
-    CO2_source = 0._wp
-    O2_source  = 0._wp
+    DO is = 1, mxlay_above_rock
+      CH4_source(is) = 0._wp
+      CO2_source(is) = 0._wp
+      O2_source (is) = 0._wp
+    ENDDO
     nissue_loc = 0
 
-    DO iLayer = 1,mxlay_above_rock
-      O2_demand = -(O2_Oxid(iLayer) + O2_Other(iLayer))   ! O2_Oxid and O2_Other are defined negative
+    DO is = 1,mxlay_above_rock
+      O2_demand = -(O2_Oxid(is) + O2_Other(is))   ! O2_Oxid and O2_Other are defined negative
       O2_stress = 1._wp
       IF (O2_demand > 0._wp) THEN
-        O2_stress = MIN((O2_dens(iLayer) + O2_Plant(iLayer)) / O2_demand, 1._wp)
+        O2_stress = MIN((O2_dens(is) + O2_Plant(is)) / O2_demand, 1._wp)
         IF (O2_stress < 0._wp) THEN
           nissue_loc = nissue_loc + 1
           O2_stress = 0._wp
         ENDIF
       END IF
 
-      CH4_demand = -(CH4_Oxid(iLayer) + CH4_Plant(iLayer) + CH4_Ebul(iLayer))  ! demand variables are defined negative
+      CH4_demand = -(CH4_Oxid(is) + CH4_Plant(is) + CH4_Ebul(is))  ! demand variables are defined negative
       CH4_stress = 1._wp
       IF (CH4_demand > 0._wp) THEN
-        CH4_stress = MIN((CH4_dens(iLayer) + CH4_Prod(iLayer)) / CH4_demand, 1._wp)
+        CH4_stress = MIN((CH4_dens(is) + CH4_Prod(is)) / CH4_demand, 1._wp)
       END IF
 
       ! resolve oxidation stress
       IF (CH4_stress <= O2_stress) THEN   ! CH4 limited
         IF (O2_stress < 1) THEN
-          O2_demand = -O2_Other(iLayer)   ! O2_Oxid and O2_Other are defined negative
+          O2_demand = -O2_Other(is)   ! O2_Oxid and O2_Other are defined negative
           O2_stress = 1._wp
           IF (O2_demand > 0._wp) THEN
-            O2_stress = MIN((O2_dens(iLayer) + O2_Plant(iLayer) + &   ! should be -, but O2_oxid defined negative
-                        (CH4_stress * O2_Oxid(iLayer))) / O2_demand, 1._wp)
+            O2_stress = MIN((O2_dens(is) + O2_Plant(is) + &   ! should be -, but O2_oxid defined negative
+                        (CH4_stress * O2_Oxid(is))) / O2_demand, 1._wp)
           END IF
         END IF
-        CH4_Oxid(iLayer) = CH4_Oxid(iLayer) * CH4_stress
-         O2_Oxid(iLayer) =  O2_Oxid(iLayer) * CH4_stress
+        CH4_Oxid(is) = CH4_Oxid(is) * CH4_stress
+         O2_Oxid(is) =  O2_Oxid(is) * CH4_stress
       ELSE    ! O2 limited
         IF (CH4_stress < 1._wp) THEN
-          CH4_demand = -(CH4_Ebul(iLayer) + CH4_Plant(iLayer))
+          CH4_demand = -(CH4_Ebul(is) + CH4_Plant(is))
           CH4_stress = 1._wp
           IF (CH4_demand > 0._wp) THEN
-            CH4_stress = MIN((CH4_dens(iLayer) + CH4_Prod(iLayer) + &   ! should be -, but CH4_oxid defined negative
-                          (O2_stress * CH4_Oxid(iLayer))) / CH4_demand, 1._wp)
+            CH4_stress = MIN((CH4_dens(is) + CH4_Prod(is) + &   ! should be -, but CH4_oxid defined negative
+                          (O2_stress * CH4_Oxid(is))) / CH4_demand, 1._wp)
           END IF
         END IF
-        CH4_Oxid(iLayer) = CH4_Oxid(iLayer) * O2_stress
-         O2_Oxid(iLayer) =  O2_Oxid(iLayer) * O2_stress
+        CH4_Oxid(is) = CH4_Oxid(is) * O2_stress
+         O2_Oxid(is) =  O2_Oxid(is) * O2_stress
       END IF
-      CO2_Oxid (iLayer) = -CH4_Oxid (iLayer)
-      CH4_Ebul (iLayer) =  CH4_Ebul (iLayer)  * CH4_stress
-      CH4_Plant(iLayer) =  CH4_Plant(iLayer)  * CH4_stress
-       O2_Other(iLayer) =   O2_Other(iLayer)  * O2_stress
+      CO2_Oxid (is) = -CH4_Oxid (is)
+      CH4_Ebul (is) =  CH4_Ebul (is)  * CH4_stress
+      CH4_Plant(is) =  CH4_Plant(is)  * CH4_stress
+       O2_Other(is) =   O2_Other(is)  * O2_stress
 
     END DO   ! iLayer
 
@@ -1056,20 +1069,21 @@ CONTAINS
       CH4_Ebul_sum = 0._wp
     END IF
 
-    CH4_source(1:mxlay_above_rock) = (CH4_Prod (1:mxlay_above_rock) + CH4_Oxid(1:mxlay_above_rock) + &
-                                      CH4_Plant(1:mxlay_above_rock) + CH4_Ebul(1:mxlay_above_rock))
-    CO2_source(1:mxlay_above_rock) = (CO2_Prod (1:mxlay_above_rock) + CO2_Oxid(1:mxlay_above_rock) + &
-                                      CO2_Plant(1:mxlay_above_rock))
-    O2_source (1:mxlay_above_rock) = (O2_Other (1:mxlay_above_rock) + O2_Oxid (1:mxlay_above_rock) + &
-                                      O2_Plant (1:mxlay_above_rock))
+    DO is = 1, mxlay_above_rock
+      CH4_source(is) = (CH4_Prod (is) + CH4_Oxid(is) + CH4_Plant(is) + CH4_Ebul(is))
+      CO2_source(is) = (CO2_Prod (is) + CO2_Oxid(is) + CO2_Plant(is))
+      O2_source (is) = (O2_Other (is) +  O2_Oxid(is) +  O2_Plant(is))
+    ENDDO
 
     lissue_loc = .FALSE.
     ! diffusion calculation: CH4
 
     ! set up diffusion coefficients
-    Di(1:mxlay_above_rock) = D_CH4(1:mxlay_above_rock)
-    kHCC = determine_Henry_cc(CH4_consts, Tsoil(1:mxlay_above_rock))
-    D_used(1:mxlay_above_rock) = surf_CH4_flux
+    DO is = 1, mxlay_above_rock
+      Di    (is) = D_CH4(is)
+      kHCC  (is) = determine_Henry_cc(CH4_consts, Tsoil(is))
+      D_used(is) = surf_CH4_flux
+    ENDDO
 
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_CH4_conc, &
                       CH4_source, kHCC, Di, D_CH4_surf, layer_thick, dens2conc, conc2dens, CH4_dens, surf_CH4_flux,lissue_tst)
@@ -1078,9 +1092,10 @@ CONTAINS
     ! diffusion calculation: CO2
 
     ! set up diffusion coefficients
-    Di(1:mxlay_above_rock) = D_CO2(1:mxlay_above_rock)
-
-    kHCC = determine_Henry_cc(CO2_consts, Tsoil(1:mxlay_above_rock))
+    DO is = 1, mxlay_above_rock
+      Di  (is) = D_CO2(is)
+      kHCC(is) = determine_Henry_cc(CO2_consts, Tsoil(is))
+    ENDDO
 
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_CO2_conc, &
                       CO2_source, kHCC, Di, D_CO2_surf, layer_thick, dens2conc, conc2dens, CO2_dens, surf_CO2_flux,lissue_tst)
@@ -1089,8 +1104,10 @@ CONTAINS
     ! diffusion calculation: O2
 
     ! set up diffusion coefficients
-    Di(1:mxlay_above_rock) = D_O2(1:mxlay_above_rock)
-    kHCC = determine_Henry_cc(O2_consts, Tsoil(1:mxlay_above_rock))
+    DO is = 1, mxlay_above_rock
+      Di  (is) = D_O2(is)
+      kHCC(is) = determine_Henry_cc(O2_consts, Tsoil(is))
+    ENDDO
 
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_O2_conc, &
                       O2_source, kHCC, Di, D_O2_surf, layer_thick, dens2conc, conc2dens, O2_dens, surf_O2_flux,lissue_tst)
@@ -1106,8 +1123,8 @@ CONTAINS
   !
   !!
   !!
-  PURE ELEMENTAL SUBROUTINE calc_methane_fire(CO2_fire_emission, landscape_type,                &
-                                              CH4_out_fire, fire_em_NO, fire_em_CO, fire_em_iso)
+  PURE SUBROUTINE calc_methane_fire(CO2_fire_emission, landscape_type,                &
+                                    CH4_out_fire, fire_em_NO, fire_em_CO, fire_em_iso)
 
     USE mo_methane_constants,      ONLY: max_specietypes, ef => emission_factors_for_methane, &
                                          SPECIE_CH4, SPECIE_NOx, SPECIE_CO, SPECIE_ISOPRENE,  &
@@ -1148,8 +1165,8 @@ CONTAINS
 !      IF ((cover_type== 2) .OR. (cover_type== 3) .OR. &: 
 !          (cover_type==10) .OR. &                      : PhenologyType == 2 (raingreen)
 !          (cover_type==13) .OR. (cover_type==16))      : C4Flag
-  PURE ELEMENTAL SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
-                                                  termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
+  PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
+                                        termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
 
     USE mo_methane_constants, ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
 
@@ -1204,7 +1221,7 @@ CONTAINS
 
   END SUBROUTINE calc_methane_termites
 
-  PURE ELEMENTAL SUBROUTINE calc_methane_herbivores(herbivory2atm, iswoody, CH4_out_herbivore)
+  PURE SUBROUTINE calc_methane_herbivores(herbivory2atm, iswoody, CH4_out_herbivore)
 
     USE mo_methane_constants, ONLY: molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
 

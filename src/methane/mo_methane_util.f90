@@ -93,7 +93,7 @@ CONTAINS
   ! @brief  determine gas concentration in water [mol m-2]
   ! based on Henry's law, as described by Wania
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
+  PURE REAL(wp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
     TYPE (t_specie_const),  INTENT(in)  :: GAS       ! Type with constants for specific gas
     REAL(wp),               INTENT(in)  :: Tsoil     ! Soil temperature in layer [K]
     REAL(wp),               INTENT(in)  :: GAS_dens  ! GAS density in ice free pore space of layer [mol]
@@ -121,7 +121,7 @@ CONTAINS
   ! @brief  determine gas concentration in water based on Henry's law
   ! result is dimensionless Henry coefficient relating aqueous to gaseous concentration
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
+  PURE REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
     TYPE (t_specie_const), INTENT(in) :: GAS            ! Structure with constanst for a specific gass
     REAL(wp),              INTENT(in) :: temp           ! Soil temperature in layer [K]
   
@@ -155,7 +155,7 @@ CONTAINS
   ! @brief Converts a gas concentration [mol m-3] to volume mixing ration at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
+  PURE REAL(wp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_conc ! Gas concentration [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_vmr'
@@ -166,7 +166,7 @@ CONTAINS
   ! @brief Converts a gas volume mixing ration to concentration [mol m-3] at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
+  PURE REAL(wp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas [m3 m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mol_m3'
@@ -181,7 +181,7 @@ CONTAINS
   ! @brief Converts a gas concentration to mass mixing ratio at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
+  PURE REAL(wp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_conc ! Concentration of gas [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_mmr'
@@ -192,7 +192,7 @@ CONTAINS
   ! @brief Converts a gas concentration to volume mixing ratio at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
+  PURE REAL(wp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_mol_m3'
@@ -206,7 +206,7 @@ CONTAINS
   ! @brief Converts a gas volume mixing ratio to mass mixing ratio at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
+  PURE REAL(wp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mmr'
@@ -217,7 +217,7 @@ CONTAINS
   ! @brief Converts a gas mass mixing ratio to volume mixing ratio at reference temperature and pressure
   !
   !!
-  PURE ELEMENTAL REAL(wp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
+  PURE REAL(wp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas [kg kg-1]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_vmr'
@@ -228,7 +228,7 @@ CONTAINS
   ! @brief Determine which unit of a gas is properly defined
   !
   !!
-  INTEGER PURE ELEMENTAL FUNCTION which_valid(GAS,mmr,vmr,conc)
+  INTEGER PURE FUNCTION which_valid(GAS,mmr,vmr,conc)
     TYPE (t_specie_const), INTENT(in)  :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)  :: mmr
     REAL(wp), OPTIONAL,    INTENT(in)  :: vmr
@@ -267,7 +267,7 @@ CONTAINS
   ! @brief Converts gas concentration or volume mixing ratio to mass mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE ELEMENTAL SUBROUTINE convert_2_mmr(GAS,mmr,vmr,conc)
+  PURE SUBROUTINE convert_2_mmr(GAS,mmr,vmr,conc)
     TYPE (t_specie_const),  INTENT(in)    :: GAS
     REAL(wp),     OPTIONAL, INTENT(inout) :: mmr
     REAL(wp),     OPTIONAL, INTENT(in)    :: vmr
@@ -293,7 +293,7 @@ CONTAINS
   ! @brief Converts gas concentration or mass mixing ratio to volume mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE ELEMENTAL SUBROUTINE convert_2_vmr(GAS,mmr,vmr,conc)
+  PURE SUBROUTINE convert_2_vmr(GAS,mmr,vmr,conc)
     TYPE (t_specie_const), INTENT(in)    :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
     REAL(wp), OPTIONAL,    INTENT(inout) :: vmr
@@ -319,7 +319,7 @@ CONTAINS
   ! @brief Converts volume or mass mixing ratio to concentration
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE ELEMENTAL SUBROUTINE convert_2_mol_m3(GAS,mmr,vmr,conc)
+  PURE SUBROUTINE convert_2_mol_m3(GAS,mmr,vmr,conc)
     TYPE (t_specie_const), INTENT(in)    :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
     REAL(wp), OPTIONAL,    INTENT(in)    :: vmr
@@ -345,7 +345,7 @@ CONTAINS
   ! @brief Calculates diffusivities for a gas in air and water
   !
   !!
-  PURE ELEMENTAL SUBROUTINE calc_diffusivity(GAS,TK,D_air,D_water)
+  PURE SUBROUTINE calc_diffusivity(GAS,TK,D_air,D_water)
 
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_methane_constants,      ONLY: t_specie_const
