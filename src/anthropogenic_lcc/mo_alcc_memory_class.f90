@@ -94,6 +94,13 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+     
+    ! Mingyue Zhang, add variables for transitions,   
+      CALL mem%Add_var('transitions_grid', mem%transitions_grid,                 &
+      & hgrid, pft_vgrid,                                                                            &
+      & prefix, suffix,                                                                              &
+      & output_level=FULL,                                                                          &
+      & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
       
   END SUBROUTINE Init_alcc_memory
 
