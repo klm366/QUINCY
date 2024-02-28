@@ -520,8 +520,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(TOP_, frac_permanent_wetland, weighted_by_fract)
     ENDIF
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
-      dsl4jsb_Aggregate_onChunk(TOP_,  aet,                    weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(TOP_,  aet_relax,              weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(TOP_,  aet,                   weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(TOP_,  aet_relax,             weighted_by_fract)
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
         dsl4jsb_Aggregate_onChunk(TOP_, precip_mean_day,   weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_, precip_relax,      weighted_by_fract)
