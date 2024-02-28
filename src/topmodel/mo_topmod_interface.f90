@@ -251,13 +251,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TOP_, aet)
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top)
 
-    ! Allocate local work arrays
-    !
-    ALLOCATE(t_soil          (nsoil))
-    ALLOCATE(wtr_soil        (nsoil))
-    ALLOCATE(ice_soil        (nsoil))
-    ALLOCATE(PE_mask         (nc))
-
     IF (lstart .AND. (dsl4jsb_Config(TOP_)%dbg_process)) CALL message(routine,'First instance of update_topmodel')
 
     ! Get needed time state
@@ -313,6 +306,13 @@ CONTAINS
     ENDIF
 
     IF (.NOT. lnew_day) RETURN ! Topmodel process is updated only once per day
+
+    ! Allocate local work arrays needed only for daily calculations
+    !
+    ALLOCATE(t_soil          (nsoil))
+    ALLOCATE(wtr_soil        (nsoil))
+    ALLOCATE(ice_soil        (nsoil))
+    ALLOCATE(PE_mask         (nc))
 
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
       IF (is_newmonth(options%current_datetime,dtime)) THEN
