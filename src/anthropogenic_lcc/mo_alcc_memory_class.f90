@@ -73,7 +73,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
     ! -------------------------------------------------------------------------------------------------- !
-    
+       
     model => Get_model(model_id)
 
     table = tables(1)
@@ -82,8 +82,29 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     pft_vgrid    => Get_vgrid('pfts')
 
-!    dsl4jsb_Get_config(ALCC_)
+    ! Mingyue Zhang: define TransMtrx start
+    type MatrixPtr
+      real(dp), pointer :: ptr(:,:)
+    end type MatrixPtr
+  
+    real(dp), pointer :: TransMtrx(:)
+  
+    ! Mingyue Zhang: Set the number of matrices dynamically
+    integer, parameter :: numMatrices = 8 ! Adjust as needed according to the size of transition matrix
+  
+    allocate(TransMtrx(numMatrices))
+  
+    do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+      allocate(TransMtrx(i)%ptr(rows, cols))
+    end do
 
+    ! Accessing elements of the matrices
+    TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment
+    ! Mingyue Zhang: define TransMtrx finsih 
+
+
+  !    dsl4jsb_Get_config(ALCC_)
+ 
     !JN-TODO: if changes are to be done on a daily basis maybe other field more interesting?
     !           e.g. target_cf ? or better remember something else e.g. "required_cf_change"?
     !         then also change out_level to BASIC and lrestart to TRUE
@@ -94,14 +115,14 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-     
-    ! Mingyue Zhang, add variables for transitions,   
-      CALL mem%Add_var('transitions_grid', mem%transitions_grid,                 &
+
+  ! Mingyue Zhang: add variables for transitions,   
+    CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
       & hgrid, pft_vgrid,                                                                            &
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-      
+    
   END SUBROUTINE Init_alcc_memory
 
 #endif
