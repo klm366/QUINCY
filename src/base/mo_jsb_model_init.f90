@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, &
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, &
     &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -282,7 +282,7 @@ CONTAINS
       ! ------------------------ tasks that can change area
       !
       ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.FAGE_
+      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
