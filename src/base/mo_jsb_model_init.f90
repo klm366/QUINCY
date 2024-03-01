@@ -20,11 +20,12 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, &
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, &
     &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
+  dsl4jsb_Use_config(SB_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -229,6 +230,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(SB_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -248,6 +250,7 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(SB_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -279,7 +282,7 @@ CONTAINS
       ! ------------------------ tasks that can change area
       !
       ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.
+      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.FAGE_
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
@@ -499,7 +502,7 @@ CONTAINS
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF(model%config%qmodel_id == QLAND) THEN
-          IF(model%processes(SB_)%p%config%sb_model_scheme == 'jsm') THEN
+          IF(dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm') THEN
             CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
           ELSE
             CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
