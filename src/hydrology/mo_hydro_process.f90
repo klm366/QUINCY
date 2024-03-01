@@ -1855,6 +1855,8 @@ CONTAINS
 
   SUBROUTINE calc_vertical_transport(dt, alpha, n_act, dzf, top_bound, bot_bound, S, C, P, Q, X)
 
+    USE mo_util, ONLY: tdma_solver_vec ! OpenACC-enabled solver for tridiagonal matrix (Thomas algorithm)
+
   ! INPUT
   INTEGER, INTENT(in) :: n_act(:)
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
@@ -1871,14 +1873,16 @@ CONTAINS
   ! LOCAL
   INTEGER            :: j, ic, nc
   INTEGER            :: nsoil
-  REAL(wp)           :: dzh(SIZE(S,1),SIZE(S,2)), matrix(SIZE(S,1),SIZE(S,2),4), &
-                      & bet(SIZE(S,1)), gam(SIZE(S,1), SIZE(S,2))
+  REAL(wp) :: dzh(SIZE(S,1),SIZE(S,2)), &
+    &         matrix(SIZE(S,1),SIZE(S,2),4) ! Matrix containing sub-diagonal (1), diagonal (2),
+                                            ! super-diagonal (3) of triangular matrix and rhs (4) of
+                                            ! linear equation system
 
   nc    = SIZE(S,1)
   nsoil = SIZE(S,2)
 
   !$ACC DATA &
-  !$ACC   CREATE(dzh, matrix, bet, gam)
+  !$ACC   CREATE(dzh, matrix)
 
   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
   DO j=1,nsoil
@@ -1929,14 +1933,15 @@ CONTAINS
         matrix(ic,j,2) =  P(ic,j) / dzh(ic,j) +  P(ic,j+1) / dzh(ic,j+1) + dzf(ic,j) * C(ic,j) / (alpha * dt)
         matrix(ic,j,3) = -P(ic,j+1) / dzh(ic,j+1)
         matrix(ic,j,4) =  Q(ic,j) - Q(ic,j+1) + dzf(ic,j) * S(ic,j) + dzf(ic,j) * C(ic,j) * X(ic,j) / (alpha * dt)
+      ELSE
+        matrix(ic,j,1) = 0._wp
+        matrix(ic,j,2) = 1._wp
+        matrix(ic,j,3) = 0._wp
+        matrix(ic,j,4) = 1._wp
       END IF
     END DO
   END DO
   !$ACC END PARALLEL
-
-  ! This solver uses LU-decomposition to solve the tridiagonal matrix.
-  ! It is based on the routine tridiag (page 43) in the
-  ! Numerical Recipes in Fortran. 2nd Edition, 1992, ISBN 0-521-43064-X
 
 #ifndef _OPENACC
   DO ic=1,nc
@@ -1947,44 +1952,8 @@ CONTAINS
   END DO
 #endif
 
-  !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-  DO ic=1,nc
-    bet(ic)  = matrix(ic,1,2)
-    X(ic,1) = matrix(ic,1,4)/bet(ic)
-  END DO
-  !$ACC END PARALLEL LOOP
-
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  !$ACC LOOP SEQ
-  DO j = 2, nsoil
-    !$ACC LOOP GANG VECTOR
-    DO ic=1,nc
-      IF (j <= n_act(ic)) THEN
-        gam(ic,j) = matrix(ic,j-1,3) /bet(ic)
-        bet(ic)   = matrix(ic,j,2) - matrix(ic,j,1) * gam(ic,j)
-#ifndef _OPENACC
-        IF( bet(ic) .EQ. 0.0) THEN
-          WRITE (message_text,*) 'tridiag: matrix couldn t be solved !'
-          CALL finish('calc_vertical_transport', message_text)
-        END IF
-#endif
-        X(ic,j) = (matrix(ic,j,4) - matrix(ic,j,1) * X(ic,j-1)) / bet(ic)
-      END IF
-    END DO
-  END DO
-  !$ACC END PARALLEL
-
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  !$ACC LOOP SEQ
-  DO j  = nsoil, 1, -1
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic=1,nc
-      IF (j <= n_act(ic)-1) THEN
-        X(ic,j)= X(ic,j) - gam(ic,j+1) * X(ic,j+1)
-      END IF
-    END DO
-  END DO
-  !$ACC END PARALLEL
+  CALL tdma_solver_vec(matrix(:,:,1), matrix(:,:,2), matrix(:,:,3), matrix(:,:,4), &
+    &                  1, nsoil, 1, nc, X(:,:))
 
   !$ACC WAIT(1)
   !$ACC END DATA
