@@ -398,7 +398,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl)) ASYNC(1)
 
     ! IF (TRIM(tile%name) /= 'box') THEN
-    IF ( (model%config%use_tmx .AND. .NOT. tile%Has_children()) .OR. TRIM(tile%name) == 'land') THEN
+    IF ( model%config%use_tmx .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 

@@ -537,6 +537,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 
     dsl4jsb_Real2D_onChunk :: &
+      & t_ptr, &                  ! tmx
       & t_filt_ptr, &
       & t_rad_ptr, &
       & t_eff_ptr, &
@@ -547,11 +548,14 @@ CONTAINS
       & fact_qsat_srf_ptr, &
       & fact_qsat_srf_land_tile, &
       & evapopot_ptr, &
+      & evapotrans_ptr, &         ! tmx
+      & latent_hflx_ptr, &        ! tmx
+      & sensible_hflx_ptr, &      ! tmx
       & evapotrans_lnd_ptr, &
       & latent_hflx_lnd_ptr, &
       & sensible_hflx_lnd_ptr, &
       & forc_hflx_ptr, &
-      & heat_cap_old_ptr, &
+      & heat_cap_ptr, &
       & rough_h_ptr, &
       & rough_m_ptr, &
       & q_snocpymlt_ptr, &
@@ -599,7 +603,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     use_tmx = model%config%use_tmx
-    tile_is_carbon_active = tile%Is_process_calculated(CARBON_)
+    tile_is_carbon_active = tile%Is_process_active(CARBON_)
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
@@ -612,7 +616,7 @@ CONTAINS
 
     !$ACC DATA CREATE(fact_land, fact_lake)
 
-    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
+    IF (tile%contains_lake .AND. .NOT. use_tmx .AND. .NOT. jsbach_runs_standalone()) THEN
 
       ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the
       ! jsbach grid box, not/only including lakes (JSBACH grid boxes do not include ocean fractions.). Re-scaling is
@@ -678,16 +682,16 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(TURB_, fact_qsat_srf, land_tile)
     evapopot_ptr     => dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
     forc_hflx_ptr    => dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used
-    heat_cap_old_ptr => dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old)  ! not computed for lake
+    heat_cap_ptr     => dsl4jsb_var2D_onChunk(SEB_,   heat_cap)
     rough_h_ptr      => dsl4jsb_var2D_onChunk(TURB_,  rough_h)
     rough_m_ptr      => dsl4jsb_var2D_onChunk(TURB_,  rough_m)
     q_snocpymlt_ptr  => dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
     IF (use_tmx) THEN
-      t_filt_ptr            => dsl4jsb_var2D_onChunk(SEB_,   t)
+      t_ptr                 => dsl4jsb_var2D_onChunk(SEB_,   t)
       t_rad_ptr             => dsl4jsb_var2D_onChunk(SEB_,   t_rad4)
-      evapotrans_lnd_ptr    => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans)
-      latent_hflx_lnd_ptr   => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx)
-      sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx)
+      evapotrans_ptr        => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans)
+      latent_hflx_ptr       => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx)
+      sensible_hflx_ptr     => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx)
       alb_vis_lnd_ptr       => dsl4jsb_var2D_onChunk(RAD_,   alb_vis)      ! TODO
       alb_vis_lnd_ptr       => dsl4jsb_var2D_onChunk(RAD_,   alb_vis)      ! TODO
       alb_nir_lnd_ptr       => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)      ! TODO
@@ -741,7 +745,7 @@ CONTAINS
       IF (PRESENT(t_srf)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          t_srf(i) = t_filt_ptr(i)
+          t_srf(i) = t_ptr(i)
         END DO
       END IF
       IF (PRESENT(t_srf_rad)) THEN
@@ -750,11 +754,47 @@ CONTAINS
           t_srf_rad(i) = t_rad_ptr(i)**0.25_wp
         END DO
       END IF
+      IF (PRESENT(evapotrans)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          evapotrans(i) = evapotrans_ptr(i)
+        END DO
+      END IF
+      IF (PRESENT(latent_hflx)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          latent_hflx(i) = latent_hflx_ptr(i)
+        END DO
+      END IF
+      IF (PRESENT(sensible_hflx)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          sensible_hflx(i) = sensible_hflx_ptr(i)
+        END DO
+      END IF
     ELSE
       IF (PRESENT(t_srf)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_srf(i) = t_filt_ptr(i)
+        END DO
+      END IF
+      IF (PRESENT(evapotrans)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          evapotrans(i) = fact_land(i) * evapotrans_lnd_ptr(i)
+        END DO
+      END IF
+      IF (PRESENT(latent_hflx)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          latent_hflx(i) = fact_land(i) * latent_hflx_lnd_ptr(i)
+        END DO
+      END IF
+      IF (PRESENT(sensible_hflx)) THEN
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO i=1,nc
+          sensible_hflx(i) = fact_land(i) * sensible_hflx_lnd_ptr(i)
         END DO
       END IF
     END IF
@@ -794,24 +834,6 @@ CONTAINS
         evapopot(i) = evapopot_ptr(i)
       END DO
     END IF
-    IF (PRESENT(evapotrans)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        evapotrans(i) = fact_land(i) * evapotrans_lnd_ptr(i)
-      END DO
-    END IF
-    IF (PRESENT(latent_hflx)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        latent_hflx(i) = fact_land(i) * latent_hflx_lnd_ptr(i)
-      END DO
-    END IF
-    IF (PRESENT(sensible_hflx)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        sensible_hflx(i) = fact_land(i) * sensible_hflx_lnd_ptr(i)
-      END DO
-    END IF
     IF (PRESENT(grnd_hflx)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
@@ -821,7 +843,7 @@ CONTAINS
     IF (PRESENT(grnd_hcap)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        grnd_hcap(i) = heat_cap_old_ptr(i)
+        grnd_hcap(i) = heat_cap_ptr(i)
       END DO
     END IF
     IF (PRESENT(rough_h_srf)) THEN

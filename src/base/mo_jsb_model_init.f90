@@ -18,9 +18,10 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
 
@@ -189,11 +190,12 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_carbon_init,         ONLY: carbon_init
-    USE mo_tcq_init,            ONLY: tcq_init
-    USE mo_fuel_init,           ONLY: fuel_init
-    !USE mo_disturb_init,        ONLY: disturb_init
-    USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
+    USE mo_fage_init,           ONLY: fage_init
+
+    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
+    USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -206,13 +208,14 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: ilct, jlct, i, no_children
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    INTEGER                             :: ilct, jlct, i, no_children, lct_start
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(FAGE_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -228,6 +231,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(FAGE_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -238,60 +242,67 @@ CONTAINS
     !>     Two Queues: default JSBACH4 or QUINCY
     !>
     IF (.NOT. model%config%use_quincy) THEN
-      ! Note: JN changed the order of the processes
+      ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
+      !   considerations
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
       ! - the task npp_buffer is performed even before to provide already updated multi annual average
       !   NPP to the NLCC process at the beginning of a year
-      ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
-      !   considerations
   
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
       END IF
 
+      ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
+      IF (model%processes(DISTURB_)%p%config%active) THEN
+        CALL model%Queue_task(DISTURB_, "damaged_area")
+        CALL model%Queue_task(DISTURB_, "natural_disturbances")
+      END IF
+
       ! ------------------------ tasks that can change area
       !
       ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.
+      ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-      END IF
 
-      !***** Add LCC processes between pplcc_pre and pplcc_post *****
-      !
-      IF (model%processes(TLCC_)%p%config%active) THEN
-        CALL model%Queue_task(TLCC_, "tlcc")
-      END IF
+        !***** Add LCC processes between pplcc_pre and pplcc_post *****
+        ! order of tasks of course determines area available for change for the subsequent lcc tasks!
+        ! suggestion: natural changes before anthropogenic changes; wind before fire (prev. order in disturb)
 
-      IF (model%processes(NLCC_)%p%config%active) THEN
-        CALL model%Queue_task(NLCC_, "nlcc")
-      END IF
+        IF (model%processes(FAGE_)%p%config%active) THEN
+          CALL model%Queue_task(FAGE_, "fage")
+        END IF
 
-      IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")
-      END IF
+        IF (model%processes(WLCC_)%p%config%active) THEN
+          CALL model%Queue_task(WLCC_, "wlcc")
+        END IF
 
-      IF (model%processes(PPLCC_)%p%config%active) THEN
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL model%Queue_task(FLCC_, "flcc")
+        END IF
+
+        IF (model%processes(NLCC_)%p%config%active) THEN
+          CALL model%Queue_task(NLCC_, "nlcc")
+        END IF
+
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc")
+        END IF
+
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
-      ! JN-TODO: disturbances need to be adapted to work on per grid-cell variables to be treated 
-      !          alongside the lccs above that change area to enable age-classes to be reintroduced
-      ! Disturbances happen on a daily basis and can lead to area changes when running with age-classes
-      IF (model%processes(FUEL_)%p%config%active) THEN
-        CALL model%Queue_task(FUEL_, "fuel")
+      ! FLCC (which runs on the veg tile) changes the co2flux_fire_all_2_atm_ta variable on the leaves
+      ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
+      IF (model%processes(FLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
+        CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
       END IF
-      IF (model%processes(DISTURB_)%p%config%active) THEN
-         CALL model%Queue_task(DISTURB_, "natural_disturbances")
-      END IF
-  
+
       ! ------------------------ tasks that do not change area
       !
-      CALL model%Queue_task(TCQ_,    "tcq")
-
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
@@ -354,8 +365,13 @@ CONTAINS
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
-    
-    ! -------------------------------------------------------------------------------------------------- !
+
+      ! Fuel is calculated last in a timestep to be right available in the next timestep
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+
+    ! ----------------------------------------------------------------------------------------------------- !
     !
     ! quincy
     !  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
@@ -488,8 +504,10 @@ CONTAINS
         CALL pheno_init(tile)
       END IF
 
-      IF (tile%Is_process_active(VEG_)) THEN
-        CALL veg_init(tile)
+      IF (model%config%use_quincy) THEN
+        IF (tile%Is_process_active(VEG_)) THEN
+          CALL veg_init(tile)
+        END IF
       END IF
 
       IF (tile%Is_process_active(SSE_)) THEN
@@ -518,19 +536,9 @@ CONTAINS
       IF (tile%Is_process_active(CARBON_)) THEN
         CALL carbon_init(tile)
       END IF
-
-      IF (tile%Is_process_active(TCQ_)) THEN
-        CALL tcq_init(tile)
+      IF (tile%Is_process_active(FAGE_)) THEN
+        CALL fage_init(tile)
       END IF
-
-      IF (tile%Is_process_active(FUEL_)) THEN
-        CALL fuel_init(tile)
-      END IF
-      
-      ! R: at the moment we do not need any initialization for disturbance:
-      ! IF (tile%Is_process_active(DISTURB_)) THEN
-      !  CALL disturb_init(tile)
-      ! END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (tile%Is_process_active(HD_)) THEN
@@ -551,7 +559,7 @@ CONTAINS
     !>
     !>     3.1 set initial tile fractions for aggregator(s)
     !>
-    !>     3.2 set LCT fractions 
+    !>     3.2 set LCT fractions of the specific tile
     !>
     ! It is important to only do this after all tile fractions have been set above
     !
@@ -562,16 +570,20 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
+    ALLOCATE(tile_lct_fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
 
+    ! Loop over the tiles, starting from the top tile (i.e. box)
     DO WHILE (ASSOCIATED(tile))
 
+      ! First only handle the leaves: skip the tile in case it has children.
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
       ! Set initial tile fractions for 'weighted_by_fract' aggregator
-      IF (tile%Has_children()) THEN  ! tile has children and we're on the way up
+      IF (tile%Has_children()) THEN
+        ! Tile has children, the tile thus had been visited before and we're on the way up
         weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
         SELECT TYPE (weighted_by_fract)
         TYPE IS (t_jsb_aggregator_weighted_by_fract)
@@ -579,37 +591,58 @@ CONTAINS
         END SELECT
       END IF
 
-      ! tile is a leaf or it has children and we're on the way up
-      DO ilct=1,SIZE(tile%lcts)
-        IF (tile%Has_children()) THEN
-          tile%lcts(ilct)%fract(:,:) = 0._wp
-          no_children = tile%Get_no_of_children()
-          child => tile%Get_first_child_tile()
-          DO i=1,no_children
-            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
-              DO jlct=1,SIZE(child%lcts)
-                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
-                  CALL child%Get_fraction(fract=fract_tmp(:,:))
-                  IF (jlct > 1) THEN
-                    fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
-                  END IF
-                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
-                  EXIT
+      ! Set (relative) land cover type fractions of the current tile
+
+      ! The rel. fraction of the primary LCT is 1: The tile is fully covered by this LCT.
+      ! Todo: Are these arrays (i.e. fract_glac_glac, fract_veg_veg, ...) of any interest, or
+      ! should we remove the definition here and also remove the corresponding Add_var calls?
+      tile%lcts(1)%fract(:,:) = 1._wp
+
+      ! We start with second LCT, as the tile's primary LCT fraction has just been set.
+      lct_start=2
+      ! There is however an exception: The primary LCT of the box tile is the LCT of the first child.
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) lct_start=1
+      DO ilct=lct_start,SIZE(tile%lcts)
+
+        ! Leaf tiles should have only the primary LCT and should not enter this loop.
+        IF (.NOT. tile%Has_children()) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
+
+        ! Tile has children. The tile thus had been visited before (s.above) and we're on the way up.
+        ! Loop over the children and add their contributions to the specific LCT fraction.
+        tile_lct_fract_tmp(:,:) = 0._wp
+        no_children = tile%Get_no_of_children()
+        child => tile%Get_first_child_tile()
+        DO i=1,no_children
+          IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
+            ! The child contains the specific land cover type
+            DO jlct=1,SIZE(child%lcts)
+              IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
+                ! Get the (absolute) child tile fraction
+                CALL child%Get_fraction(fract=fract_tmp(:,:))
+                ! In case the child has only one LTC, LCT fraction and tile fraction are
+                ! identical and we are done. If it has several LCTs, the fraction of the
+                ! current LCT still needs to be calculated:
+                IF (jlct > 1) THEN
+                  fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
                 END IF
-              END DO
-              CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              WHERE (fract_tmp(:,:) > 0._wp)
-                tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:)
-              ELSE WHERE
-                tile%lcts(ilct)%fract(:,:) = 0._wp
-              END WHERE
-            END IF
-            child => child%Get_next_sibling_tile()
-          END DO
-        ELSE
-          IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
-          tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
-        END IF
+                ! Sum up the children's contributions
+                tile_lct_fract_tmp(:,:) = tile_lct_fract_tmp(:,:) + fract_tmp(:,:)
+                EXIT
+              END IF
+            END DO
+            ! Get the (absolute) fraction of the current tile
+            CALL tile%Get_fraction(fract=fract_tmp(:,:))
+            ! Calculate the (relative) LCT fraction of the tile
+            WHERE (tile_lct_fract_tmp(:,:) == 0._wp)
+              tile%lcts(ilct)%fract(:,:) = 0._wp
+            ELSE WHERE (fract_tmp(:,:) > 0._wp)
+              tile%lcts(ilct)%fract(:,:) = tile_lct_fract_tmp(:,:) / fract_tmp(:,:)
+            ELSE WHERE
+              tile%lcts(ilct)%fract(:,:) = 1._wp
+            END WHERE
+          END IF
+          child => child%Get_next_sibling_tile()
+        END DO
         !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract) ASYNC(1)
       END DO
 
@@ -685,12 +718,20 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (tile%Is_process_active(TLCC_)) THEN
-        CALL tlcc_init_lcc(tile)
+      IF (tile%Is_process_active(FAGE_)) THEN
+        CALL fage_init_lcc(tile)
       END IF
 
       IF (tile%Is_process_active(ALCC_)) THEN
         CALL alcc_init_lcc(tile)
+      END IF
+
+      IF (tile%Is_process_active(FLCC_)) THEN
+        CALL flcc_init_lcc(tile)
+      END IF
+
+      IF (tile%Is_process_active(WLCC_)) THEN
+        CALL wlcc_init_lcc(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)

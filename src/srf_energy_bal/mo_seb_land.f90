@@ -56,7 +56,7 @@ CONTAINS
     USE mo_sse_process,            ONLY: Get_liquid_max
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef, &
       &                                  update_drag
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd, cvd
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
@@ -151,6 +151,7 @@ CONTAINS
     REAL(wp) :: &
       & t_air_in_Celcius,             &
       & w_soil_critical_config,       &
+      & cpd_or_cvd,                   &
       & eps,                          &
       & soil_depth_sl_vol_porosity_sl_tmp
     LOGICAL  :: l_snow_config, l_freeze_config, l_supercool_config, use_tmx
@@ -180,6 +181,12 @@ CONTAINS
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
     jsb_standalone         = jsbach_runs_standalone()
+
+    IF (use_tmx) THEN
+      cpd_or_cvd = cvd
+    ELSE
+      cpd_or_cvd = cpd
+    END IF
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
@@ -350,15 +357,19 @@ CONTAINS
       END IF
 
       ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
+      ! This is the heat capacity from the previous time step used in the surface energy balance; hcap_grnd will
+      ! be updated later in the SSE_ process.
       heat_cap(ic) = hcap_grnd(ic)
 
       ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
+      ! This is the heat capacity from the previous time step used in the surface energy balance; grnd_hflx will
+      ! be updated later in the SSE_ process.
       forc_hflx(ic) = grnd_hflx(ic)
 
       ! Old dry static energy
       s_old(ic) = surface_dry_static_energy( &
         & t_old(ic), &
-        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd, jsb_standalone)
+        & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, jsb_standalone)
 
       t2s_conv(ic) = s_old(ic) / t_old(ic)
 
@@ -765,7 +776,7 @@ CONTAINS
   SUBROUTINE update_surface_fluxes_land(tile, options)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: alv, als, cpd, cvd
+    USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -854,7 +865,7 @@ CONTAINS
       s_air(ic) = t_acoef(ic) * s_star(ic) + t_bcoef(ic)
 
       IF (use_tmx) THEN
-        sensible_hflx(ic) = ch(ic) * (s_air(ic) - s_star(ic)) * cvd / cpd ! Sensible heat flux
+        sensible_hflx(ic) = ch(ic) * (s_air(ic) - s_star(ic))             ! Sensible heat flux
       ELSE
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha) ! Transfer coefficient
         sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic))     ! Sensible heat flux
