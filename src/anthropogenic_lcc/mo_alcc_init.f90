@@ -76,6 +76,7 @@ CONTAINS
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
+    USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -208,10 +209,10 @@ CONTAINS
     DEALLOCATE(cf_correction)
 
     ! Assert: sum of absolute fractions needs to be <=1
-    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + 1.E-11_wp)) THEN
+    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
       CALL finish(TRIM(routine), &
       & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
-      & //' sum to > 1.0_wp + 1e-11. Please check.') 
+      & //' sum to > 1.0_wp. Please check.')
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')

@@ -298,7 +298,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )  
+        & initval_r=0.0_wp )
       END IF
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
@@ -408,6 +408,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_bcoef_wtr', mem%q_bcoef_wtr,                        &

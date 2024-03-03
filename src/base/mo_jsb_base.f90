@@ -16,17 +16,24 @@ MODULE mo_jsb_base
 
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_exception,   ONLY: message
+  USE mo_exception,   ONLY: message, finish
   USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach
   PUBLIC :: jsbach_setup_models, jsbach_setup_tiles
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> Setup the ICON-Land models
+  !>
+  !>   Routine is called by both:
+  !>      ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
+  !>      host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
+  !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
@@ -48,13 +55,17 @@ CONTAINS
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
+
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(FLCC_)
+    dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -65,6 +76,9 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(FLCC_)
+    dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
@@ -129,6 +143,16 @@ CONTAINS
         model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
       END DO
 
+      ! Point from each associated process%config to the model_config
+      DO iproc = 1,max_no_of_processes
+        IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+          IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+            model%processes(iproc)%p%config%model_config => model%config
+          ENDIF
+        ENDIF
+      ENDDO
+
+      ! Configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(SSE_)
@@ -137,6 +161,9 @@ CONTAINS
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
+      dsl4jsb_Get_config(FAGE_)
+      dsl4jsb_Get_config(WLCC_)
+      dsl4jsb_Get_config(FLCC_)
       dsl4jsb_Get_config(PPLCC_)
 
       ! Crosscheck process configs
@@ -176,7 +203,7 @@ CONTAINS
       END IF
 
       IF (model%Do_fractions_change()) THEN
-        IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
+        IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
           CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
         END IF
         dsl4jsb_Config(PPLCC_)%active = .TRUE.
@@ -186,6 +213,15 @@ CONTAINS
         CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
       END IF
 
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+        ! Print message if infiltration at sub-zero temperature is switched off in namelist
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
+      END IF
+
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
         CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
           &                         ' ... therefore no influence of vegetation on albedo')
@@ -193,13 +229,37 @@ CONTAINS
         CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
       END IF
 
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+      IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
+      END IF
+      IF (model%Is_process_enabled(WLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
+      END IF
+      IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(FUEL_)) THEN
         dsl4jsb_Config(FUEL_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
       END IF
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+      IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
         dsl4jsb_Config(CARBON_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
+      END IF
+
+      IF (model%Is_process_enabled(FAGE_) &
+          & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
+        CALL finish(routine, &
+          & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
+      END IF
+      IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+          & .AND. .NOT. model%Is_process_enabled(FLCC_)) THEN
+        CALL finish(routine, &
+           & 'When FAGE is enabled and disturbances are active, flcc should be active, too! Please check!')
+      END IF
+      IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+          & .AND. .NOT. model%Is_process_enabled(WLCC_)) THEN
+        CALL finish(routine, &
+          & 'When FAGE is enabled and disturbances are active, wlcc should be active, too! Please check!')
       END IF
 
     END DO

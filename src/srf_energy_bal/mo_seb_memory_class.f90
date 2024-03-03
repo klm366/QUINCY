@@ -24,6 +24,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_jsb_control,            ONLY: jsbach_runs_standalone
 
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
@@ -51,12 +52,12 @@ MODULE mo_seb_memory_class
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
-      & heat_cap_old,           & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
-      & forc_hflx                 !< Additional heat flux at surface                                 [W m-2]
+      & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
+      & richardson                !< Richardson number (standalone model)                            []
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &
@@ -194,15 +195,6 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'heat_cap_old', mem%heat_cap_old,                              &
-      & hgrid, surface,                                                              &
-      & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & output_level=BASIC, &
-      & initval_r=0.0_wp )
-
     CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                                &
       & hgrid, surface,                                                              &
       & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
@@ -229,6 +221,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    IF (jsbach_runs_standalone()) THEN
+      CALL mem%Add_var( 'richardson', mem%richardson,                                &
+        & hgrid, surface,                                                            &
+        & t_cf('richardson', '-', 'Richardson number'),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.TRUE.,                                                           &
+        & initval_r=0.0_wp )
+    END IF
 
     IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &

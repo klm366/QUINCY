@@ -77,6 +77,9 @@ macros = {
     'config': [re.compile(
         r'dsl4jsb_Config *\((.*?)_ *\)', re.IGNORECASE),
         r'\1__conf'],
+    'get_lcc_relocations': [re.compile(
+        r'dsl4jsb_Get_lcc_relocations *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => tile%lcc_processes(\1_)%p'],
     'lctlib': [re.compile(
         r'dsl4jsb_Lctlib', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
@@ -104,6 +107,9 @@ macros = {
     'var2d_onchunk': [re.compile(
         r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
+    'var2d_onchunk_tile_name' : [re.compile(
+        r'dsl4jsb_var2D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\1__mem__\3%\2%ptr(ics:ice,iblk)'],
     'var3d_onchunk': [re.compile(
         r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],

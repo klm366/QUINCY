@@ -129,7 +129,7 @@ CONTAINS
 
     dsl4jsb_Get_config(RAD_)
 
-    IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(RAD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
 
@@ -252,7 +252,8 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis)) &
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd)) &
@@ -262,7 +263,8 @@ CONTAINS
     IF (tile%contains_soil) THEN
       dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil) = rad_init_vars%alb_vis_soil
       dsl4jsb_var2D_onDomain(RAD_, alb_nir_soil) = rad_init_vars%alb_nir_soil
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
     ! Note: If use_alb_canopy=FALSE and PFTs are used, alb_vis_can and alb_nir_can will be different on the tiles
@@ -281,7 +283,8 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
 
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).

@@ -58,9 +58,7 @@ CONTAINS
 
     nc = SIZE(lai)
 
-    !$ACC DATA PRESENT(lai, lat, scaling_fact_cl)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(cos_zenith_noon, k12)
     DO ic=1,nc
 
@@ -87,8 +85,7 @@ CONTAINS
       END IF
 
     END DO
-    !$ACC END PARALLEL
-    !$ACC END DATA
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_assimilation_scaling_factors
 
@@ -513,13 +510,9 @@ CONTAINS
 
     nc = SIZE(apar_per_lai_cl)
 
-    !$ACC DATA &
-    !$ACC   PRESENT(t_air, press_srf, par_down_mol, apar_per_lai_cl, co2_mol_mixing_ratio, n_scaling_factors) &
-    !$ACC   PRESENT(canopy_cond_cl, co2_conc_leaf_cl, gross_assimilation_cl, dark_respiration_cl, carbox_rate_max_cl) &
-    !$ACC   PRESENT(e_transport_rate_max_cl, carbox_rate_cl, e_transport_rate_cl)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR
 
+    !$ACC LOOP GANG VECTOR
     DO ic=1,nc
 
       T1 =  25._wp + tmelt   ! 25 degress Celsius expressed in Kelvin
@@ -758,7 +751,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL
-    !$ACC END DATA
 
   END SUBROUTINE calc_assimilation_waterlimited
 
@@ -797,17 +789,14 @@ CONTAINS
 
     nc = SIZE(gross_assimilation_ca)
 
-    !$ACC DATA PRESENT(gross_assimilation_ca, dark_respiration_ca, npp_pot_rate_ca)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(growthRespiration, maintenanceRespiration)
     DO ic=1,nc
       maintenanceRespiration = dark_respiration_ca(ic) / f_aut_leaf
       growthRespiration = max(0._wp,hlp * (gross_assimilation_ca(ic) - maintenanceRespiration))
       NPP_pot_rate_ca(ic) = gross_assimilation_ca(ic) - maintenanceRespiration - growthRespiration
     END DO
-    !$ACC END PARALLEL
-    !$ACC END DATA
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_NPP_pot_rate
 

@@ -31,9 +31,13 @@ MODULE mo_sse_constants
     & vol_hcap_ice       = ci * dens_ice,   & !< =1931202 Volumetric heat capacity of ice                     [J/m3/K]
     & hcond_ice          = ki,              & !< =2.1656  thermal conductivity of ice                         [W/K/m]
     ! Parameters for organic soil component
-    & vol_hcap_org       = 2.5e+06_wp,      & !< Organic layer volumetric heat capacity (Beringer et al 2001) [J/m3/K]
-    & hcond_org          = 0.25_wp,         & !< Organic layer heat conductivity (Beringer et al 2001)        [W/m/K]
-    & hcond_dry_org      = 0.05_wp,         & !< Dry soil heat conductivity (Farouki 1981)                    [W/m/K]
+    ! @todo these values need to be double-checked and potentially adapted for top and deep soil layers
+    & vol_hcap_org_top       = 2.5e+06_wp,  & !< Organic layer volumetric heat capacity (Beringer et al 2001) [J/m3/K]
+    & hcond_org_top          = 0.25_wp,     & !< Organic layer heat conductivity (Beringer et al 2001)        [W/m/K]
+    & hcond_dry_org_top      = 0.05_wp,     & !< Dry soil heat conductivity (Farouki 1981)                    [W/m/K]
+    & vol_hcap_org_below     = 2.5e+06_wp,  & !< Organic layer volumetric heat capacity (Beringer et al 2001) [J/m3/K]
+    & hcond_org_below        = 0.25_wp,     & !< Organic layer heat conductivity (Beringer et al 2001)        [W/m/K]
+    & hcond_dry_org_below    = 0.05_wp,     & !< Dry soil heat conductivity (Farouki 1981)                    [W/m/K]
     ! Parameters for bedrock
     & vol_hcap_bedrock   = 2.e+06_wp,       & !< Volumetric heat capacity of bedrock (Bonan 2002)             [J/m3/K]
     & hcond_bedrock      = 2._wp,           & !< Thermal conductivity of bedrock (Tarnocai 2004)              [W/m/K]
