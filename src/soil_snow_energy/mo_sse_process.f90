@@ -1272,7 +1272,7 @@ CONTAINS
       & temp, w_max, matrix_pot, bclapp
     REAL(wp) :: liquid_max
 
-    IF (temp < tmelt) THEN
+    IF (temp < tmelt - 1e-10_wp) THEN
       ! supercooled water equation (Niu&Yang,2006)
       liquid_max =                                                               &
         & w_max                                                                  & ! Maximum water storage
