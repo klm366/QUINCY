@@ -207,6 +207,7 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
+        dsl4jsb_Get_config(RAD_)
         dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(RAD_)
         dsl4jsb_Get_config(CARBON_)
