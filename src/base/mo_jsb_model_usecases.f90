@@ -513,9 +513,13 @@ CONTAINS
             CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
           END IF
 
-          IF (model%processes(NLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
-          END IF
+        ! Note: Using flcc and wlcc does not really make sense before bare tiles are realised...
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+        END IF
+        IF (model%processes(WLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+        END IF
 
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)

@@ -47,7 +47,8 @@ MODULE mo_spq_memory_class
                                     soil_depth      , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
                                     root_depth      , & !< actual rooting depth [m]
                                     t_srf_old       , & !< previous surface temperature [K]
-                                    zril_old            !< previous timestep's Reynold's number
+                                    zril_old        , & !< previous timestep's Reynold's number
+                                    elevation           !< currently 0.0 [m]
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
@@ -169,7 +170,7 @@ CONTAINS
   SUBROUTINE Init_spq_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC , MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -244,7 +245,15 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
+      CALL mem%Add_var( 'elevation', mem%elevation,                                    &
+        & hgrid, surface,                                                              &
+        & t_cf('elevation', 'm', 'Mean orography'),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE.,                                                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
       CALL mem%Add_var('soil_depth_sl', mem%soil_depth_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('soil_depth_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &

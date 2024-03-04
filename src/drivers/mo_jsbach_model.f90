@@ -792,6 +792,7 @@ CONTAINS
 #endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
