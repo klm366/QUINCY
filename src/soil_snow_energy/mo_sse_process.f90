@@ -566,8 +566,8 @@ CONTAINS
         END IF
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-        DO jl=1,nidx
-          DO jk=1,nsoil
+        DO jk=1,nsoil
+          DO jl=1,nidx
             IF (t_soil_sl(jl,jk) < tmelt .AND. ws(jl,jk) > liquid_max(jl,jk)) THEN
               frozen(jl,jk) = MIN(ws(jl,jk) - liquid_max(jl,jk), &
                 &               heat_cap(jl,jk) * (tmelt - t_soil_sl(jl,jk)) / (alf * rhoh2o) &
