@@ -34,6 +34,7 @@ MODULE mo_interface_hd_ocean
 #endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+  USE mo_jsb_control,        ONLY: acc_stream
 
   dsl4jsb_Use_processes HYDRO_, HD_
   dsl4jsb_Use_config(HD_)
@@ -205,7 +206,7 @@ CONTAINS
 !$OMP END PARALLEL
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
@@ -220,8 +221,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC UPDATE HOST(buffer) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE HOST(buffer) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
 !$OMP END PARALLEL DO
 
     nbr_hor_cells = grid%ntotal
