@@ -927,7 +927,7 @@ CONTAINS
   ! State machine engine
   !
   SUBROUTINE Process_message_hsm(this, msg, debug)
-    USE mo_jsb_control, ONLY: acc_stream
+    USE mo_jsb_control, ONLY: acc_stream, acc_async_sync
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
 !!$    CLASS(t_Message), POINTER       :: msg
@@ -963,7 +963,7 @@ CONTAINS
     CASE (HSM_simple)
       ! Prepare OpenACC streams for multi-stream processing
       original_stream = acc_stream
-      acc_stream = 1
+      IF (acc_stream /= acc_async_sync) acc_stream = 1
 
       IF (msg%action%name /= "INTEGRATE") THEN
         CALL finish(TRIM(routine), "routines should start with INTEGRATE")
@@ -987,12 +987,12 @@ CONTAINS
             !$ACC PARALLEL ASYNC(original_stream)
             dummy = 1
             !$ACC END PARALLEL
-            acc_stream = original_stream
+            IF (acc_stream /= acc_async_sync) acc_stream = original_stream
             original_stream = -1
           ENDIF
         ELSE
           ! Use a separate stream for each INTEGRATE task
-          acc_stream = acc_stream + 1
+          IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
           !$ACC WAIT(original_stream) ASYNC(acc_stream)
         ENDIF
 
