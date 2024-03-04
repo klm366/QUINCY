@@ -59,7 +59,8 @@ CONTAINS
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -195,10 +196,10 @@ CONTAINS
       ! configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
-      dsl4jsb_Get_config(RAD_)
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
+        dsl4jsb_Get_config(RAD_)
         dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
@@ -225,8 +226,15 @@ CONTAINS
       END IF
 
       SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        ! There are several jsbach processes for whom active is set to TRUE as default, however, these are not required for IQ:
+        model%processes(SSE_)%p%config%active = .FALSE.
+        model%processes(SEB_)%p%config%active = .FALSE.
+        model%processes(RAD_)%p%config%active = .FALSE.
+        model%processes(TURB_)%p%config%active = .FALSE.
+        model%processes(ASSIMI_)%p%config%active = .FALSE.
+        model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
-
         IF (model%config%l_compat401) THEN
           CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
           CALL message('    ', '... using soil heat capacity from mineral soil map')
