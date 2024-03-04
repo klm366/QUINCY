@@ -454,7 +454,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk:iblk+1), this%fract_old(ics:ice,iblk:iblk+1)) ASYNC(1)
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -482,21 +482,10 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk:iblk+1)) ASYNC(1)
     END IF
 
     !$ACC WAIT(1)
-
-  END SUBROUTINE Set_fraction_1d
-
-  SUBROUTINE Set_fraction_2d(this, fract, fract_old)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), OPTIONAL,         INTENT(in)    :: &
-      & fract(:,:),        &
-      & fract_old(:,:)
-
-    INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
