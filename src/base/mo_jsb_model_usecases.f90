@@ -247,44 +247,27 @@ CONTAINS
         !>veg_tile
         !!
         ! default jsb4: HYDRO_ & SSE_ are active at veg tile only to save runtime
-        SELECT CASE (model%config%model_scheme)
-        CASE (MODEL_JSBACH)
-          veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-            & fract_varname='fract_veg')
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+          & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')
 
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
-          END IF
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+        END IF
 
-          ! Note: Using flcc and wlcc does not really make sense before bare tiles are realised...
-          IF (model%processes(FLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-          IF (model%processes(WLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
-          END IF
+        ! Note: Using flcc and wlcc does not really make sense before bare tiles are realised...
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+        END IF
+        IF (model%processes(WLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+        END IF
 
-          IF (model%processes(NLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-
-        ! using quincy:
-        !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
-        !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
-        !  SSE_ runs at PFT tiles instead of VEG tile, which is fine with the jsb4 tasks (info by Reiner)
-        !    and needed by the quincy tasks because the lctlib is used
-        !  VEG_ is active
-        !  SB_  is active
-        CASE (MODEL_QUINCY)
-          veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,    SSE_,      Q_ASSIMI_, PHENO_,    VEG_,      SB_,       SPQ_/), &
-            & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-            & fract_varname='fract_veg')
-        END SELECT
+        IF (model%processes(NLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+        END IF
 
         !
         IF (model%processes(TLCC_)%p%config%active) THEN
@@ -576,8 +559,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     Q_RAD_   , TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     Q_RAD_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
 
@@ -587,8 +570,6 @@ CONTAINS
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
       ! none of the tasks of these processes is running via task queue
-      & processes       = (/SEB_    /), &
-      & process_actions = (/ON_TILE_/), &
       & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
                                  ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
@@ -598,8 +579,8 @@ CONTAINS
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/HYDRO_,    SSE_,     Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
 
@@ -693,8 +674,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     Q_RAD_     , TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     Q_RAD_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
 
@@ -704,8 +685,6 @@ CONTAINS
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
       ! none of the tasks of these processes is running via task queue
-      & processes       = (/SEB_    /), &
-      & process_actions = (/ON_TILE_/), &
       & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
                                  ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
@@ -715,8 +694,8 @@ CONTAINS
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/HYDRO_,    SSE_,     Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
 
