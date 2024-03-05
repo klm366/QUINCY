@@ -65,6 +65,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
 
+#ifdef __QUINCY_STANDALONE__
+    CALL sb_qs_read_init_vars(tile)
+    CALL sb_init_ic_bc(tile)
+    CALL sb_finalize_init_vars()
+#else
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sb_read_init_vars(tile)
@@ -75,7 +80,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(SB_)) THEN
       CALL sb_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE sb_init
 
   ! ======================================================================================================= !
@@ -508,6 +513,98 @@ CONTAINS
       & sb_init_vars%nwrb_taxonomy_class_int)
   END SUBROUTINE sb_finalize_init_vars
 
+#ifdef __QUINCY_STANDALONE__
+  SUBROUTINE sb_qs_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(SB_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SB_)
+
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_qs_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting SB_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE( &
+      & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
+      & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
+      & sb_init_vars%soil_ph                 (nproma, nblks),       &
+      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
+      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
+      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
+      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
+      & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
+      & )
+
+    sb_init_vars%usda_taxonomy_class     (:,:) = missval
+    sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
+    sb_init_vars%soil_ph                 (:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
+    sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
+
+    dsl4jsb_Get_config(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    !> USDA taxonomy soil class
+    !>
+    sb_init_vars%usda_taxonomy_class_int(:,:) = dsl4jsb_Config(SB_)%usda_taxonomy_class
+
+    !> NWRB taxonomy soil class
+    !>
+    sb_init_vars%nwrb_taxonomy_class_int(:,:) = dsl4jsb_Config(SB_)%nwrb_taxonomy_class
+
+    !> qmax organic fine particle
+    !>
+    sb_init_vars%qmax_org_fine_particle(:,:) = dsl4jsb_Config(SB_)%qmax_org_fine_particle
+
+    !> soil ph
+    !>
+    sb_init_vars%soil_ph(:,:) = dsl4jsb_Config(SB_)%soil_ph
+
+    !> P labile
+    !>
+    sb_init_vars%soil_p_labile(:,:) = dsl4jsb_Config(SB_)%soil_p_labile
+
+    !> P slow
+    !>
+    sb_init_vars%soil_p_slow(:,:) = dsl4jsb_Config(SB_)%soil_p_slow
+
+    !> P occluded
+    !>
+    sb_init_vars%soil_p_occluded(:,:) = dsl4jsb_Config(SB_)%soil_p_occluded
+
+    !> P primary (apatite)
+    !>
+    sb_init_vars%soil_p_primary(:,:) = dsl4jsb_Config(SB_)%soil_p_primary
+  END SUBROUTINE sb_qs_read_init_vars
+#else
   ! ======================================================================================================= !
   !> read SB_ init vars from input file
   !>
@@ -637,6 +734,7 @@ CONTAINS
 
     CALL input_file%Close()
   END SUBROUTINE sb_read_init_vars
+#endif
 
   ! ======================================================================================================= !
   !>init SB_ with the simple soil model
@@ -1005,10 +1103,10 @@ CONTAINS
           & nproma, &
           & nsoil_sb, &
           & soil_lay_depth_center_sl(:,:,iblk), & 
-          & soil_p_labile, &
-          & soil_p_slow, &
-          & soil_p_occluded, &
-          & soil_p_primary, &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
           & site_ID_spp1685, &
           & p_labile_slow_site(:,:,iblk), &
           & p_labile(:,:,iblk), &
@@ -1496,10 +1594,10 @@ CONTAINS
           & nproma, &
           & nsoil_sb, &
           & soil_lay_depth_center_sl(:,:,iblk), & 
-          & soil_p_labile, &
-          & soil_p_slow, &
-          & soil_p_occluded, &
-          & soil_p_primary, &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
           & site_ID_spp1685, &
           & p_labile_slow_site(:,:,iblk), &
           & p_labile(:,:,iblk), &

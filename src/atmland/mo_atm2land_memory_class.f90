@@ -666,6 +666,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = press_srf_init)
 
       CALL mem%Add_var('drag_srf', mem%drag_srf, &

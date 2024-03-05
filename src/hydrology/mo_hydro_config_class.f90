@@ -68,6 +68,7 @@ CONTAINS
 
   SUBROUTINE Init_hydro_config(config)
 
+    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
@@ -119,7 +120,12 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
-    active                 = .TRUE.
+    SELECT CASE (config%model_config%model_scheme)
+    CASE (MODEL_QUINCY)
+      active                 = .FALSE.
+    CASE (MODEL_JSBACH)
+      active                 = .TRUE.
+    END SELECT
     bc_filename            = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
     ic_filename            = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
     bc_sso_filename        = 'bc_land_sso.nc'
