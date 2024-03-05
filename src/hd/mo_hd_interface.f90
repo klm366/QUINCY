@@ -436,6 +436,8 @@ CONTAINS
       CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:))
       CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:))
       CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
+      ! Sync comm stream 1 with our processing stream acc_stream
+      !$ACC WAIT(1) ASYNC(acc_stream)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
@@ -452,16 +454,16 @@ CONTAINS
       ! outflow_count(:,:) = nsplit(:,:)
       !dbg<<
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
-      DO blk = 1, nblks
-        DO jc = 1, nproma
-          ztemp(jc,blk) = (outflow_runoff(jc,blk) + outflow_drainage(jc,blk) + outflow_rivers(jc,blk)) * in_domain(jc,blk)
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      global_outflow = global_sum_array(ztemp, lacc=.TRUE.)
-
       IF (debug_hd) THEN
+
+       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+        DO blk = 1, nblks
+          DO jc = 1, nproma
+            ztemp(jc,blk) = (outflow_runoff(jc,blk) + outflow_drainage(jc,blk) + outflow_rivers(jc,blk)) * in_domain(jc,blk)
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+        global_outflow = global_sum_array(ztemp, lacc=.TRUE.)
         ! Consistency check: There should not be outflow in pure ocean cells
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
@@ -488,10 +490,10 @@ CONTAINS
       DO blk = blks, blke
         jcs = grid%get_col_start(blk)
         jce = grid%get_col_end(blk)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+        !$ACC LOOP SEQ
         DO n = 1, nneigh
-          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream) &
-          !$ACC   PRIVATE(jc_us, blk_us)
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG VECTOR PRIVATE(jc_us, blk_us)
           DO jc = jcs, jce
             ! inflow from grid cells upstream: outflow from runnoff, drainage and riverflow
             ! local indices of grid cells upstream
@@ -531,8 +533,8 @@ CONTAINS
               !dbg<<
             END IF
           END DO
-          !$ACC END PARALLEL
         END DO
+        !$ACC END PARALLEL
       END DO
 
       ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos, and only on CPU
@@ -781,8 +783,7 @@ CONTAINS
       & steplen,                  &
       & global_water_budget,      &  ! water budget of current step
       & global_water_budget_old,  &  ! water budget of previous step
-      & global_water_error,       &  ! water budget change within the time step
-      & global_water_flux            ! water fluxes changing the budget
+      & global_water_error           ! water budget change within the time step
 
     REAL(wp), POINTER :: water_error_gsum(:)
 
@@ -879,7 +880,6 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)
 
     ! Calculate global land water budget
     !
@@ -894,7 +894,6 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_budget = global_sum_array(water_budget, lacc=.TRUE.)
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water budget:')
@@ -952,7 +951,6 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    global_water_flux = global_sum_array(water_flux(:,:), lacc=.TRUE.)
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water fluxes during time interval:')
@@ -983,7 +981,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       WRITE(message_text,*) '-   discharge_ocean (neg.): ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
+      WRITE(message_text,*) '-->      sum of the fluxes: ', global_sum_array(water_flux, lacc=.TRUE.)*steplen, ' m3'
       CALL message(routine, message_text)
     END IF
 
@@ -1025,15 +1023,20 @@ CONTAINS
       WRITE (message_text,*) 'Water budget imbalance during time step: ', global_water_error,' m3'
       CALL message (routine,message_text)
     END IF
+    
+    IF (diag_water_budget) THEN
+      global_water_budget =     global_sum_array(water_budget,     lacc=.TRUE.)
+      global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)
 
-    IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN        !vg: zero at the very first time step
-      IF (ABS(global_water_error/global_water_budget) > 10._wp*EPSILON(1._wp)) THEN
-        WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
-             global_water_error,' m3'
-        IF (dsl4jsb_Config(HD_)%enforce_water_budget) THEN
-          CALL finish (TRIM(routine), message_text)
-        ELSE
-          CALL message (TRIM(routine), message_text)
+      IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN        !vg: zero at the very first time step
+        IF (ABS(global_water_error/global_water_budget) > 10._wp*EPSILON(1._wp)) THEN
+          WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
+              global_water_error,' m3'
+          IF (dsl4jsb_Config(HD_)%enforce_water_budget) THEN
+            CALL finish (TRIM(routine), message_text)
+          ELSE
+            CALL message (TRIM(routine), message_text)
+          END IF
         END IF
       END IF
     END IF
