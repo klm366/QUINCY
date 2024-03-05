@@ -444,6 +444,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
+	dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -459,10 +460,27 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
+	dsl4jsb_Get_memory(VEG_)
 
     ! @TODO  add missing variables for aggregation
 
+    ! VEG 2D
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_pot               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_pot               , weighted_by_fract)
+    ! SB_ 2D
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_noy                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2o                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_noy_n15                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2o_n15                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2_n15                 , weighted_by_fract)	
     ! SB_ 3D
+    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration_c13             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration_c14             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_no3_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_po4_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
