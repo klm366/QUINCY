@@ -58,6 +58,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_init'
 
+#ifdef __QUINCY_STANDALONE__
+    CALL spq_qs_read_init_vars(tile)
+    CALL spq_init_ic_bc(tile)
+    CALL spq_finalize_init_vars()
+#else
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL spq_read_init_vars(tile)
@@ -68,7 +73,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(SPQ_)) THEN
       CALL spq_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE spq_init
 
   ! ======================================================================================================= !
@@ -534,6 +539,76 @@ CONTAINS
       & spq_init_vars%soil_bulk_density)
   END SUBROUTINE spq_finalize_init_vars
 
+#ifdef __QUINCY_STANDALONE__
+  SUBROUTINE spq_qs_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(SPQ_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SPQ_)
+
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':spq_qs_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE( &
+      & spq_init_vars%soil_sand               (nproma, nblks),       &
+      & spq_init_vars%soil_silt               (nproma, nblks),       &
+      & spq_init_vars%soil_clay               (nproma, nblks),       &
+      & spq_init_vars%soil_sat_water_content  (nproma, nblks),       &
+      & spq_init_vars%soil_bulk_density       (nproma, nblks)        &
+      & )
+
+    spq_init_vars%soil_sand              (:,:) = missval
+    spq_init_vars%soil_silt              (:,:) = missval
+    spq_init_vars%soil_clay              (:,:) = missval
+    spq_init_vars%soil_sat_water_content (:,:) = missval
+    spq_init_vars%soil_bulk_density      (:,:) = missval
+
+    dsl4jsb_Get_config(SPQ_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    !> sand
+    !>
+    spq_init_vars%soil_sand(:,:) = dsl4jsb_Config(SPQ_)%soil_sand
+
+    !> silt
+    !>
+    spq_init_vars%soil_silt(:,:) = dsl4jsb_Config(SPQ_)%soil_silt
+
+    !> clay
+    !>
+    spq_init_vars%soil_clay(:,:) = dsl4jsb_Config(SPQ_)%soil_clay
+
+    !> bulk density
+    !>
+    spq_init_vars%soil_bulk_density(:,:) = dsl4jsb_Config(SPQ_)%bulk_density
+
+    !> saturated water content (awc)
+    !>
+    spq_init_vars%soil_sat_water_content(:,:) = dsl4jsb_Config(SPQ_)%soil_awc_prescribe
+  END SUBROUTINE spq_qs_read_init_vars
+#else
   ! ======================================================================================================= !
   !> read SPQ_ init vars from input file
   !>
@@ -638,6 +713,7 @@ CONTAINS
 
     CALL input_file%Close()
   END SUBROUTINE spq_read_init_vars
+#endif
 
   ! ======================================================================================================= !
   !>ensure a certain minimum proportion for sand, clay and silt
