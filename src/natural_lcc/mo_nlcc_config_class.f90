@@ -29,10 +29,11 @@ MODULE mo_nlcc_config_class
   PUBLIC :: t_nlcc_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_nlcc_config
-    LOGICAL             :: &
+    LOGICAL              :: &
       & init_running_means, &
-      & init_nlcc
-    REAL(wp)            :: &
+      & init_nlcc,          &
+      & climbuf_only
+    REAL(wp)             :: &
       & accelerate_nlcc
 
    CONTAINS
@@ -98,6 +99,7 @@ CONTAINS
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
     config%init_nlcc         = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
+    config%climbuf_only      = .FALSE. ! Can only be activated from the CH4_ process
     config%accelerate_nlcc   = accelerate_nlcc
     IF (accelerate_nlcc /= 1._wp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc

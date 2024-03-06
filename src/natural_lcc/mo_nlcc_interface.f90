@@ -26,7 +26,7 @@ MODULE mo_nlcc_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -198,13 +198,12 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
+    model => Get_model(tile%owner_model_id)
 
     ! If process is not to be calculated on this tile, do nothing
-    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
+    IF (debug_on() .AND.  (iblk == 1)) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_config(NLCC_)
 
@@ -215,6 +214,51 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(DISTURB_)
+
+    ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp_of_yr) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp20)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
+!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
+
+    ! Required time diagnostics
+    lstart    = is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc
+    new_year  = is_newyear (options%current_datetime, options%dtime)
+    new_month = is_newmonth(options%current_datetime, options%dtime)
+    new_day   = is_newday  (options%current_datetime, options%dtime)
+
+    ! Update climbuf
+    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
+    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
+    init_mmtemp20 = MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp
+    CALL calc_climbuf(lstart, init_running_means .OR. init_mmtemp20, new_day, new_month, new_year, dtime, t_air, &
+                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
+                      gdd_sum_year, gdd_prev_year)
+
+    IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
+       IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp) &
+          CALL message(TRIM(routine), 'initialisation of mmtemp20')
+    ENDIF
+
+    ! For CH4_%do_termite, only calc_climbuf is needed. Thus we can now return if no real NLCC_ is wanted
+    IF (dsl4jsb_Config(NLCC_)%climbuf_only) RETURN
 
     ! import lct information from PFT tiles
     !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
@@ -263,37 +307,6 @@ CONTAINS
     burned_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%burned_fract)
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
-    ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
-!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
-
-    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
-    new_year = is_newyear(options%current_datetime, options%dtime)
-    new_month = is_newmonth(options%current_datetime, options%dtime)
-    new_day = is_newday(options%current_datetime, options%dtime)
-
     ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))
     cover_fract_sum(:) = 0._wp
@@ -323,20 +336,6 @@ CONTAINS
        bare_fpc(:) = 0._wp
        CALL scale_fpc(routine, nc, iblk, no_children, is_dynamic, act_fpc, bare_fpc)
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
-    ENDIF
-
-    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
-    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
-    init_mmtemp20 = .TRUE.
-    IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                      gdd_sum_year, gdd_prev_year)
-
-    IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
-       IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp) &
-          CALL message(TRIM(routine), 'initialisation of mmtemp20')
     ENDIF
 
 !!$ TR    WRITE (*,*) 't_air: ', lstart, new_day, t_air(:)
@@ -421,7 +420,9 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
     INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    dsl4jsb_Def_memory(NLCC_)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_nlcc'
 
     ! Get local variables from options argument
@@ -435,8 +436,12 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    !X Implementation: Start your process scheme here...
+    dsl4jsb_Get_memory(NLCC_)
 
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(NLCC_, min_mmtemp20, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(NLCC_, max_mmtemp20, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
