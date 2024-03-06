@@ -865,7 +865,6 @@ CONTAINS
           CALL wlcc_init_lcc(tile)
         END IF
 
-! StW: Need some topmodel stuff here?
       END SELECT
 
         IF (tile%Is_process_active(ALCC_)) THEN

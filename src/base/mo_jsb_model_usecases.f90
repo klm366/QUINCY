@@ -233,6 +233,8 @@ CONTAINS
   !>
   SUBROUTINE init_usecase_pfts(model)
 
+    dsl4jsb_Use_config(CH4_)
+
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
@@ -262,8 +264,11 @@ CONTAINS
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
+    dsl4jsb_Def_config(CH4_)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
+    dsl4jsb_Get_config(CH4_)
     ! overview of tile structure:
     !
     !  box
@@ -559,7 +564,15 @@ CONTAINS
                   !$ACC ENTER DATA COPYIN(fage_tile)
                 END DO
               END IF
+              IF (model%processes(NLCC_)%p%config%active .OR. &
+                  (model%processes(CH4_)%p%config%active .AND. dsl4jsb_Config(CH4_)%do_termite)) THEN
+                CALL pft_tile%Set_process_action(NLCC_, INHERIT_, AGGREGATE_)
+              ENDIF
             END DO
+          IF (model%processes(NLCC_)%p%config%active .OR. &
+              (model%processes(CH4_)%p%config%active .AND. dsl4jsb_Config(CH4_)%do_termite)) THEN
+            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+          END IF
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
@@ -581,12 +594,14 @@ CONTAINS
   SUBROUTINE init_usecase_pfts_with_forest_age_classes(model)
 
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(CH4_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, fage_tile
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(CH4_)
 
     INTEGER :: i, j
     INTEGER :: nacs
@@ -643,6 +658,7 @@ CONTAINS
     model%top => box_tile
 
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(CH4_)
 
     ! FAGE_ is the process that organises ageing in the age classes.
     ! It does not make sense to run age classes without FAGE_ and vice versa!
@@ -704,7 +720,8 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
-          IF (model%processes(NLCC_)%p%config%active) THEN
+          IF ((model%processes(NLCC_)%p%config%active) .OR. &
+              (model%processes(CH4_)%p%config%active .AND. dsl4jsb_config(CH4_)%do_termite)) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
 
