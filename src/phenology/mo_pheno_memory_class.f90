@@ -254,7 +254,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
+          & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = -1.0_wp) ! Secure that uninitialized values are not used
@@ -265,7 +265,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
+          & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)

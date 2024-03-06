@@ -368,8 +368,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_prev_year)          ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_sum)                ! inout
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_prev_year)          ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_sum)                ! inout
+    ENDIF
     ! ---------------------------
     ! Go
 
@@ -708,6 +710,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
@@ -724,6 +727,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(PHENO_)
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
@@ -742,6 +746,10 @@ CONTAINS
     ENDIF
     !X Implementation: Start your process scheme here...
     !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Aggregate_onChunk(PHENO_, GDD_prev_year, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, GDD_sum,       weighted_by_fract)
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_phenology
@@ -762,6 +770,7 @@ CONTAINS
     ! Local variables
 
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
