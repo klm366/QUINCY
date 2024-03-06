@@ -100,7 +100,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
+    dsl4jsb_Def_config(NLCC_)
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(NLCC_)
 
     table = tables(1)
 
@@ -187,6 +191,9 @@ CONTAINS
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
       & initval_r=0.0_wp )
+
+    IF (dsl4jsb_config(NLCC_)%climbuf_only .OR. &
+       .NOT. dsl4jsb_config(NLCC_)%active) RETURN
 
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
