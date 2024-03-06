@@ -273,7 +273,7 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_fire) THEN
       CALL mem%Add_var( 'CH4_out_fire', mem%CH4_out_fire,                      &
         & hgrid, surface,                                                      &
-        & t_cf('CH4_out_fire', '', ''),                                        & ! unit?
+        & t_cf('CH4_out_fire', 'mol m-2 s-1', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
@@ -307,7 +307,7 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       CALL mem%Add_var( 'CH4_out_termite', mem%CH4_out_termite,                &
         & hgrid, surface,                                                      &
-        & t_cf('CH4_out_termite', '', ''),                                     & ! unit?
+        & t_cf('CH4_out_termite', 'mol m-2 s-1', ''),                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
@@ -325,7 +325,7 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       CALL mem%Add_var( 'CH4_out_herbivore', mem%CH4_out_herbivore,            &
         & hgrid, surface,                                                      &
-        & t_cf('CH4_out_herbivore', '', ''),                                   & ! unit?
+        & t_cf('CH4_out_herbivore', 'mol m-2 s-1', ''),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
