@@ -208,7 +208,6 @@ CONTAINS
     USE mo_methane_process,   ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire
     USE mo_methane_process,   ONLY: soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm
     USE mo_methane_process,   ONLY: reaction_diffusion, ebullition, init_gas_pools
-    USE mo_mpi,               ONLY: p_sum
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -527,15 +526,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, O2_wet%dens_sl)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_termite)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_herbivore)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_fire)
-    dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_NO)
-    dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_CO)
-    dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_iso)
+    IF (dsl4jsb_Config(CH4_)%do_fire) THEN
+      dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_fire)
+      dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_NO)
+      dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_CO)
+      dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_iso)
+    ENDIF
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
+      dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_termite)
       dsl4jsb_Get_var2D_onChunk(NLCC_, min_mmtemp20)
+    ENDIF
+    IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
+      dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_herbivore)
     ENDIF
     IF (dbg) THEN
       dsl4jsb_Get_var3D_onChunk(CH4_, CH4_wet%prod_out_sl)

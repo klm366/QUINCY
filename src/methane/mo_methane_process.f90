@@ -1174,7 +1174,7 @@ CONTAINS
     REAL(wp),           INTENT(in)    :: frac_tile          ! Fraction of tile
     REAL(wp),           INTENT(in)    :: GPP                ! GPP of last year [mol(C) m-2(canopy) s-1]
     REAL(wp),           INTENT(in)    :: GDD                ! Growing degree days (of last year) [degC]
-    REAL(wp),           INTENT(in)    :: min_mmtemp20       ! Growing degree days (of last year) [degC]
+    REAL(wp),           INTENT(in)    :: min_mmtemp20       ! Growing degree days (of last years) [degC]
     LOGICAL,            INTENT(in)    :: GPP_dep_termites   ! Does termite biomass depend on GPP for this tile?
     REAL(wp),           INTENT(out)   :: termite_biomass    ! Biomass of termites [g m-2(canopy)]
     REAL(wp),           INTENT(out)   :: CH4_out_termite    ! Methane production flux by termites [mol m-2(canopy) s-1]
