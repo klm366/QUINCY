@@ -29,7 +29,7 @@ MODULE mo_jsb_model_usecases
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, TOP_, &
     &                               CH4_, MEGAN_,                                                                         &
     &                               Q_PHENO_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_, INHERIT_!, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE   ! define the type of the tile
@@ -159,6 +159,8 @@ CONTAINS
   !>
   SUBROUTINE init_usecase_pfts(model)
 
+    dsl4jsb_Use_config(CH4_)
+
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
@@ -188,8 +190,11 @@ CONTAINS
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
+    dsl4jsb_Def_config(CH4_)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
+    dsl4jsb_Get_config(CH4_)
     ! overview of tile structure:
     !
     !  box
@@ -268,10 +273,6 @@ CONTAINS
             CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
           END IF
 
-          IF (model%processes(NLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-
           ! All "normal" vegetation PFTs are processed the same way by TOP_ and CH_ processes,
           ! thus much time can be saved by calculating only once. However, a specific peatland tile
           ! requires special treatment and thus each PFT must be calculcated by itself
@@ -332,7 +333,15 @@ CONTAINS
               IF (model%processes(MEGAN_)%p%config%active) THEN
                 CALL pft_tile%Set_process_action(MEGAN_, ON_LEAFS_, AGGREGATE_)
               END IF
+              IF (model%processes(NLCC_)%p%config%active .OR. &
+                  (model%processes(CH4_)%p%config%active .AND. dsl4jsb_Config(CH4_)%do_termite)) THEN
+                CALL pft_tile%Set_process_action(NLCC_, INHERIT_, AGGREGATE_)
+              ENDIF
             END DO
+          IF (model%processes(NLCC_)%p%config%active .OR. &
+              (model%processes(CH4_)%p%config%active .AND. dsl4jsb_Config(CH4_)%do_termite)) THEN
+            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+          END IF
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
@@ -354,12 +363,14 @@ CONTAINS
   SUBROUTINE init_usecase_pfts_with_forest_age_classes(model)
 
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(CH4_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, fage_tile
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(CH4_)
 
     INTEGER :: i, j
     INTEGER :: nacs
@@ -416,6 +427,7 @@ CONTAINS
     model%top => box_tile
 
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(CH4_)
 
     ! FAGE_ is the process that organises ageing in the age classes.
     ! It does not make sense to run age classes without FAGE_ and vice versa!
@@ -477,7 +489,8 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
-          IF (model%processes(NLCC_)%p%config%active) THEN
+          IF ((model%processes(NLCC_)%p%config%active) .OR. &
+              (model%processes(CH4_)%p%config%active .AND. dsl4jsb_config(CH4_)%do_termite)) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
 

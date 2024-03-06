@@ -878,7 +878,6 @@ CONTAINS
           CALL wlcc_init_lcc(tile)
         END IF
 
-! StW: Need some topmodel stuff here?
       END SELECT
 
       CALL model%Goto_next_tile(tile)

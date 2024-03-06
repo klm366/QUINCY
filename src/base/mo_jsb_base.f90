@@ -59,7 +59,7 @@ CONTAINS
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, NLCC_, CH4_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -71,6 +71,8 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(NLCC_)
+    dsl4jsb_Use_config(CH4_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -84,6 +86,8 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(NLCC_)
+    dsl4jsb_Def_config(CH4_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -209,6 +213,8 @@ CONTAINS
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
+        dsl4jsb_Get_config(NLCC_)
+        dsl4jsb_Get_config(CH4_)
       END SELECT
 
       ! Crosscheck process configs
@@ -260,6 +266,13 @@ CONTAINS
         IF (model%config%init_from_ifs) THEN
           CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
         END IF
+
+        IF (model%Is_process_enabled(CH4_) .AND. dsl4jsb_Config(CH4_)%do_termite .AND. &
+            .NOT. model%Is_process_enabled(NLCC_)) THEN
+          dsl4jsb_Config(NLCC_)%active = .TRUE.
+          dsl4jsb_Config(NLCC_)%climbuf_only = .TRUE.
+          CALL message(TRIM(routine), 'Switching on nlcc process since methane process is active with do_termites')
+        ENDIF
 
         IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
           ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
