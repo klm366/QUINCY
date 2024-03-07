@@ -644,8 +644,8 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), field_cap_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(weq_soil(1:nc))
+      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp) &
+      !$ACC   ASYNC(acc_stream)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
