@@ -23,6 +23,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_turb_memory_class,    ONLY: t_turb_memory
   USE mo_sse_memory_class,     ONLY: t_sse_memory
   USE mo_hydro_memory_class,   ONLY: t_hydro_memory
+  USE mo_mix_memory_class,     ONLY: t_mix_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
@@ -47,6 +48,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_sse_config_class,     ONLY: t_sse_config
   USE mo_hydro_interface,      ONLY: Register_hydro_tasks
   USE mo_hydro_config_class,   ONLY: t_hydro_config
+  USE mo_mix_interface,        ONLY: Register_mix_tasks
+  USE mo_mix_config_class,     ONLY: t_mix_config
   USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
@@ -78,7 +81,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, MIX_
 
   IMPLICIT NONE
   PRIVATE
@@ -123,6 +126,9 @@ CONTAINS
     CASE (HYDRO_)
       CALL Register_hydro_tasks(return_ptr, model_id)
       ALLOCATE(t_hydro_config::return_ptr%config)
+    CASE (MIX_)
+      CALL Register_mix_tasks(return_ptr, model_id)
+      ALLOCATE(t_mix_config::return_ptr%config)
     CASE (ASSIMI_)
       CALL Register_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_assimi_config::return_ptr%config)
@@ -191,6 +197,7 @@ CONTAINS
     USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
     USE mo_sse_memory_class,     ONLY: max_no_of_sse_vars => max_no_of_vars
     USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
+    USE mo_mix_memory_class,     ONLY: max_no_of_mix_vars => max_no_of_vars
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
@@ -228,6 +235,9 @@ CONTAINS
     CASE (HYDRO_)
       ALLOCATE(t_hydro_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hydro_vars
+    CASE (MIX_)
+      ALLOCATE(t_mix_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_mix_vars
     CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars

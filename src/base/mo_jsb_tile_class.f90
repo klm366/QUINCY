@@ -26,7 +26,8 @@ MODULE mo_jsb_tile_class
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, &
+    &                               UPLAND_TYPE, LOWLAND_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
@@ -80,11 +81,15 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: is_land = .FALSE.
     LOGICAL                                :: is_glacier = .FALSE.
     LOGICAL                                :: is_lake = .FALSE.
+    LOGICAL                                :: is_upland = .FALSE.             !< whether primary lct is UPLAND_TYPE
+    LOGICAL                                :: is_lowland = .FALSE.            !< whether primary lct is LOWLAND_TYPE
     LOGICAL                                :: contains_vegetation = .FALSE.
     LOGICAL                                :: contains_bare = .FALSE.
     LOGICAL                                :: contains_land = .FALSE.
     LOGICAL                                :: contains_glacier = .FALSE.
     LOGICAL                                :: contains_lake = .FALSE.
+    LOGICAL                                :: contains_upland = .FALSE.       !< whether any lct of tile is UPLAND_TYPE
+    LOGICAL                                :: contains_lowland = .FALSE.      !< whether any lct of tile is LOWLAND_TYPE
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
@@ -348,6 +353,10 @@ CONTAINS
           this%is_glacier = .TRUE.
         CASE (LAKE_TYPE)
           this%is_lake = .TRUE.
+        CASE (UPLAND_TYPE)
+          this%is_upland = .TRUE.
+        CASE (LOWLAND_TYPE)
+          this%is_lowland = .TRUE.
         END SELECT
       END IF
 
@@ -376,6 +385,10 @@ CONTAINS
       this%contains_glacier = .TRUE.
     CASE (LAKE_TYPE)
       this%contains_lake = .TRUE.
+    CASE (UPLAND_TYPE)
+      this%contains_upland = .TRUE.
+    CASE (LOWLAND_TYPE)
+      this%contains_lowland = .TRUE.
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land
