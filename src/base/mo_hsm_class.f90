@@ -979,15 +979,15 @@ CONTAINS
 
         IF (new_msg%action%name /= "INTEGRATE") THEN
           ! Join all the streams before the first non-integration task
-          IF (original_stream /= -1) THEN
-            DO stream = 2, acc_stream
+          IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
+            DO stream = original_stream+1, acc_stream
               !$ACC WAIT(stream) ASYNC(original_stream)
             ENDDO
             ! Dummy kernel for the faster graph dependency resolution
             !$ACC PARALLEL ASYNC(original_stream)
             dummy = 1
             !$ACC END PARALLEL
-            IF (acc_stream /= acc_async_sync) acc_stream = original_stream
+            acc_stream = original_stream
             original_stream = -1
           ENDIF
         ELSE
@@ -1031,6 +1031,17 @@ CONTAINS
         END IF
       END DO
 
+      IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
+        DO stream = original_stream+1, acc_stream
+          !$ACC WAIT(stream) ASYNC(original_stream)
+        ENDDO
+        ! Dummy kernel for the faster graph dependency resolution
+        !$ACC PARALLEL ASYNC(original_stream)
+        dummy = 1
+        !$ACC END PARALLEL
+        acc_stream = original_stream
+        original_stream = -1
+      ENDIF
 
     CASE (HSM_full)
 
