@@ -845,7 +845,9 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    ! if running with FLCC (which runs on the veg tile)
+    CALL weighted_by_fract%BeginAggregate()
+
+    ! if running with FLCC (which runs on the veg tile) 
     ! the co2flux_fire_all_2_atm_ta variable is changed on the leaves
     ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
     dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
@@ -866,6 +868,7 @@ CONTAINS
     ! dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
 
+    CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_ta_vars_after_lcc
 

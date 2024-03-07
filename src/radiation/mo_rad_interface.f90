@@ -370,6 +370,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net,  weighted_by_fract)
@@ -379,6 +381,8 @@ CONTAINS
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

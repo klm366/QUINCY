@@ -354,10 +354,14 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_damaged_area
 
