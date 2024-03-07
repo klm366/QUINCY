@@ -720,6 +720,7 @@ CONTAINS
 
     END SELECT
 
+    !$ACC WAIT(acc_stream)
     !$ACC END DATA
     DEALLOCATE (in_domain, ztemp)
 
@@ -867,6 +868,7 @@ CONTAINS
       END IF
       !$ACC EXIT DATA DELETE(in_domain, ztemp)
       DEALLOCATE(in_domain, ztemp)
+      !$ACC WAIT(acc_stream)
       RETURN
     END IF
 
@@ -1004,6 +1006,7 @@ CONTAINS
     IF (is_time_experiment_start(options%current_datetime)) THEN
       !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
       DEALLOCATE (water_budget_old, water_flux)
+      !$ACC WAIT(acc_stream)
       RETURN
     END IF
     !
@@ -1047,6 +1050,7 @@ CONTAINS
 
     !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
     DEALLOCATE (water_budget_old, water_flux)
+    !$ACC WAIT(acc_stream)
 
   END SUBROUTINE hd_check_water_budget
 
