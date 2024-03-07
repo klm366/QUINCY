@@ -856,6 +856,8 @@ CONTAINS
     END IF
 
     original_stream = acc_stream
+    IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
+    !$ACC WAIT(original_stream) ASYNC(acc_stream)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
@@ -1277,11 +1279,13 @@ CONTAINS
 
       !$ACC END PARALLEL
 
+    END IF
+
+    IF (acc_stream /= acc_async_sync) THEN
       DO stream = original_stream + 1, acc_stream
           !$ACC WAIT(stream) ASYNC(original_stream)
       ENDDO
-      IF (acc_stream /= acc_async_sync) acc_stream = original_stream
-
+      acc_stream = original_stream
     END IF
 
     !$ACC END DATA
