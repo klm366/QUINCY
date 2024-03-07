@@ -304,8 +304,10 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    !!# !$ACC DATA CREATE(declination) ASYNC(acc_stream)
-    CALL inquire_declination(declination) ! out
+    !$ACC DATA CREATE(declination) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream) ASYNC(1)
+    CALL inquire_declination(declination, .TRUE.) ! out
+    !$ACC WAIT(1) ASYNC(acc_stream)
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
@@ -328,7 +330,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL
     END IF
-    !!# !$ACC END DATA
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

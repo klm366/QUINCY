@@ -59,7 +59,9 @@ CONTAINS
 
     nc = SIZE(lai)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    ! NB: present(declination) is required here, because defaul(present) doesn't affect scalars
+    !
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(declination) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(cos_zenith_noon, k12)
     DO ic=1,nc
 
