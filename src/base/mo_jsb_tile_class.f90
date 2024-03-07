@@ -263,8 +263,10 @@ MODULE mo_jsb_tile_class
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     !> Variables needed to calculate aggregation weights
     REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    INTEGER :: nblks, nproma !< Tile parameters
-    INTEGER :: stream, original_stream !< Variables for OpenACC multi-stream aggregation
+    REAL(wp), POINTER     :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
+    REAL(wp), POINTER     :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
+
+    INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
     !> Functions to make use of the aggregator
     PROCEDURE :: BeginAggregate => BeginAggregate_weighted_by_fract !< Start  multi-stream aggregation (useful for OpenACC)
@@ -696,11 +698,12 @@ CONTAINS
     ALLOCATE(aggregator)
     aggregator%name = 'weighted_by_fract'
     aggregator%original_stream = -1
+    aggregator%stream = acc_stream
 
     grid => Get_grid(grid_id)
-    aggregator%nproma = grid%nproma
-    aggregator%nblks  = grid%nblks
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
+    ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
+    ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
     !$ACC ENTER DATA CREATE(aggregator, aggregator%fractions)
   END FUNCTION Create_aggregator_weighted_by_fract
 
@@ -720,28 +723,38 @@ CONTAINS
       !$ACC EXIT DATA DELETE(aggregator%fractions)
       DEALLOCATE(aggregator%fractions)
     END IF
+    IF (ALLOCATED(aggregator%data_sum)) THEN
+      DEALLOCATE(aggregator%data_sum)
+    END IF
+    IF (ALLOCATED(aggregator%fract_sum)) THEN
+      DEALLOCATE(aggregator%fract_sum)
+    END IF
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
 
   SUBROUTINE BeginAggregate_weighted_by_fract(this)
     CLASS(t_jsb_aggregator_weighted_by_fract),    INTENT(inout), TARGET :: this
 
-    this%original_stream = acc_stream
-    this%stream = 2
+    IF (this%stream /= acc_async_sync) THEN
+      this%original_stream = acc_stream
+      this%stream = this%original_stream + 1
+    END IF
   END SUBROUTINE BeginAggregate_weighted_by_fract
   SUBROUTINE EndAggregate_weighted_by_fract(this)
     CLASS(t_jsb_aggregator_weighted_by_fract),    INTENT(inout), TARGET :: this
     INTEGER :: stream, dummy
 
-    DO stream = 2, this%stream - 1
-      !$ACC WAIT(stream) ASYNC(this%original_stream)
-    END DO
-    ! Dummy kernel for simpler graph dependency resolution
-    !$ACC PARALLEL ASYNC(this%original_stream)
-    dummy = 1
-    !$ACC END PARALLEL
-    IF (acc_stream /= acc_async_sync) acc_stream = this%original_stream
+    IF (this%original_stream /= -1) THEN
+      DO stream = this%original_stream + 1, this%stream - 1
+        !$ACC WAIT(stream) ASYNC(this%original_stream)
+      END DO
+      ! Dummy kernel for simpler graph dependency resolution
+      !$ACC PARALLEL ASYNC(this%original_stream)
+      dummy = 1
+      !$ACC END PARALLEL
+    END IF
     this%original_stream = -1
+    this%stream = acc_stream
   END SUBROUTINE EndAggregate_weighted_by_fract
 
   ! ====================================================================================================== !
@@ -854,8 +867,8 @@ CONTAINS
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
-    REAL(wp) :: fract_sum(this%nproma, this%nblks)
-    REAL(wp) :: data_sum(this%nproma, this%nblks)
+    REAL(wp), POINTER :: fract_sum(:,:)
+    REAL(wp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -910,8 +923,11 @@ CONTAINS
       END DO
     END IF
 
-    IF (this%original_stream == -1) this%stream = acc_stream
-    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) WAIT(this%original_stream) ASYNC(this%stream)
+    data_sum  => this%data_sum
+    fract_sum => this%fract_sum
+
+    !$ACC WAIT(this%original_stream) ASYNC(this%stream) IF(this%original_stream /= -1)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) ASYNC(this%stream)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       ! If there is only one child nothing needs to be aggregated ...
@@ -1022,8 +1038,8 @@ CONTAINS
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
-    REAL(wp) :: fract_sum(this%nproma, this%nblks)
-    REAL(wp) :: data_sum(this%nproma, this%nblks)
+    REAL(wp), POINTER :: fract_sum(:,:)
+    REAL(wp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
@@ -1080,8 +1096,11 @@ CONTAINS
       END DO
     END IF
 
-    IF (this%original_stream == -1) this%stream = acc_stream
-    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) WAIT(this%original_stream) ASYNC(this%stream)
+    data_sum  => this%data_sum
+    fract_sum => this%fract_sum
+
+    !$ACC WAIT(this%original_stream) ASYNC(this%stream) IF(this%original_stream /= -1)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) ASYNC(this%stream)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       ! If there is only one child nothing needs to be aggregated ...
