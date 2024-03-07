@@ -30,7 +30,7 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newday, is_time_experiment_start, is_time_restart
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
   dsl4jsb_Use_processes CARBON_, ALCC_
@@ -49,11 +49,8 @@ MODULE mo_jsb_interface
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
-  ! TODO: This is kind of a hack, but for now this is sufficient.
-  ! If this variable is set (should be done during jsbach_start_timestep),
-  ! the step will not run with a CUDA graph, and new graphs will be captured starting
-  ! with the following step
-  LOGICAL :: invalidate_cuda_graphs
+  LOGICAL :: invalidate_cuda_graphs ! If true, all the existing graphs will be deleted
+                                    ! For example, after reading new data or at the start of a new day
 
 CONTAINS
 
@@ -647,7 +644,12 @@ CONTAINS
     ENDIF
 
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
-    invalidate_cuda_graphs = .false.
+    invalidate_cuda_graphs = .FALSE.
+    IF (     is_time_experiment_start(current_datetime) .OR. is_time_restart(current_datetime)  &
+        .OR. is_newday(current_datetime, dtime) .OR. is_newyear(current_datetime, dtime) ) THEN
+      ! Invalidate graphs when the workflow is changing
+      invalidate_cuda_graphs = .TRUE.
+    END IF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -664,7 +666,7 @@ CONTAINS
   SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
-    USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
+    USE mo_jsb_time,    ONLY: is_newmonth
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
     USE mo_seb_interface,      ONLY: global_seb_diagnostics
