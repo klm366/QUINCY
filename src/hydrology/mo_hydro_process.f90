@@ -24,7 +24,7 @@ MODULE mo_hydro_process
   PRIVATE
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
-    & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
+    & calc_wskin_fractions_lice, calc_wet_fractions_veg, calc_wet_fractions_bare,             &
     & get_canopy_conductance, get_water_stress_factor, calc_orographic_features,              &
     & get_soilhyd_properties
 
@@ -54,7 +54,7 @@ CONTAINS
   !! @param [in]     skinres_canopy_max    Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
   !! @param [in]     skinres_max           Total capacity of the skin reservoirs, i.e. soil and canopy [m]
   !! @param [in]     fract_snow            surface snow fraction []
-  !! @param [in]     fract_wet             skin reservoir fraction []
+  !! @param [in]     fract_skin            skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation (if there was enough water/ice) [kg m-2 s-1]
@@ -81,12 +81,14 @@ CONTAINS
     & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
     & l_infil_subzero, snow_depth_max, steepness, t_soil_sl1,       &
     & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
-    & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot,       &
-    & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
+    & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
+    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
+    & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & q_snocpymlt, snow_accum, snowmelt_soil,                       &
-    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
-    & evapo_deficit, infilt, runoff)
+    & wtr_pond, ice_pond, q_snocpymlt,                              &
+    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
+    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
+    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt, runoff)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Catchment_, Point_
@@ -97,15 +99,18 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), fract_snow(:), fract_wet(:), &
-      & hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:),         &
-      & rain(:), snow(:), weq_rootzone(:), weq_rootzone_max(:)
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
+      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
+      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
+      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:)
     REAL(wp), INTENT(inout) :: &
-      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:)
-    REAL(wp), INTENT(out)   ::                                               &
-      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), evapotrans_soil(:), &
-      & evapo_skin(:), evapo_snow(:), water_to_soil(:), evapo_deficit(:),    &
-      & infilt(:), runoff(:)
+      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
+      & wtr_pond(:), ice_pond(:)
+    REAL(wp), INTENT(out)   ::                                              &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
+      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
+      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),               &
+      & evapo_deficit(:), infilt(:), runoff(:)
     !
     !  local variables
     !
@@ -114,9 +119,10 @@ CONTAINS
       & new_snow,             & !< amount of snowfall within time step [m]
       & weq_snow_soil_old,    & !< amount of snow prior to update [m]
       & evapotrans_in_m,      & !< amount of evapotranspiration within time step [m]
-      & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
+      & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow, skin and ponds) within time step [m]
       & evapo_soil_in_m,      & !< amount of ground evaporation within time step [m]
       & evapo_skin_in_m,      & !< amount of evaporation from skin reservoir within time step [m]
+      & evapo_pond_in_m,      & !< amount of evaporation from pond reservoir within time step [m]
       & transpiration_in_m,   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
       & snowmelt_can,         & !< snow melt from canopy [m]
@@ -129,8 +135,14 @@ CONTAINS
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
+      & evapo_pond_pot_in_m,  & !< potential evaporation from pond reservoir
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
-      & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
+      & wtr_skin_pre_rain,    & !< amount of water in the skin reservoir prior to the update [m]
+      & t_pond,               & !< surface pond water temperature [K]
+      & wtr_pond_inflow,      & !< pond inflow [m]
+      & wtr_pond_outflow,     & !< pond outflow [m]
+      & wtr_pond_overflow,    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
+      & pond_change_pot         !< amount of water that could potentially be frozen or thawed [m]
 
     INTEGER :: ic, nc
     !
@@ -139,6 +151,8 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2 = 1.87E5_wp     ! [Ks]
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
+    REAL(wp), PARAMETER :: k_sat_clay = 8.50E-8_wp ! saturated hydraulic conductivity for clay (Terra model) [m s-1]
+
 
     nc = SIZE(snowmelt_soil)
 
@@ -149,7 +163,7 @@ CONTAINS
     !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m)    &
     !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow)  &
     !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)            &
-    !$ACC   PRIVATE(rain_to_skinres, wtr_skin_pre_rain)
+    !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
 
     DO ic = 1, nc
       snow_accum(ic)        = 0._wp
@@ -158,8 +172,11 @@ CONTAINS
       evapotrans_soil(ic)   = 0._wp
       evapo_skin(ic)        = 0._wp
       evapo_snow(ic)        = 0._wp
+      pond_freeze(ic)       = 0._wp
+      pond_melt(ic)         = 0._wp
       water_to_soil(ic)     = 0._wp
       evapo_deficit(ic)     = 0._wp
+      wtr_pond_net_flx(ic)  = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -170,7 +187,8 @@ CONTAINS
       transpiration_in_m  = transpiration(ic) * dtime/rhoh2o
       evapo_snow_pot_in_m = fract_snow(ic)    * evapopot(ic) * dtime/rhoh2o
       evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-      evapo_skin_pot_in_m = (1._wp - fract_snow(ic)) * fract_wet(ic) * evapopot(ic) * dtime/rhoh2o
+      evapo_skin_pot_in_m = (1._wp - fract_snow(ic)) * fract_skin(ic) * evapopot(ic) * dtime/rhoh2o
+      evapo_pond_pot_in_m = (1._wp - fract_snow(ic)) * fract_pond(ic) * evapopot(ic) * dtime/rhoh2o
 
       !---------------------------------------------
       !  Budgets of snow (canopy, ground)
@@ -239,8 +257,28 @@ CONTAINS
         weq_snow_soil(ic) = MIN(snow_depth_max, weq_snow_soil(ic))
       END IF
 
+      !  Freezing and melting of surface pond reservoir
+      ! @todo add t_pond as persistent variable, provide specific heat capacity
+      !       and move to sse routine. Also use ice density for ice fluxes
+      !------------------------
+      ! 1.) Potential melting:
+      t_pond = t_unfilt(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
+      IF (t_pond > tmelt .AND. ice_pond(ic) > 0._wp) THEN
+        pond_change_pot      = hcap_grnd(ic) * (t_pond-tmelt)/(alf*rhoh2o)
+        pond_melt(ic)        = MAX(MIN(pond_change_pot, ice_pond(ic)), 0._wp)
+        ice_pond(ic)         = ice_pond(ic) - pond_melt(ic)
+        wtr_pond(ic)         = wtr_pond(ic) + pond_melt(ic)
+        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + pond_melt(ic)
+      ELSE IF (t_pond < tmelt .AND. wtr_pond(ic) > 0._wp) THEN
+        pond_change_pot      = hcap_grnd(ic) * (tmelt-t_pond)/(alf*rhoh2o)
+        pond_freeze(ic)      = MAX(MIN(pond_change_pot, wtr_pond(ic)), 0._wp)
+        wtr_pond(ic)         = wtr_pond(ic) - pond_freeze(ic)
+        ice_pond(ic)         = ice_pond(ic) + pond_freeze(ic)
+        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) - pond_freeze(ic)
+      END IF
+
       !-----------------------------------------------------------
-      !   Budget of water in skin reservoir (canopy and ground)
+      !   Budget of water in skin and pond reservoir (canopy and ground)
       !-----------------------------------------------------------
       ! Interception of rain (part of rain goes into skin reservoir)
       rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max(ic) - wtr_skin(ic), 0._wp))
@@ -253,11 +291,39 @@ CONTAINS
       ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
       !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
       evapo_skin_in_m = wtr_skin(ic) - (wtr_skin_pre_rain + rain_to_skinres)
-      evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m
+
+      ! Limit pond evaporation to the available pond weq
+      evapo_pond_in_m = MAX(-(wtr_pond(ic) + ice_pond(ic)), evapo_pond_pot_in_m)
+      ! Only evaporate from ponds if demand cannot be fullfilled from skin reservoir and transpiration
+      evapo_pond_in_m = MAX(evapo_pond_in_m, &
+        & MIN(0._wp, evapotrans_no_snow - evapo_skin_in_m - transpiration_in_m))
+
+      ! Update evaporation required from the soil
+      evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
+      IF (weq_soil(ic) + evapotrans_soil_in_m < 0._wp) THEN
+        ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
+        evapo_pond_in_m  = MAX(-(wtr_pond(ic) + ice_pond(ic)), &
+          &                    evapo_pond_in_m + (weq_soil(ic) + evapotrans_soil_in_m))
+        evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
+      END IF
+      evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m
+
+      ! Add dew to liquid pond storage or evaporate pond water
+      IF (evapo_pond_in_m > 0._wp .OR. -evapo_pond_in_m <= wtr_pond(ic)) THEN
+        wtr_pond(ic) = wtr_pond(ic) + evapo_pond_in_m
+      ELSE IF (-evapo_pond_in_m < wtr_pond(ic) + ice_pond(ic)) THEN
+        ice_pond(ic) = ice_pond(ic) + (evapo_pond_in_m + wtr_pond(ic))
+        wtr_pond(ic) = 0._wp
+      ELSE
+        evapo_deficit(ic) = evapo_deficit(ic) + (evapo_pond_in_m + wtr_pond(ic) + ice_pond(ic))
+        wtr_pond(ic) = 0._wp
+        ice_pond(ic) = 0._wp
+      END IF
+      wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + evapo_pond_in_m
+
       IF (evapo_skin_pot_in_m < 0._wp) THEN
         evapo_deficit(ic) = evapo_deficit(ic) + evapo_skin_pot_in_m - evapo_skin_in_m
       END IF
-      evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m  ! Evaporation from ground
 
       ! Positive values of evaporation and transpiration (dew) are added to water_to_soil.
       ! Negative fluxes change soil moisture later in calc_soil_hydrology.
@@ -296,6 +362,45 @@ CONTAINS
 
       ! Compute fluxes based on catchment scale approach
       ELSE IF (hydro_scale == Catchment_) THEN
+        ! Lateral water flows from ponds are connected to the choice of the surface runoff
+        ! and infiltration scheme. The following pond flow scheme is based on the WEED
+        ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
+        ! with the ARNO runoff scheme.
+
+        ! Compute lateral inflow into ponds, expected to originate
+        ! from the whole grid cell and flow towards the depressions. Thus, most of the
+        ! available water is expected to end up in ponds
+        wtr_pond_inflow = water_to_soil(ic) * fract_pond(ic)**(1.0_wp/3.0_wp)
+
+        ! As ponds form in depressions, no lateral outflow is assumed but
+        ! rather infiltration into the soil. Here we use several assumptions:
+        ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
+        !   limitation and is scaled with pond fraction as only a part of the cell is covered by ponds
+        ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
+        IF (ice_pond(ic) > 0._wp) THEN
+          wtr_pond_outflow = 0._wp
+        ELSE
+          wtr_pond_outflow = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
+          & k_sat_clay * dtime * fract_pond(ic))
+        END IF
+        ! Update pond storages
+        wtr_pond(ic)         = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
+
+        ! If pond water (+ ice storage) exceeds the maximum allowed pond content, compute
+        ! overflow to be added to water_to_soil
+        IF (wtr_pond(ic) + ice_pond(ic) > weq_pond_max(ic)) THEN
+          wtr_pond_overflow = MAX(0._wp, wtr_pond(ic) + ice_pond(ic) - weq_pond_max(ic))
+          wtr_pond(ic)      = MAX(0._wp, weq_pond_max(ic) - ice_pond(ic))
+        ELSE
+          wtr_pond_overflow = 0._wp
+        END IF
+        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + wtr_pond_inflow  &
+          &                  - wtr_pond_outflow - wtr_pond_overflow
+
+        ! Update amount of water available for runoff and infiltration
+        water_to_soil(ic) = water_to_soil(ic) - wtr_pond_inflow + wtr_pond_outflow &
+          &              + wtr_pond_overflow
+
         ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
         ! Infiltration takes place in the root zone and what doesn't fit goes to the runoff
         ! Runoff has two components:
@@ -316,11 +421,15 @@ CONTAINS
       END IF
 
       ! Transform fluxes in output from [m] to [kg m-2 s-1]
-      snowmelt_soil(ic)   = snowmelt_soil(ic)    * rhoh2o / dtime
+      snowmelt_soil(ic) = snowmelt_soil(ic) * rhoh2o / dtime
+      pond_freeze(ic)   = pond_freeze(ic)   * rhoh2o / dtime
+      pond_melt(ic)     = pond_melt(ic)     * rhoh2o / dtime
 
-      evapotrans_soil(ic) = evapotrans_soil_in_m * rhoh2o / dtime
-      evapo_skin(ic)      = evapo_skin_in_m      * rhoh2o / dtime
-      evapo_snow(ic)      = evapo_snow_in_m      * rhoh2o / dtime
+      evapotrans_soil(ic)  = evapotrans_soil_in_m * rhoh2o / dtime
+      evapo_skin(ic)       = evapo_skin_in_m      * rhoh2o / dtime
+      evapo_snow(ic)       = evapo_snow_in_m      * rhoh2o / dtime
+      evapo_pond(ic)       = evapo_pond_in_m      * rhoh2o / dtime
+      wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) * rhoh2o / dtime
 
     END DO
     !$ACC END LOOP
@@ -463,9 +572,10 @@ CONTAINS
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,               &
-    & evapotrans_soil, transpiration,                                                    &
+    & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
+    & tpe_overflow, evapo_deficit,                                                       &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, infilt_over, drainage,  &
     & drainage_sl, wtr_transp_down, wtr_soilhyd_res                                      &
@@ -485,10 +595,11 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & lat, lon,                              &
-      & evapotrans_soil, transpiration
+      & lat, lon,                                       &
+      & fract_pond_max, evapotrans_soil, transpiration, &
+      & ice_pond, weq_pond_max
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_net_flx
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -501,7 +612,8 @@ CONTAINS
     REAL(wp) ::                       &
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
-      & drain_bot(nc)                   !< drainage towards bedrock [m]
+      & drain_bot(nc),                & !< drainage towards bedrock [m]
+      & wtr_pond_corr(nc)               !< correction term for ponds fluxes due to saturated soils [m]
 
     INTEGER :: ic, is
 
@@ -509,7 +621,7 @@ CONTAINS
     !$ACC DECLARE COPYIN(ilog)
 
     !$ACC DATA &
-    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, drain_bot)
+    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_bot)
 
     !
     !> Calculation of soil saturation, field capacity and wilting point
@@ -561,7 +673,7 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    ! Aggregate the different runoff flux components
+    ! Aggregate or distribute the different runoff flux components
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -572,11 +684,24 @@ CONTAINS
     !$ACC END PARALLEL
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    !> subsurface drainage and surface runoff
-    !>
     DO ic = 1, nc
       drainage(ic)  = drainage(ic) + drain_bot(ic)
-      runoff(ic)    = runoff(ic) + infilt_over(ic)
+
+      ! Infiltration overflow goes into ponds water storage
+      IF (fract_pond_max(ic) > EPSILON(1._wp) .AND. infilt_over(ic) > 0._wp) THEN
+        ! Pond state need to be corrected accordingly
+        ! Add infiltration overflow to pond storage
+        wtr_pond_corr(ic)    = MIN(MAX(0._wp, weq_pond_max(ic) - wtr_pond(ic) - ice_pond(ic)), infilt_over(ic))
+        wtr_pond(ic)         = wtr_pond(ic) + wtr_pond_corr(ic)
+        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + wtr_pond_corr(ic) * rhoh2o / dtime
+        ! Check for remaining overflow and add to surface runoff
+        wtr_pond_corr(ic)    = MAX(0._wp, infilt_over(ic) - wtr_pond_corr(ic))
+        runoff(ic)           = runoff(ic) + wtr_pond_corr(ic)
+
+      ! Without ponds, all infitration overflow goes directly into surface runoff
+      ELSE
+        runoff(ic)    = runoff(ic) + infilt_over(ic)
+      END IF
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1602,28 +1727,38 @@ CONTAINS
 
   END SUBROUTINE calc_wskin_fractions_lice
 
-  SUBROUTINE calc_wskin_fractions_veg( &
+  SUBROUTINE calc_wet_fractions_veg(   &
     & dtime,                           & ! in
     & use_tmx,                         & ! in
     & skinres_max,                     & ! in
+    & weq_pond_max,                    & ! in
+    & fract_pond_max,                  & ! in
+    & pond_dynamics_scheme,            & ! in
     & oro_stddev,                      & ! in
     & t_srf_old,                       & ! in
     & press_srf,                       & ! in
     & heat_tcoef,                      & ! in
     & q_air,                           & ! in
     & wtr_skin,                        & ! in
+    & weq_pond,                        & ! in
     & weq_snow_soil,                   & ! in
     & weq_snow_can,                    & ! in
     & fract_snow_can,                  & ! inout
+    & fract_skin,                      & ! out
+    & fract_pond,                      & ! out
     & fract_wet,                       & ! out
     & fract_snow_soil                  & ! out
     & )
 
     USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
     REAL(wp), INTENT(in) :: &
       & dtime
+
+    INTEGER, INTENT(in)  :: pond_dynamics_scheme
 
     LOGICAL, INTENT(in) :: use_tmx
 
@@ -1634,13 +1769,18 @@ CONTAINS
       & heat_tcoef,         &
       & q_air,              &
       & skinres_max,        &
+      & weq_pond_max,       &
+      & fract_pond_max,     &
       & wtr_skin,           &
+      & weq_pond,           &
       & weq_snow_soil,      &
       & weq_snow_can
 
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & fract_snow_can,      &
-      & fract_wet    ,       &
+      & fract_skin,          &
+      & fract_pond,          &
+      & fract_wet,           &
       & fract_snow_soil
 
     REAL(wp) ::       &
@@ -1658,10 +1798,10 @@ CONTAINS
       ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
         fract_snow_can(ic) = MIN(1._wp, weq_snow_can(ic) / skinres_max(ic))
-        fract_wet(ic)      = MIN(1._wp, wtr_skin(ic)     / skinres_max(ic))
+        fract_skin(ic)      = MIN(1._wp, wtr_skin(ic)     / skinres_max(ic))
       ELSE
         fract_snow_can(ic) = 0._wp
-        fract_wet(ic)      = 0._wp
+        fract_skin(ic)      = 0._wp
       END IF
 
       ! Snow fraction on soil
@@ -1669,51 +1809,79 @@ CONTAINS
       fract_snow_soil(ic) = MERGE(fract_snow_can(ic), fract_snow_soil(ic), &
                                fract_snow_soil(ic) < EPSILON(1._wp) .AND. fract_snow_can(ic) > EPSILON(1._wp))
 
-
+      ! Update pond fraction
+      IF (weq_pond_max(ic) > EPSILON(1.0_wp) .AND. weq_pond(ic) > EPSILON(1.0_wp) .AND. &
+        & pond_dynamics_scheme == Quad_) THEN
+        fract_pond(ic) = MIN(1._wp, (weq_pond(ic) / weq_pond_max(ic))**0.5_wp) * fract_pond_max(ic)
+      ELSE IF (weq_pond_max(ic) > EPSILON(1.0_wp) .AND. weq_pond(ic) > EPSILON(1.0_wp) .AND. &
+        &      pond_dynamics_scheme == Tanh_) THEN
+        fract_pond(ic) = MIN(1._wp, (TANH(pi * (weq_pond(ic) / weq_pond_max(ic))))**(oro_stddev(ic)/oro_crit)) &
+          &              * fract_pond_max(ic)
+      ELSE
+        fract_pond(ic) = 0._wp
+      END IF
       ! Potential evaporation using old values of air and surface humidity
       qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
       evapo_pot    = -1._wp * heat_tcoef(ic) * (q_air(ic) - qsat_srf_old)  ! Positive upwards
 
       ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
-      ! snow water content from soil and canopy; same for skin reservoir
+      ! snow water content from soil and canopy; same for skin and pond reservoir
       IF (fract_snow_soil(ic) > 0._wp) THEN
         ! @todo Shouldn't one take rhoice here insteady of rhoh2o?
         fract_snow_soil(ic) = fract_snow_soil(ic) / MAX(1._wp, fract_snow_soil(ic) * evapo_pot * dtime             &
           &                                                    / (rhoh2o * (weq_snow_soil(ic) + weq_snow_can(ic))) &
           &                                            )
       END IF
-      IF (fract_wet(ic) > 0._wp ) THEN
-        fract_wet(ic) = fract_wet(ic) / MAX(1._wp, (1._wp - fract_snow_soil(ic)) * evapo_pot * dtime        &
-          &                                                 / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin(ic)))  &
+      IF (fract_skin(ic) > 0._wp ) THEN
+        fract_skin(ic) = fract_skin(ic) / MAX(1._wp, (1._wp - fract_snow_soil(ic)) * evapo_pot * dtime      &
+          &                                          / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin(ic)))  &
           &                                )
       END IF
+      IF (fract_pond(ic) > 0._wp ) THEN
+        fract_pond(ic) = fract_pond(ic) / MAX(1._wp, fract_pond(ic) * evapo_pot * dtime                &
+        &                                          / (rhoh2o * MAX(EPSILON(1._wp), weq_pond(ic)))    &
+        &                                  )
+      END IF
+      ! Combine the different wet surface fractions assuming that skin and pond locations
+      ! would always coincide.
+      fract_wet(ic) = MAX(fract_skin(ic), fract_pond(ic))
 
     END DO
     !$ACC END PARALLEL LOOP
     !$ACC WAIT(1)
 
-  END SUBROUTINE calc_wskin_fractions_veg
+  END SUBROUTINE calc_wet_fractions_veg
 
-  SUBROUTINE calc_wskin_fractions_bare( &
+  SUBROUTINE calc_wet_fractions_bare( &
     & dtime,                            & ! in
     & use_tmx,                          & ! in
     & skinres_max,                      & ! in
+    & weq_pond_max,                     & ! in
+    & fract_pond_max,                   & ! in
+    & pond_dynamics_scheme,             & ! in
     & oro_stddev,                       & ! in
     & t_srf_old,                        & ! in
     & press_srf,                        & ! in
     & heat_tcoef,                       & ! in
     & q_air,                            & ! in
     & wtr_skin,                         & ! in
+    & weq_pond,                         & ! in
     & weq_snow_soil,                    & ! in
+    & fract_skin,                       & ! out
+    & fract_pond,                       & ! out
     & fract_wet,                        & ! out
     & fract_snow_soil                   & ! out
     & )
 
     USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
     REAL(wp), INTENT(in) :: &
       & dtime
+
+    INTEGER, INTENT(in) :: pond_dynamics_scheme
 
     LOGICAL, INTENT(in) :: use_tmx
 
@@ -1724,12 +1892,17 @@ CONTAINS
       & heat_tcoef,         &
       & q_air,              &
       & skinres_max,        &
+      & weq_pond_max,       &
+      & fract_pond_max,     &
       & wtr_skin,           &
+      & weq_pond,           &
       & weq_snow_soil
 
 
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & fract_wet,          &
+      & fract_skin,          &
+      & fract_pond,          &
+      & fract_wet,           &
       & fract_snow_soil
 
     REAL(wp) ::       &
@@ -1744,13 +1917,25 @@ CONTAINS
     DO ic=1,nc
 
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
-        fract_wet(ic) = MIN(1._wp, wtr_skin(ic) / skinres_max(ic))
+        fract_skin(ic) = MIN(1._wp, wtr_skin(ic) / skinres_max(ic))
       ELSE
-        fract_wet(ic) = 0._wp
+        fract_skin(ic) = 0._wp
       END IF
 
       ! Snow fraction on soil
       fract_snow_soil(ic) = Get_snow_fract_noforest(weq_snow_soil(ic), oro_stddev(ic)) ! snow on soil below forest
+
+      ! Update pond fraction
+      IF (weq_pond_max(ic) > EPSILON(1.0_wp) .AND. weq_pond(ic) > EPSILON(1.0_wp) .AND. &
+        & pond_dynamics_scheme == Quad_) THEN
+        fract_pond(ic) = MIN(1._wp, (weq_pond(ic) / weq_pond_max(ic))**0.5_wp) * fract_pond_max(ic)
+      ELSE IF (weq_pond_max(ic) > EPSILON(1.0_wp) .AND. weq_pond(ic) > EPSILON(1.0_wp) .AND. &
+        &      pond_dynamics_scheme == Tanh_) THEN
+        fract_pond(ic) = MIN(1._wp, (TANH(pi * (weq_pond(ic) / weq_pond_max(ic))))**(oro_stddev(ic)/oro_crit)) &
+          &              * fract_pond_max(ic)
+      ELSE
+        fract_pond(ic) = 0._wp
+      END IF
 
       ! Potential evaporation using old values of air and surface humidity
       qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
@@ -1763,17 +1948,27 @@ CONTAINS
           &                                                    / (rhoh2o * MAX(EPSILON(1._wp), weq_snow_soil(ic))) )
       END IF
       ! Same for water cover on soil
-      IF (fract_wet(ic) > 0._wp .AND. wtr_skin(ic) > EPSILON(1._wp)) THEN
-        fract_wet(ic) = fract_wet(ic) / MAX(1._wp, (1._wp - fract_snow_soil(ic)) * evapo_pot * dtime      &
+      IF (fract_skin(ic) > 0._wp .AND. wtr_skin(ic) > EPSILON(1._wp)) THEN
+        fract_skin(ic) = fract_skin(ic) / MAX(1._wp, (1._wp - fract_snow_soil(ic)) * evapo_pot * dtime      &
           &                                                 / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin(ic))) )
       END IF
+      ! Same for surface water ponds
+      IF (fract_pond(ic) > 0._wp ) THEN
+        fract_pond(ic) = fract_pond(ic) / MAX(1._wp, fract_pond(ic) * evapo_pot * dtime                &
+          &                                          / (rhoh2o * MAX(EPSILON(1._wp), weq_pond(ic)))    &
+          &                                  )
+      END IF
+
+      ! Combine the different wet surface fractions assuming that skin and pond locations
+      ! would always coincide.
+      fract_wet(ic) = MAX(fract_skin(ic), fract_pond(ic))
 
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC WAIT(1)
 
-  END SUBROUTINE calc_wskin_fractions_bare
+  END SUBROUTINE calc_wet_fractions_bare
 
   !< Roesch et al. 2002, Climate Dynamics
   !
@@ -1900,6 +2095,8 @@ CONTAINS
 
   SUBROUTINE calc_vertical_transport(dt, alpha, n_act, dzf, top_bound, bot_bound, S, C, P, Q, X)
 
+    USE mo_util, ONLY: tdma_solver_vec ! OpenACC-enabled solver for tridiagonal matrix (Thomas algorithm)
+
   ! INPUT
   INTEGER, INTENT(in) :: n_act(:)
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
@@ -1916,14 +2113,16 @@ CONTAINS
   ! LOCAL
   INTEGER            :: j, ic, nc
   INTEGER            :: nsoil
-  REAL(wp)           :: dzh(SIZE(S,1),SIZE(S,2)), matrix(SIZE(S,1),SIZE(S,2),4), &
-                      & bet(SIZE(S,1)), gam(SIZE(S,1), SIZE(S,2))
+  REAL(wp) :: dzh(SIZE(S,1),SIZE(S,2)), &
+    &         matrix(SIZE(S,1),SIZE(S,2),4) ! Matrix containing sub-diagonal (1), diagonal (2),
+                                            ! super-diagonal (3) of triangular matrix and rhs (4) of
+                                            ! linear equation system
 
   nc    = SIZE(S,1)
   nsoil = SIZE(S,2)
 
   !$ACC DATA &
-  !$ACC   CREATE(dzh, matrix, bet, gam)
+  !$ACC   CREATE(dzh, matrix)
 
   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
   DO j=1,nsoil
@@ -1974,14 +2173,15 @@ CONTAINS
         matrix(ic,j,2) =  P(ic,j) / dzh(ic,j) +  P(ic,j+1) / dzh(ic,j+1) + dzf(ic,j) * C(ic,j) / (alpha * dt)
         matrix(ic,j,3) = -P(ic,j+1) / dzh(ic,j+1)
         matrix(ic,j,4) =  Q(ic,j) - Q(ic,j+1) + dzf(ic,j) * S(ic,j) + dzf(ic,j) * C(ic,j) * X(ic,j) / (alpha * dt)
+      ELSE
+        matrix(ic,j,1) = 0._wp
+        matrix(ic,j,2) = 1._wp
+        matrix(ic,j,3) = 0._wp
+        matrix(ic,j,4) = 1._wp
       END IF
     END DO
   END DO
   !$ACC END PARALLEL
-
-  ! This solver uses LU-decomposition to solve the tridiagonal matrix.
-  ! It is based on the routine tridiag (page 43) in the
-  ! Numerical Recipes in Fortran. 2nd Edition, 1992, ISBN 0-521-43064-X
 
 #ifndef _OPENACC
   DO ic=1,nc
@@ -1992,44 +2192,8 @@ CONTAINS
   END DO
 #endif
 
-  !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-  DO ic=1,nc
-    bet(ic)  = matrix(ic,1,2)
-    X(ic,1) = matrix(ic,1,4)/bet(ic)
-  END DO
-  !$ACC END PARALLEL LOOP
-
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  !$ACC LOOP SEQ
-  DO j = 2, nsoil
-    !$ACC LOOP GANG VECTOR
-    DO ic=1,nc
-      IF (j <= n_act(ic)) THEN
-        gam(ic,j) = matrix(ic,j-1,3) /bet(ic)
-        bet(ic)   = matrix(ic,j,2) - matrix(ic,j,1) * gam(ic,j)
-#ifndef _OPENACC
-        IF( bet(ic) .EQ. 0.0) THEN
-          WRITE (message_text,*) 'tridiag: matrix couldn t be solved !'
-          CALL finish('calc_vertical_transport', message_text)
-        END IF
-#endif
-        X(ic,j) = (matrix(ic,j,4) - matrix(ic,j,1) * X(ic,j-1)) / bet(ic)
-      END IF
-    END DO
-  END DO
-  !$ACC END PARALLEL
-
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  !$ACC LOOP SEQ
-  DO j  = nsoil, 1, -1
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic=1,nc
-      IF (j <= n_act(ic)-1) THEN
-        X(ic,j)= X(ic,j) - gam(ic,j+1) * X(ic,j+1)
-      END IF
-    END DO
-  END DO
-  !$ACC END PARALLEL
+  CALL tdma_solver_vec(matrix(:,:,1), matrix(:,:,2), matrix(:,:,3), matrix(:,:,4), &
+    &                  1, nsoil, 1, nc, X(:,:))
 
   !$ACC WAIT(1)
   !$ACC END DATA

@@ -314,7 +314,7 @@ CONTAINS
         CALL model%Queue_task(TURB_, "surface_roughness")
         CALL model%Queue_task(TURB_, "exchange_coefficients")
       END IF
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
       CALL model%Queue_task(HYDRO_,  "evaporation")
@@ -324,7 +324,7 @@ CONTAINS
       END IF
       CALL model%Queue_task(MIX_,    "reset_mix")
       CALL model%Queue_task(HYDRO_,  "surface_hydrology")
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
@@ -349,7 +349,7 @@ CONTAINS
       ELSE
         CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
       END IF
-      ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
@@ -402,20 +402,20 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology_q_")                ! quincy
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")      ! may be called two times
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
       CALL model%Queue_task(HYDRO_,  "evaporation")
       CALL model%Queue_task(SEB_,    "surface_fluxes")
       CALL model%Queue_task(HYDRO_,  "surface_hydrology")
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")      ! may be called two times
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
       CALL model%Queue_task(SEB_,    "snowmelt_correction")
       CALL model%Queue_task(HYDRO_,  "water_stress")
       CALL model%Queue_task(ASSIMI_, "update_canopy_fluxes")        ! quincy
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")

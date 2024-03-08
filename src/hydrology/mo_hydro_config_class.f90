@@ -29,13 +29,14 @@ MODULE mo_hydro_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
-    REAL(wp)            :: &
-      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins, as well as
-                             !  maximum snow depth on leaves  [m water equivalent]
-      & w_soil_limit,      & !< Upper limit for maximum soil moisture content
-      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
-                             !  infinitely growing snow depth; -1. for no limitation
-    CHARACTER(len=10)     :: &
+    REAL(wp)               :: &
+      & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
+                                !  maximum snow depth on leaves  [m water equivalent]
+      & w_soil_limit,         & !< Upper limit for maximum soil moisture content
+      & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
+                                !  infinitely growing snow depth; -1. for no limitation
+
+    CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
@@ -44,14 +45,17 @@ MODULE mo_hydro_config_class
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero         !< Allow infiltration at soil temperatures below 0degC
-    INTEGER               :: &
-      & soilhydmodel,        & !< Choice of soil hydrological model for calc soil hydraulic properties:
-                               !  'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
-      & interpol_mean,       & !< Interpolation scheme to obtain K & D at layer interface:
-                               !     'upstream' (default) or 'arithmetic' mean
-      & hydro_scale            !< either use 'catchment' scale (default) parametrizations for soil in- and outflows
-                               !   or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
+      & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
+      & l_ponds                 !< Additional surface water storage
+    INTEGER               ::  &
+      & soilhydmodel,         & !< Choice of soil hydrological model to calc soil hydraulic properties:
+                                !! 'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
+      & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
+                                !! 'upstream' (default) or 'arithmetic' mean
+      & pond_dynamics,        & !< Choice of pond dynamics scheme (i.e. depth-area scaling)
+                                !! tanh (default), quadratic
+      & hydro_scale             !< either use 'catchment' scale (default) parametrizations for soil in- and outflows
+                                !! or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -68,8 +72,8 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_, Catchment_, Point_
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, Upstream_, Arithmetic_, &
+      &                              Quad_, Tanh_, Catchment_, Point_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -77,9 +81,9 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, hydro_scale
+    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
-      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero
+      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -97,8 +101,10 @@ CONTAINS
       & l_soil_texture,             &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
+      & l_ponds,                    &
       & soilhydmodel,               &
       & interpol_mean,              &
+      & pond_dynamics,              &
       & hydro_scale
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -129,6 +135,8 @@ CONTAINS
     l_soil_texture         = .FALSE.
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
+    l_ponds                = .FALSE.
+    pond_dynamics          = "tanh"
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
     hydro_scale            = "Catchment"
@@ -138,7 +146,6 @@ CONTAINS
     nml_unit = position_nml('jsb_hydro_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
 
-    ! add values form namelist to config, and write messages to logfile
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
@@ -190,6 +197,13 @@ CONTAINS
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
+    config%l_ponds = l_ponds
+    IF (l_ponds) THEN
+      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thoroughly validated!!')
+    ELSE
+      CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
+    END IF
+
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("vangenuchten")
       config%soilhydmodel = VanGenuchten_
@@ -213,6 +227,17 @@ CONTAINS
       CALL message(TRIM(routine), 'Soil diffusivity/conductivity interpolation uses arithmetic means')
     CASE default
       CALL finish(TRIM(routine), 'Soil diffusivity/conductivity interpolation method '//TRIM(interpol_mean)//' not implemented')
+    END SELECT
+
+    SELECT CASE(TRIM(tolower(pond_dynamics)))
+    CASE("quadratic")
+      config%pond_dynamics = Quad_
+      CALL message(TRIM(routine), 'Pond dynamics scheme uses quadratic scaling')
+    CASE("tanh")
+      config%pond_dynamics = Tanh_
+      CALL message(TRIM(routine), 'Pond dynamics scheme uses tanh scaling')
+    CASE default
+      CALL finish(TRIM(routine), 'Pond dynamics scheme '//TRIM(pond_dynamics)//' not implemented')
     END SELECT
 
     SELECT CASE(TRIM(tolower(hydro_scale)))

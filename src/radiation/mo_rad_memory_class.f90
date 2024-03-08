@@ -49,7 +49,9 @@ MODULE mo_rad_memory_class
       & alb_vis,              & ! Albedo of the whole tile in the VIS (visible) range
       & alb_nir,              & ! Albedo of the whole tile in the NIR (near-infrared) range
       & alb_vis_snow,         & ! Albedo of snow in the VIS range
-      & alb_nir_snow            ! Albedo of snow in the NIR range
+      & alb_nir_snow,         & ! Albedo of snow in the NIR range
+      & alb_vis_pond,         & !< Albedo of ponds in the VIS range [unitless]
+      & alb_nir_pond            !< Albedo of ponds in the NIR range [unitless]
 
     !
     ! Additional variables for soil
@@ -133,6 +135,8 @@ MODULE mo_rad_memory_class
       ! & alb_nir_q_,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       ! & alb_vis_snow_q_,          & !< Albedo of snow in the VIS range [unitless]
       ! & alb_nir_snow_q_,          & !< Albedo of snow in the NIR range [unitless]
+      ! & alb_vis_pond,             & !< Albedo of ponds in the VIS range [unitless]
+      ! & alb_nir_pond,             & !< Albedo of ponds in the NIR range [unitless]
       & albedo                      !< total surface albedo [unitless]
 
     ! Additional variables for soil
@@ -372,6 +376,22 @@ CONTAINS
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+      CALL mem%Add_var( 'alb_vis_pond', mem%alb_vis_pond,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_vis_pond', '', ''),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                   &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_pond', mem%alb_nir_pond,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_nir_pond', '', ''),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                   &
+        & initval_r=0.0_wp )
     END IF
 
     ! Additional variables for vegetation

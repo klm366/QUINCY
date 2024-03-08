@@ -114,6 +114,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: wtr_pond
+    dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
@@ -146,6 +149,7 @@ CONTAINS
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
      & has_snow_layer,                &
+     & has_pond_storage,              &
      & tile_fract_zero
 
     REAL(wp) :: &
@@ -239,6 +243,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     IF (.NOT. tile%is_glacier) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)        ! in
+    END IF
+    IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)   ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)     ! in
@@ -258,7 +267,7 @@ CONTAINS
 
     !$ACC DATA &
     !$ACC   CREATE(qsat_srf_old, s_old, dQdT, t2s_conv, heat_tcoef, t_star, liquid_max) &
-    !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero)
+    !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     IF (use_tmx) THEN
@@ -373,6 +382,19 @@ CONTAINS
 
       t2s_conv(ic) = s_old(ic) / t_old(ic)
 
+      ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
+      ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
+      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      IF (tile%is_glacier) THEN
+        frozen_fract(ic) = fract_snow(ic)
+      ELSE
+        IF (ice_pond(ic) > EPSILON(1.0_wp)) THEN
+          frozen_fract(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_pond(ic)
+        ELSE
+          frozen_fract(ic) = fract_snow(ic)
+        END IF
+      END IF
+
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -380,7 +402,7 @@ CONTAINS
     IF (jsb_standalone) THEN
       !TODO: GPU adaptation still missing!
       !$ACC DATA &
-      !$ACC   CREATE(frozen_fract, rough_h_srf, rough_m_srf, t_srf_upd)
+      !$ACC   CREATE(rough_h_srf, rough_m_srf, t_srf_upd)
 
       ! Get surface roughness
       rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
@@ -524,8 +546,9 @@ CONTAINS
         t_unfilt(ic) = ( tpfac2 * s_star(ic) + tpfac3 * s_old(ic) ) / t2s_conv(ic)
       END IF
 
-      ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
-      ! ice/water in the top soil layer that will happen during this time step
+      ! Correct new dry static energy for melting of snow on the surface, melting/freezing of surface water
+      ! and (if l_freeze=.TRUE.) melting/freezing ofice/water in the top soil layer
+      ! that will happen during this time step
       ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
       t_star(ic) = s_star(ic) / t2s_conv(ic)
 
@@ -539,6 +562,21 @@ CONTAINS
       IF (has_snow_layer(ic) .OR. is_glacier(ic)) THEN
         ! Snow melt where glacier or snow layer
         t_star(ic) = MIN(t_star(ic), tmelt)
+      END IF
+
+      ! Actual pond freezing and thawing will be computed later in the hydrology process (update_surface_hydrology)
+      has_pond_storage(ic) = .FALSE.
+      IF (.NOT. has_snow_layer(ic) .AND. .NOT. is_glacier(ic)) THEN
+        ! Freezing of water in pond reservoir without snow layer
+        IF (wtr_pond(ic) > w_soil_critical_config) THEN
+          t_star(ic) = MAX(t_star(ic), tmelt)
+          has_pond_storage(ic) = .TRUE.
+        END IF
+        ! Melting of ice in pond reservoir without snow layer
+        IF (ice_pond(ic) > w_soil_critical_config) THEN
+          t_star(ic) = MIN(t_star(ic), tmelt)
+          has_pond_storage(ic) = .TRUE.
+        END IF
       END IF
 
       IF (l_freeze_config .AND. .NOT. tile%is_glacier) THEN
@@ -556,7 +594,7 @@ CONTAINS
           liquid_max(ic) = 0._wp
         END IF
 
-        IF (.NOT. has_snow_layer(ic) .AND. .NOT. is_glacier(ic)) THEN
+        IF (.NOT. has_snow_layer(ic) .AND. .NOT. has_pond_storage(ic) .AND. .NOT. is_glacier(ic)) THEN
           IF (wtr_soil_sl(ic,1) > MAX(liquid_max(ic), w_soil_critical_config)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(ic) = MAX(t_star(ic), tmelt)
@@ -801,12 +839,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: fract_snow
+    dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: ice_pond
 
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) ::                      &
-      & s_air      , &  !< Dry static energy at lowest atmospheric level
-      & heat_tcoef      !< Heat transfer coefficient (rho*C_h*|v|)
+      & s_air,       &  !< Dry static energy at lowest atmospheric level
+      & heat_tcoef,  &  !< Heat transfer coefficient (rho*C_h*|v|)
+      & frozen_fract
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen, alpha
@@ -843,6 +884,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
+    IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)          ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)            ! in
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx)         ! out
@@ -858,7 +903,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$ACC DATA CREATE(s_air, heat_tcoef)
+    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
 
@@ -873,7 +918,19 @@ CONTAINS
 
       ! Compute latent heat flux
       !
-      latent_hflx(ic) = alv * evapotrans(ic) + (als - alv) * fract_snow(ic) * evapopot(ic)
+      ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
+      ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
+      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      IF (tile%is_glacier) THEN
+        frozen_fract(ic) = fract_snow(ic)
+      ELSE
+        IF (ice_pond(ic) > EPSILON(1._wp)) THEN
+          frozen_fract(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_pond(ic)
+        ELSE
+          frozen_fract(ic) = fract_snow(ic)
+        END IF
+      END IF
+      latent_hflx(ic) = alv * evapotrans(ic) + (als - alv) * frozen_fract(ic) * evapopot(ic)
 
       ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
       sensible_hflx_lnd(ic) = sensible_hflx(ic)

@@ -27,6 +27,9 @@ MODULE mo_hydro_constants
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
     & Arithmetic_      = 2,                &
+    ! Identifiers used for the pond dynamics scheme
+    & Quad_            = 1,                &
+    & Tanh_            = 2,                &
     ! Identifiers used for hydrological scale parametrizations
     & Catchment_       = 1,                &
     & Point_           = 2
@@ -56,6 +59,9 @@ MODULE mo_hydro_constants
     & drain_min   = 0.001_wp / (3600._wp*1000._wp), & ! factor for slow drainage (~ 10 hours)
     & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & ! factor for fast drainage (~ 4 days)
     & drain_exp   = 1.5_wp, &
+
+    ! Parameters used for pond computations
+    & oro_crit = 100._wp,                   & !< Reference topo standard deviation for pond scaling factor [m]
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<
