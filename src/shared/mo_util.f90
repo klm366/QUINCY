@@ -16,12 +16,14 @@ MODULE mo_util
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
+  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+                                               !      libmath-support is an external library
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
