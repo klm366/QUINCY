@@ -77,10 +77,10 @@ CONTAINS
   PURE &
 #endif
   SUBROUTINE calc_surface_hydrology_land (                          &
-    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow, l_infil_subzero,       &
-    & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
-    & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
-    & fract_snow, fract_skin, fract_pond,                           &
+    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
+    & l_infil_subzero, snow_depth_max, steepness, t_soil_sl1,       &
+    & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
+    & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
@@ -99,9 +99,9 @@ CONTAINS
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
-      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
-      & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
-      & weq_rootzone_max(:), weq_soil(:)
+      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
+      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
+      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -570,7 +570,7 @@ CONTAINS
     & soilhydmodel, interpol_mean, hydro_scale,                                          &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,                            &
+    & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,               &
     & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
