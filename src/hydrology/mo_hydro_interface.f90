@@ -38,7 +38,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, MIX_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -52,6 +52,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(MIX_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -2511,6 +2512,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(MIX_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -2518,11 +2520,13 @@ CONTAINS
       & snow, &
       & runoff, &
       & drainage, &
+      & wtr_latflow, &
       & evapotrans, &
       & evapo_deficit, &
       & wtr_skin, &
       & weq_snow, &
       & weq_pond, &
+      & retention_storage, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
       & weq_balance_err  ! [m3/(time step)]
@@ -2569,14 +2573,27 @@ CONTAINS
 
     tile_contains_soil = tile%contains_soil
 
+    ALLOCATE(wtr_latflow(nc), retention_storage(nc))
+    wtr_latflow(:)       = 0._wp
+    retention_storage(:) = 0._wp
+
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
+    IF (tile%is_process_active(MIX_)) THEN
+      ! MIX_ Process currently only exists for qarctic usecase
+      dsl4jsb_Get_memory(MIX_)
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      rain)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      snow)                ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
+    IF (tile%is_process_active(MIX_)) THEN
+      wtr_latflow(:)       = dsl4jsb_var2D_onChunk(MIX_, wtr_latflow)                        ! in
+      retention_storage(:) = dsl4jsb_var2D_onChunk(MIX_, runoff_retention) &                 ! in
+        &                  + SUM(dsl4jsb_var3D_onChunk(MIX_, drain_lat_retention_sl), DIM=2) ! in
+    END IF
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
@@ -2595,11 +2612,12 @@ CONTAINS
     DO ic=1,nc
       tile_area  = tile_fract(ic) * area(ic)
 
-      weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
+      weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic) + wtr_latflow(ic)
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + retention_storage(ic) &
+          &              + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
           &              * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
@@ -2624,14 +2642,16 @@ CONTAINS
           & 'Snowfall:           ', snow(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
           & 'Evapotranspiration: ', evapotrans(ic) * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
           & 'Runoff:             ', runoff(ic)     * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
-          & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
+          & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
+          & 'Lateral flow:       ', wtr_latflow(ic)* tile_area / rhoh2o * dtime
         IF (tile%contains_soil) THEN
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
             & 'Snow reservoir:     ', weq_snow(ic)           * tile_area
           IF (.NOT. tile%is_lake) THEN
             WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
-              & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
+              & 'Pond reservoir:     ', weq_pond(ic)           * tile_area,            NEW_LINE('a'), &
+              & 'Flow retention res.:', retention_storage(ic)  * tile_area
           END IF
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
@@ -2648,6 +2668,8 @@ CONTAINS
 #endif
     END DO
     !$ACC END PARALLEL LOOP
+
+    DEALLOCATE(wtr_latflow, retention_storage)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

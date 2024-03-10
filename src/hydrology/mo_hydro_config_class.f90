@@ -33,8 +33,12 @@ MODULE mo_hydro_config_class
       & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
                                 !  maximum snow depth on leaves  [m water equivalent]
       & w_soil_limit,         & !< Upper limit for maximum soil moisture content
-      & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !  infinitely growing snow depth; -1. for no limitation
+      & manning_n,            & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
+                                ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
+      & dt_sat,               & !< Time required for hydraulic conductivity to reach max [sec]
+      & max_slope               !< maximum slope considered for infiltration/runoff estimation
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -80,6 +84,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
+    REAL(wp)                    :: manning_n, dt_sat, max_slope
     REAL(wp)                    :: w_soil_limit
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
@@ -93,6 +98,9 @@ CONTAINS
       & w_skin_max,                 &
       & w_soil_limit,               &
       & snow_depth_max,             &
+      & manning_n,                  &
+      & dt_sat,                     &
+      & max_slope,                  &
       & scheme_stom_cond,           &
       & sanitize_restart,           &
       & enforce_water_budget,       &
@@ -127,6 +135,9 @@ CONTAINS
     w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
     w_soil_limit           = -1.0_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
+    manning_n              = 0.075_wp
+    dt_sat                 = 600._wp             ! [sec]
+    max_slope              = 0.45_wp             ! [m/m]
     scheme_stom_cond       = 'echam5'
     sanitize_restart       = .FALSE.
     enforce_water_budget   = config%model_config%enforce_water_budget
@@ -146,6 +157,12 @@ CONTAINS
     nml_unit = position_nml('jsb_hydro_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
 
+    IF (TRIM(config%model_config%usecase) == 'jsbach_qarctic') THEN
+      ! Q-Arctic use case needs different defaults for some hydro parameters
+      l_ponds              = .TRUE.
+      hydro_scale          = 'Point'
+    ENDIF
+
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
@@ -161,6 +178,16 @@ CONTAINS
     IF (snow_depth_max >= 0._wp) THEN
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
+
+    config%manning_n      = manning_n
+    CALL message(TRIM(routine), 'Manning coefficient for lateral flow: '//TRIM(real2string(manning_n)))
+
+    config%dt_sat         = dt_sat
+    CALL message(TRIM(routine), 'Time required for hydraulic conductivity to reach max [sec]: '//TRIM(real2string(dt_sat)))
+
+    config%max_slope      = max_slope
+    CALL message(TRIM(routine), 'Maximum slope considered in runoff and infiltration computation [sec]: '&
+      & //TRIM(real2string(max_slope)))
 
     config%scheme_stom_cond       = scheme_stom_cond
 

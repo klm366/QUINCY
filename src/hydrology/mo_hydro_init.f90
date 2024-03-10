@@ -641,17 +641,32 @@ CONTAINS
     DO i = 1, grid%Get_nblks()
       CALL calc_orographic_features(                    &
         ! in
-        & grid%Get_nproma(),                            &
-        & grid%nlat_g,                                  & !< (Effective) number of latitudes for steepness parameter
-        & dsl4jsb_var_ptr(HYDRO_, oro_stddev ) (:,i),   &
+        & grid%Get_nproma(),                              & !< Number of gridcells
+        & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
+        & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< T: HydroTiles setup is active
+        & tile%contains_upland,                           & !< T: Upland HydroTile
+        & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
         ! out
-        & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
+        & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
         & )
     END DO
 
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       ! Maximum depth and extent of surface water ponds
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+      IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+        ! Note, surface depression depth is given as negative value in the data, but represent
+        !   a storage on top of the soil --> needs to be converted to positive values!
+        IF (tile%contains_lowland) THEN
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
+        ELSE
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
+        END IF
+      ELSE IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
         ! Note, surface depression depth is given as negative value in the data, but represent
         !   a storage on top of the soil --> needs to be converted to positive values!
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
