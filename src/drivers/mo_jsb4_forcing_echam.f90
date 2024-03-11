@@ -1,30 +1,20 @@
+!> Module to read and convert external forcing data
 !>
-!! @brief Module to read and convert external forcing data (expects annual files with year in filename)
-!! -- current implementation only for daily, timestep or constant data
-!!    (for using monthly data see e.g. jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133))
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!  This module contains substantial contributions by the Max Planck Institute for Biogeochemistry, Jena.
-!!
-!! @par Revision History
-!  Initial version in JSBACH3 by Christian Reick, Thomas Raddatz (prior to 2010)
-!  Substantial contributions by Gregor Schuermann, Nuno Carvalhais, Soenke Zaehle (2010-2015)
-!! Initial version for JSBACH4 by Julia Nabel (2016-02)
-!!   From jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133) - mo_jsbalone_forcing.f90
-!!   -- adopted most of the options which were provided in the jsbach3 namelist (e.g. different sw-schemes incl. using clouds)
-!!   -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
-!!      several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
-!!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
-!! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- r8893  by Julia Nabel (2017-07)
-!!
-!! Added the compatibility with ICON-A         by Rainer Schneck (2020-01-21)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> expects annual files with year in filename
+!>
+!> current implementation only for daily, timestep or constant data
+!>
 MODULE mo_jsb4_forcing_echam
 #ifndef __NO_JSBACH__
 

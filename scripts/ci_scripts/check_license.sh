@@ -1,5 +1,17 @@
 #/bin/bash
 
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # Checks that the input files contain the license header (prefixed with the
 # respective language-specific comment character):
 license=' ICON-Land
