@@ -315,6 +315,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_pool_woody_litter_c
     dsl4jsb_Real3D_onChunk :: total_soil_n
     dsl4jsb_Real3D_onChunk :: total_soil_inorg_n
+    dsl4jsb_Real3D_onChunk :: total_soil_inorg_p
+	dsl4jsb_Real3D_onChunk :: total_soil_lab_pi
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_microbial_c
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_microbial_n
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_microbial_p
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_c
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_n
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_p
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_residue_c
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_residue_n
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_residue_p
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -568,6 +579,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_n)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_n)          ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_p)
+	dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_lab_pi)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_c)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_n)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_residue_c)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_residue_n)
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_residue_p)
     !------------------------------------------------------------------------------------------------------ !
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
@@ -705,6 +727,17 @@ CONTAINS
       ELSEWHERE
         dom_cp(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixP, :, :)
       ENDWHERE
+
+    
+      sb_bgcm_pool_microbial_c(:,:)       = sb_pool_mt(ix_microbial, ixC, :, :)
+      sb_bgcm_pool_microbial_n(:,:)       = sb_pool_mt(ix_microbial, ixN, :, :)
+      sb_bgcm_pool_microbial_p(:,:)       = sb_pool_mt(ix_microbial, ixP, :, :)
+      sb_bgcm_pool_mineral_assoc_c(:,:)   = sb_pool_mt(ix_residue_assoc, ixC, :, :) + sb_pool_mt(ix_dom_assoc, ixC, :, :)
+      sb_bgcm_pool_mineral_assoc_n(:,:)   = sb_pool_mt(ix_residue_assoc, ixN, :, :) + sb_pool_mt(ix_dom_assoc, ixN, :, :)
+      sb_bgcm_pool_mineral_assoc_p(:,:)   = sb_pool_mt(ix_residue_assoc, ixP, :, :) + sb_pool_mt(ix_dom_assoc, ixP, :, :)
+      sb_bgcm_pool_residue_c(:,:)         = sb_pool_mt(ix_residue, ixC, :, :)
+      sb_bgcm_pool_residue_n(:,:)         = sb_pool_mt(ix_residue, ixN, :, :)
+      sb_bgcm_pool_residue_p(:,:)         = sb_pool_mt(ix_residue, ixP, :, :)
 
       ! unit conversion of inorganic transport fluxes to [mumol m3 s-1] for compatibility with the simple_1d soil model
       transport_nh4_solute(:,:)           = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
@@ -1045,6 +1078,8 @@ CONTAINS
       & + SUM(lateral_loss_no3_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2)
     total_soil_n(:,:)         = sb_pool_total_som_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
+    total_soil_inorg_p(:,:)   = po4_primary(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:) + po4_solute(:,:)
+	total_soil_lab_pi(:,:)    = po4_assoc_fast(:,:) + po4_solute(:,:)
 
     !> 14.2 across multiple processes
     !>
