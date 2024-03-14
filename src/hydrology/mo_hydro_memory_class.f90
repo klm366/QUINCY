@@ -1031,6 +1031,7 @@ CONTAINS
         & t_cf('water_stress', '-', 'Water stress factor'),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
