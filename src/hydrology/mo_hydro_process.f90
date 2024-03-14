@@ -2065,27 +2065,18 @@ CONTAINS
   ELEMENTAL &
 #endif
   FUNCTION get_water_stress_factor ( &
-    & w_soil, w_soil_max, w_soil_crit_fract, w_soil_wilt_fract) RESULT(water_stress_factor)
+    & w_soil, w_soil_crit, w_soil_wilt) RESULT(water_stress_factor)
 
     !$ACC ROUTINE SEQ
 
-    ! TODO
-    ! TBD: Maybe change later so that it uses geographically dependend critical values (like wilting point)
-
-    REAL(wp), INTENT(in) :: w_soil            !< Soil water content
-    REAL(wp), INTENT(in) :: w_soil_max        !< Soil water content at field capacity
-    REAL(wp), INTENT(in) :: w_soil_crit_fract !< Fraction of max. soil water content at critical point
-    REAL(wp), INTENT(in) :: w_soil_wilt_fract !< Fraction of max. soil water content at wilting point
+    REAL(wp), INTENT(in) :: w_soil      !< Soil water content
+    REAL(wp), INTENT(in) :: w_soil_crit !< soil water content at critical point
+    REAL(wp), INTENT(in) :: w_soil_wilt !< soil water content at wilting point
     REAL(wp)             :: water_stress_factor
 
-    REAL(wp) :: w_crit, w_wilt                       !< Soil water content at critical/wilting point
-
-    w_crit = w_soil_max * w_soil_crit_fract
-    w_wilt = w_soil_max * w_soil_wilt_fract
-
-    IF (w_crit - w_wilt > 0._wp) THEN
+    IF (w_soil_crit - w_soil_wilt > 0._wp) THEN
       water_stress_factor = MAX (0._wp, &
-        &                        MIN (1._wp, (w_soil - w_wilt) / (w_crit - w_wilt) ))
+        &                        MIN (1._wp, (w_soil - w_soil_wilt) / (w_soil_crit - w_soil_wilt) ))
     ELSE
       water_stress_factor = 0._wp
     END IF
