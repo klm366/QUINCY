@@ -36,11 +36,9 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io_netcdf_iface,    ONLY:           &
-    & nf, nf_get_vara_double,                    &
-    & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, &
-    & NF_MAX_NAME, nf_get_att_text,              &
-    & nf_get_att_double => nfx_get_att,          &
-    & NF_NOERR
+    & nf, nf90_inq_varid, nf90_get_var,          &
+    & nf90_inq_dimid, nf90_inquire_dimension,    &
+    & nf90_get_att, NF90_MAX_NAME, NF90_NOERR
 
   USE mo_jsb_class,              ONLY: get_model
 
@@ -155,9 +153,9 @@ MODULE mo_jsb4_forcing
   !> Information on the forcing variables
   !>
   TYPE input_variable_type
-    CHARACTER(NF_MAX_NAME)   :: variable_name=""       !! Name of the variable (name in netcdf-data file)
-    CHARACTER(NF_MAX_NAME)   :: file_name_prefix = ""  !! Prefix of files in which the variable is located
-    CHARACTER(NF_MAX_NAME)   :: expectedUnit = ""      !! Unit for the variable expected in the file
+    CHARACTER(NF90_MAX_NAME) :: variable_name=""       !! Name of the variable (name in netcdf-data file)
+    CHARACTER(NF90_MAX_NAME) :: file_name_prefix = ""  !! Prefix of files in which the variable is located
+    CHARACTER(NF90_MAX_NAME) :: expectedUnit = ""      !! Unit for the variable expected in the file
     INTEGER                  :: frequency = 0          !! Input data frequency (see 'options controlling types of forcing data')
     REAL(wp)                 :: ocean_value = 0._wp    !! Value used for ocean cells
     REAL(wp)                 :: constantValue = 0._wp  !! Value in case of frequency 'constant'
@@ -579,14 +577,14 @@ CONTAINS
     REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
 
     !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
-    CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
+    CHARACTER(NF90_MAX_NAME) :: forcing_temp_file_prefix       !! Prefix for files with temperature forcing data
     CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
     REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
     REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
 
-    CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
+    CHARACTER(NF90_MAX_NAME) :: forcing_precip_file_prefix     !! Prefix for files with precipitation forcing data (unit: mm/day
     !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
     CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
@@ -594,19 +592,19 @@ CONTAINS
     LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
     CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
 
-    CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
+    CHARACTER(NF90_MAX_NAME) :: forcing_sw_file_prefix         !! Prefix for files with shortwave radiation data
     CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
     REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
 
-    CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
+    CHARACTER(NF90_MAX_NAME) :: forcing_lw_file_prefix         !! Prefix for files with longwave radiation data
     CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
     REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
 
-    CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
+    CHARACTER(NF90_MAX_NAME) :: forcing_co2_file_prefix        !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
     !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
     CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
     REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
@@ -614,13 +612,13 @@ CONTAINS
     REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
 
-    CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
+    CHARACTER(NF90_MAX_NAME) :: forcing_wind_file_prefix       !! Prefix for files with windspeed data
     CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
     REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
 
-    CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
+    CHARACTER(NF90_MAX_NAME) :: forcing_qair_file_prefix       !! Prefix for files with qair data
     CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
     CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
     REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
@@ -923,7 +921,7 @@ CONTAINS
     INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep, index_time, nc_var_id
     LOGICAL           :: do_advance
     CHARACTER(len=8)  :: year_label
-    CHARACTER(len=NF_MAX_NAME)  :: readUnit
+    CHARACTER(len=NF90_MAX_NAME)  :: readUnit
 
     INTEGER :: nproma, nblks
     REAL(wp), POINTER :: return_pointer(:,:,:) !temporary pointer
@@ -1019,9 +1017,9 @@ CONTAINS
           forcing_input_variable%input_file = &
             & jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
           ! Read globally constant CO2 value
-          CALL nf(nf_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id), routine)
-          CALL nf(nf_get_vara_double(forcing_input_variable%input_file%file_id, nc_var_id, &
-            & (/1,1,currentTimeStep/), (/1,1,1/), hlp_r), routine)
+          CALL nf(nf90_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id), routine)
+          CALL nf(nf90_get_var(forcing_input_variable%input_file%file_id, nc_var_id, hlp_r, &
+            & (/1,1,currentTimeStep/), (/1,1,1/)), routine)
           CALL forcing_input_variable%input_file%Close()
         ENDIF
 
@@ -1250,15 +1248,15 @@ CONTAINS
 
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
-    CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
-    CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
+    CALL nf(nf90_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
+    CALL nf(nf90_inquire_dimension(input_file%file_id, nc_dim_id, len = forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
 
     ! We need the timevalues for get_data_and_update_field
-    CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
-    CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
-      & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues), routine)
+    CALL nf(nf90_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
+    CALL nf(nf90_get_var(input_file%file_id, nc_var_id, forcing_input_variable%timevalues, &
+      & (/ 1 /), (/ forcing_input_variable%length_time_series /)), routine)
 
   END SUBROUTINE get_time_dimension
 
@@ -1280,9 +1278,9 @@ CONTAINS
     INTEGER :: nc_var_id, status
 
     IF (TRIM(expectedUnit) .NE. TRIM(unspecified_exp_unit)) THEN
-      CALL nf(nf_inq_varid(file_id, TRIM(variable_name), nc_var_id), routine)
-      status = nf_get_att_text(file_id, nc_var_id, name_of_unit_attribute, readUnit)
-      IF (status /= NF_NOERR) THEN
+      CALL nf(nf90_inq_varid(file_id, TRIM(variable_name), nc_var_id), routine)
+      status = nf90_get_att(file_id, nc_var_id, name_of_unit_attribute, readUnit)
+      IF (status /= NF90_NOERR) THEN
         CALL message(TRIM(routine), &
              & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name) &
              & //'(expected '//TRIM(expectedUnit)//')')
@@ -1321,15 +1319,15 @@ CONTAINS
 
     INTEGER :: nc_var_id, status
 
-    CALL nf(nf_inq_varid(file_id, TRIM(variable_name), nc_var_id), routine)
-    status = nf_get_att_double(file_id, nc_var_id, 'missing_value', missval)
+    CALL nf(nf90_inq_varid(file_id, TRIM(variable_name), nc_var_id), routine)
+    status = nf90_get_att(file_id, nc_var_id, 'missing_value', missval)
 
-    IF (status == NF_NOERR) THEN
+    IF (status == NF90_NOERR) THEN
       CALL message(TRIM(routine), &
         & 'Found missing value '//TRIM(real2string(missval))//' for variable '//TRIM(variable_name))
     ELSE
-      status = nf_get_att_double(file_id, nc_var_id, '_FillValue', missval)
-      IF (status == NF_NOERR) THEN
+      status = nf90_get_att(file_id, nc_var_id, '_FillValue', missval)
+      IF (status == NF90_NOERR) THEN
         CALL message(TRIM(routine), &
           & 'Found missing value '//TRIM(real2string(missval))//' for variable '//TRIM(variable_name))
       ELSE
