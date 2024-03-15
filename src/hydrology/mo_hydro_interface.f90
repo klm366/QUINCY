@@ -1601,8 +1601,7 @@ CONTAINS
     ! Formerly, the root zone moisture was computed as part of the soil hydrology prior to diffusion
     !   and percolation. This seems wrong as the actual water stress should be the result of the
     !   updated soil state and not of the one at the start of the time step.
-    CALL get_amount_in_rootzone(MAX(0._wp, wtr_soil_sl(:,:) - wtr_soil_pot_scool_sl(:,:)),  &
-                             &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+    CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     ! IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
     !   ! Supercooled water is not available to plants
@@ -1665,8 +1664,8 @@ CONTAINS
     ! END IF
 
     ! Calculate water stress based on root zone water and the distributed wilting point and field capacity fields
-    ! Note, that this approach needs to be consistent with diagnose_evapotranspiration in the soil hydrology to
-    ! ensure water extraction for transpiration and water stress fit together.
+    ! Note, that this approach needs to be consistent with `diagnose_evapotranspiration` in the soil hydrology to
+    ! ensure water extraction for transpiration and water stress provided to phenology and assimi fit together.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       water_stress(ic) = &
@@ -1674,10 +1673,10 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! Calculate relative soil moisture (used in LoGro-P Phenology)
+    ! Calculate relative soil moisture (purely diagnostic)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic= 1, nc
-      wtr_rootzone_avail_max(ic) = wtr_rootzone_fc(ic) ! - wtr_rootzone_pwp(ic)
+      wtr_rootzone_avail_max(ic) = wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)
       wtr_rootzone_avail(ic)     = wtr_rootzone(ic)
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
