@@ -19,7 +19,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_time_averages.pp-jsb.f90"
 !NEC$ options "-finline-max-function-size=100"
 
-MODULE mo_jsb_pheno_interface
+MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
@@ -72,7 +72,7 @@ MODULE mo_jsb_pheno_interface
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pheno_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
 CONTAINS
 

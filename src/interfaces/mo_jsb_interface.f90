@@ -757,7 +757,7 @@ CONTAINS
 
     USE mo_seb_interface,       ONLY: global_seb_diagnostics
     USE mo_hydro_interface,     ONLY: global_hydrology_diagnostics
-    USE mo_jsb_pheno_interface, ONLY: global_phenology_diagnostics
+    USE mo_pheno_interface,     ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,    ONLY: global_carbon_diagnostics
     USE mo_pplcc_interface,     ONLY: global_pplcc_diagnostics
 #ifndef __NO_JSBACH_HD__

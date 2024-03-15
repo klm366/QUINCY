@@ -113,7 +113,7 @@ CONTAINS
     ! Create vertical axis for canopy layers
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers from ASSIMI_ JSBACH', &
-      & levels = (/ (REAL(i, kind=wp), i=1, config%ncanopy) /), units = '')
+      & levels = (/ (REAL(icanopy, kind=wp), icanopy=1, config%ncanopy) /), units = '')
     CALL register_vgrid(vgrid_canopy)
     
     ! Prepare canopy boundaries of lai_cl

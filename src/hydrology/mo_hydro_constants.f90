@@ -95,7 +95,5 @@ MODULE mo_hydro_constants
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc               = 0.139_wp         !< Parameter from percolation theory
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
-
 #endif
 END MODULE mo_hydro_constants

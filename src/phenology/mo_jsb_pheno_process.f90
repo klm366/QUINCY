@@ -24,7 +24,7 @@ MODULE mo_pheno_process
              get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, &
              calc_gdd
 
-   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pheno_process'
+   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
  CONTAINS
 
@@ -1031,4 +1031,4 @@ MODULE mo_pheno_process
   END FUNCTION get_foliage_projected_cover
 
 #endif
-END MODULE mo_jsb_pheno_process
+END MODULE mo_pheno_process
