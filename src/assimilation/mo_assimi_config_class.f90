@@ -54,13 +54,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_assimi_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                     :: jsbach_fixed_ncanopy       ! three canopy layer by default for MODEL_JSBACH
-    INTEGER                     :: ncanopy_q_                 ! @TODO remove later, here and from namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     LOGICAL                     :: init_running_means
-    INTEGER                     :: i
+    INTEGER                     :: ncanopy
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy
 
@@ -68,7 +66,6 @@ CONTAINS
       & active,                   &
       & ic_filename,              &
       & bc_filename,              &
-      & ncanopy_q_,               &    ! @TODO remove later, here and from namelist
       & init_running_means
 
     INTEGER                     :: nml_handler, nml_unit, istat
@@ -77,7 +74,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting assimi configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
-    jsbach_fixed_ncanopy          = 3            ! three canopy layer by default for MODEL_JSBACH
+    ncanopy                       = 3            ! three canopy layer by default for MODEL_JSBACH
     ! Set namelist defaults
     active                        = .TRUE.
     bc_filename                   = 'bc_land_assimi.nc'
@@ -98,19 +95,18 @@ CONTAINS
 
     ! ncanopy is fixed to 3 layers
     ! for JSBACH ncanopy has so far not been a parameter in the assimi namelist but fixed to 3 in the code
-    config%ncanopy = jsbach_fixed_ncanopy
+    config%ncanopy = ncanopy
 
     ! Create vertical axis for canopy layers
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers from ASSIMI_ JSBACH', &
-      & levels = (/ (REAL(i, kind=wp), i=1, config%ncanopy) /), units = '')
+      & levels = (/ (REAL(icanopy, kind=wp), icanopy=1, config%ncanopy) /), units = '')
     CALL register_vgrid(vgrid_canopy)
     
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:config%ncanopy))
     DO icanopy = 0,config%ncanopy
       config%canopy_bound_lai(icanopy) = REAL(icanopy, wp) / REAL(config%ncanopy, wp)
-      !write(*,*) "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR: canopy_bound_lai(i)" , new%canopy_bound_lai(i)
     END DO
 
   END SUBROUTINE Init_assimi_config
