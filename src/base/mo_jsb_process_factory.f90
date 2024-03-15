@@ -61,7 +61,7 @@ MODULE mo_jsb_process_factory
   USE mo_q_assimi_config_class,ONLY: t_q_assimi_config
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_q_pheno_interface,    ONLY: Register_q_pheno_tasks
-  USE mo_jsb_pheno_interface,  ONLY: Register_pheno_tasks
+  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
   USE mo_q_pheno_config_class, ONLY: t_q_pheno_config
   USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__

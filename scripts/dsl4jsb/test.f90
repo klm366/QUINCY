@@ -42,12 +42,10 @@ PROGRAM example
   dsl4jsb_var3D_onDomain(SOIL_,ws_l)
   dsl4jsb_Aggregate_onChunk(SOIL_,ws, aggregator)
 
-  dsl4jsb_Use_pools(CARBON_) t_basic_pool, t_awenh_pool
   dsl4jsb_Def_pool(t_basic_pool) :: green
   dsl4jsb_Get_pool(CARBON_, pools%plant%green, green)
   dsl4jsb_pool(CARBON_, pools%plant%green)%carbon
   dsl4jsb_Get_pool_var2d_onChunk(CARBON_, pools%soil, soil_respiration)
-  dsl4jsb_Use_elements(CARBON_) CARBON
 
   dsl4jsb_Def_mt2L2D :: veg_pool_mt
   dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
