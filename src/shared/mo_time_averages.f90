@@ -28,25 +28,25 @@ MODULE mo_time_averages
   !!   you can add new parameters here, please sort by increasing numbers
   !!   the default unit of the averaging period is 'day'
   !!   but can also be 'week' or 'year'
-  !! 
+  !!
   ! generic memory time-scales (in days):
     REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
     REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
     REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
-    
+
   ! specific memory time-scales (in days):
     REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF) 
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool 
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF)
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
     REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
     REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
     REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
     REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes 
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes
     REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 30.0_wp * 365.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
   !!----------------------------------------------------------------------------------------------------
 

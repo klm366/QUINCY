@@ -46,7 +46,7 @@ MODULE mo_veg_interface
 
   ! Use of process memories (t_PROC_memory)
   dsl4jsb_Use_memory(VEG_)
-  
+
 
   IMPLICIT NONE
   PRIVATE
@@ -57,7 +57,7 @@ MODULE mo_veg_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_veg_fluxes
   CONTAINS
@@ -67,48 +67,48 @@ MODULE mo_veg_interface
 
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_veg_turnover task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_veg_turnover
   ! CONTAINS
   !   PROCEDURE, NOPASS :: Integrate => update_veg_turnover      !< Advances task computation for one timestep
   !   PROCEDURE, NOPASS :: Aggregate => aggr_update_veg_turnover !< Aggregates computed task variables
   ! END TYPE tsk_update_veg_turnover
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_veg_dynamics task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_veg_dynamics
   ! CONTAINS
   !   PROCEDURE, NOPASS :: Integrate => update_veg_dynamics      !< Advances task computation for one timestep
   !   PROCEDURE, NOPASS :: Aggregate => aggr_update_veg_dynamics !< Aggregates computed task variables
   ! END TYPE tsk_update_veg_dynamics
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_veg_growth task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_veg_growth
   ! CONTAINS
   !   PROCEDURE, NOPASS :: Integrate => update_veg_growth      !< Advances task computation for one timestep
   !   PROCEDURE, NOPASS :: Aggregate => aggr_update_veg_growth !< Aggregates computed task variables
   ! END TYPE tsk_update_veg_growth
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_veg_pools task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_veg_pools
   ! CONTAINS
   !   PROCEDURE, NOPASS :: Integrate => update_veg_pools      !< Advances task computation for one timestep
   !   PROCEDURE, NOPASS :: Aggregate => aggr_update_veg_pools !< Aggregates computed task variables
-  ! END TYPE tsk_update_veg_pools  
+  ! END TYPE tsk_update_veg_pools
 
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_reset_veg_fluxes
     PROCEDURE Create_task_reset_veg_fluxes         !< Constructor function for task
@@ -116,31 +116,31 @@ MODULE mo_veg_interface
 
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_veg_turnover task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! INTERFACE tsk_update_veg_turnover
   !   PROCEDURE Create_task_update_veg_turnover         !< Constructor function for task
   ! END INTERFACE tsk_update_veg_turnover
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_veg_dynamics task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! INTERFACE tsk_update_veg_dynamics
   !   PROCEDURE Create_task_update_veg_dynamics         !< Constructor function for task
   ! END INTERFACE tsk_update_veg_dynamics
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_veg_growth task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! INTERFACE tsk_update_veg_growth
   !   PROCEDURE Create_task_update_veg_growth         !< Constructor function for task
   ! END INTERFACE tsk_update_veg_growth
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_veg_pools task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! INTERFACE tsk_update_veg_pools
   !   PROCEDURE Create_task_update_veg_pools         !< Constructor function for task
@@ -153,7 +153,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: VEG_ process
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_veg_tasks(this, model_id)
 
@@ -175,7 +175,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_veg_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_veg_fluxes(model_id) RESULT(return_ptr)
 
@@ -193,74 +193,74 @@ CONTAINS
 
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_veg_turnover task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! FUNCTION Create_task_update_veg_turnover(model_id) RESULT(return_ptr)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                   INTENT(in) :: model_id
   !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
+  !
+  !
   !   ALLOCATE(tsk_update_veg_turnover::return_ptr)
   !   CALL return_ptr%Construct(name='update_veg_turnover', process_id=VEG_, owner_model_id=model_id)
-  ! 
+  !
   ! END FUNCTION Create_task_update_veg_turnover
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_veg_dynamics task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! FUNCTION Create_task_update_veg_dynamics(model_id) RESULT(return_ptr)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                   INTENT(in) :: model_id
   !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
+  !
+  !
   !   ALLOCATE(tsk_update_veg_dynamics::return_ptr)
   !   CALL return_ptr%Construct(name='update_veg_dynamics', process_id=VEG_, owner_model_id=model_id)
-  ! 
+  !
   ! END FUNCTION Create_task_update_veg_dynamics
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_veg_growth task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! FUNCTION Create_task_update_veg_growth(model_id) RESULT(return_ptr)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                   INTENT(in) :: model_id
   !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
+  !
+  !
   !   ALLOCATE(tsk_update_veg_growth::return_ptr)
   !   CALL return_ptr%Construct(name='update_veg_growth', process_id=VEG_, owner_model_id=model_id)
-  ! 
+  !
   ! END FUNCTION Create_task_update_veg_growth
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_veg_pools task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! FUNCTION Create_task_update_veg_pools(model_id) RESULT(return_ptr)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                   INTENT(in) :: model_id
   !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
+  !
+  !
   !   ALLOCATE(tsk_update_veg_pools::return_ptr)
   !   CALL return_ptr%Construct(name='update_veg_pools', process_id=VEG_, owner_model_id=model_id)
-  ! 
+  !
   ! END FUNCTION Create_task_update_veg_pools
 
   !-----------------------------------------------------------------------------------------------------
@@ -335,7 +335,7 @@ CONTAINS
   ! !!  actually NOT using this routine, i.e., no var is aggregated here
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE aggr_update_veg_turnover(tile, options)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
@@ -371,31 +371,30 @@ CONTAINS
   !   dsl4jsb_Get_config(VEG_)
   !   ! Get process memories
   !   dsl4jsb_Get_memory(VEG_)
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go aggregate
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   IF (tile%Has_children()) THEN
   !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
   !     ! do not aggregate after this routine, only after update_veg_pools()
   !   END IF
-  ! 
+  !
   !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
+  !
   !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
+  !
   ! END SUBROUTINE aggr_update_veg_turnover
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Implementation of "aggregate": update_veg_dynamics task
   ! !!  actually NOT using this routine, i.e., no var is aggregated here
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE aggr_update_veg_dynamics(tile, options)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
@@ -431,31 +430,30 @@ CONTAINS
   !   dsl4jsb_Get_config(VEG_)
   !   ! Get process memories
   !   dsl4jsb_Get_memory(VEG_)
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go aggregate
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   IF (tile%Has_children()) THEN
   !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
   !     ! do not aggregate after this routine, only after update_veg_pools()
   !   END IF
-  ! 
+  !
   !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
+  !
   !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
+  !
   ! END SUBROUTINE aggr_update_veg_dynamics
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Implementation of "aggregate": update_veg_growth task
   ! !!  actually NOT using this routine, i.e., no var is aggregated here
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE aggr_update_veg_growth(tile, options)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
@@ -491,31 +489,30 @@ CONTAINS
   !   dsl4jsb_Get_config(VEG_)
   !   ! Get process memories
   !   dsl4jsb_Get_memory(VEG_)
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go aggregate
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   IF (tile%Has_children()) THEN
   !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
   !     ! do not aggregate after this routine, only after update_veg_pools()
   !   END IF
-  ! 
+  !
   !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
+  !
   !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
+  !
   ! END SUBROUTINE aggr_update_veg_growth
-  ! 
+  !
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Implementation of "aggregate": update_veg_pools task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE aggr_update_veg_pools(tile, options)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
@@ -551,17 +548,17 @@ CONTAINS
   !   dsl4jsb_Get_config(VEG_)
   !   ! Get process memories
   !   dsl4jsb_Get_memory(VEG_)
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go aggregate
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   IF (tile%Has_children()) THEN
   !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-  ! 
-  !     ! *slmdev 
+  !
+  !     ! *slmdev
   !     ! the below list is not complete, it is just an initial placeholder for all var that need to be aggregated !
   !     dsl4jsb_Aggregate_onChunk(VEG_, diameter            , weighted_by_fract)
   !     dsl4jsb_Aggregate_onChunk(VEG_, height              , weighted_by_fract)
@@ -569,12 +566,11 @@ CONTAINS
   !     dsl4jsb_Aggregate_onChunk(VEG_, dphi                , weighted_by_fract)
   !     dsl4jsb_Aggregate_onChunk(VEG_, npp                 , weighted_by_fract)
   !   END IF
-  ! 
+  !
   !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
+  !
   !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
+  !
   ! END SUBROUTINE aggr_update_veg_pools
 
 #endif

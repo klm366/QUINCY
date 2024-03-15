@@ -105,6 +105,9 @@ CONTAINS
     return_ptr%name           = Get_process_name(iproc)
     return_ptr%owner_model_id = model_id
 
+    ! Register tasks and set some process properties
+    ! e.g. the land cover change (lcc) processes should set l_changes_fractions to .TRUE. here
+    ! and processes that do not have a memory module also need to specify this here.
     SELECT CASE (iproc)
     CASE (A2L_, L2A_)
       ! Do nothing for A2L and L2A: these processes currently have no tasks and no config

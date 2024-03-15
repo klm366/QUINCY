@@ -33,17 +33,17 @@ MODULE mo_veg_config_class
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
-  !! 
+  !!
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     ! INTEGER          :: pft_id
     ! REAL(wp)         :: cohort_harvest_interval    !< interval of harvesting plants [yr], used with veg_dynamics_scheme="cohort"
     ! CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate BNF (biological nitrogen fixation)
-    !                                                !! "none fixed standard optimal resistance unlimited"   
+    !                                                !! "none fixed standard optimal resistance unlimited"
     ! CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
     !                                                !! none: constant mortality
-    !                                                !! "none population cohort"   
+    !                                                !! "none population cohort"
     ! CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
     ! CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
    CONTAINS
@@ -55,8 +55,8 @@ MODULE mo_veg_config_class
 CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> configuration routine of t_veg_config
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_config(config)
 
@@ -74,19 +74,19 @@ CONTAINS
                                    bc_filename
     ! INTEGER                     :: plant_functional_type_id
     ! REAL(wp)                    :: cohort_harvest_interval
-    ! CHARACTER(15)               :: bnf_scheme       
+    ! CHARACTER(15)               :: bnf_scheme
     ! CHARACTER(15)               :: veg_dynamics_scheme
     ! CHARACTER(15)               :: biomass_alloc_scheme
     ! CHARACTER(15)               :: leaf_stoichom_scheme
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
-    NAMELIST /jsb_veg_nml/       & 
+    NAMELIST /jsb_veg_nml/       &
       active,                       &
       bc_filename,                  &
       ic_filename!,                  &
       ! plant_functional_type_id,     &
       ! cohort_harvest_interval,      &
-      ! bnf_scheme,                   & 
+      ! bnf_scheme,                   &
       ! veg_dynamics_scheme,          &
       ! biomass_alloc_scheme,         &
       ! leaf_stoichom_scheme

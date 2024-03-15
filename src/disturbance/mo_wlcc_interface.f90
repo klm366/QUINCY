@@ -114,7 +114,7 @@ CONTAINS
     LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
     INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
     CLASS(t_jsb_tile_abstract), POINTER :: first_ac ! pointer to first ac (only if running with age classes)
-  
+
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_memory_tile(DISTURB_, d_tile)
     dsl4jsb_Real2D_onChunk :: damaged_fract_d_tile
@@ -156,7 +156,7 @@ CONTAINS
     !>
     dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    
+
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
@@ -293,7 +293,7 @@ CONTAINS
         ELSE
           current_tile => tile%self_tile
         END IF
-        
+
         i_tile = 0
         DO WHILE (i_tile < nr_of_tiles)
 

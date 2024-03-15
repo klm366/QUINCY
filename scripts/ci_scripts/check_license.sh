@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # ICON-Land
 #
@@ -166,7 +166,7 @@ quote_value regexp
 
 exitcode=0
 
-list_files yes "${@}" | xargs -P ${job_num} -I{} -- ${SHELL-${BASH}} -c "{ cat '{}' | tr '\\n' '\\01' | grep -qPz ${regexp}; } || { echo '{}'; exit 1; }" || {
+list_files yes "${@}" | xargs -P ${job_num} -I{} -- /bin/bash -c "{ cat '{}' | tr '\\n' '\\01' | grep -qPz ${regexp}; } || { echo '{}'; exit 1; }" || {
   {
     echo "ERROR: some of the input files (see above) do not contain the following license"
     echo "       header):"
@@ -180,7 +180,7 @@ list_files yes "${@}" | xargs -P ${job_num} -I{} -- ${SHELL-${BASH}} -c "{ cat '
 regexp='^[[:space:]]*'"${comment}"'.*@(par[[:space:]]+revision[[:space:]]+history|author)'
 quote_value regexp
 
-list_files no "${@}" | xargs -P ${job_num} -I{} -- ${SHELL-${BASH}} -c "grep --color='auto' -HniP ${regexp} '{}' >&2; test \${?} -eq 1" || {
+list_files no "${@}" | xargs -P ${job_num} -I{} -- /bin/bash -c "grep --color='auto' -HniP ${regexp} '{}' >&2; test \${?} -eq 1" || {
   {
     echo "ERROR: some of the input files contain forbidden Doxygen commands"
     echo "       '@par Revision history' and '@author' (see above)"

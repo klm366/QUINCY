@@ -12,15 +12,15 @@
 !> ---------------------------------------
 !>
 
-! Program taken from the script collection of SW/TR (rewrite_transfer_matrix.f90) to 
-! calculate relative from absolute transition data which was previously aggregated from LUH2_v1 data 
-! and then remap it from 0.25° to ires
+! Program taken from the script collection of SW/TR (rewrite_transfer_matrix.f90) to
+! calculate relative from absolute transition data which was previously aggregated from LUH2_v1 data
+! and then remap it from 0.25 degC to ires
 !
-!-- JN 07.07.16: 
+!-- JN 07.07.16:
 !* changed the expected input grid
 !* removed non existing transitions
 !* added reading of floats (write as double)
-!-- TR 25.08.16: 
+!-- TR 25.08.16:
 !* processing of years with 3 digits
 !-- JN 06.12.16:
 !* also read work path from timeinfo.nml
@@ -34,9 +34,9 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
    !                   4 byte REAL      8 byte REAL
    !          CRAY:        -            precision =   13
    !                                    exponent  = 2465
-   !          IEEE:    precision =  6   precision =   15  
+   !          IEEE:    precision =  6   precision =   15
    !                   exponent  = 37   exponent  =  307
-   INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND(6,37)  
+   INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND(6,37)
    INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(12,307)
    INTEGER, PARAMETER :: wp = dp   ! working precision
    INTEGER, PARAMETER :: i4 = SELECTED_INT_KIND(9)
@@ -85,7 +85,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
    REAL(dp),ALLOCATABLE, DIMENSION(:,:,:)  ::  RSTATES
 ! no pasture
    REAL(dp)  :: RNAT_TO_NAT, RSTATE_NATURAL_NEXT, RSTATE_MANAGED_NOW
-   REAL(dp)  :: RTRANS_NATURAL_MANAGED, RTRANS_MANAGED_NATURAL 
+   REAL(dp)  :: RTRANS_NATURAL_MANAGED, RTRANS_MANAGED_NATURAL
 ! gauss output
    INTEGER  ::  NGLON, NGLAT, ISTATES_OUT
    REAL(dp)  ::  UMFANG, EXCESS
@@ -206,7 +206,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
       ALLOCATE (NATTTYP(NVAR,NVARATTMAX))
       ALLOCATE (NATTDIM(NVAR,NVARATTMAX))
       DO I=1,NVAR
-        DO II=1,NVARATT(I)      
+        DO II=1,NVARATT(I)
           IRET = nf_inq_attname(NCID,I,II,FATTNAM(I,II))
           CALL check_err(IRET)
           IRET = nf_inq_att(NCID,I,FATTNAM(I,II),NATTTYP(I,II),NATTDIM(I,II))
@@ -272,15 +272,15 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
             IF (NDIMLEN(I) == NLAT) LLAT = .true.
          END IF
       END DO
-      
+
       IF (.NOT. LLON) STOP 'Dimension lon not found or number of longitudes not correct'
       IF (.NOT. LLAT) STOP 'Dimension lat not found or number of latitudes not correct'
-      
+
       LPRIMARY = .false.
       LSECONDARY = .false.
       LCROP = .false.
       LPASTURE = .false.
-      
+
       DO I = 1,NVAR
          ! 'gothr' is primary vegetation
          IF (FVARNAM(I) == 'gothr') THEN
@@ -298,7 +298,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
             IPASTURE = I
          END IF
       END DO
-      
+
       IF (.NOT. LPRIMARY) STOP 'Variable gothr (primary) not found'
       IF (.NOT. LSECONDARY) STOP 'Variable gsecd (secondary) not found'
       IF (.NOT. LCROP) STOP 'Variable gcrop not found'
@@ -355,7 +355,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
       ALLOCATE (NATTTYP(NVAR,NVARATTMAX))
       ALLOCATE (NATTDIM(NVAR,NVARATTMAX))
       DO I=1,NVAR
-        DO II=1,NVARATT(I)      
+        DO II=1,NVARATT(I)
           IRET = nf_inq_attname(NCID,I,II,FATTNAM(I,II))
           CALL check_err(IRET)
           IRET = nf_inq_att(NCID,I,FATTNAM(I,II),NATTTYP(I,II),NATTDIM(I,II))
@@ -394,7 +394,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
          IF (FVARNAM(I) == 'lon' ) THEN
             ALLOCATE(RVARLON(NDIMLEN(NVARDIMID(I,1))))
             IRET = nf_get_var_double(NCID,I,RVARLON)
-            CALL check_err(IRET)         
+            CALL check_err(IRET)
          ELSE IF (FVARNAM(I) == 'lat') THEN
             ALLOCATE(RVARLAT(NDIMLEN(NVARDIMID(I,1))))
             IRET = nf_get_var_double(NCID,I,RVARLAT)
@@ -797,7 +797,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
                   IF (RSTATES_FLIP(I + 1,J + 1) >= -EPSILON(1.) .AND. &
                       RSTATES_FLIP(I + 1,J + 1) <= 1. + EPSILON(1.) .AND. &
                       RSTATES(I + NLON/2,J,ISECONDARY) >= -EPSILON(1.) .AND. &
-                      RSTATES(I + NLON/2,J,ISECONDARY) <= 1. + EPSILON(1.)) THEN                   
+                      RSTATES(I + NLON/2,J,ISECONDARY) <= 1. + EPSILON(1.)) THEN
                      RSTATES_FLIP(I + 1,J + 1) = RSTATES_FLIP(I + 1,J + 1) + RSTATES(I + NLON/2,J,ISECONDARY)
                   ELSE
                      RSTATES_FLIP(I + 1,J + 1) = MISS_VALUE
@@ -811,7 +811,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
                   IF (RSTATES_FLIP(I + 1,J + 1) >= -EPSILON(1.) .AND. &
                       RSTATES_FLIP(I + 1,J + 1) <= 1. + EPSILON(1.) .AND. &
                       RSTATES(I - NLON/2,J,ISECONDARY) >= -EPSILON(1.) .AND. &
-                      RSTATES(I - NLON/2,J,ISECONDARY) <= 1. + EPSILON(1.)) THEN               
+                      RSTATES(I - NLON/2,J,ISECONDARY) <= 1. + EPSILON(1.)) THEN
                      RSTATES_FLIP(I + 1,J + 1) = RSTATES_FLIP(I + 1,J + 1) + RSTATES(I - NLON/2,J,ISECONDARY)
                   ELSE
                      RSTATES_FLIP(I + 1,J + 1) = MISS_VALUE
@@ -906,7 +906,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
    WRITE(*,'(A,g16.8,3i5)') 'Max excess SECONDARY 2 PASTURE  :',MAX_EXCESS(ISECONDARY2PASTURE,1), &
                                                             INT(MAX_EXCESS(ISECONDARY2PASTURE,2:4))
    WRITE(*,'(A,g16.8,3i5)') 'Max excess SECONDARY 2 CROP     :',MAX_EXCESS(ISECONDARY2CROP,1)   , &
-                                                            INT(MAX_EXCESS(ISECONDARY2CROP,2:4)) 
+                                                            INT(MAX_EXCESS(ISECONDARY2CROP,2:4))
    DEALLOCATE(MAX_EXCESS)
 
    WRITE (*,*) "Program sucessfully finished."
@@ -999,7 +999,7 @@ CONTAINS
      X(I)=XX(I-1)
    END DO
    DO J=2,NY+1
-     Y(J) = YY(J-1)        
+     Y(J) = YY(J-1)
    END DO
    X(1) = (2. * X(2)) - X(3)
    X(NX+2) = (2. * X(NX+1)) - X(NX)
@@ -1068,7 +1068,7 @@ CONTAINS
 ! add flux multiplied by the associated area to OUT-GRID
        IF (ICASE == 1) THEN
          AREA(IX-1,IY-1) = AREA(IX-1,IY-1) + (WEIGHT(II,JJ) * AIN)
-         FIELD(IX-1,IY-1) = FIELD(IX-1,IY-1) + (FIELDM(II,JJ) * WEIGHT(II,JJ) * AIN)          
+         FIELD(IX-1,IY-1) = FIELD(IX-1,IY-1) + (FIELDM(II,JJ) * WEIGHT(II,JJ) * AIN)
        ELSE IF (ICASE == 2) THEN
          IF (IY > NY) WRITE(*,*) 'IY,NY: ATTENTION (ICASE=2)!',IY,NY
          AIN1 = ABS(SIN((YM(JJ-1) + YM(JJ)) *deg_to_rad / 2.) - SIN((Y(IY) + Y(IY+1)) * deg_to_rad / 2.)) &
@@ -1144,14 +1144,14 @@ SUBROUTINE GAUAW (pa,nlat)
 
     IMPLICIT NONE
 
-    !  Scalar arguments 
+    !  Scalar arguments
     INTEGER :: nlat
 
-    !  Array arguments 
+    !  Array arguments
     REAL(dp)    :: pa(nlat)
     ! *pa*  - array, length at least *k,* to receive abscis abscissas.
 
-    !  Local scalars: 
+    !  Local scalars:
     REAL, PARAMETER :: eps = EPSILON(0.0)
     INTEGER, PARAMETER :: itemax = 20
 
@@ -1160,10 +1160,10 @@ SUBROUTINE GAUAW (pa,nlat)
     REAL    :: za, zw, z, zan
     REAL    :: zk, zkm1, zkm2, zx, zxn, zldn, zmod
 
-    !  Intrinsic functions 
+    !  Intrinsic functions
     INTRINSIC ABS, COS, MOD, TAN
 
-    !  Executable statements 
+    !  Executable statements
 
     api    = 2.*ASIN(1.)
 
@@ -1171,7 +1171,7 @@ SUBROUTINE GAUAW (pa,nlat)
 
     ! Find first approximation of the roots of the
     ! Legendre polynomial of degree nlat
-    
+
     DO jgl = 1, ins2
        z = REAL(4*jgl-1)*api/REAL(4*nlat+2)
        pa(jgl) = COS(z+1./(TAN(z)*REAL(8*nlat**2)))
@@ -1184,12 +1184,12 @@ SUBROUTINE GAUAW (pa,nlat)
     DO jgl = 1, ins2
 
        za = pa(jgl)
-    
+
        DO iter = 1, itemax+1
           zk = 0.0
 
           ! Newton iteration step
-    
+
           zkm2 = 1.0
           zkm1 = za
           zx = za
@@ -1203,9 +1203,9 @@ SUBROUTINE GAUAW (pa,nlat)
           zmod = -zk/zldn
           zxn = zx+zmod
           zan = zxn
-    
+
           ! computes weight
-    
+
           zkm2 = 1.0
           zkm1 = zxn
           zx = zxn

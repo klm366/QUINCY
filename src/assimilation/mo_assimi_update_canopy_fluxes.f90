@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, RAD_, ASSIMI_, PHENO_, VEG_  ! SSE_ 
+    USE mo_jsb_process_class,       ONLY: A2L_, RAD_, ASSIMI_, PHENO_, VEG_  ! SSE_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_parallel,            ONLY: Get_omp_thread
@@ -64,8 +64,8 @@ CONTAINS
     USE mo_rad_process,             ONLY: Has_minimal_radiation
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
-    
+    dsl4jsb_Use_config(ASSIMI_)
+
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
@@ -236,7 +236,7 @@ CONTAINS
 
 
     !> 0.8 set some variables to a constant value for now | or calc input values in a simplified way
-    !! 
+    !!
     beta_sinklim_ps(:)    = 1.0_wp
     t_jmax_opt_mavg(:)    = 25.0_wp                                 ! [deg C]
     t_air_tacclim_mavg(:) = t_air(:)
@@ -244,7 +244,7 @@ CONTAINS
     beta_soa(:)           = 1.0_wp  ! soa_tsoa_mavg(:) = 7.0_wp  ! see quincy:test_canopy_model; is initialized in assimi init with -10.0_wp as the model starts in winter
 
     !> 0.9 set output to zero
-    !! 
+    !!
     canopy_cond(:)            = 0.0_wp
     co2_conc_leaf(:)          = 0.0_wp
 
@@ -321,7 +321,7 @@ CONTAINS
         !                               gross_assimilation_cl(:,icanopy) * &
         !                               lai_cl(:,icanopy) * &
         !                               calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C13(:), hlp1(:))
-        ! 
+        !
         !   ! C14 flux associated with photosynthesis
         !   hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
         !                                                 co2_mixing_ratio(:)        , &
@@ -329,7 +329,7 @@ CONTAINS
         !                                                 lctlib%ps_pathway)
         !   gross_assimilation_C14(:) = gross_assimilation_C14(:) + &
         !                               gross_assimilation_cl(:,icanopy) * &
-        !                               lai_cl(:,icanopy) * & 
+        !                               lai_cl(:,icanopy) * &
         !                               calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
         !                                                  hlp1(:), co2_mixing_ratio_C13(:))
         ! END WHERE
@@ -344,16 +344,16 @@ CONTAINS
 
         ! diagnose jmax and vcmax
         !> N specific rate of electron transport rate
-        jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
+        jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * &
                              exp(-(((t_air(:) - tmelt - t_jmax_opt_mavg(:))/lctlib%t_jmax_omega)**2)) * &
-                             beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
+                             beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *&
                              leaf_nitrogen_cl(:,icanopy)
 
 
         !> N specific rate of Rubisco turnover
         vcmax_cl(:,icanopy) = vcmax2n * fn_rub_cl(:,icanopy) * exp(E0v - E1v/(r_gas * t_air(:))) * &
-                              beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
-                              leaf_nitrogen_cl(:,icanopy) 
+                              beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *&
+                              leaf_nitrogen_cl(:,icanopy)
 
     ENDDO ! DO icanopy = 1,ncanopy
 
@@ -415,7 +415,7 @@ CONTAINS
                                             m_et                , &
                                             m_pepc)
 
-  USE mo_veg_constants,             ONLY: fmaint_rate_base  
+  USE mo_veg_constants,             ONLY: fmaint_rate_base
   USE mo_jsb_physical_constants,    ONLY: r_gas, tmelt
   USE mo_assimi_constants,          ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
@@ -435,8 +435,8 @@ CONTAINS
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
   REAL(wp),                 INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
-  REAL(wp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (micro-mol m-2 s-1)
+  REAL(wp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (micro-mol m-2 s-1)
   REAL(wp),                 INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit
   REAL(wp),                 INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),                 INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
@@ -451,9 +451,9 @@ CONTAINS
   REAL(wp),                 INTENT(IN) :: lai_cl                  !< lai of the particular canopy layer
   REAL(wp),                 INTENT(IN) :: leaf_nitrogen_cl        !< total foliar N content
   REAL(wp),                 INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
-  REAL(wp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (micro-mol CO2 / m2 /s)
   REAL(wp),                 INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s)
   REAL(wp),                 INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
   REAL(wp),                 INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
@@ -463,13 +463,13 @@ CONTAINS
   ! 0.2 Local
   REAL(wp) :: kc, ko, km              ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
   REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
-  REAL(wp) :: f_resp                  ! N-specific layer respiration rate (µmol CO2 / mmol N /s)
+  REAL(wp) :: f_resp                  ! N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
   REAL(wp) :: nsat,nlim               ! foliar N that is light saturated / limited (mmol N)
   REAL(wp) :: n1,n2,n3                ! N specific rates of electron-transport/Rubisco/PEPc limited PS
   REAL(wp) :: m1,m2,m3                ! ci sensitivity of electron-transport/Rubisco/PEPc limited PS
   REAL(wp) :: msat                    ! N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
   REAL(wp) :: nco                     ! co-limitation factor
-  REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (µmol / m2 / s)
+  REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
   REAL(wp) :: fabs,fabsb              ! fractional light absorption on chloroplast
   REAL(wp) :: ppm2Pa                  ! factor to convert gas concentrations from ppm to Pa
   REAL(wp) :: rtck                    ! dry static energy
@@ -494,7 +494,7 @@ CONTAINS
 
 
     !> IF: initialise output for no-light condition
-    !! use l_day(:) for consistency with RAD_ 
+    !! use l_day(:) for consistency with RAD_
     !! prev. it was used: "IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN"
     IF (.NOT. l_day) THEN
       ag_cl    = 0.0_wp
@@ -573,7 +573,7 @@ CONTAINS
 
           !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
           msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
-          
+
           !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
           nco = msat/(alpha_i * ka * m1)
 
@@ -726,15 +726,15 @@ CONTAINS
 
 
     !> 1.0 saturating specific humidity [kg kg-1]
-    !! 
+    !!
     q_sat = calc_spec_humidity_sat(temp,press_srf)
 
     !> 1.1 vapour pressure deficit [kPa]
-    !! 
+    !!
     vpd = MAX(q_sat - q_air,0.0_wp) * press_srf / eps_vpd / 1000._wp
 
     !> 1.2 scalar for atmospheric humidity as relative humidity (fractions)
-    !! 
+    !!
     beta = q_air/q_sat ! Ball & Berry
     !beta = MIN(5._wp,1._wp / SQRT(vpd + eps8)) ! Medlyn et al. 2011
   END FUNCTION calc_atm_moisture_stress
@@ -748,7 +748,7 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi,phi_leaf_min) RESULT(beta)
-  
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -772,8 +772,8 @@ CONTAINS
   !
   !-------------------------------------------------------------------------------------------------------
   !> Calculate spring recovery period for coniferous forests
-  !! 
-  !! Based on Mäkelä et al., 2004  \n
+  !!
+  !! Based on Makela et al., 2004  \n
   !! returns beta_soa with a value [0.01,1.0]
   !-------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
@@ -817,11 +817,11 @@ CONTAINS
   ! !! Output: Discrimination (per mill)
   ! !-----------------------------------------------------------------------------------------------------
   ! PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-  ! 
+  !
   !   USE mo_assimi_constants,       ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
   !                                        discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
   !                                        discr_ps_phi, ic3phot, ic4phot
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 Inout
@@ -833,8 +833,8 @@ CONTAINS
   !   ! ---------------------------
   !   ! 0.2 Local
   !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
-  ! 
-  ! 
+  !
+  !
   !   !> SELECT PS pathway C3 C4
   !   SELECT CASE(ps_pathway)
   !   CASE (ic3phot)
@@ -854,7 +854,7 @@ CONTAINS
   !         discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci/ca
   !     END SELECT
   !   END SELECT
-  ! 
+  !
   ! END FUNCTION discrimination_ps
 
 #endif

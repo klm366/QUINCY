@@ -1029,7 +1029,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! Saturated hydraulic conductivity following percolation theory 
+      ! Saturated hydraulic conductivity following percolation theory
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)

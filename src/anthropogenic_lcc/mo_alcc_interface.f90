@@ -24,7 +24,7 @@ MODULE mo_alcc_interface
   USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -51,12 +51,12 @@ MODULE mo_alcc_interface
     PROCEDURE, NOPASS :: Integrate => update_alcc     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_alcc  !< Aggregates computed task variables
   END TYPE tsk_alcc
-  
+
   !> Constructor interface for alcc pre task
   INTERFACE tsk_alcc
     PROCEDURE Create_task_alcc                        !< Constructor function for task
   END INTERFACE tsk_alcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -73,7 +73,7 @@ CONTAINS
     CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for alcc process
@@ -85,14 +85,14 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_alcc(model_id))
-    
+
   END SUBROUTINE Register_alcc_tasks
 
   ! ====================================================================================================== !
   !
   !> Implementation of "update" for task "alcc"
   !>
-  !> Task "alcc" currently annually moves land and to be conserved matter 
+  !> Task "alcc" currently annually moves land and to be conserved matter
   !
   SUBROUTINE update_alcc(tile, options)
 
@@ -156,7 +156,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     !>
-    !> Assert, that this tile is the VEG tile 
+    !> Assert, that this tile is the VEG tile
     !>
     ! - this lcc process changes the PFT tiles but it runs and is controlled on their parent tile
     IF (.NOT. tile%name .EQ. 'veg') THEN
@@ -236,7 +236,7 @@ CONTAINS
         ! are part of the lcc structure
         IF (one_of(current_tile%name, lcc_relocations%tile_names) <= 0) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
-          & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.') 
+          & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
         END IF
 
         cf_diff(:) = cf_current_year(:, i_cf_tile) - initial_area(:, i_tile)
@@ -332,11 +332,11 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     iblk = options%iblk
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     !> Currently nothing to do
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_alcc

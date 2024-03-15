@@ -32,7 +32,7 @@ MODULE mo_sse_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
@@ -700,7 +700,7 @@ CONTAINS
       & soil_depth_sl,        &
       & fract_org_sl,         &
       & vol_heat_cap_sl,      &
-      & heat_cond_sl,         & 
+      & heat_cond_sl,         &
       & wtr_soil_sl,          &
       & ice_soil_sl,          &
       & vol_porosity_sl,      &
@@ -715,7 +715,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: & 
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: &
       & vol_heat_cap_tmp,                    &
       & vol_heat_cap_org_tmp,                &
       & vol_porosity_org_tmp,                &
@@ -802,7 +802,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)  
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -885,7 +885,7 @@ CONTAINS
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
-      
+
       ALLOCATE(heat_cond_tmp(nc,nsoil), vol_porosity_org_tmp(nc,nsoil), &
              & hcond_org_tmp(nc,nsoil), hcond_dry_org_tmp(nc,nsoil))
       !$ACC ENTER DATA CREATE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)

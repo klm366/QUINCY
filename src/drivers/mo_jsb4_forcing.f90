@@ -1341,7 +1341,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> @TODO add docu
-  !> 
+  !>
   SUBROUTINE finalize_external_forcing(no_of_models)
 
     INTEGER, INTENT(in) :: no_of_models

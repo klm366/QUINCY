@@ -15,20 +15,20 @@
 !>
 
 ! -- to be executed after scaling of the LUH2 states (scale_with_veg-ratio-max.bash)
-!    [which is to be executed after processing the LUH2 data in the "CMIP5-way" 
-!   The scaling of states is the "CMIP6-way": 
-!   In order to conserve as much as possible of the LUH2 crop + pasture area 
+!    [which is to be executed after processing the LUH2 data in the "CMIP5-way"
+!   The scaling of states is the "CMIP6-way":
+!   In order to conserve as much as possible of the LUH2 crop + pasture area
 !   the states S_t are scaled to S'_t using the veg_ratio_max,
-!   i.e. crop and pasture are scaled up (divided by veg_ratio_max) 
+!   i.e. crop and pasture are scaled up (divided by veg_ratio_max)
 !   The additional area is then subtracted from the natural vegetation
 !   (the desert fraction used in the jsbach simulation is assumed to only be part of LUH2 natural vegetation
 !   -- this scaling is only done up to a remaining natural vegetation fraction of 0.01
 !   => for years and cells where nat < 0.01 no scaling is done, even if veg_ratio_max < 1)
 !
 !   Scaling of states makes the previously absolute area fractions of crop and pasture 'relative' to JSBACHs desert fraction.
-!   The aim of this program is to also scale the transitions accordingly, thus to also make them 'relative' to the deserts 
-!   (Note, after the 'CMIP5' like processing the transitions are relative to the unscaled states, 
-!   thus first the absolute unscaled transitions are calculated, then they are scaled with the desert fraction 
+!   The aim of this program is to also scale the transitions accordingly, thus to also make them 'relative' to the deserts
+!   (Note, after the 'CMIP5' like processing the transitions are relative to the unscaled states,
+!   thus first the absolute unscaled transitions are calculated, then they are scaled with the desert fraction
 !   and then they are made relative to the area fraction of the source vegetation type of the transition again)
 !
 !   Scaling of the transitions is done in several steps
@@ -52,7 +52,7 @@
 !---- inspired by old fortran programs of TR/SW ++ see discussions with TR, e.g. TRs emails from 02.12.2016 and 27.01.2017
 !-- JN 09.12.16 -- julia.nabel@mpimet.mpg.de
 !-- JN 31.07.17: changed check on remaining natveg vs delta transitions (during testing rangelands as pastures for Trendy v6)
-! 
+!
 ! compile locally:
 ! nagfor -colour -w=uep Adapting_transitions_after_scaling_of_states.f90 -o Adapting_transitions_after_scaling_of_states.x -I/sw/jessie-x64/netcdf_fortran-4.4.2-static-nag60/include -L/sw/jessie-x64/netcdf-4.3.3.1-static-gccsys/lib -L/sw/jessie-x64/netcdf_fortran-4.4.2-static-nag60/lib -lnetcdff -lnetcdf -L/sw/jessie-x64/hdf5-1.8.16-static-gccsys/lib -lhdf5_hl -lhdf5 -lz -L/sw/jessie-x64/szip-2.1-static-gccsys/lib/ -lsz -ldl
 PROGRAM Adapting_transitions_after_scaling_of_states
@@ -76,21 +76,21 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   ! Minimum fraction of natural vegetation that was conserved in scaled cells
   REAL(dp), PARAMETER :: MIN_NAT_FRACT_IN_SCALING = 0.01
 
-  ! NOTE: Unfortunately the accuracy of the LUH data is only about ~1.e-6, 
+  ! NOTE: Unfortunately the accuracy of the LUH data is only about ~1.e-6,
   ! Louise Parsons Chini - Email 05.01.17: "these differences are on the order of 1e-5 so we were not too concerned about these
   !                                         differences since the accuracy/precision of our datasets is about that order anyway."
   ! Thus, e.g.
   ! - changes in states do not equalise from one time step to another but differ of up to +-1.e-6
   ! - there are changes in the states in the magnitude of 1.e-6 although transitions are zero
-  REAL(dp), PARAMETER :: EXPECTED_ACCURACY = 1.e-6 ! Note: needed to be slightly increased for GCB2021 (3.e-5) 
+  REAL(dp), PARAMETER :: EXPECTED_ACCURACY = 1.e-6 ! Note: needed to be slightly increased for GCB2021 (3.e-5)
   ! - NOTE: depending on the accepted error, imbalances between transitions and states might add up
   REAL(dp), PARAMETER :: RESULTING_ACCURACY_ERRORS = 3.e-5 !5.e-6
   REAL(dp), PARAMETER :: SMALL_RELATIVE_ERROR = 1.e-3
 
   ! Threshold for detours to be considered (i.e. do not consider unscaled detours below this threshold)
   REAL(dp), PARAMETER :: DETOUR_THRESHOLD = EXPECTED_ACCURACY
-  
-  ! resolution dependant 
+
+  ! resolution dependant
   INTEGER :: nLon           ! number of longitudes
   INTEGER :: nLat           ! number of latitudes
 
@@ -137,7 +137,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   REAL(dp),ALLOCATABLE, DIMENSION(:,:,:,:) :: trans_bounded_circ
   REAL(dp),ALLOCATABLE, DIMENSION(:,:,:,:) :: absTrans_diffNetDelta_UnscaledS, trans_scaled_diffNetDelta
   REAL(dp),ALLOCATABLE, DIMENSION(:,:,:,:) :: trans_deltaScaledS, trans_netScaledS, trans_ScaledS
- 
+
   ! indices, counter, other ints
   INTEGER :: lon, lat, i, j, yearCounter, indexTransition
   INTEGER :: indexCrop2Pasture, indexPasture2Crop, indexNatural2Crop
@@ -153,7 +153,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   CHARACTER(LEN=512) :: vegRatioMaxFileNameWithPath
   CHARACTER(LEN=128) :: folderStateFiles      ! directory with scaled states files
   CHARACTER(LEN=128) :: folderUnscaledStateFiles
-  CHARACTER(LEN=128) :: folderTransitionFiles ! directory with unscaled transition files 
+  CHARACTER(LEN=128) :: folderTransitionFiles ! directory with unscaled transition files
   CHARACTER(LEN=128) :: outputFolder          ! directory for scaled transition files
   CHARACTER(LEN=128) :: stateTagScaled, stateTagUnscaled, transitionsTag
   CHARACTER(LEN=512) :: fileName, outFileName
@@ -270,7 +270,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   ALLOCATE(absTrans_circ_via_reduction(nLon,nLat,NTRANSSTATES,NTRANSSTATES))
 
   ALLOCATE(trans_bounded_circ(nLon,nLat,NTRANSSTATES,NTRANSSTATES))
-  
+
   ALLOCATE(trans_deltaScaledS(nLon,nLat,NTRANSSTATES,NTRANSSTATES))
   ALLOCATE(trans_netScaledS(nLon,nLat,NTRANSSTATES,NTRANSSTATES))
   ALLOCATE(trans_ScaledS(nLon,nLat,NTRANSSTATES,NTRANSSTATES))
@@ -278,9 +278,9 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   veg_ratio_max(:,:) = 0.
   readData(:,:,:) = 0.
   readScaledSNextY(:,:,:) = 0.
-  readScaledSThisY(:,:,:) = 0.  
+  readScaledSThisY(:,:,:) = 0.
   readUnscaledSNextY(:,:,:) = 0.
-  readUnscaledSThisY(:,:,:) = 0.  
+  readUnscaledSThisY(:,:,:) = 0.
   readTrans(:,:,:) = 0.
 
   sortedUnscaledSThisY(:,:,:) = 0.
@@ -312,11 +312,11 @@ PROGRAM Adapting_transitions_after_scaling_of_states
       endif
     ENDIF
   ENDDO
-  
+
   DEALLOCATE(varName, varTyp, nVarAttr, dimLength, dimName, varDimIDs)
 
   !----- time loop
-  DO yearCounter = 1,nyear  
+  DO yearCounter = 1,nyear
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!! preparation: init/reset arrays !!!
@@ -335,7 +335,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     absTrans_circ_bilateral(:,:,:,:) = 0.
     absTrans_circ_fullCycles(:,:,:,:) = 0.
     absTrans_circ_via_reduction(:,:,:,:) = 0.
-    trans_bounded_circ(:,:,:,:) = 0. 
+    trans_bounded_circ(:,:,:,:) = 0.
 
     absTrans_diffNetDelta_UnscaledS(:,:,:,:) = 0.
     trans_scaled_diffNetDelta(:,:,:,:) = 0.
@@ -375,7 +375,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     END IF
 
 
-    !----- get land cover states of next year 
+    !----- get land cover states of next year
     fileName = trim(workingPath) // trim(folderStateFiles) // 'LUH_states_T' // &
         & TRIM(char_res) // TRIM(stateTagScaled) // '_' // TRIM(nextYYYY) // '.nc'
     CALL read_states_file(fileName, nLon, nLat, readScaledSNextY)
@@ -421,7 +421,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     ALLOCATE (attrType(nVar,maxNrOfReadAttrs))
     ALLOCATE (attrLen(nVar,maxNrOfReadAttrs))
     DO i=1,nVar
-      DO j=1,nVarAttr(i)      
+      DO j=1,nVarAttr(i)
         errorStatus = nf_inq_attname(ncFileID,i,j,attrName(i,j))
         CALL check_err(errorStatus)
         errorStatus = nf_inq_att(ncFileID,i,attrName(i,j),attrType(i,j),attrLen(i,j))
@@ -466,7 +466,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
       IF (varName(i) == 'lon' ) THEN
         ALLOCATE(readLons(dimLength(varDimIDs(i,1))))
         errorStatus = nf_get_var_double(ncFileID,i,readLons)
-        CALL check_err(errorStatus)         
+        CALL check_err(errorStatus)
       ELSE IF (varName(i) == 'lat') THEN
         ALLOCATE(readLats(dimLength(varDimIDs(i,1))))
         errorStatus = nf_get_var_double(ncFileID,i,readLats)
@@ -496,7 +496,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
           checkPasture2Natural = .true.
           indexPasture2Natural = indexTransition
         END IF
-        
+
         errorStatus = nf_get_var_double(ncFileID,i,readData)
         CALL check_err(errorStatus)
         readTrans(:,:,indexTransition) = readData(:,:,1)
@@ -525,7 +525,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
 
     sortedUnscaledSNextY(:,:,1) = readUnscaledSNextY(:,:,indexOfPrimary) + readUnscaledSNextY(:,:,indexOfSecondary)  ! natural
     sortedUnscaledSNextY(:,:,2) = readUnscaledSNextY(:,:,indexOfCrop)                                        ! crop
-    sortedUnscaledSNextY(:,:,3) = readUnscaledSNextY(:,:,indexOfPasture) 
+    sortedUnscaledSNextY(:,:,3) = readUnscaledSNextY(:,:,indexOfPasture)
 
     ! TODO: revisit: numerical issues can lead to natural vegetation with cf > 1
     CALL check_natural_veg_for_numerical_issues(sortedUnscaledSNextY, 'unscaled states next year')
@@ -573,7 +573,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     !ASSERTION: sum of outgoing transition of any state may not exceed one
     CALL check_sum_of_transitions(absTrans_UnscaledS, sortedUnscaledSThisY, sortedUnscaledSNextY, 'org absolute trans')
 
-    !--- calculate delta for scaled and unscaled states 
+    !--- calculate delta for scaled and unscaled states
     deltaUnscaledS = sortedUnscaledSNextY - sortedUnscaledSThisY
     deltaScaledS = sortedScaledSNextY - sortedScaledSThisY
     ! ASSERTION: changes in states need to equal out
@@ -593,13 +593,13 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     absTrans_circ_via_reduction = absTrans_circ_fullCycles + absTrans_circ_bilateral
     CALL check_circularity_of_circular_transitions(absTrans_circ_via_reduction, 'unconstraint circular transitions')
 
-    !- derive net transitions as remaining transitions 
+    !- derive net transitions as remaining transitions
     absTrans_netUnscaledS = absTrans_UnscaledS - absTrans_circ_via_reduction
     ! clean net trans (and abs trans) where possible
     CALL remove_unscaled_where_zero(deltaUnscaledS, absTrans_netUnscaledS, absTrans_UnscaledS)
 
     !- get a correction required for direct transitions (detours)
-    ! the difference between the direct transitions from delta and the net transitions remaining when eliminating the circular 
+    ! the difference between the direct transitions from delta and the net transitions remaining when eliminating the circular
     ! transitions from the actual transitions are the detours contained in the actual transitions
     absTrans_diffNetDelta_UnscaledS = absTrans_netUnscaledS - absTrans_deltaUnscaledS
     !TODO: reconsider: detours are only considered if they are larger than a threshold
@@ -611,7 +611,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
 
     !--- assemble scaled transitions
     !- calculate delta transitions
-    ! NOTE: in the scaled case there are no abs trans (since this is the target variable) 
+    ! NOTE: in the scaled case there are no abs trans (since this is the target variable)
     !       therefore, absTrans_UnscaledS is used for plausibility checks (e.g. transitions should not be zero when delta is not)
     CALL calculate_transitions_from_deltaS(absTrans_UnscaledS, deltaScaledS, trans_deltaScaledS)
 
@@ -622,7 +622,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     FORALL(lon=1:nLon,lat=1:nLat, veg_ratio_max(lon,lat) .GT. FRACT_SMALL)
       trans_scaled_diffNetDelta(lon,lat,:,:) = absTrans_diffNetDelta_UnscaledS(lon,lat,:,:) / veg_ratio_max(lon,lat)
     END FORALL
-    ! boundary conditions: ignore detours in cells which were scaled but are at the limit after scaling 
+    ! boundary conditions: ignore detours in cells which were scaled but are at the limit after scaling
     !                      + detours can only be fulfilled, if enough natural vegetation is available
     CALL constrain_detours_with_natural_vegetation(sortedScaledSThisY, sortedUnscaledSThisY, &
         & trans_deltaScaledS, trans_scaled_diffNetDelta)
@@ -643,7 +643,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
 
     !- add net and circular transitions
     trans_ScaledS = trans_netScaledS + absTrans_circ_via_reduction
-    ! boundary condition: transitions involving natural vegetation are constrained by the available area 
+    ! boundary condition: transitions involving natural vegetation are constrained by the available area
     ! (the veg_ratio_max scaling might reduce natural vegetation strongly)
     ! -> i.e. it is not possible to move more natural vegetation in a year than available in the scaled state
     CALL constrain_with_scaled_natural_vegetation(sortedScaledSThisY, &
@@ -667,7 +667,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     ! ASSERTION: transitions are not allowed to be negative and need to be smaller than 1
     CALL check_transitions_for_valid_range(sortedTrans, sortedScaledSNextY, 'final relative transitions')
     !ASSERTION: sum of outgoing transition of any state may not exceed one
-    CALL check_sum_of_transitions(sortedTrans, sortedScaledSThisY, sortedScaledSNextY, 'scaled relative trans')    
+    CALL check_sum_of_transitions(sortedTrans, sortedScaledSThisY, sortedScaledSNextY, 'scaled relative trans')
 
     !-- sort the 4D array back into a 3D array for writing
     scaledTrans(:,:,indexNatural2Crop) = sortedTrans(:,:,1,2)
@@ -675,7 +675,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     scaledTrans(:,:,indexCrop2Natural) = sortedTrans(:,:,2,1)
     scaledTrans(:,:,indexCrop2Pasture) = sortedTrans(:,:,2,3)
     scaledTrans(:,:,indexPasture2Natural) = sortedTrans(:,:,3,1)
-    scaledTrans(:,:,indexPasture2Crop) = sortedTrans(:,:,3,2)    
+    scaledTrans(:,:,indexPasture2Crop) = sortedTrans(:,:,3,2)
 
     ! store this next year arrays for the next year in this year arrays ;)
     sortedScaledSThisY = sortedScaledSNextY
@@ -795,7 +795,7 @@ CONTAINS
         CALL check_err(errorStatus)
 
         call check_dim_order(NDIMSOFVARS, varDimIDs(i,:), dimName, NDIMINID)
-        
+
         if (ALL(NDIMINID .eq. (/ 1,2,3 /))) then
           readStates(:,:,indexState) = readData(:,:,1)
         else
@@ -832,12 +832,12 @@ CONTAINS
     CALL check_err(errorStatus)
 
   END SUBROUTINE read_states_file
-  
+
   ! --- calculate_transitions_from_deltaS -------------------------------------------------------
   ! calculates direct transitions from the delta calculated from the states:
-  ! TR: "Only two cases are possible regarding deltaS (if we don't consider the easy cases with one or all of the three entries of deltaS equals zero): 
-  !      Either 2 vegetation groups increase in area and the other group is shrinking (one transition from the shrinking to each of the two extending, 
-  !      the other transitions are zero) or only one vegetation group is increasing and the other two are shrinking (one transition from each of the 
+  ! TR: "Only two cases are possible regarding deltaS (if we don't consider the easy cases with one or all of the three entries of deltaS equals zero):
+  !      Either 2 vegetation groups increase in area and the other group is shrinking (one transition from the shrinking to each of the two extending,
+  !      the other transitions are zero) or only one vegetation group is increasing and the other two are shrinking (one transition from each of the
   !      two shrinking to the extending, the other transitions are zero). So, it's obvious how to construct Tabs,n(t -> t+1) from deltaS(t -> t+1)."
   ! --> problem as always: the numerical accuracy of the data
   SUBROUTINE calculate_transitions_from_deltaS(absTrans, deltaS, netAbsTrans)
@@ -864,7 +864,7 @@ CONTAINS
       isIncreasing = .FALSE.
       isDecreasing = .FALSE.
       DO i = 1,NTRANSSTATES
-        IF (deltaS(lon,lat,i) .GT. 0.0) THEN 
+        IF (deltaS(lon,lat,i) .GT. 0.0) THEN
           isIncreasing(i) = .TRUE.
         ELSEIF (deltaS(lon,lat,i) .LT. 0.0) THEN
           isDecreasing(i) = .TRUE.
@@ -896,8 +896,8 @@ CONTAINS
         countTransStateIssues = countTransStateIssues + 1
       ENDIF
 
-      IF (setDeltaSToZero) deltaS(lon,lat,:) = 0. 
-      IF (setTransToZero) absTrans(lon,lat,:,:) = 0. 
+      IF (setDeltaSToZero) deltaS(lon,lat,:) = 0.
+      IF (setTransToZero) absTrans(lon,lat,:,:) = 0.
 
       ! Construct net abs transitions from deltaS
       IF ((COUNT(isDecreasing) .EQ. 2) .AND. (COUNT(isIncreasing) .EQ. 1)) THEN
@@ -962,7 +962,7 @@ CONTAINS
 
   CHARACTER(LEN=*),INTENT(IN) :: checkedCase
 
-  setDeltaSToZero = .FALSE. 
+  setDeltaSToZero = .FALSE.
   setTransToZero = .FALSE.
 
   ! check known cases:
@@ -997,8 +997,8 @@ CONTAINS
       WRITE(*,*) '*** transitions from this state: ', absTrans(i,:)
       WRITE(*,*) deltaS(i) - sum(absTrans(:,i)) + sum(absTrans(i,:))
     ENDDO
-    STOP 
-  ENDIF  
+    STOP
+  ENDIF
 
   END SUBROUTINE check_expected_accuracy_problems
 
@@ -1064,9 +1064,9 @@ CONTAINS
         WRITE(*,*) 'WARNING: Found serious imbalance between delta and final transitions - Replaced with trans from delta!'
         CALL show_values_for_lon_lat(lon,lat)
         ! Replace by transitions derived from delta!
-        trans(lon,lat,:,:) = deltaTrans(lon,lat,:,:)        
+        trans(lon,lat,:,:) = deltaTrans(lon,lat,:,:)
       ELSEIF(unmodifedDataInconsistent) THEN
-        countReplacedInconsistentUnmodifiedData = countReplacedInconsistentUnmodifiedData + 1 
+        countReplacedInconsistentUnmodifiedData = countReplacedInconsistentUnmodifiedData + 1
         IF(INFO)THEN
           WRITE(*,*) '######################################################################'
           WRITE(*,*) 'WARNING: inconsistent unmodified data:'
@@ -1075,9 +1075,9 @@ CONTAINS
         ! Replace by transitions derived from delta!
         trans(lon,lat,:,:) = deltaTrans(lon,lat,:,:)
       ELSEIF(hasSmallRelativeError) THEN
-        countSmallRelativeErrors = countSmallRelativeErrors + 1 
+        countSmallRelativeErrors = countSmallRelativeErrors + 1
       ELSEIF(hasSmallAbsDiff) THEN
-        countSmallDiffs = countSmallDiffs + 1 
+        countSmallDiffs = countSmallDiffs + 1
       ENDIF
     ENDDO
   ENDDO
@@ -1123,7 +1123,7 @@ CONTAINS
       ENDDO
     ENDDO
   ENDIF
- 
+
   countSmallDiffs = COUNT(ABS(SUM(deltaS, DIM=3)) .GT. 0.)
   IF(countSmallDiffs .GT. 0) THEN
     WRITE(*,*) '### Counted delta state sums which were larger than zero but smaller than expected accuracy for case ', &
@@ -1178,7 +1178,7 @@ CONTAINS
       ENDDO
     ENDDO
   ENDIF
- 
+
   IF(countSmallExceedance .GT. 0) THEN
     WRITE(*,*) '### Corrected sum of outgoing transitions exceeding one (but < SMALL_RELATIVE_ERROR) -- reduced proportionally ', &
         & countSmallExceedance, checkedCase
@@ -1287,8 +1287,8 @@ CONTAINS
 
   countNumericalIssues = COUNT(states(:,:,1) .GT. 1._dp .AND. states(:,:,1) .NE. MISS_VALUE)
   FORALL(lon=1:nLon, lat=1:nLat, states(lon,lat,1) .GT. 1._dp .AND. states(lon,lat,1) .NE. MISS_VALUE)
-    states(lon,lat,1) = 1._dp 
-  END FORALL 
+    states(lon,lat,1) = 1._dp
+  END FORALL
 
   IF(countNumericalIssues .GT. 0) THEN
     WRITE(*,*) '### Corrected nat area fracts larger than 1.0 (but < 1.0 + expected accuracy) to 1.0: ', &
@@ -1299,7 +1299,7 @@ CONTAINS
 
 
   ! --- constrain_with_scaled_natural_vegetation ------------------------------------------------
-  ! boundary condition: transitions involving natural vegetation are constrained by the available area 
+  ! boundary condition: transitions involving natural vegetation are constrained by the available area
   ! (the veg_ratio_max scaling might reduce natural vegetation strongly)
   ! -> i.e. it is not possible to move more natural vegetation in a year than available in the scaled state
   ! Here: net transitions need to be conserved, here: second full cycles are conserved and only then bilateral cycles
@@ -1326,19 +1326,19 @@ CONTAINS
 
       remainingNatVeg = sortedScaledSThisY(lon,lat,1)
       IF(SUM(trans_ScaledS(lon,lat,1,:)) .GT. remainingNatVeg) THEN
-        ! TODO: reconsider: constrain to available natural vegetation while trying to maintain net transitions, 
+        ! TODO: reconsider: constrain to available natural vegetation while trying to maintain net transitions,
         !       second full cycles and finally bilateral transitions involving nat vegetation
 
-        !ASSERTION: since state delta was used to construct the net transitions, 
+        !ASSERTION: since state delta was used to construct the net transitions,
         !           net transitions should not exceed the state by more than EXPECTED_ACCURACY
         IF(SUM(trans_netScaledS(lon,lat,1,:)) .GT. remainingNatVeg) THEN
           IF(SUM(trans_netScaledS(lon,lat,1,:)) .LT. EXPECTED_ACCURACY) THEN
             countReducedNetSmallTrans = countReducedNetSmallTrans + 1
             trans_netScaledS(lon,lat,1,:) = 0.
           ELSEIF(ABS(SUM(trans_netScaledS(lon,lat,1,:)) - remainingNatVeg) .LT. EXPECTED_ACCURACY) THEN
-            !try to maintain net transitions 
-            !-> anticipated problems: 2 increasing 1 decreasing or 1 increasing and 1 decreasing 
-            !   -> delta decreasing does not match 
+            !try to maintain net transitions
+            !-> anticipated problems: 2 increasing 1 decreasing or 1 increasing and 1 decreasing
+            !   -> delta decreasing does not match
             !   (since the transitions were constructed from the increasing deltas)
             !=> thus outgoing transitions from nat have to be constrained proportionally
             IF(trans_netScaledS(lon,lat,1,2) .GT. 0. .OR. trans_netScaledS(lon,lat,1,3) .GT. 0.) THEN
@@ -1390,11 +1390,11 @@ CONTAINS
         ENDIF
       ENDIF
     ENDDO
-  ENDDO    
-  
+  ENDDO
+
   IF(countReducedNatBilateral .GT. 0) THEN
     WRITE(*,*) '### Counted reduction of nat bilateral transitions due to limited nat veg area: ', countReducedNatBilateral
-  ENDIF 
+  ENDIF
   IF(countRemovedNatBilateralAndReducedFullCycle .GT. 0) THEN
     WRITE(*,*) '### Counted removed nat bilateral and reduced full cylces due to limited nat veg area: ', &
         & countRemovedNatBilateralAndReducedFullCycle
@@ -1416,7 +1416,7 @@ CONTAINS
 
 
   ! --- constrain_detours_with_natural_vegetation --------------------------------------------------
-  ! boundary conditions: ignore detours in cells which were scaled but are at the limit after scaling 
+  ! boundary conditions: ignore detours in cells which were scaled but are at the limit after scaling
   !                      + detours can only be fulfilled, if enough natural vegetation is available
   SUBROUTINE constrain_detours_with_natural_vegetation(sortedScaledSThisY, sortedUnscaledSThisY, &
       & trans_deltaScaledS, trans_scaled_diffNetDelta)
@@ -1437,7 +1437,7 @@ CONTAINS
           & .OR. (sortedScaledSNextY(lon,lat,1) .LE. MIN_NAT_FRACT_IN_SCALING + EXPECTED_ACCURACY &
             & .AND. sortedUnscaledSNextY(lon,lat,1) .GT. MIN_NAT_FRACT_IN_SCALING + EXPECTED_ACCURACY) &
           & .AND. ANY(trans_scaled_diffNetDelta(lon,lat,:,:) .GT. 0.)) THEN
-        ! TODO: reconsider: ignore detours when the scaled natural vegetation in this or in the next year 
+        ! TODO: reconsider: ignore detours when the scaled natural vegetation in this or in the next year
         !       is smaller than MIN_NAT_FRACT_IN_SCALING + EXPECTED_ACCURACY, but was larger in the unscaled case
         !       i.e. do not use detours when the scaling was affected by the 'remaining nat fraction' boundary condition rule
         countDetoursInCellsWithRestrictedScaling = countDetoursInCellsWithRestrictedScaling + 1
@@ -1446,7 +1446,7 @@ CONTAINS
           & .GT. sortedScaledSThisY(lon,lat,1)) THEN
         ! boundary condition: a detour is only possible if it does not violate the amount of nat vegetation available after scaling
         countViolatingDetours = countViolatingDetours + 1
-        !TODO: instead of setting them to zero they should maybe set to the minimum possible, 
+        !TODO: instead of setting them to zero they should maybe set to the minimum possible,
         !      -> this needs some thought -- i.e. are several detours possible?
         trans_scaled_diffNetDelta(lon,lat,:,:) = 0.
       ENDIF
@@ -1456,7 +1456,7 @@ CONTAINS
   IF(countDetoursInCellsWithRestrictedScaling .GT. 0) THEN
     WRITE(*,*) '### Counted detours not accounted for because cells were scaled down to minimum nat. fraction: ', &
         & countDetoursInCellsWithRestrictedScaling
-  ENDIF  
+  ENDIF
   IF(countViolatingDetours .GT. 0) THEN
     WRITE(*,*) '### Counted detours not accounted for due to violation of available nat. fraction: ', countViolatingDetours
   ENDIF
@@ -1529,7 +1529,7 @@ CONTAINS
             WRITE(*,*) '*** incoming: ', absTrans_circ(lon,lat,i,:)
             WRITE(*,*) '*** outgoing: ', absTrans_circ(lon,lat,:,j)
             CALL show_values_for_lon_lat(lon,lat)
-            STOP 
+            STOP
           ENDIF
         ENDIF
       ENDDO
@@ -1661,7 +1661,7 @@ CONTAINS
 
   subroutine check_dim_order(expectedNrOfDims, varDimIDs, nameofDim, orderOfInputDim)
     IMPLICIT NONE
-    
+
     INTEGER, INTENT(IN) :: expectedNrOfDims
     INTEGER, INTENT(IN), Dimension(expectedNrOfDims) :: varDimIDs
     CHARACTER(LEN=4), INTENT(IN), Dimension(expectedNrOfDims)  ::  nameofDim
@@ -1687,7 +1687,7 @@ CONTAINS
       & ncFileID, varName, varTyp, nVarAttr, dimLength, varDimIDs, dimName)
   IMPLICIT NONE
   INCLUDE 'netcdf.inc'
-  
+
   CHARACTER(LEN=*), INTENT(IN) ::  fileName
   INTEGER, INTENT(IN) :: expectedNrVars, expectedNrOfDims
   INTEGER, INTENT(OUT) :: ncFileID
@@ -1698,11 +1698,11 @@ CONTAINS
   INTEGER, INTENT(OUT) :: varDimIDs(:,:)
 
   INTEGER :: i, j, nDim, nVar, nAttr, unLimDimID, errorStatus
-  
+
   INTEGER :: readDimIDs(expectedNrOfDims)
   INTEGER :: nVarDims(expectedNrVars)
 
-  LOGICAL :: checkLonDim, checkLatDim 
+  LOGICAL :: checkLonDim, checkLatDim
 
   ! open the file
   WRITE (*,*) 'open file: ',TRIM(fileName)

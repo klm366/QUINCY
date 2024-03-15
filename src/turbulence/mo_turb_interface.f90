@@ -812,7 +812,7 @@ CONTAINS
           fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) *  &
             & (1._wp - fract_wet(ic)) /                     &
             & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic)))
-        ELSE 
+        ELSE
           fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
           fact_qsat_trans(ic) = 0._wp
         END IF

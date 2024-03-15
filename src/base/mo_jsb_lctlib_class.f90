@@ -148,20 +148,20 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
     REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
-    
+
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
-    INTEGER  :: growthform 
+    INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
-    REAL(wp) :: sla                 
-    REAL(wp) :: sigma_vis 
-    REAL(wp) :: sigma_nir 
-    REAL(wp) :: omega_clumping 
-    REAL(wp) :: crown_shape_factor 
-    REAL(wp) :: cn_leaf             
+    REAL(wp) :: sla
+    REAL(wp) :: sigma_vis
+    REAL(wp) :: sigma_nir
+    REAL(wp) :: omega_clumping
+    REAL(wp) :: crown_shape_factor
+    REAL(wp) :: cn_leaf
     REAL(wp) :: cn_leaf_min
     REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf  
+    REAL(wp) :: np_leaf
     REAL(wp) :: np_leaf_min
     REAL(wp) :: np_leaf_max
     REAL(wp) :: k0_fn_struc
@@ -183,7 +183,7 @@ MODULE mo_jsb_lctlib_class
                 tau_seed_est      , &
                 tau_mycorrhiza
 
-    ! N uptake parameters    
+    ! N uptake parameters
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
                 bnf_base
@@ -217,9 +217,9 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: k_root_dist    
+    REAL(wp) :: k_root_dist
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
-    
+
   END TYPE t_lctlib_element
 
 CONTAINS
@@ -265,7 +265,7 @@ CONTAINS
 
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
@@ -413,7 +413,7 @@ CONTAINS
     LOGICAL            :: exists_c0_allom = .FALSE.
     LOGICAL            :: exists_fstore_target = .FALSE.
     LOGICAL            :: exists_k_root_dist = .FALSE.
-    
+
     ! quincy end
     INTEGER            :: i
 
@@ -946,7 +946,7 @@ CONTAINS
               exists_fstore_target = .TRUE.
 
             CASE ('k_root_dist')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist          
+              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist
               exists_k_root_dist = .TRUE.
             CASE default
               ! nothing to do
@@ -1305,7 +1305,7 @@ CONTAINS
         DO i=2,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
-              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
               !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
            ELSE
               lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
@@ -1314,8 +1314,8 @@ CONTAINS
        ! c0_allom
          DO i=2,nlct
            IF(lctlib(i)%growthform == itree) THEN
-             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
-                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * & 
+             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
+                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
                                   lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
            ELSE
              lctlib(i)%c0_allom = 0.0_wp

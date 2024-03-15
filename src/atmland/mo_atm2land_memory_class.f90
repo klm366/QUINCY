@@ -69,27 +69,27 @@ MODULE mo_a2l_memory_class
       t_bcoef_ice        , &
       q_acoef_ice        , &
       q_bcoef_ice
-    
+
     !! quincy
     !TYPE(t_jsb_var_real2d) :: &
-      ! & t_air                 , &  !> 2m air temperature [K] 
-      ! & q_air                 , &  !> 2m air specific humidity [g g-1] 
+      ! & t_air                 , &  !> 2m air temperature [K]
+      ! & q_air                 , &  !> 2m air specific humidity [g g-1]
       ! & rain                  , &  !> liquid water precipitation [kg m-2 s-1]
       ! & snow                  , &  !> solid water precipitation [kg m-2 s-1]
-      ! & wind_air              , &  !> 2m air wind speed [m s-1] 
-      ! & wind_10m              , &  !> 10m air wind speed [m s-1] 
-      ! & lw_srf_down           , &  !> longwave surface downward flux [W m-2] 
+      ! & wind_air              , &  !> 2m air wind speed [m s-1]
+      ! & wind_10m              , &  !> 10m air wind speed [m s-1]
+      ! & lw_srf_down           , &  !> longwave surface downward flux [W m-2]
       ! & swvis_srf_down        , &  !> shortwave surface downward flux in the visible band [W m-2]
-      ! & swnir_srf_down        , &  !> shortwave surface downward flux in the near infrared band [W m-2] 
-      ! & swpar_srf_down        , &  !> shortwave surface downward flux in the PAR band [W m-2] 
+      ! & swnir_srf_down        , &  !> shortwave surface downward flux in the near infrared band [W m-2]
+      ! & swpar_srf_down        , &  !> shortwave surface downward flux in the PAR band [W m-2]
       ! & swpar_fdiffuse        , &  !> fraction of shortwave surface downward flux that is diffuse [fraction]
       ! & press_srf             , &  !> surface air pressure [Pa]
-      ! & drag_srf              , &  !> total surface drag [unitless] 
-      ! & t_acoef               , &  !> Richtmeyer-Morten coefficient A for temperature [unitless] 
+      ! & drag_srf              , &  !> total surface drag [unitless]
+      ! & t_acoef               , &  !> Richtmeyer-Morten coefficient A for temperature [unitless]
       ! & t_bcoef               , &  !> Richtmeyer-Morten coefficient B for temperature [unitless]
-      ! & q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity [unitless] 
+      ! & q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity [unitless]
       ! & q_bcoef               , &  !> Richtmeyer-Morten coefficient B for specific humidity [unitless]
-      ! & pch                   , &  !> total surface drag [unitless] 
+      ! & pch                   , &  !> total surface drag [unitless]
       ! & cos_zenith_angle           !> Cosine of solar zenith angle [unitless]
 
     ! CO2
@@ -100,8 +100,8 @@ MODULE mo_a2l_memory_class
       & CO2_mixing_ratio      , &  !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
       & CO2_mixing_ratio_C13  , &  !< surface air 13CO2 mixing ratio [ppmv]
       & CO2_mixing_ratio_C14       !< surface air 14CO2 mixing ratio [scaled]
-    
-    
+
+
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
   END TYPE t_a2l_memory
@@ -469,7 +469,7 @@ CONTAINS
     !  & prefix, suffix, &
     !  & loutput=.TRUE., lrestart=.TRUE., &
     !  & initval_r=0.0_wp)
-    
+
     CALL mem%Add_var('CO2_mixing_ratio', mem%co2_mixing_ratio,                    &
       & hgrid, surface,                                                           &
       & t_cf('CO2_mixing_ratio', 'ppm', 'surface air CO2 mixing ratio'),          &

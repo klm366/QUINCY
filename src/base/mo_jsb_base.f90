@@ -102,7 +102,7 @@ CONTAINS
     jsbach%no_of_models = no_of_models
 
     ALLOCATE(jsbach_subsets(no_of_models))
-  
+
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -268,13 +268,13 @@ CONTAINS
     !! assuming the shared/constants/ modules are available here already (impl, math, physical)
     IF (model%config%use_quincy) THEN
       CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
-      CALL init_rad_constants      
-      CALL init_atmland_constants  
-      CALL init_assimi_constants   
-      CALL init_veg_constants      
+      CALL init_rad_constants
+      CALL init_atmland_constants
+      CALL init_assimi_constants
+      CALL init_veg_constants
       ! CALL init_sse_constants
       ! CALL init_sb_constants
-      CALL init_pheno_constants    
+      CALL init_pheno_constants
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
     ENDIF
 

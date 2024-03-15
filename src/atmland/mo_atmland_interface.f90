@@ -648,7 +648,7 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE    ! without lakes
- 
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO i=1,nc
         fact_land(i) = 1._wp
@@ -998,7 +998,7 @@ CONTAINS
     ELSE
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  
+
       IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc

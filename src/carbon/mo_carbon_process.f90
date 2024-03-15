@@ -955,7 +955,7 @@ CONTAINS
     !! heterotrophic soil respiration.
     !! For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
     !!
-    !! implementation: Tea Thum (FMI), Petri Räisänen (FMI), Daniel Goll (MPI-M)
+    !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
     USE mo_jsb_physical_constants, ONLY: tmelt
@@ -1296,7 +1296,7 @@ CONTAINS
       &                          litter, 1.0_wp - fract_aboveground, Lit_coefV)
 
     ! Cflx_litter_2_humus is not only required for distribution, but possibly also as output for the eq script
-    Cflx_litter_2_humus = Lit_coefV(i_lctlib_humus) * litter 
+    Cflx_litter_2_humus = Lit_coefV(i_lctlib_humus) * litter
 
     ! compute d_litter_green; this is given by the change in AWEN pools
     !          Flx                 Pool(t)                   Pool(t+1)
@@ -1384,7 +1384,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool 
+    REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool
     REAL(wp), INTENT(IN)    :: litter        !< litter input  (above and belowground) [mol(C)/m2/day]
     REAL(wp), INTENT(IN)    :: fraction      !< fraction of litter put into this pool (BG vs AG) [ ]
     REAL(wp), INTENT(IN)    :: coefficient   !< litter coefficient (acid vs water vs ...) [ ]
