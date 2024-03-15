@@ -487,10 +487,16 @@ CONTAINS
 	dsl4jsb_Aggregate_onChunk(SB_,  net_mineralisation_nh4          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  net_mineralisation_no3          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  net_mineralisation_po4          , weighted_by_fract)
+	dsl4jsb_Aggregate_onChunk(SB_,  biochem_mineralisation_po4      , weighted_by_fract)
+	dsl4jsb_Aggregate_onChunk(SB_,  microbial_uptake_nh4_sl         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  microbial_uptake_no3_sl         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  microbial_uptake_po4_sl         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
     ! SB_BGCM_ 3D
+	dsl4jsb_Aggregate_onChunk(SB_,  dom_cn_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  dom_cp_mavg        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_n        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_p        , weighted_by_fract)
@@ -500,6 +506,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_residue_c          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_residue_n          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_residue_p          , weighted_by_fract)
+	dsl4jsb_Aggregate_onChunk(SB_,  microbial_cue_eff_tmic_mavg          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  microbial_nue_eff_tmic_mavg          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  microbial_pue_eff_tmic_mavg          , weighted_by_fract)
+	dsl4jsb_Aggregate_onChunk(SB_,  fact_n_status_mic_c_growth          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  fact_p_status_mic_c_growth          , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

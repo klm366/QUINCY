@@ -653,6 +653,7 @@ CONTAINS
           DO WHILE (hlp2(ic) > soil_depth_sl(ic, isoil_hlp) .AND. isoil_hlp > 0)
             hlp1(ic)  = hlp1(ic) + soil_depth_sl(ic, isoil_hlp) * pool(ic, isoil_hlp)
             hlp2(ic)  = hlp2(ic) - soil_depth_sl(ic, isoil_hlp)
+            IF (isoil_hlp == 1) EXIT
             isoil_hlp = isoil_hlp - 1
           ENDDO
           ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
