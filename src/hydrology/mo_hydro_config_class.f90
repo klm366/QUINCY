@@ -33,6 +33,10 @@ MODULE mo_hydro_config_class
       & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
                                 !  maximum snow depth on leaves  [m water equivalent]
       & w_soil_limit,         & !< Upper limit for maximum soil moisture content
+      & w_soil_crit_fract,    & !< Fraction of field capacity at which soil starts to dry,
+                                !  i.e. at which water stress starts to be above zero
+      & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
+                                !  i.e. when no transpiration occurs anymore
       & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !  infinitely growing snow depth; -1. for no limitation
 
@@ -80,7 +84,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: w_soil_limit
+    REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
       &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
@@ -92,6 +96,8 @@ CONTAINS
       & bc_sso_filename,            &
       & w_skin_max,                 &
       & w_soil_limit,               &
+      & w_soil_crit_fract,          &
+      & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & scheme_stom_cond,           &
       & sanitize_restart,           &
@@ -126,6 +132,8 @@ CONTAINS
     bc_sso_filename        = 'bc_land_sso.nc'
     w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
     w_soil_limit           = -1.0_wp
+    w_soil_crit_fract      = 0.75_wp
+    w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     scheme_stom_cond       = 'echam5'
     sanitize_restart       = .FALSE.
@@ -156,6 +164,12 @@ CONTAINS
 
     config%w_soil_limit        = w_soil_limit
     CALL message(TRIM(routine), 'Upper limit for maximum soil moisture content: '//TRIM(real2string(w_soil_limit)))
+
+    config%w_soil_crit_fract   = w_soil_crit_fract
+    CALL message(TRIM(routine), 'Fraction of field capacity at critical point: '//TRIM(real2string(w_soil_crit_fract)))
+
+    config%w_soil_wilt_fract   = w_soil_wilt_fract
+    CALL message(TRIM(routine), 'Fraction of field capacity at permanent wilting point: '//TRIM(real2string(w_soil_wilt_fract)))
 
     config%snow_depth_max      = snow_depth_max
     IF (snow_depth_max >= 0._wp) THEN

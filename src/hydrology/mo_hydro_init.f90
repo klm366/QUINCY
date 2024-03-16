@@ -537,9 +537,9 @@ CONTAINS
         & variable_name='root_depth', &
         & fill_array = hydro_init_vars%root_depth)
         ! Make sure there is root depth equivalent to 0.2 m weq in all cells
-        !   that contain soil porosity data but no root depth
+        !   that contain field capacity data but no root depth
         hydro_init_vars%root_depth = MERGE(ptr_2D, &
-          & MERGE(0.2_wp / hydro_init_vars%vol_porosity, 0._wp, hydro_init_vars%vol_porosity > 0._wp), &
+          & MERGE(0.2_wp / hydro_init_vars%vol_field_cap, 0._wp, hydro_init_vars%vol_field_cap > 0._wp), &
           & ptr_2D >= 0._wp)
         ! Constrain root depth because in the bc file it is sometimes larger then soil depth
         hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
@@ -765,10 +765,9 @@ CONTAINS
         & soil_w%dz(:))    ! Soil layer thicknesses
 
       ! Maximum root zone soil moisture
-      ! Note: weq_rootzone_max corresponds to a fully saturated soil (all pores are filled with
-      !   water or ice). The plant water stress computation later accounts for ice and field capacity.
+      ! Note: weq_rootzone_max corresponds to water content at field capacity.
       dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = &
-        & hydro_init_vars%vol_porosity * hydro_init_vars%root_depth
+        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth
       ! Constain rootzone capacity if upper limit is given to soil water capacity
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
@@ -950,11 +949,11 @@ CONTAINS
 
       ! Re-compute maximum root zone moisture based on soil parameters modified by organic fractions
       ! Note: All plant related computations use weq_rootzone_max reduced by ice and supercooled water content,
-      !        which represents the unfrozen part of the soil.
+      !       which represents the unfrozen part of the soil.
       !       This assumes that plants retract/extents their roots immediately if the soil freezes/thaws.
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max), 2)
           CALL get_amount_in_rootzone( &
-          & dsl4jsb_var_ptr(HYDRO_, vol_porosity_sl)  (:,:,i) * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, vol_field_cap_sl) (:,:,i) * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max) (:,  i)  )
