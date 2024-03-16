@@ -56,9 +56,6 @@ CONTAINS
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
 
-    !$ACC ENTER DATA CREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
-    !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf) ASYNC(1)
-
   END SUBROUTINE Register_grid
 
   SUBROUTINE Register_vgrid(vgrid)

@@ -14,10 +14,10 @@
 MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,       ONLY: finish
+  USE mo_exception,       ONLY: message, finish
   USE mo_kind,            ONLY: wp
 
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, debug_on
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -47,102 +47,97 @@ CONTAINS
 
   SUBROUTINE update_atm2land( &
     & tile, options,          &
-    & t_air,                  &
-    & q_air,                  &
-    & press_air,              &
-    & rain,                   &
-    & snow,                   &
-    & wind_air,               &
-    & wind_10m,               &
-    & lw_srf_down,            &
-    & swvis_srf_down,         &
-    & swnir_srf_down,         &
-    & swpar_srf_down,         &
-    & fract_par_diffuse,      &
-    & dz_srf,                 &
-    & press_srf,              &
-    & rho_srf,                &
-    & drag_srf,               &
-    & t_acoef,                &
-    & t_bcoef,                &
-    & q_acoef,                &
-    & q_bcoef,                &
-    & pch,                    &
-    & cos_zenith_angle,       &
-    & CO2_air,                &
-    & DEBUG_VAR,              &
+    & t_air_in,                  &
+    & q_air_in,                  &
+    & press_air_in,              &
+    & rain_in,                   &
+    & snow_in,                   &
+    & wind_air_in,               &
+    & wind_10m_in,               &
+    & lw_srf_down_in,            &
+    & swvis_srf_down_in,         &
+    & swnir_srf_down_in,         &
+    & swpar_srf_down_in,         &
+    & fract_par_diffuse_in,      &
+    & dz_srf_in,                 &
+    & press_srf_in,              &
+    & rho_srf_in,                &
+    & drag_srf_in,               &
+    & t_acoef_in,                &
+    & t_bcoef_in,                &
+    & q_acoef_in,                &
+    & q_bcoef_in,                &
+    & pch_in,                    &
+    & cos_zenith_angle_in,       &
+    & CO2_air_in,                &
+    & DEBUG_VAR_in,              &
     ! For lakes:
-    & drag_wtr,               &
-    & drag_ice,               &
-    & t_acoef_wtr,            &
-    & t_bcoef_wtr,            &
-    & q_acoef_wtr,            &
-    & q_bcoef_wtr,            &
-    & t_acoef_ice,            &
-    & t_bcoef_ice,            &
-    & q_acoef_ice,            &
-    & q_bcoef_ice             &
+    & drag_wtr_in,               &
+    & drag_ice_in,               &
+    & t_acoef_wtr_in,            &
+    & t_bcoef_wtr_in,            &
+    & q_acoef_wtr_in,            &
+    & q_bcoef_wtr_in,            &
+    & t_acoef_ice_in,            &
+    & t_bcoef_ice_in,            &
+    & q_acoef_ice_in,            &
+    & q_bcoef_ice_in             &
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
 
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
-    ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
-    REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
-      & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-      & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, &
-      & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
-      & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
-      & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
+    REAL(wp), DIMENSION(options%nc), INTENT(in) ::                                                       &
+      & t_air_in, q_air_in, rain_in, snow_in, wind_air_in, wind_10m_in, lw_srf_down_in, swvis_srf_down_in, swnir_srf_down_in, swpar_srf_down_in, &
+      & fract_par_diffuse_in, press_srf_in, drag_srf_in, t_acoef_in, t_bcoef_in, q_acoef_in, q_bcoef_in, pch_in, cos_zenith_angle_in, &
+      & CO2_air_in, drag_wtr_in, drag_ice_in,                                                                    &
+      & t_acoef_wtr_in, t_bcoef_wtr_in, q_acoef_wtr_in, q_bcoef_wtr_in,                                                        &
+      & t_acoef_ice_in, t_bcoef_ice_in, q_acoef_ice_in, q_bcoef_ice_in
+    REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
+      & debug_var_in, dz_srf_in, press_air_in, rho_srf_in
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER ::  iblk, ics, ice, nc, i
+    dsl4jsb_real2D_onChunk :: t_air
+    dsl4jsb_real2D_onChunk :: q_air
+    dsl4jsb_real2D_onChunk :: rain
+    dsl4jsb_real2D_onChunk :: snow
+    dsl4jsb_real2D_onChunk :: wind_air
+    dsl4jsb_real2D_onChunk :: wind_10m
+    dsl4jsb_real2D_onChunk :: lw_srf_down
+    dsl4jsb_real2D_onChunk :: swvis_srf_down
+    dsl4jsb_real2D_onChunk :: swnir_srf_down
+    dsl4jsb_real2D_onChunk :: swpar_srf_down
+    dsl4jsb_real2D_onChunk :: fract_par_diffuse
+    dsl4jsb_real2D_onChunk :: press_srf
+    dsl4jsb_real2D_onChunk :: drag_srf
+    dsl4jsb_real2D_onChunk :: t_acoef
+    dsl4jsb_real2D_onChunk :: t_bcoef
+    dsl4jsb_real2D_onChunk :: q_acoef
+    dsl4jsb_real2D_onChunk :: q_bcoef
+    dsl4jsb_real2D_onChunk :: pch
+    dsl4jsb_real2D_onChunk :: cos_zenith_angle
+    dsl4jsb_real2D_onChunk :: CO2_air
+    dsl4jsb_real2D_onChunk :: CO2_air_mol
+    dsl4jsb_real2D_onChunk :: drag_wtr
+    dsl4jsb_real2D_onChunk :: drag_ice
+    dsl4jsb_real2D_onChunk :: t_acoef_wtr
+    dsl4jsb_real2D_onChunk :: t_acoef_ice
+    dsl4jsb_real2D_onChunk :: t_bcoef_wtr
+    dsl4jsb_real2D_onChunk :: t_bcoef_ice
+    dsl4jsb_real2D_onChunk :: q_acoef_wtr
+    dsl4jsb_real2D_onChunk :: q_acoef_ice
+    dsl4jsb_real2D_onChunk :: q_bcoef_wtr
+    dsl4jsb_real2D_onChunk :: q_bcoef_ice
+
+    INTEGER ::  iblk, ics, ice, nc, i, ic
     TYPE(t_jsb_model), POINTER :: model
     LOGICAL :: use_quincy
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
-
-    dsl4jsb_Real2D_onChunk ::  &
-      & t_air_ptr,             &
-      & q_air_ptr,             &
-      & press_air_ptr,         &
-      & rain_ptr,              &
-      & snow_ptr,              &
-      & wind_air_ptr,          &
-      & wind_10m_ptr,          &
-      & lw_srf_down_ptr,       &
-      & swvis_srf_down_ptr,    &
-      & swnir_srf_down_ptr,    &
-      & swpar_srf_down_ptr,    &
-      & fract_par_diffuse_ptr, &
-      & dz_srf_ptr,            &
-      & press_srf_ptr,         &
-      & rho_srf_ptr,           &
-      & drag_srf_ptr,          &
-      & t_acoef_ptr,           &
-      & t_bcoef_ptr,           &
-      & q_acoef_ptr,           &
-      & q_bcoef_ptr,           &
-      & pch_ptr,               &
-      & cos_zenith_angle_ptr,  &
-      & CO2_air_ptr,           &
-      & CO2_air_mol_ptr,       &
-      & CO2_mixing_ratio_ptr,  &
-      & DEBUG_VAR_ptr,         &
-      & drag_wtr_ptr,          &
-      & drag_ice_ptr,          &
-      & t_acoef_wtr_ptr,       &
-      & t_bcoef_wtr_ptr,       &
-      & q_acoef_wtr_ptr,       &
-      & q_bcoef_wtr_ptr,       &
-      & t_acoef_ice_ptr,       &
-      & t_bcoef_ice_ptr,       &
-      & q_acoef_ice_ptr,       &
-      & q_bcoef_ice_ptr
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -151,337 +146,118 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
     use_quincy = model%config%use_quincy
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
 
-    IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
+    IF (nc /= SIZE(t_air_in,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
-    IF (PRESENT(DEBUG_VAR)) THEN
-      DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
-    END IF
 
-    IF (PRESENT(t_air)) THEN
-      t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
-    END IF
-    IF (PRESENT(q_air)) THEN
-      q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
-    END IF
-    IF (PRESENT(press_air)) THEN
-      press_air_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_air)
-    END IF
-    IF(PRESENT(rain)) THEN
-      rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
-    END IF
-    IF (PRESENT(snow)) THEN
-      snow_ptr              => dsl4jsb_var2D_onChunk(A2L_, snow)
-    END IF
-    IF (PRESENT(wind_air)) THEN
-      wind_air_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_air)
-    END IF
-    IF (PRESENT(wind_10m)) THEN
-      wind_10m_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_10m)
-    END IF
-    IF (PRESENT(lw_srf_down)) THEN
-      lw_srf_down_ptr       => dsl4jsb_var2D_onChunk(A2L_, lw_srf_down)
-    END IF
-    IF (PRESENT(swvis_srf_down)) THEN
-      swvis_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
-    END IF
-    IF(PRESENT(swnir_srf_down)) THEN
-      swnir_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swnir_srf_down)
-    END IF
-    IF (PRESENT(swpar_srf_down)) THEN
-      swpar_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swpar_srf_down)
-    END IF
-    IF (PRESENT(fract_par_diffuse)) THEN
-      fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
-    END IF
-    IF (PRESENT(dz_srf)) THEN
-      dz_srf_ptr            => dsl4jsb_var2D_onChunk(A2L_, dz_srf)
-    END IF
-    IF (PRESENT(press_srf)) THEN
-      press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
-    END IF
-    IF (PRESENT(rho_srf)) THEN
-      rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
-    END IF
-    IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
-    END IF
-    IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
-    END IF
-    IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
-    END IF
-    IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
-    END IF
-    IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
-    END IF
-    IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
-    END IF
-    IF (PRESENT(cos_zenith_angle)) THEN
-      cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
-    END IF
-    IF (PRESENT(CO2_air)) THEN
-      CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
-      CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
-    END IF
-    IF (PRESENT(drag_wtr)) THEN
-      drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
-    END IF
-    IF (PRESENT(drag_ice)) THEN
-      drag_ice_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_ice)
-    END IF
-    IF (PRESENT(t_acoef_wtr)) THEN
-      t_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_wtr)
-    END IF
-    IF (PRESENT(t_bcoef_wtr)) THEN
-      t_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_wtr)
-    END IF
-    IF (PRESENT(q_acoef_wtr)) THEN
-      q_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_wtr)
-    END IF
-    IF (PRESENT(q_bcoef_wtr)) THEN
-      q_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_wtr)
-    END IF
-    IF (PRESENT(t_acoef_ice)) THEN
-      t_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_ice)
-    END IF
-    IF (PRESENT(t_bcoef_ice)) THEN
-      t_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_ice)
-    END IF
-    IF (PRESENT(q_acoef_ice)) THEN
-      q_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_ice)
-    END IF
-    IF (PRESENT(q_bcoef_ice)) THEN
-      q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
-    END IF
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef)
+    dsl4jsb_Get_var2D_onChunk(A2L_, pch)
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air_mol)
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_ice)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_wtr)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_ice)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_wtr)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_ice)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_wtr)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_ice)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_wtr)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_ice)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    IF (PRESENT(DEBUG_VAR)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
-      END DO
-    END IF
+    ! IF (PRESENT(DEBUG_VAR)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
+    !   END DO
+    ! END IF
 
-    IF (PRESENT(t_air)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC LOOP GANG VECTOR PRIVATE(ic)
       DO i=1,nc
-        t_air_ptr(i) = t_air(i)
-      END DO
-    END IF
-    IF (PRESENT(q_air)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        q_air_ptr(i) = q_air(i)
-      END DO
-    END IF
-    IF (PRESENT(press_air)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        press_air_ptr(i) = press_air(i)
-      END DO
-    END IF
-    IF (PRESENT(rain)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        rain_ptr(i) = rain(i)
-      END DO
-    END IF
-    IF (PRESENT(snow)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        snow_ptr(i) = snow(i)
-      END DO
-    END IF
-    IF (PRESENT(wind_air)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        wind_air_ptr(i) = wind_air(i)
-      END DO
-    END IF
-    IF (PRESENT(wind_10m)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        wind_10m_ptr(i) = wind_10m(i)
-      END DO
-    END IF
-    IF (PRESENT(lw_srf_down)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        lw_srf_down_ptr(i) = lw_srf_down(i)
-      END DO
-    END IF
-    IF (PRESENT(swvis_srf_down)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        swvis_srf_down_ptr(i) = swvis_srf_down(i)
-      END DO
-    END IF
-    IF (PRESENT(swnir_srf_down)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        swnir_srf_down_ptr(i) = swnir_srf_down(i)
-      END DO
-    END IF
-    IF (PRESENT(swpar_srf_down)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        swpar_srf_down_ptr(i) = swpar_srf_down(i)
-      END DO
-    END IF
-    IF (PRESENT(fract_par_diffuse)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
-      END DO
-    END IF
-    IF (PRESENT(dz_srf)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        dz_srf_ptr(i) = dz_srf(i)
-      END DO
-    END IF
-    IF (PRESENT(press_srf)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        press_srf_ptr(i) = press_srf(i)
-      END DO
-    END IF
-    IF (PRESENT(drag_srf)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        drag_srf_ptr(i) = drag_srf(i)
-      END DO
-    END IF
-    IF (PRESENT(rho_srf)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        rho_srf_ptr(i) = rho_srf(i)
-      END DO
-    END IF
-    IF (PRESENT(t_acoef)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        t_acoef_ptr(i) = t_acoef(i)
-      END DO
-    END IF
-    IF (PRESENT(t_bcoef)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        t_bcoef_ptr(i) = t_bcoef(i)
-      END DO
-    END IF
-    IF (PRESENT(q_acoef)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        q_acoef_ptr(i) = q_acoef(i)
-      END DO
-    END IF
-    IF (PRESENT(q_bcoef)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        q_bcoef_ptr(i) = q_bcoef(i)
-      END DO
-    END IF
-    IF (PRESENT(pch)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        pch_ptr(i) = pch(i)
-      END DO
-    END IF
-    IF (PRESENT(cos_zenith_angle)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
-      END DO
-    END IF
-    IF (PRESENT(CO2_air)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        CO2_air_ptr(i) = CO2_air(i)
+        t_air(i) = t_air_in(i)
+        q_air(i) = q_air_in(i)
+    ! IF (PRESENT(press_air)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     press_air(i) = press_air_in(i)
+    !   END DO
+    ! END IF
+        rain(i) = rain_in(i)
+        snow(i) = snow_in(i)
+        wind_air(i) = wind_air_in(i)
+        wind_10m(i) = wind_10m_in(i)
+        lw_srf_down(i) = lw_srf_down_in(i)
+        swvis_srf_down(i) = swvis_srf_down_in(i)
+        swnir_srf_down(i) = swnir_srf_down_in(i)
+        swpar_srf_down(i) = swpar_srf_down_in(i)
+        fract_par_diffuse(i) = fract_par_diffuse_in(i)
+    ! IF (PRESENT(dz_srf)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     dz_srf(i) = dz_srf_in(i)
+    !   END DO
+    ! END IF
+        press_srf(i) = press_srf_in(i)
+        drag_srf(i) = drag_srf_in(i)
+    ! IF (PRESENT(rho_srf)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     rho_srf(i) = rho_srf_in(i)
+    !   END DO
+    ! END IF
+        t_acoef(i) = t_acoef_in(i)
+        t_bcoef(i) = t_bcoef_in(i)
+        q_acoef(i) = q_acoef_in(i)
+        q_bcoef(i) = q_bcoef_in(i)
+        pch(i) = pch_in(i)
+        cos_zenith_angle(i) = cos_zenith_angle_in(i)
+        CO2_air(i) = CO2_air_in(i)
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
-        CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
+        CO2_air_mol(i) = CO2_air_in(i) * molarMassDryAir / molarMassCO2
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
-        IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
-      END DO
-    END IF
+        ! IF (use_quincy) THEN
+        !   CO2_mixing_ratio(i) = CO2_air_mol, ic) * 1000000._wp
+        ! END IF
 
-    IF (tile_contains_lake) THEN
+          drag_wtr(i) = drag_wtr_in(i)
+          drag_ice(i) = drag_ice_in(i)
+          t_acoef_wtr(i) = t_acoef_wtr_in(i)
+          t_bcoef_wtr(i) = t_bcoef_wtr_in(i)
+          q_acoef_wtr(i) = q_acoef_wtr_in(i)
+          q_bcoef_wtr(i) = q_bcoef_wtr_in(i)
+          t_acoef_ice(i) = t_acoef_ice_in(i)
+          t_bcoef_ice(i) = t_bcoef_ice_in(i)
+          q_acoef_ice(i) = q_acoef_ice_in(i)
+          q_bcoef_ice(i) = q_bcoef_ice_in(i)
 
-      IF (PRESENT(drag_wtr)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          drag_wtr_ptr(i) = drag_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(drag_ice)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          drag_ice_ptr(i) = drag_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(t_acoef_wtr)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(t_bcoef_wtr)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(q_acoef_wtr)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(q_bcoef_wtr)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(t_acoef_ice)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_acoef_ice_ptr(i) = t_acoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(t_bcoef_ice)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(q_acoef_ice)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          q_acoef_ice_ptr(i) = q_acoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(q_bcoef_ice)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
-        END DO
-      END IF
-
-    END IF
+  END DO
 
     !$ACC END PARALLEL
 
@@ -505,19 +281,24 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(wp), OPTIONAL, INTENT(out) ::                                               &
-      & t_srf(:), t_srf_rad(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                 &
-      & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
-      & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-      & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
-      & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:), s_lwtr(:), s_lice(:),      &
-      & evapo_wtr(:), latent_hflx_wtr(:), sensible_hflx_wtr(:),                      &
-      & evapo_ice(:), latent_hflx_ice(:), sensible_hflx_ice(:),                      &
-      & ice_fract_lake(:),                                                           &
-      & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
-      & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
-      & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & CO2_flux(:), kh(:), km(:), kh_neutral(:), km_neutral(:)
+    ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(out) ::         &
+    REAL(wp), DIMENSION(options%nc), INTENT(out) ::         &
+      & t_srf, t_eff_srf, qsat_srf, s_srf,                 &
+      & fact_q_air, fact_qsat_srf,                          &
+      & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap, &
+      & rough_h_srf, rough_m_srf, q_snocpymlt,                        &
+      & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,         &
+      & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                &
+      & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                &
+      & ice_fract_lake,                                               &
+      & albedo_lwtr, albedo_lice,                    &
+      & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,           &
+      & CO2_flux
+    REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(out) ::         &
+      & alb_vis_dir_wtr, alb_vis_dif_wtr, alb_nir_dir_wtr,            &
+      & alb_nir_dif_wtr,                     &
+      & t_srf_rad, evapopot,                          &
+      & kh, km, kh_neutral, km_neutral
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
@@ -586,10 +367,10 @@ CONTAINS
       & sensible_hflx_ice_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
-    IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
-    IF (PRESENT(alb_nir_dir_wtr)) CONTINUE
-    IF (PRESENT(alb_vis_dif_wtr)) CONTINUE
-    IF (PRESENT(alb_vis_dir_wtr)) CONTINUE
+    ! IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
+    ! IF (PRESENT(alb_nir_dir_wtr)) CONTINUE
+    ! IF (PRESENT(alb_vis_dif_wtr)) CONTINUE
+    ! IF (PRESENT(alb_vis_dir_wtr)) CONTINUE
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -741,154 +522,154 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    IF (use_tmx) THEN
-      IF (PRESENT(t_srf)) THEN
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_srf(i) = t_ptr(i)
-        END DO
-      END IF
-      IF (PRESENT(t_srf_rad)) THEN
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          t_srf_rad(i) = t_rad_ptr(i)**0.25_wp
-        END DO
-      END IF
-      IF (PRESENT(evapotrans)) THEN
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          evapotrans(i) = evapotrans_ptr(i)
-        END DO
-      END IF
-      IF (PRESENT(latent_hflx)) THEN
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          latent_hflx(i) = latent_hflx_ptr(i)
-        END DO
-      END IF
-      IF (PRESENT(sensible_hflx)) THEN
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO i=1,nc
-          sensible_hflx(i) = sensible_hflx_ptr(i)
-        END DO
-      END IF
-    ELSE
-      IF (PRESENT(t_srf)) THEN
+    ! IF (use_tmx) THEN
+    !   IF (PRESENT(t_srf)) THEN
+    !     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !     DO i=1,nc
+    !       t_srf(i) = t_ptr(i)
+    !     END DO
+    !   END IF
+    !   IF (PRESENT(t_srf_rad)) THEN
+    !     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !     DO i=1,nc
+    !       t_srf_rad(i) = t_rad_ptr(i)**0.25_wp
+    !     END DO
+    !   END IF
+    !   IF (PRESENT(evapotrans)) THEN
+    !     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !     DO i=1,nc
+    !       evapotrans(i) = evapotrans_ptr(i)
+    !     END DO
+    !   END IF
+    !   IF (PRESENT(latent_hflx)) THEN
+    !     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !     DO i=1,nc
+    !       latent_hflx(i) = latent_hflx_ptr(i)
+    !     END DO
+    !   END IF
+    !   IF (PRESENT(sensible_hflx)) THEN
+    !     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !     DO i=1,nc
+    !       sensible_hflx(i) = sensible_hflx_ptr(i)
+    !     END DO
+    !   END IF
+    ! ELSE
+      ! IF (PRESENT(t_srf)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_srf(i) = t_filt_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(evapotrans)) THEN
+      ! END IF
+      ! IF (PRESENT(evapotrans)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           evapotrans(i) = fact_land(i) * evapotrans_lnd_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(latent_hflx)) THEN
+      ! END IF
+      ! IF (PRESENT(latent_hflx)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           latent_hflx(i) = fact_land(i) * latent_hflx_lnd_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(sensible_hflx)) THEN
+      ! END IF
+      ! IF (PRESENT(sensible_hflx)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           sensible_hflx(i) = fact_land(i) * sensible_hflx_lnd_ptr(i)
         END DO
-      END IF
-    END IF
-    IF (PRESENT(t_eff_srf)) THEN
+      ! END IF
+    ! END IF
+    ! IF (PRESENT(t_eff_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         t_eff_srf(i) = t_eff_ptr(i)**0.25_wp
       END DO
-    END IF
-    IF (PRESENT(qsat_srf)) THEN
+    ! END IF
+    ! IF (PRESENT(qsat_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         qsat_srf(i) = qsat_star_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(s_srf)) THEN
+    ! END IF
+    ! IF (PRESENT(s_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         s_srf(i) = s_star_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(fact_q_air)) THEN
+    ! END IF
+    ! IF (PRESENT(fact_q_air)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         fact_q_air(i) = fact_q_air_land_tile(i)
       END DO
-    END IF
-    IF (PRESENT(fact_qsat_srf)) THEN
+    ! END IF
+    ! IF (PRESENT(fact_qsat_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         fact_qsat_srf(i) = fact_qsat_srf_land_tile(i)
       END DO
-    END IF
+    ! END IF
     IF (PRESENT(evapopot)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         evapopot(i) = evapopot_ptr(i)
       END DO
     END IF
-    IF (PRESENT(grnd_hflx)) THEN
+    ! IF (PRESENT(grnd_hflx)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         grnd_hflx(i) = forc_hflx_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(grnd_hcap)) THEN
+    ! END IF
+    ! IF (PRESENT(grnd_hcap)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         grnd_hcap(i) = heat_cap_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(rough_h_srf)) THEN
+    ! END IF
+    ! IF (PRESENT(rough_h_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         rough_h_srf(i) = rough_h_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(rough_m_srf)) THEN
+    ! END IF
+    ! IF (PRESENT(rough_m_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         rough_m_srf(i) = rough_m_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(q_snocpymlt)) THEN
+    ! END IF
+    ! IF (PRESENT(q_snocpymlt)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         q_snocpymlt(i) = fact_land(i) * q_snocpymlt_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(alb_vis_dir)) THEN
+    ! END IF
+    ! IF (PRESENT(alb_vis_dir)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         alb_vis_dir(i) = alb_vis_lnd_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(alb_vis_dif)) THEN
+    ! END IF
+    ! IF (PRESENT(alb_vis_dif)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         alb_vis_dif(i) = alb_vis_lnd_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(alb_nir_dir)) THEN
+    ! END IF
+    ! IF (PRESENT(alb_nir_dir)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         alb_nir_dir(i) = alb_nir_lnd_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(alb_nir_dif)) THEN
+    ! END IF
+    ! IF (PRESENT(alb_nir_dif)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
         alb_nir_dif(i) = alb_nir_lnd_ptr(i)
       END DO
-    END IF
-    IF (PRESENT(CO2_flux)) THEN
+    ! END IF
+    ! IF (PRESENT(CO2_flux)) THEN
       IF (tile_is_carbon_active) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
@@ -905,31 +686,31 @@ CONTAINS
           CO2_flux(i) = 0._wp
         END DO
       END IF
-    END IF
-    IF (PRESENT(kh)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        kh(i) = kh_ptr(i)
-      END DO
-    END IF
-    IF (PRESENT(km)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        km(i) = km_ptr(i)
-      END DO
-    END IF
-    IF (PRESENT(kh_neutral)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        kh_neutral(i) = kh_neutral_ptr(i)
-      END DO
-    END IF
-    IF (PRESENT(km_neutral)) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        km_neutral(i) = km_neutral_ptr(i)
-      END DO
-    END IF
+    ! END IF
+    ! IF (PRESENT(kh)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     kh(i) = kh_ptr(i)
+    !   END DO
+    ! END IF
+    ! IF (PRESENT(km)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     km(i) = km_ptr(i)
+    !   END DO
+    ! END IF
+    ! IF (PRESENT(kh_neutral)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     kh_neutral(i) = kh_neutral_ptr(i)
+    !   END DO
+    ! END IF
+    ! IF (PRESENT(km_neutral)) THEN
+    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !   DO i=1,nc
+    !     km_neutral(i) = km_neutral_ptr(i)
+    !   END DO
+    ! END IF
 
     !$ACC END PARALLEL
 
@@ -940,117 +721,117 @@ CONTAINS
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-      IF (PRESENT(t_lwtr)) THEN
+      ! IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_lwtr(i) = t_lwtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(qsat_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(qsat_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           qsat_lwtr(i) = qsat_lwtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(s_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(s_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           s_lwtr(i) = s_lwtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(evapo_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(evapo_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           evapo_wtr(i) = fact_lake(i) * evapo_wtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(latent_hflx_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(latent_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           latent_hflx_wtr(i) = fact_lake(i) * latent_hflx_wtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(sensible_hflx_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(sensible_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           sensible_hflx_wtr(i) = fact_lake(i) * sensible_hflx_wtr_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(albedo_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(albedo_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           albedo_lwtr(i) = albedo_lwtr_ptr(i)
         END DO
-      END IF
+      ! END IF
 
     ! Exchange fields on the ice fraction of lakes
     ! --------------------------------------------
 
-      IF (PRESENT(ice_fract_lake)) THEN
+      ! IF (PRESENT(ice_fract_lake)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           ice_fract_lake(i) = fract_lice_ptr(i)
         END DO
-      END IF
+      ! END IF
 
       !$ACC END PARALLEL
 
     ELSE
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-
-      IF (PRESENT(t_lwtr)) THEN
+  
+      ! IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_lwtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(qsat_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(qsat_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           qsat_lwtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(s_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(s_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           s_lwtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(evapo_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(evapo_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           evapo_wtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(latent_hflx_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(latent_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           latent_hflx_wtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(sensible_hflx_wtr)) THEN
+      ! END IF
+      ! IF (PRESENT(sensible_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           sensible_hflx_wtr(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(albedo_lwtr)) THEN
+      ! END IF
+      ! IF (PRESENT(albedo_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           albedo_lwtr(i) = 0.07_wp
         END DO
-      END IF
+      ! END IF
 
     ! Exchange fields on the ice fraction of lakes
     ! --------------------------------------------
 
-      IF (PRESENT(ice_fract_lake)) THEN
+      ! IF (PRESENT(ice_fract_lake)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           ice_fract_lake(i) = 0._wp
         END DO
-      END IF
+      ! END IF
 
       !$ACC END PARALLEL
 
@@ -1060,48 +841,48 @@ CONTAINS
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-      IF (PRESENT(t_lice)) THEN
+      ! IF (PRESENT(t_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_lice(i) = t_lice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(qsat_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(qsat_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           qsat_lice(i) = qsat_lice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(s_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(s_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           s_lice(i) = s_lice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(evapo_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(evapo_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           evapo_ice(i) = fact_lake(i) * evapo_ice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(latent_hflx_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(latent_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           latent_hflx_ice(i) = fact_lake(i) * latent_hflx_ice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(sensible_hflx_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(sensible_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           sensible_hflx_ice(i) = fact_lake(i) * sensible_hflx_ice_ptr(i)
         END DO
-      END IF
-      IF (PRESENT(albedo_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(albedo_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           albedo_lice(i) = albedo_lice_ptr(i)
         END DO
-      END IF
+      ! END IF
 
       !$ACC END PARALLEL
 
@@ -1109,48 +890,48 @@ CONTAINS
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-      IF (PRESENT(t_lice)) THEN
+      ! IF (PRESENT(t_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           t_lice(i) = 273.15_wp
         END DO
-      END IF
-      IF (PRESENT(qsat_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(qsat_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           qsat_lice(i) = 0.0075_wp
         END DO
-      END IF
-      IF (PRESENT(s_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(s_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           s_lice(i) = 2.9E5_wp
         END DO
-      END IF
-      IF (PRESENT(evapo_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(evapo_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           evapo_ice(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(latent_hflx_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(latent_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           latent_hflx_ice(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(sensible_hflx_ice)) THEN
+      ! END IF
+      ! IF (PRESENT(sensible_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           sensible_hflx_ice(i) = 0._wp
         END DO
-      END IF
-      IF (PRESENT(albedo_lice)) THEN
+      ! END IF
+      ! IF (PRESENT(albedo_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           albedo_lice(i) = 0.55_wp
         END DO
-      END IF
+      ! END IF
 
       !$ACC END PARALLEL
 

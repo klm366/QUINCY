@@ -60,7 +60,7 @@ CONTAINS
   !>
   SUBROUTINE interface_full( &
     & model_id,         &
-    & iblk, ics, ice,   &
+    & iblk, ics, ice, nc, &
     & current_datetime, &
     & dtime, steplen,   &
     & t_air,            &
@@ -102,7 +102,6 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
-    & DEBUG_VAR,        &
     ! OPTIONAL arguments:
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
@@ -116,6 +115,7 @@ CONTAINS
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For ICON-Land standalone
+    & DEBUG_VAR,        &
     & evapopot                                                          & !< out
     & )
 
@@ -134,79 +134,81 @@ CONTAINS
       & dtime,              &
       & steplen
     REAL(wp), INTENT(in) ::    &
-      & t_air             (:), &
-      & q_air             (:), &
-      & rain              (:), &
-      & snow              (:), &
-      & wind_air          (:), &
-      & wind_10m          (:), &
-      & lw_srf_down       (:), &
-      & swvis_srf_down    (:), &
-      & swnir_srf_down    (:), &
-      & swpar_srf_down    (:), &
-      & fract_par_diffuse  (:), &
-      & press_srf         (:), &
-      & drag_srf          (:), &
-      & t_acoef           (:), &
-      & t_bcoef           (:), &
-      & q_acoef           (:), &
-      & q_bcoef           (:), &
-      & pch               (:), &
-      & cos_zenith_angle  (:), &
-      & CO2_air           (:)
+      & t_air             (nc), &
+      & q_air             (nc), &
+      & rain              (nc), &
+      & snow              (nc), &
+      & wind_air          (nc), &
+      & wind_10m          (nc), &
+      & lw_srf_down       (nc), &
+      & swvis_srf_down    (nc), &
+      & swnir_srf_down    (nc), &
+      & swpar_srf_down    (nc), &
+      & fract_par_diffuse  (nc), &
+      & press_srf         (nc), &
+      & drag_srf          (nc), &
+      & t_acoef           (nc), &
+      & t_bcoef           (nc), &
+      & q_acoef           (nc), &
+      & q_bcoef           (nc), &
+      & pch               (nc), &
+      & cos_zenith_angle  (nc), &
+      & CO2_air           (nc)
     ! For lakes:
-    REAL(wp), INTENT(in), OPTIONAL ::    &
-      & DEBUG_VAR         (:), &
-      & drag_wtr          (:), &
-      & drag_ice          (:), &
-      & t_acoef_wtr       (:), &
-      & t_bcoef_wtr       (:), &
-      & q_acoef_wtr       (:), &
-      & q_bcoef_wtr       (:), &
-      & t_acoef_ice       (:), &
-      & t_bcoef_ice       (:), &
-      & q_acoef_ice       (:), &
-      & q_bcoef_ice       (:)
+    ! REAL(wp), INTENT(in), OPTIONAL ::    &
+    REAL(wp), INTENT(in) ::    &
+      & drag_wtr          (nc), &
+      & drag_ice          (nc), &
+      & t_acoef_wtr       (nc), &
+      & t_bcoef_wtr       (nc), &
+      & q_acoef_wtr       (nc), &
+      & q_bcoef_wtr       (nc), &
+      & t_acoef_ice       (nc), &
+      & t_bcoef_ice       (nc), &
+      & q_acoef_ice       (nc), &
+      & q_bcoef_ice       (nc)
     REAL(wp), INTENT(out) ::   &
-      & t_srf             (:), &
-      & t_eff_srf         (:), &
-      & qsat_srf          (:), &
-      & s_srf             (:), &
-      & fact_q_air        (:), &
-      & fact_qsat_srf     (:), &
-      & evapotrans        (:), &
-      & latent_hflx       (:), &
-      & sensible_hflx     (:), &
-      & grnd_hflx         (:), &
-      & grnd_hcap         (:), &
-      & rough_h_srf       (:), &
-      & rough_m_srf       (:), &
-      & q_snocpymlt       (:), &
-      & alb_vis_dir       (:), &
-      & alb_nir_dir       (:), &
-      & alb_vis_dif       (:), &
-      & alb_nir_dif       (:), &
-      & CO2_flux          (:)
+      & t_srf             (nc), &
+      & t_eff_srf         (nc), &
+      & qsat_srf          (nc), &
+      & s_srf             (nc), &
+      & fact_q_air        (nc), &
+      & fact_qsat_srf     (nc), &
+      & evapotrans        (nc), &
+      & latent_hflx       (nc), &
+      & sensible_hflx     (nc), &
+      & grnd_hflx         (nc), &
+      & grnd_hcap         (nc), &
+      & rough_h_srf       (nc), &
+      & rough_m_srf       (nc), &
+      & q_snocpymlt       (nc), &
+      & alb_vis_dir       (nc), &
+      & alb_nir_dir       (nc), &
+      & alb_vis_dif       (nc), &
+      & alb_nir_dif       (nc), &
+      & CO2_flux          (nc)
     ! For lakes:
-    REAL(wp), INTENT(out), OPTIONAL ::   &
-      & t_lwtr            (:), &
-      & qsat_lwtr         (:), &
-      & s_lwtr            (:), &
-      & evapo_wtr         (:), &
-      & latent_hflx_wtr   (:), &
-      & sensible_hflx_wtr (:), &
-      & albedo_lwtr       (:), &
-      & t_lice            (:), &
-      & qsat_lice         (:), &
-      & s_lice            (:), &
-      & evapo_ice         (:), &
-      & latent_hflx_ice   (:), &
-      & sensible_hflx_ice (:), &
-      & albedo_lice       (:), &
-      & ice_fract_lake    (:)
+    ! REAL(wp), INTENT(out), OPTIONAL ::   &
+    REAL(wp), INTENT(out) ::   &
+      & t_lwtr            (nc), &
+      & qsat_lwtr         (nc), &
+      & s_lwtr            (nc), &
+      & evapo_wtr         (nc), &
+      & latent_hflx_wtr   (nc), &
+      & sensible_hflx_wtr (nc), &
+      & albedo_lwtr       (nc), &
+      & t_lice            (nc), &
+      & qsat_lice         (nc), &
+      & s_lice            (nc), &
+      & evapo_ice         (nc), &
+      & latent_hflx_ice   (nc), &
+      & sensible_hflx_ice (nc), &
+      & albedo_lice       (nc), &
+      & ice_fract_lake    (nc)
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: &
-      & evapopot(:)
+      & DEBUG_VAR         (nc), &
+      & evapopot(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model),         POINTER :: model
@@ -265,38 +267,38 @@ CONTAINS
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
-      & t_air              = t_air(:),              &
-      & q_air              = q_air(:),              &
-      & rain               = rain(:),               &
-      & snow               = snow(:),               &
-      & wind_air           = wind_air(:),           &
-      & wind_10m           = wind_10m(:),           &
-      & lw_srf_down        = lw_srf_down(:),        &
-      & swvis_srf_down     = swvis_srf_down(:),     &
-      & swnir_srf_down     = swnir_srf_down(:),     &
-      & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse   = fract_par_diffuse(:), &
-      & press_srf          = press_srf(:),          &
-      & drag_srf           = drag_srf(:),           &
-      & t_acoef            = t_acoef(:),            &
-      & t_bcoef            = t_bcoef(:),            &
-      & q_acoef            = q_acoef(:),            &
-      & q_bcoef            = q_bcoef(:),            &
-      & pch                = pch(:),                &
-      & cos_zenith_angle   = cos_zenith_angle(:),   &
-      & CO2_air            = CO2_air(:),            &
-      & DEBUG_VAR          = DEBUG_VAR,             &
+      & t_air_in              = t_air(1:nc),              &
+      & q_air_in              = q_air(1:nc),              &
+      & rain_in               = rain(1:nc),               &
+      & snow_in               = snow(1:nc),               &
+      & wind_air_in           = wind_air(1:nc),           &
+      & wind_10m_in           = wind_10m(1:nc),           &
+      & lw_srf_down_in        = lw_srf_down(1:nc),        &
+      & swvis_srf_down_in     = swvis_srf_down(1:nc),     &
+      & swnir_srf_down_in     = swnir_srf_down(1:nc),     &
+      & swpar_srf_down_in     = swpar_srf_down(1:nc),     &
+      & fract_par_diffuse_in   = fract_par_diffuse(1:nc), &
+      & press_srf_in          = press_srf(1:nc),          &
+      & drag_srf_in           = drag_srf(1:nc),           &
+      & t_acoef_in            = t_acoef(1:nc),            &
+      & t_bcoef_in            = t_bcoef(1:nc),            &
+      & q_acoef_in            = q_acoef(1:nc),            &
+      & q_bcoef_in            = q_bcoef(1:nc),            &
+      & pch_in                = pch(1:nc),                &
+      & cos_zenith_angle_in   = cos_zenith_angle(1:nc),   &
+      & CO2_air_in            = CO2_air(1:nc),            &
+      ! & DEBUG_VAR          = DEBUG_VAR,             &
       ! For lakes:
-      & drag_wtr           = drag_wtr,              &
-      & drag_ice           = drag_ice,              &
-      & t_acoef_wtr        = t_acoef_wtr,           &
-      & t_bcoef_wtr        = t_bcoef_wtr,           &
-      & q_acoef_wtr        = q_acoef_wtr,           &
-      & q_bcoef_wtr        = q_bcoef_wtr,           &
-      & t_acoef_ice        = t_acoef_ice,           &
-      & t_bcoef_ice        = t_bcoef_ice,           &
-      & q_acoef_ice        = q_acoef_ice,           &
-      & q_bcoef_ice        = q_bcoef_ice            &
+      & drag_wtr_in           = drag_wtr(1:nc),              &
+      & drag_ice_in           = drag_ice(1:nc),              &
+      & t_acoef_wtr_in        = t_acoef_wtr(1:nc),           &
+      & t_bcoef_wtr_in        = t_bcoef_wtr(1:nc),           &
+      & q_acoef_wtr_in        = q_acoef_wtr(1:nc),           &
+      & q_bcoef_wtr_in        = q_bcoef_wtr(1:nc),           &
+      & t_acoef_ice_in        = t_acoef_ice(1:nc),           &
+      & t_bcoef_ice_in        = t_bcoef_ice(1:nc),           &
+      & q_acoef_ice_in        = q_acoef_ice(1:nc),           &
+      & q_bcoef_ice_in        = q_bcoef_ice(1:nc)            &
       & )
     NULLIFY(tile)
 
@@ -499,31 +501,31 @@ CONTAINS
 
     CALL model%Get_top_tile(tile)
 
-    CALL update_atm2land(                           &
-      & tile,                                       &
-      & model%options(no_omp_thread),               &
-      & t_air              = t_air(:),              &
-      & q_air              = q_air(:),              &
-      & press_air          = press_air(:),          &
-      & rain               = rain(:),               &
-      & snow               = snow(:),               &
-      & wind_air           = wind_air(:),           &
-      & wind_10m           = wind_10m(:),           &
-      & lw_srf_down        = lw_srf_down(:),        &
-      & swvis_srf_down     = swvis_srf_down(:),     &
-      & swnir_srf_down     = swnir_srf_down(:),     &
-      & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse  = fract_par_diffuse(:),  &
-      & dz_srf             = dz_srf(:),             &
-      & press_srf          = press_srf(:),          &
-      & rho_srf            = rho_srf(:),            &
-      & t_acoef            = t_acoef(:),            &
-      & t_bcoef            = t_bcoef(:),            &
-      & q_acoef            = q_acoef(:),            &
-      & q_bcoef            = q_bcoef(:),            &
-      & cos_zenith_angle   = cos_zenith_angle(:),   &
-      & CO2_air            = CO2_air(:)             &
-      & )
+    ! CALL update_atm2land(                           &
+    !   & tile,                                       &
+    !   & model%options(no_omp_thread),               &
+    !   & t_air              = t_air(:),              &
+    !   & q_air              = q_air(:),              &
+    !   & press_air          = press_air(:),          &
+    !   & rain               = rain(:),               &
+    !   & snow               = snow(:),               &
+    !   & wind_air           = wind_air(:),           &
+    !   & wind_10m           = wind_10m(:),           &
+    !   & lw_srf_down        = lw_srf_down(:),        &
+    !   & swvis_srf_down     = swvis_srf_down(:),     &
+    !   & swnir_srf_down     = swnir_srf_down(:),     &
+    !   & swpar_srf_down     = swpar_srf_down(:),     &
+    !   & fract_par_diffuse  = fract_par_diffuse(:),  &
+    !   & dz_srf             = dz_srf(:),             &
+    !   & press_srf          = press_srf(:),          &
+    !   & rho_srf            = rho_srf(:),            &
+    !   & t_acoef            = t_acoef(:),            &
+    !   & t_bcoef            = t_bcoef(:),            &
+    !   & q_acoef            = q_acoef(:),            &
+    !   & q_bcoef            = q_bcoef(:),            &
+    !   & cos_zenith_angle   = cos_zenith_angle(:),   &
+    !   & CO2_air            = CO2_air(:)             &
+    !   & )
     NULLIFY(tile)
 
     ! Run tasks in queue
@@ -532,23 +534,23 @@ CONTAINS
     ! Finally, give the required variables back to the atmosphere
     CALL model%Get_top_tile(tile)
 
-    CALL update_land2atm(                        &
-      & tile,                                    &
-      & model%options(no_omp_thread),            &
-      & t_srf              = t_srf,              &
-      & t_srf_rad          = t_srf_rad,          &
-      & t_eff_srf          = t_srf_eff,          &
-      & q_snocpymlt        = q_snocpymlt,        &
-      & qsat_srf           = qsat_srf,           &
-      & alb_vis_dir        = alb_vis_dir,        &
-      & alb_nir_dir        = alb_nir_dir,        &
-      & alb_vis_dif        = alb_vis_dif,        &
-      & alb_nir_dif        = alb_nir_dif,        &
-      & kh                 = kh,                 &
-      & km                 = km,                 &
-      & kh_neutral         = kh_neutral,         &
-      & km_neutral         = km_neutral          &
-      & )
+    ! CALL update_land2atm(                        &
+    !   & tile,                                    &
+    !   & model%options(no_omp_thread),            &
+    !   & t_srf              = t_srf,              &
+    !   & t_srf_rad          = t_srf_rad,          &
+    !   & t_eff_srf          = t_srf_eff,          &
+    !   & q_snocpymlt        = q_snocpymlt,        &
+    !   & qsat_srf           = qsat_srf,           &
+    !   & alb_vis_dir        = alb_vis_dir,        &
+    !   & alb_nir_dir        = alb_nir_dir,        &
+    !   & alb_vis_dif        = alb_vis_dif,        &
+    !   & alb_nir_dif        = alb_nir_dif,        &
+    !   & kh                 = kh,                 &
+    !   & km                 = km,                 &
+    !   & kh_neutral         = kh_neutral,         &
+    !   & km_neutral         = km_neutral          &
+    !   & )
     NULLIFY(tile)
 
     IF (debug_on('basic') .AND. iblk == 1) &

@@ -358,11 +358,12 @@ CONTAINS
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
       ELSE
-        tmp_ptr => Create_process_memory(iproc) ! Create memory for the specific process
-        __acc_attach(tmp_ptr)
-        this%mem(iproc)%p => tmp_ptr            !TODO: Still needed? Same as this%mem(iproc)%p%owner_proc_id  (see below)
-        __acc_attach(this%mem(iproc)%p)         !      (Needs to be tested on gpu)
-        this%mem(iproc)%p%id = iproc
+        ! this%param(iproc)%p => t_jsb_param(iproc)
+        tmp_ptr => Create_process_memory(iproc)  ! Create memory for the specific process
+        !__acc_attach(tmp_ptr)
+        ! this%mem(iproc)%p => tmp_ptr
+        !__acc_attach(this%mem(iproc)%p)
+        tmp_ptr%id = iproc
 
         ! Preparations needed for the Init process memory function called below
         ! Generate variable list name. Each process has its own variable list; used in add_var
@@ -371,34 +372,42 @@ CONTAINS
         ELSE
           varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
         END IF
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
+        tmp_ptr%varlist_name = TRIM(varlist_name_loc)
 
         ! Also the memory of the parent tile is available on the current tile (if it has a parent).
-        IF (ASSOCIATED(parent_tile)) this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
+        IF (ASSOCIATED(parent_tile)) tmp_ptr%parent => parent_tile%mem(iproc)%p
 
-        this%mem(iproc)%p%grid_id = grid_id
-        this%mem(iproc)%p%owner_model_id = this%owner_model_id
-        this%mem(iproc)%p%owner_proc_id = iproc
-        this%mem(iproc)%p%owner_proc_name = process_name
-        ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
-        this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
-        this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
-        this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
-        !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
+        tmp_ptr%grid_id = grid_id
+        tmp_ptr%owner_model_id = this%owner_model_id
+        tmp_ptr%owner_proc_id = iproc
+        tmp_ptr%owner_proc_name = process_name
+        ALLOCATE(tmp_ptr%owner_tile_path(SIZE(this%path)))
+        !$noACC ENTER DATA CREATE(tmp_ptr%owner_tile_path)
+        tmp_ptr%owner_tile_path(:) = this%path(:)
+        tmp_ptr%owner_tile_name = TRIM(this%name)
+        tmp_ptr%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        !$noACC UPDATE DEVICE(tmp_ptr) ASYNC(1)
+        !$noACC ENTER DATA CREATE(tmp_ptr%vars)
+        !$noACC UPDATE DEVICE(tmp_ptr, tmp_ptr%vars) ASYNC(1)
+        __acc_attach(tmp_ptr)
+        !$noACC UPDATE DEVICE(tmp_ptr) ASYNC(1)
+
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL tmp_ptr%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL tmp_ptr%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
+        !$noACC UPDATE DEVICE(tmp_ptr) ASYNC(1)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
+        this%mem(iproc)%p => tmp_ptr
+        __acc_attach(this%mem(iproc)%p)
+
         ! Make the current tile's memory available from the parent tile
-        IF (ASSOCIATED(parent_tile)) THEN                               ! Tile has a parent (i.e. this is not the box tile)
-          no_of_children = parent_tile%Get_no_of_children()             ! Total number of siblings
+        IF (ASSOCIATED(parent_tile)) THEN
+          no_of_children = parent_tile%Get_no_of_children()
           IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
             parent_tile%mem(iproc)%p%no_of_children = no_of_children    !TODO: this line is probably not needed
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
@@ -413,7 +422,7 @@ CONTAINS
       END IF
 
     END DO
-    !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
+    !$noACC UPDATE DEVICE(this%mem) ASYNC(1)
 
   END SUBROUTINE Init_tile
 
