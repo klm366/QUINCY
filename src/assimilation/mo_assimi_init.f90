@@ -42,8 +42,8 @@ CONTAINS
     USE mo_assimi_constants,      ONLY: t_jmax_opt_min
 
     ! Use of process configurations (t_PROC_config)
-    !dsl4jsb_Use_config(ASSIMI_)    
-    
+    !dsl4jsb_Use_config(ASSIMI_)
+
     ! USE PROC_memory
     dsl4jsb_Use_memory(ASSIMI_)
 
@@ -131,14 +131,14 @@ CONTAINS
     beta_soa_tphen_mavg(:,:)          = 1.0_wp
     beta_soil_ps(:,:)                 = 1.0_wp
     beta_soil_gs(:,:)                 = 1.0_wp
-    
+
     beta_air_daytime(:,:)             = 1.0_wp
     beta_air_daytime_dacc(:,:)        = 1.0_wp
     beta_soil_ps_daytime(:,:)         = 1.0_wp
     beta_soil_ps_daytime_dacc(:,:)    = 1.0_wp
     beta_soil_gs_daytime(:,:)         = 1.0_wp
     beta_soil_gs_daytime_dacc(:,:)    = 1.0_wp
-    
+
     beta_air_tfrac_mavg(:,:)          = 1.0_wp
     beta_air_tcnl_mavg(:,:)           = 1.0_wp
     beta_soil_ps_tfrac_mavg(:,:)      = 1.0_wp
@@ -147,7 +147,7 @@ CONTAINS
     beta_soil_gs_tfrac_mavg(:,:)      = 1.0_wp
     beta_soil_gs_tcnl_mavg(:,:)       = 1.0_wp
 
-    t_jmax_opt(:,:)                   = t_jmax_opt_min 
+    t_jmax_opt(:,:)                   = t_jmax_opt_min
 
   END SUBROUTINE assimi_init
 

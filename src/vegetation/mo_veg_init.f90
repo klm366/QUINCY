@@ -34,7 +34,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> Intialize vegetation process (after memory has been set up)
   !!
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE veg_init(tile)
 
@@ -124,8 +124,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fn_oth_cl)
-   
-    
+
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
@@ -135,13 +135,13 @@ CONTAINS
     leaf_nitrogen_cl(:,:,:)             = 0.0_wp        ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
     lai_cl(:,:,:)                       = 0.0_wp        ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
     fn_oth_cl(:,:,:)                    = 1.0_wp        ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
-                                                        ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()    
+                                                        ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
     ! moving averages
     t_jmax_opt_mavg(:,:)                = 17.0_wp
     growth_req_n_tlabile_mavg(:,:)      = 1._wp / 25._wp
     growth_req_p_tlabile_mavg(:,:)      = 1._wp / 14._wp
     fleaf_sunlit_tfrac_mavg_cl(:,:,:)   = 0.5_wp
-    t_air_tacclim_mavg(:,:)             = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration    
+    t_air_tacclim_mavg(:,:)             = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
     t_air_tphen_mavg(:,:)               = 283.15_wp
     t_air_week_mavg(:,:)                = 283.15_wp
     t_air_month_mavg(:,:)               = 283.15_wp
@@ -150,7 +150,7 @@ CONTAINS
     veg_pool_leaf_carbon(:,:)           = 0.0_wp
     veg_growth_leaf_carbon(:,:)         = 0.0_wp
     veg_litterfall_leaf_carbon(:,:)     = 0.0_wp
-        
+
     IF (tile%lcts(1)%lib_id /= 0) THEN      ! work with lctlib only if the present tile is a pft
       veg_pool_leaf_carbon(:,:)     = lai(:,:) / lctlib%sla
       veg_pool_leaf_nitrogen(:,:)   = lai(:,:) / lctlib%sla / lctlib%cn_leaf
@@ -158,7 +158,7 @@ CONTAINS
 
       IF(lctlib%growthform == itree)THEN
          height(:,:)                = 10.0_wp
-      ELSE 
+      ELSE
          height(:,:)                = 1.0_wp
       ENDIF
     ENDIF

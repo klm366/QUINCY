@@ -12,7 +12,7 @@
 !> ---------------------------------------
 !>
 MODULE mo_jsb_impl_constants
- 
+
   USE mo_kind,                  ONLY: wp
 
   IMPLICIT NONE

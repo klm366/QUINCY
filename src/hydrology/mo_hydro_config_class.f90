@@ -129,8 +129,8 @@ CONTAINS
 
     ! Set defaults
     active                 = .TRUE.
-    bc_filename            = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
-    ic_filename            = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
+    bc_filename            = 'bc_land_hydro.nc'
+    ic_filename            = 'ic_land_hydro.nc'
     bc_sso_filename        = 'bc_land_sso.nc'
     w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
     w_soil_limit           = -1.0_wp

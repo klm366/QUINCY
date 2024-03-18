@@ -50,9 +50,9 @@ MODULE mo_pheno_init
 CONTAINS
 
   !> Run phenology init
-  !! 
+  !!
   !! run jsb4 or/and quincy init routine
-  !! 
+  !!
   SUBROUTINE pheno_init(tile)
 
     ! Arguments
@@ -359,7 +359,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize pheno variables for boundary conditions (bc)
-  !! 
+  !!
   !! quincy
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE pheno_init_q_(tile)
@@ -368,7 +368,7 @@ CONTAINS
     USE mo_pheno_constants,       ONLY: ievergreen
     USE mo_jsb_impl_constants,    ONLY: false, true
     USE mo_pheno_process,         ONLY: get_foliage_projected_cover
-    
+
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -378,7 +378,7 @@ CONTAINS
 
     INTEGER :: nblks, ib, nc, ic
     REAL(wp) :: ClumpinessFactor_param, MaxLai_param
-       
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -469,7 +469,7 @@ CONTAINS
 
     !> 2.0 jsbach4 "pheno init" code copied with minor modifications
     !!
-    
+
     !> 2.1 get fract_fpc_max
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
@@ -481,7 +481,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !> 2.2 calc initial fract_fpc 
+    !> 2.2 calc initial fract_fpc
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO ib=1,nblks
@@ -502,7 +502,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ENDIF
-    
+
     !> 2.3 veg_fract_correction (a factor between 0 and 1, not modified at runtime, see pheno mem class for some docu)
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)

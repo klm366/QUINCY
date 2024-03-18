@@ -103,31 +103,29 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
-     INTEGER,  intent(in)    ::                     &
-                                day_of_year
+     INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
 
      REAL(wp), intent(in)    :: timeStep_in_days
 
-     REAL(wp), intent(in)    ::                     &
-                                lat,                &
-                                previous_day_temp_mean, &
-                                LaiMax_corrected,   &
-                                pseudo_soil_temp
+     REAL(wp), intent(in)    :: lat,                &
+       &                        previous_day_temp_mean, &
+       &                        LaiMax_corrected,   &
+       &                        pseudo_soil_temp
 
-     REAL(wp), intent(inout) ::                     &
-                                days_since_growth_begin_SG, &
-                                chill_days_SG,      &
-                                heat_sum_SG,        &
-                                growth_phase_SG,    &
-                                lai                   ! Total LAI.
+     REAL(wp), intent(inout) :: days_since_growth_begin_SG, &
+       &                        chill_days_SG,      &
+       &                        heat_sum_SG,        &
+       &                        growth_phase_SG,    &
+       &                        lai                   ! Total LAI.
+
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
-                          grRate     ! argument to calls of get_letItGrow
+       &                  grRate     ! argument to calls of get_letItGrow
 
      !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -363,8 +361,7 @@ MODULE mo_pheno_process
         END IF
         IF(lai > PhenoParam%all%LAI_negligible) THEN
            ! otherwise nothing to do
-           grRate = PhenoParam%EG%growthRate ! R: xtmp zu grRate geändert um Konsistent zu bleiben mit anderen Aufrufen wie 
-                                             !    z.B. bei crops....
+           grRate = PhenoParam%EG%growthRate
            lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
         END IF
      ELSE                                   ! we are during the VEGETATIVE PHASE
@@ -459,11 +456,6 @@ MODULE mo_pheno_process
 
      IF (previous_day_NPP_pot_rate_ca > - 1.E-10_wp) THEN
        NPP_positive = .TRUE.  ! Do not set to zero, as crops could never grow then...
-                              ! R: Sehr kleinen negativen Wert gewählt =>
-                              !    wenn die Umweltbedingungen so sind, dass crops zumindest
-                              !    kein wesentlich negatives NPP hatten, dann heat sum bilden.
-                              !    Beispielwerte von avg_NPP_yDayMean:
-                              !    2007-12-31 crop: -3.5039e-08  3.7397e-08  1.3059e-06 :
      ELSE
        NPP_positive = .FALSE.
      END IF
@@ -538,7 +530,7 @@ MODULE mo_pheno_process
             ! If there are winter crops and summer crops would have been harvested already twice
             ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
             IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                        ! winter crops in growth phase..
-               heat_sum_CRP > 2.0_wp * PhenoParam%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested 
+               heat_sum_CRP > 2.0_wp * PhenoParam%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
                                                                                ! already twice..
                   growth_phase_CRP = -1._wp                                    ! => rest phase of summer crops
             END IF

@@ -71,7 +71,7 @@ CONTAINS
 #endif
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension 
+    INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension
                                                      !< of 2-d decomposition
     INTEGER, INTENT(in)                    :: nprocb
         !< Number of processors in 2nd dimension of 2-d decomposition
@@ -385,9 +385,9 @@ CONTAINS
       !
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         ! quincy
       CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            ! quincy
-      
+
       !------------------------ tasks that can change area (e.g. disturbance & fuel)
-      ! 
+      !
       ! !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
       ! IF (model%processes(FUEL_)%p%config%active) THEN
       !   CALL model%Queue_task(FUEL_, "fuel")
@@ -395,7 +395,7 @@ CONTAINS
       ! IF (model%processes(DISTURB_)%p%config%active) THEN
       !    CALL model%Queue_task(DISTURB_, "natural_disturbances")
       ! END IF
-  
+
       !------------------------ tasks that do not change area
       !
       CALL model%Queue_task(RAD_,    "sw_radiation_q_")             ! quincy (sw radiation and albedo)
@@ -419,17 +419,17 @@ CONTAINS
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")
-          ! Note: albedo is updated at the end of the time step, one time step before the radiation is 
+          ! Note: albedo is updated at the end of the time step, one time step before the radiation is
           ! updated in the atmosphere
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
-      
+
       CALL model%Queue_task(PHENO_,  "time_average_phenology")      ! quincy
           ! averaging variables in time at the end of the timestep
     ENDIF
     ! Task Queue created
-    !--------------------------------------------------------------------------------------------------- !    
-    
+    !--------------------------------------------------------------------------------------------------- !
+
     ! Debug message after creating task queue
     IF (debug_on()) THEN
       CALL print_model(model)
@@ -528,7 +528,7 @@ CONTAINS
       IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
-      
+
       IF (tile%Is_process_active(ASSIMI_)) THEN
         CALL assimi_init(tile)
         ! CALL assimi_init_bc(tile)

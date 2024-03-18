@@ -2247,7 +2247,7 @@ CONTAINS
     REAL(wp), INTENT(in)            :: dsoil(:,:)         !< soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: wtr(:,:)           !< water content
     REAL(wp), INTENT(in)            :: ice(:,:)           !< ice content
-    REAL(wp), INTENT(in)            :: wscools(:,:)       !< supercooled water
+    REAL(wp), INTENT(in)            :: wscools(:,:)       !< potentially supercooled water
     REAL(wp), INTENT(in)            :: wsat(:,:)          !< soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: fc(:,:)            !< field capacity [m]
     REAL(wp), INTENT(in)            :: pwp(:,:)           !< plant wilting point [m]

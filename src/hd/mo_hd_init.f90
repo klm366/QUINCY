@@ -141,7 +141,7 @@ CONTAINS
         & extdim_name='nneigh')
 
       IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
-        ! Number of channel river splits into 
+        ! Number of channel river splits into
         return_pointer => input_file%Read_2d(         &
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
@@ -247,8 +247,8 @@ CONTAINS
       !$ACC   ASYNC(1)
 
       !$ACC WAIT(1)
-      
-    CASE ('none')      
+
+    CASE ('none')
 
     END SELECT
 

@@ -139,7 +139,7 @@ CONTAINS
       IF (water + ice <= EPSILON(1._wp)) THEN
         heat_cond = hcond_dry
       ELSE
-        
+
 
         ! Thermal conductivity of soil solids
         hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org

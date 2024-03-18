@@ -42,7 +42,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset vegetation fluxes (with/to zero)
-  !! 
+  !!
   !! called prior to all Tasks (pheno_interface)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE reset_veg_fluxes(tile, options)
@@ -52,7 +52,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_math_constants,    ONLY: zero
-    
+
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
 
@@ -61,7 +61,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
 
-    dsl4jsb_Def_memory(VEG_) 
+    dsl4jsb_Def_memory(VEG_)
 
     dsl4jsb_Real2D_onChunk      :: veg_growth_leaf_carbon
     dsl4jsb_Real2D_onChunk      :: veg_litterfall_leaf_carbon
@@ -75,7 +75,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    dsl4jsb_Get_memory(VEG_) 
+    dsl4jsb_Get_memory(VEG_)
 
     model  => Get_model(tile%owner_model_id)
 
@@ -91,7 +91,7 @@ CONTAINS
     ! set zero all flux variables of the assimilation process
     veg_growth_leaf_carbon(:)       = zero
     veg_litterfall_leaf_carbon(:)   = zero
-    
+
     maint_respiration_pot(:)        = zero
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

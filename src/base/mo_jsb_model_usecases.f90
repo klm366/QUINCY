@@ -309,7 +309,7 @@ CONTAINS
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
-          ! use_quincy: 
+          ! use_quincy:
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
         !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
         !  VEG_ is active
@@ -685,7 +685,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile, fage_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)

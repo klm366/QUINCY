@@ -121,7 +121,7 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%ifs_tskin))    DEALLOCATE(sse_init_vars%ifs_tskin)
 
   END SUBROUTINE sse_finalize_init_vars
-      
+
   SUBROUTINE sse_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -451,7 +451,7 @@ CONTAINS
       & vol_field_cap_sl
 
     ! Locally allocated vectors
-    ! 
+    !
     dsl4jsb_Real3D_onDomain :: &
       & liquid_max,            &
       & fract_water,           &
@@ -531,7 +531,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-  
+
       ALLOCATE(liquid_max (nproma, nsoil, nblks))
       !$ACC ENTER DATA CREATE(liquid_max)
 
@@ -731,7 +731,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 2, nsoil
         DO ib = 1, nblks

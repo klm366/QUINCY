@@ -113,8 +113,8 @@ CONTAINS
 
     ! Set defaults
     active                    = .TRUE.
-    bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
-    ic_filename               = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    bc_filename               = 'bc_land_rad.nc'
+    ic_filename               = 'ic_land_rad.nc'
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
     use_alb_soil_organic_C    = ''

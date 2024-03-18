@@ -26,25 +26,6 @@ MODULE mo_pheno_constants
   ! grasses     (GRS)
   ! crops       (CRP)
 
-  ! --- public types used for parameters -----------------------------------------------------------------------------------------
-
-  ! R: nicht mehr notwendig laut Christian:
-  !   TYPE t_bounds  !! For saving parameter boundary values
-  !      LOGICAL   ::  exists = .FALSE.  ! indicates whether a boundary value exists
-  !      REAL(dp)  ::  value  =  NaN     ! the boundary value if it exists
-  !   END TYPE t_bounds
-  !  PUBLIC :: t_bounds
-
-  !   TYPE rdata_type  ! To have a real value of a variable, its name and possible upper and lower range together. Should be set by
-  !                    ! routine set_rdata().
-  !      REAL(dp)          :: v =  NaN   ! the value of the variable
-  !      CHARACTER(len=32) :: n =  ""    ! the name of the variable
-  ! ! R: nicht mehr notwendig laut Christian    TYPE(t_bounds) :: uBound        ! the upper bound
-  ! ! R: nicht mehr notwendig laut Christian    TYPE(t_bounds) :: lBound        ! the lower bound
-  !      CHARACTER(len=32) :: units =""  ! the physical units of the stored values
-  !   END TYPE rdata_type
-  ! !  PUBLIC :: rdata_type
-
   !> Collects parameters that apply to all phenology types
   TYPE t_GeneralParams
     REAL(wp) :: &
@@ -71,7 +52,7 @@ MODULE mo_pheno_constants
     REAL(wp) :: &
       & alternation_temp = 4.0_wp,        & ! [Celsius] Critical temperature of the alternating model, above
                                             ! which temperature contributes to the heat sum, and below which
-                                            ! days are considered as chilling days (see subroutine 
+                                            ! days are considered as chilling days (see subroutine
                                             ! "update_growth_phase")
       & heat_sum_min = 10.0_wp,           & ! [degree days] Minimum value of critical heat sum [degree days]
                                             ! (see "update_growth_phase")
@@ -107,7 +88,7 @@ MODULE mo_pheno_constants
                                           ! have. This parameter is introduced for technical reasons to assure
                                           ! that the next growth pahse is not missed.
       & minLength_gvPhase = 90._wp        ! [days] 60 = growthPhaseLength  + 30 ! Number of days that growth plus
-                                          ! vegetative phase minimally should last. This parameter is introduced 
+                                          ! vegetative phase minimally should last. This parameter is introduced
                                           ! to prevent leaf shedding when early after the growth phase there is a
                                           ! cold snap.
   END TYPE t_summergreen_param
@@ -186,11 +167,11 @@ MODULE mo_pheno_constants
   !$ACC   CREATE(PhenoParam%CRP, PhenoParam%FR, PhenoParam)
 
   !! quincy
-  REAL(wp), SAVE ::   & 
+  REAL(wp), SAVE ::   &
       gdd_t_air_threshold             !< temperature threshold for the accumulation of growing degree days [deg K]
 
   !< some useful numbers for easy identification of photosynthetic pathways and growth forms
-  !! 
+  !!
   INTEGER, PARAMETER ::                     &
       ievergreen              = 1         , &
       isummergreen            = 2         , &
@@ -207,7 +188,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_pheno_constants
 
-    USE mo_jsb_physical_constants, ONLY: tmelt  
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_constants'
 

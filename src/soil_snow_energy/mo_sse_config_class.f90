@@ -55,7 +55,7 @@ MODULE mo_sse_config_class
     REAL(wp)      :: soil_sand            !< soil sand proportion - site specific from forcing info file
     REAL(wp)      :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)      :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp)      :: bulk_density    
+    REAL(wp)      :: bulk_density
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config

@@ -146,7 +146,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: the QUINCY update_phenology_q_ task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_phenology_q_(model_id) RESULT(return_ptr)
 
@@ -160,7 +160,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: time_average_phenology task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_time_average_phenology(model_id) RESULT(return_ptr)
 
@@ -191,7 +191,7 @@ CONTAINS
     ! local
     TYPE(t_jsb_model), POINTER :: model
 
-    ! get var / objects 
+    ! get var / objects
     model   => Get_model(model_id)
 
 
@@ -248,10 +248,10 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> QUINCY phenology 
-  !! 
+  !> QUINCY phenology
+  !!
   !! determine onset and end of the growing season
-  !! 
+  !!
   !! covers temporarily also:     n\
   !!  update leaf C:N:P pools     n\
   !!  calc lai                    n\
@@ -502,8 +502,6 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: NUR ZUR SICHERHEIT:
-    !    Diese Abfrage sollte unnötig sein, da der Prozess Phänologie nur für veg tiles aufgerufen werden sollte.
     IF (.NOT. tile%is_vegetation) THEN
        CALL finish(TRIM(routine), 'The programm tries to calculate phenology on a non vegetated tile...')
     END IF
@@ -525,11 +523,6 @@ CONTAINS
 
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
     !    once for the whole hsm (tile%name == 'box'):
-    ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muß man bis auf NPP nicht für jedes Tile machen. Daher
-    !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables für JSBACH4 getrennt.
-    !    Die Berechnungen die nicht für jedes Tile gemacht werden müssen sind in calc_previous_day_variables und die NPP-
-    !    Berechnungen werden im Folgenden vorgenommen. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
-    !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
     ! after this routine. At the start of a new day, we here divide the sum by the day length to get
@@ -656,7 +649,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
     LAI_negligible_tmp = PhenoParam%all%LAI_negligible
@@ -721,7 +713,6 @@ CONTAINS
 
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
-       ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -908,7 +899,6 @@ CONTAINS
     ENDIF
 
     !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -916,7 +906,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "aggregate": phenology_q_ task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_phenology_q_(tile, options)
 
@@ -1043,7 +1033,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-    ELSE        
+    ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1139,11 +1129,11 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, source)
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, target)
 
-    ! There are pheno variables that need to be merged upon ageing 
+    ! There are pheno variables that need to be merged upon ageing
     ! because they are used for bookkeeping by various processes but are not conserved
     ! (i.e. they are not automatically dealed with by pplcc and the lcc framework)
     ! For the pheno process these are lai and the day_npp_sum
-    ! [According to the specifications in Reick et al. (2021) the LAI is to be interpreted as leaf area 
+    ! [According to the specifications in Reick et al. (2021) the LAI is to be interpreted as leaf area
     ! "per canopy area", where canopy area is defined as area covered by a hypothetical tile without canopy gaps.]
     CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:), &
       &  veg_fract_correction_source(:), veg_fract_correction_target(:), lai_source(:), lai_target(:))
@@ -1198,10 +1188,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_phenology'
 
-    dsl4jsb_Def_memory(A2L_)                        
-    dsl4jsb_Def_memory(ASSIMI_)                     
-    dsl4jsb_Def_memory(VEG_)         
-             
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)
+
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -1245,18 +1235,18 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)    
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)              
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)               
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)              
-    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)              
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)     
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)     
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)
@@ -1271,10 +1261,10 @@ CONTAINS
     !> 1.0 run average calculations for several timescales
     !!
     !!----- docu
-    !! calc_time_mavg(current average, new value, length of avg_period, 
+    !! calc_time_mavg(current average, new value, length of avg_period,
     !!                do_calc=LOGICAL, avg_period_unit='day')
     !!                RETURN(new current average)
-    !! 
+    !!
     !! note: the unit of the averaging period is 'day' by default but can also be 'week' or 'year'
     !!       avg_period_unit='day'
     !!       avg_period_unit='week'
@@ -1285,9 +1275,9 @@ CONTAINS
     !!
     t_air_week_mavg(:)       = calc_time_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)
     t_air_month_mavg(:)      = calc_time_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
-    
+
     !> 1.2 labile pool timescale
-    !! 
+    !!
     gpp_tlabile_mavg(:)                = calc_time_mavg(gpp_tlabile_mavg(:), gross_assimilation(:), &
                                                     mavg_period_tlabile)
     maint_respiration_tlabile_mavg(:)  = calc_time_mavg(maint_respiration_tlabile_mavg(:), maint_respiration_pot(:), &
@@ -1298,21 +1288,21 @@ CONTAINS
                                                     mavg_period_tlabile, do_calc=(growth_req_p(:) > eps8))
 
     !> 1.3 phenology timescale
-    !! 
+    !!
     t_air_tphen_mavg(:)           = calc_time_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
     beta_soil_gs_tphen_mavg(:)    = calc_time_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
     beta_soa_tphen_mavg(:)        = calc_time_mavg(beta_soa_tphen_mavg(:), beta_soa(:), mavg_period_tphen)
-    
+
     !> 1.4 soa timescale
     soa_tsoa_mavg(:)              = calc_time_mavg(soa_tsoa_mavg(:), t_air(:) - tmelt, mavg_period_tsoa)
-    
+
 
   END SUBROUTINE update_time_average_phenology
 
 
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "aggregate": time_average_phenology task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_time_average_phenology(tile, options)
 
@@ -1357,7 +1347,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go aggregate
     ! ------------------------------------------------------------------------------------------------------------
-    
+
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -1374,7 +1364,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg                     , weighted_by_fract)
 
     !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

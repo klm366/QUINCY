@@ -141,7 +141,7 @@ CONTAINS
     ! local
     TYPE(t_jsb_model), POINTER :: model
 
-    ! get var / objects 
+    ! get var / objects
     model   => Get_model(model_id)
 
 
@@ -634,26 +634,6 @@ CONTAINS
          max_green_bio = MAX(max_green_bio, c_green)
       ENDIF
 
-
-      ! R: In JSBACH3 wurden alle C-pools auf canopy Flaeche gezogen gerechnet. Ebenso die C Fluxe.
-      !    Fuer den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
-      !    Besser waere fuer JSBACH4 eigentlich auf Tile Flaeche bezogen zu rechnen um alle variablen von JS4
-      !    konsistent auf dieselbe Flaeche zu beziehen. Sonst machen wir den Code unnoetig unuebersichtlich.
-      !    Dadurch wuerde z.B. die Variablen-Verdopplung vermieden.
-      !    Ich habe die Assimilation zwar schon auf tile Flaeche umgerechnet und koennte daher prinzipiell
-      !    die Cpools und Fluxe alle ueber das NPP-auf-Tile-Flaeche rechnen.
-      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepasst
-      !    werden muessten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
-      !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
-      !    Dazu kommt, dass Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden muessten.
-      !    Wie auch immer wenn spaeter etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
-      !    Flaeche zu bleiben.
-      !    => daher habe ich das doppelte Flaechenkonzept von JSBACH3 uebernommen.
-      !
-      !    Um die Benennungen wenigstens richtig zu machen muesste ich jede dieser 30 Variablen in allen
-      !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
-      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Flaeche bezogen sind.
-
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
 
@@ -705,7 +685,7 @@ CONTAINS
                (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                     * cflux_herb_2_atm )                          ! .. herbivory
 
-    co2flux_npp_2_atm_yday_ta = molarMassCO2_kg *               & ! daily C conservation test cannot deal with 
+    co2flux_npp_2_atm_yday_ta = molarMassCO2_kg *               & ! daily C conservation test cannot deal with
               (- veg_fract_correction * fract_fpc_max           & ! diurnal cycle of NPP,
                    * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
 
@@ -873,7 +853,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    ! if running with FLCC (which runs on the veg tile) 
+    ! if running with FLCC (which runs on the veg tile)
     ! the co2flux_fire_all_2_atm_ta variable is changed on the leaves
     ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
     dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
@@ -1007,7 +987,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout            
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
 
     c_green           = c_green           * (oldRefArea / newRefArea)
     c_woods           = c_woods           * (oldRefArea / newRefArea)
@@ -1567,7 +1547,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-      
+
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1671,7 +1651,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
     CLASS(t_jsb_tile_abstract), INTENT(IN)    :: tile    !< tile for which the relocation is be conducted
     INTEGER,                    INTENT(IN)    :: i_tile  !< index of the tile in lcc structure
     TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
@@ -1681,7 +1661,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     TYPE(t_jsb_model), POINTER   :: model
 
     INTEGER :: i, k, i_pool, i_passive, i_litter_coefficient, nc, ics, ice, iblk
-    
+
     REAL(wp) :: litter_coefficient, fraction, this_fract
     REAL(wp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
     REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
@@ -1752,7 +1732,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
       !JN-TODO: better way? Reiner? DSL?
       DO i = 1,nc
-        k = ics + i - 1 
+        k = ics + i - 1
         CALL add_litter_to_yasso_pool( &
           & lcc_relocations%passive_vars(i_passive)%p%relocate_this(k,i_tile,iblk), &
           & this_litter(i), fraction, litter_coefficient)
@@ -1790,7 +1770,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
 
@@ -1937,7 +1917,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-    
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, SIZE(cflux_ta)
       Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)

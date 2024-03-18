@@ -1,4 +1,4 @@
-!> module to determine the phenological state of a plant 
+!> module to determine the phenological state of a plant
 !>
 !> ICON-Land
 !>
@@ -32,16 +32,16 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Main Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> determine onset and end of the growing season for some PFT
-  !! 
+  !!
   !! PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses \n
-  !! 
+  !!
   !! @todo OBS: currently uncalibrated, in particular rain green phenology \n
   !!  Dev: Have more cost-benefit in decision to start/stop growing season \n
   !!      what about seasonality beyond off/on behaviour? -> implies some collaboration between
-  !!      turnover rates and phenology -> should the two be linked? 
+  !!      turnover rates and phenology -> should the two be linked?
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_phenology_quincy(tile, options)
 
@@ -216,13 +216,13 @@ CONTAINS
 
 
     !> 0.8 pass reasonable values to mavg variables (temporary solution)
-    !! 
-    ppfd_sunlit_tfrac_mavg_cl(:,:)  = ppfd_sunlit_cl(:,:) 
-    ppfd_shaded_tfrac_mavg_cl(:,:)  = ppfd_shaded_cl(:,:) 
+    !!
+    ppfd_sunlit_tfrac_mavg_cl(:,:)  = ppfd_sunlit_cl(:,:)
+    ppfd_shaded_tfrac_mavg_cl(:,:)  = ppfd_shaded_cl(:,:)
     fleaf_sunlit_tfrac_mavg_cl(:,:) = fleaf_sunlit_cl(:,:)
 
     !> 0.9 optional arguments of calc_canopy_layers (local variables)
-    !! 
+    !!
     t_air_tfrac_mavg(:)            = 0.0_wp
     t_air_tacclim_mavg(:)          = 0.0_wp
     press_srf_tfrac_mavg(:)        = 0.0_wp
@@ -236,7 +236,7 @@ CONTAINS
 
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
-    !! 
+    !!
     CALL calc_phenology(lctlib%phenology_type              , &  ! lctlib
                         lctlib%beta_soil_flush             , &
                         lctlib%cn_leaf                     , &
@@ -262,9 +262,9 @@ CONTAINS
 
 
     !> 2.0 QUINCY canopy model: calculate lai(:) using growing season and leaf_carbon
-    !! 
+    !!
     !! this code is a simplified version of the 'veg_update_pools CASE ('canopy')' code in QUINCY
-    
+
     !> 2.1 leaf carbon growth/litterfall flux depending on growing season T/F
     !!
     !! use in calc_canopy_layers() the lai(:) calculated here in sec. 2.3
@@ -273,10 +273,10 @@ CONTAINS
        veg_growth_leaf_carbon(:) = lai_max(:) / lctlib%sla * &
                                    (1._wp - exp( -k_leafon_canopy * &
                                     (lai_max(:) - lai(:)) / lai_max(:))) * &
-                                   dtime / one_day 
+                                   dtime / one_day
     ELSEWHERE
-       veg_litterfall_leaf_carbon(:) = MIN(veg_pool_leaf_carbon(:), & 
-                                           lai(:) / lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
+       veg_litterfall_leaf_carbon(:) = MIN(veg_pool_leaf_carbon(:), &
+                                           lai(:) / lctlib%sla * max_leaf_shedding_rate * dtime / one_day * &
                                            lai_max(:) / &
                                            MAX(eps4, lai(:)))
     ENDWHERE
@@ -286,12 +286,12 @@ CONTAINS
     IF(lctlib%phenology_type == ievergreen) THEN
       veg_litterfall_leaf_carbon(:) = veg_pool_leaf_carbon(:) / lctlib%tau_leaf / one_day / one_year * dtime
     ENDIF
-    
-    !> 2.3 update leaf C:N:P pools 
+
+    !> 2.3 update leaf C:N:P pools
     !!
-    veg_pool_leaf_carbon(:)     = veg_pool_leaf_carbon(:)   + veg_growth_leaf_carbon(:) - veg_litterfall_leaf_carbon(:) 
-    veg_pool_leaf_nitrogen(:)   = veg_pool_leaf_carbon(:)   / lctlib%cn_leaf 
-    veg_pool_leaf_phosphorus(:) = veg_pool_leaf_nitrogen(:) / lctlib%np_leaf 
+    veg_pool_leaf_carbon(:)     = veg_pool_leaf_carbon(:)   + veg_growth_leaf_carbon(:) - veg_litterfall_leaf_carbon(:)
+    veg_pool_leaf_nitrogen(:)   = veg_pool_leaf_carbon(:)   / lctlib%cn_leaf
+    veg_pool_leaf_phosphorus(:) = veg_pool_leaf_nitrogen(:) / lctlib%np_leaf
 
     !> 2.4 calc lai
     !!
@@ -308,8 +308,8 @@ CONTAINS
 
 
     !> 3.0 canopy layers
-    !! 
-    !! copied from quincy:mo_veg_update_pools 
+    !!
+    !! copied from quincy:mo_veg_update_pools
     !!
     !! quincy canopy model:
     !!      previously this routine was called in update_canopy_fluxes() but led to inconsistentcies between lai & lai_cl in RAD
@@ -353,14 +353,14 @@ CONTAINS
                              fn_chl_cl(:,:)                                 , & ! inout
                              fn_oth_cl(:,:)                                 )   ! inout
 
-  END SUBROUTINE update_phenology_quincy 
+  END SUBROUTINE update_phenology_quincy
 
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_phenology_quincy
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> calculate phenology 
+  !> calculate phenology
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
@@ -388,7 +388,7 @@ CONTAINS
                                       gdd )
 
     USE mo_jsb_math_constants,      ONLY: dtime, one_day
-    USE mo_jsb_physical_constants,  ONLY: tmelt  
+    USE mo_jsb_physical_constants,  ONLY: tmelt
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
                                           gdd_t_air_threshold
 
@@ -416,7 +416,7 @@ CONTAINS
     REAL(wp),                     INTENT(inout) :: growth_req_n_tlabile_mavg       , & !< moles N required for a unit of C growth to determine labile pool size
                                                    growth_req_p_tlabile_mavg       , & !< moles P required for a unit of N growth to determine labile pool size
                                                    nd_dormance                     , & !< number of days in dormancy since last growing season
-                                                   gdd                                 !< growing degree days 
+                                                   gdd                                 !< growing degree days
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: hlp1                                      ! helper variable for tmp values
@@ -430,28 +430,28 @@ CONTAINS
 
 
     !> 1.0 check growing season has started or ended
-    !! 
+    !!
     IF(growing_season < test_false_true) THEN ! If not in growing season, check whether growing season has started
        SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN 
+            IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
                   growing_season = true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
-         CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
+         CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
-            IF(gdd > hlp1) THEN 
+            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance )
+            IF(gdd > hlp1) THEN
                   growing_season = true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
+            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance )
             IF(gdd > hlp1 .AND. &
-               beta_soil_gs_tphen_mavg > beta_soil_flush)THEN 
+               beta_soil_gs_tphen_mavg > beta_soil_flush)THEN
                   growing_season = true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
@@ -461,42 +461,42 @@ CONTAINS
        SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. & 
-               mean_leaf_age > min_leaf_age ) & 
+            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. &
+               mean_leaf_age > min_leaf_age ) &
                   growing_season = false
-         CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
+         CASE (isummergreen)     ! if temperature are declining below a certain threshold AND
             ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
-               t_air_tphen_mavg < t_air_senescence .AND. & 
-               mean_leaf_age > min_leaf_age) & 
+               t_air_tphen_mavg < t_air_senescence .AND. &
+               mean_leaf_age > min_leaf_age) &
                   growing_season = false
-         CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
+         CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
                                  ! leaves have been out a given number of days
-            IF((t_air_tphen_mavg < t_air_senescence .OR. & 
+            IF((t_air_tphen_mavg < t_air_senescence .OR. &
                 beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
                 mean_leaf_age > min_leaf_age) &
                   growing_season = false
        END SELECT
-    ENDIF   
+    ENDIF
 
     !> 2.1 gdd counter
-    !! 
+    !!
     IF(t_air > gdd_t_air_threshold) THEN
        gdd = gdd + ((t_air - gdd_t_air_threshold) * dtime/one_day)
     ENDIF
     IF(t_air_tphen_mavg < tmelt) gdd = 0.0_wp
 
     !> 2.2 nd_dormance counter
-    !! 
-    IF (growing_season > test_false_true) THEN 
+    !!
+    IF (growing_season > test_false_true) THEN
       gdd         = 0.0_wp
       nd_dormance = 0.0_wp
     ELSE
-      nd_dormance = nd_dormance + dtime/one_day 
+      nd_dormance = nd_dormance + dtime/one_day
     ENDIF
 
-  END SUBROUTINE calc_phenology 
+  END SUBROUTINE calc_phenology
 
 #endif
 END MODULE mo_pheno_update_phenology
