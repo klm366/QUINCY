@@ -875,7 +875,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: lon(:)                     ! Grid cell longitudes
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
-    INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
+    INTEGER,  INTENT(in)            :: interpol_mean              ! vertical interpolation scheme
     INTEGER,  INTENT(in)            :: hydro_scale                !< hydrology scale scheme
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
@@ -917,7 +917,7 @@ CONTAINS
 
     REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
-    REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     ! soil moisture state prior to lateral transport [m]
+    REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     ! soil moisture state prior to vertical transport [m]
     REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
     REAL(wp) :: ice_impedance_sl(nc,nsoil)   ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
@@ -1107,7 +1107,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 
     DO ic = 1, nc
-      ! Store soil moisture state for later diagnosis of lateral water fluxes
+      ! Store soil moisture state for later diagnosis of vertical water fluxes
       wtr_soil_sl_t0(ic,:) = wtr_soil_sl(ic,:)
       !> store actual soil water state, infiltration (upper boundary condition) and evaporation
       !>  to compute the residual transport error
@@ -1278,7 +1278,7 @@ CONTAINS
     END DO
 #endif
 
-    ! Diagnose lateral water transport
+    ! Diagnose vertical water transport
     ! @todo GPU stuff
     DO ic = 1, nc
       wtr_flux_top(ic) = infilt(ic) + evapo_soil_sl1(ic)

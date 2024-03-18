@@ -443,7 +443,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
-    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
@@ -458,7 +457,6 @@ CONTAINS
       & trans_tmp
     REAL(wp), DIMENSION(options%nc,nsoil) :: &
       & weq_soil_sl_tmp,    &
-      & field_cap_sl_tmp,   &
       & weq_sat_soil_sl_tmp
 
     INTEGER  :: iblk, ics, ice, nc, ic, is
@@ -585,7 +583,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_skin)       ! in
@@ -653,13 +650,12 @@ CONTAINS
       !$ACC WAIT(1)
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), field_cap_sl_tmp(1:nc,1:nsoil)) &
+      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_sat_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(weq_soil(1:nc))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO  ic = 1, nc
-          field_cap_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
           weq_sat_soil_sl_tmp(ic,is) = vol_porosity_sl(ic,is) * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
           !       necessary. WHY?
@@ -689,6 +685,9 @@ CONTAINS
       !$ACC WAIT(1)
 
       ! Compute actual and maximum total rootzone moisture as well as the total water amount in the soil (liquid + ice)
+      ! Note, here weq_rootzone_max is computed based on porosity, not field capacity. This is because it is used to
+      ! compute the bucket overflow in the ARNO scheme for infiltration and runoff, and therefore should consider the
+      ! maximum amount of water that can fit into the rootzone.
       CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone(:))
@@ -777,10 +776,6 @@ CONTAINS
         weq_pond(ic) = wtr_pond(ic) + ice_pond(ic)
       END DO
       !$ACC END LOOP
-
-      CALL get_amount_in_rootzone(field_cap_sl_tmp(:,:),                                                 &
-        &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
-        &  weq_rootzone_max(:))
 
       IF (l_compat401_config) THEN
         !$ACC LOOP GANG VECTOR
@@ -1509,6 +1504,7 @@ CONTAINS
     ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl       !< Volumetric soil field capacity
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
     dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
@@ -1525,6 +1521,7 @@ CONTAINS
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5)
+    REAL(wp) :: weq_fcap_soil_sl(options%nc,5)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1549,12 +1546,13 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
@@ -1582,6 +1580,17 @@ CONTAINS
     !   updated soil state and not of the one at the start of the time step.
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:),  &
                              &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+
+    ! Compute maximum root zone water content based on soil field capacity
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil
+      DO  ic = 1, nc
+        weq_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+    CALL get_amount_in_rootzone(weq_fcap_soil_sl(:,:),  &
+      &  soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
 
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       ! Supercooled water is not available to plants
@@ -1707,6 +1716,7 @@ CONTAINS
 
     ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_rootzone_max,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_rootzone,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
