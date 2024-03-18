@@ -30,8 +30,10 @@ MODULE mo_pheno_constants
   TYPE t_GeneralParams
     REAL(wp) :: &
       & LAI_negligible =1.0e-05_wp, & ! [-] Below this value an LAI is considered to be zero.
-      & laiSeed = 0.40_wp             ! [-] Seed value used for the LAI to have a non-zero starting value
+      & laiSeed = 0.40_wp,          & ! [-] Seed value used for the LAI to have a non-zero starting value
                                       ! whenever the vegetation starts growing.
+      & wilt_point = 0.35_wp          ! [-] Critical fraction of soil water bucket level: below this value
+                                      !  growth of grasses, raingreens and crops stops (wilting point).
   END TYPE t_GeneralParams
 
   !> Parameters that are common to the evergreen and raingreen phenology type
@@ -101,11 +103,11 @@ MODULE mo_pheno_constants
                                              ! longevity)
       & growthRate = 8.0e-02_wp,           & ! [1/days] Growth rate (only active during wet season; modified by
                                              ! leaf shedding)
-      & water_stress_critical = 7.50e-01_wp, & ! [fraction] If water stress factor drops below this value, the shedding
+      & bucketFill_critical = 6.50e-01_wp, & ! [fraction] If bucket filling drops below this value, the shedding
                                              ! rate is increased
                                              ! so that plant growth is reduced until it gets zero at the wilting
                                              ! point
-      & water_stress_leafout = 1.25e-01_wp   ! [fraction] The water stress factor above which plants start
+      & bucketFill_leafout = 4.00e-01_wp     ! [fraction] The critical bucket filling at which plant start
                                              ! growing leaves (>= wiltingt point)
   END TYPE t_raingreen_param
 
@@ -127,7 +129,7 @@ MODULE mo_pheno_constants
                                         ! temperature growth of crops stops.
       & gdd_temp = 6.0_wp,            & ! [Celsius] Critical (base) temperature for counting growing degree days
                                         ! (i.e. heat sum) of crops
-      & sproud = 0.05_wp,             & ! [-] Critical fraction of water stress factor for setting LAI to
+      & sproud = 0.37_wp,             & ! [-] Critical fraction of soil water bucket level for setting LAI to
                                         ! the seed value
       & heat_sum_harvest = 1300.0_wp, & ! [Degree days] Heat sum (degree days) at which crops are harvested
       & shedRate_growth = 0.03333_wp, & ! [1/days] Leaf shedding rate in the growth phase
