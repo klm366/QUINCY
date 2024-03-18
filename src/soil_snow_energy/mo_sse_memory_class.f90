@@ -158,7 +158,7 @@ CONTAINS
       & initval_r=0.0_wp )
 
     IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
-      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN               
+      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
         & hgrid, surface,                                                      &
         & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &

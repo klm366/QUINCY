@@ -29,19 +29,19 @@ MODULE mo_veg_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
- 
+
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !< TYPE t_jsb_var
 
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg memory
   !!
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
       ! basic plant 2D
-      TYPE(t_jsb_var_real2d)          :: &   
+      TYPE(t_jsb_var_real2d)          :: &
                                     height            , &            !< plant height [m]
                                     ! diameter          , &            !< plant diameter [m]
                                     ! dens_ind          , &            !< density of individuals [# m-2]
@@ -60,12 +60,12 @@ MODULE mo_veg_memory_class
                                     ! target_lai        , &            !< LAI implied from sap wood area [m2 m-2]
                                     ! kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry [day-1]
       ! 1.1 memory of conditions for the labile pool dynamics
-      TYPE(t_jsb_var_real2d)          :: &   
-                                    gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
-                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration [µmol m-2 s-1]
+      TYPE(t_jsb_var_real2d)          :: &
+                                    gpp_tlabile_mavg               , &  !< gpp  [micro-mol m-2 s-1]
+                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration [micro-mol m-2 s-1]
                                     growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
                                     growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
-      TYPE(t_jsb_var_real2d)          :: &   
+      TYPE(t_jsb_var_real2d)          :: &
                                     t_air_tphen_mavg               , &  !< air temperature time-averaged [K]
                                     t_air_week_mavg                , &  !< air temperature time-averaged [K]
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
@@ -76,29 +76,29 @@ MODULE mo_veg_memory_class
                                     t_jmax_opt_mavg, &
                                     t_air_tacclim_mavg
       ! fluxes
-      TYPE(t_jsb_var_real2d)          :: &   
-                                    maint_respiration_pot         !, & !< potential maintenance respiration [µmol CO2 m-2 s-1]
-                                    ! maint_respiration             , & !< maintenance respiration [µmol CO2 m-2 s-1]
-                                    ! maint_respiration_c13         , & !< maintenance respiration [µmol 13CO2 m-2 s-1]
-                                    ! maint_respiration_c14         , & !< maintenance respiration [µmol 14CO2 m-2 s-1]
-                                    ! growth_respiration            , & !< growth respiration [µmol CO2 m-2 s-1]
-                                    ! growth_respiration_c13        , & !< growth respiration [µmol 13CO2 m-2 s-1]
-                                    ! growth_respiration_c14        , & !< growth respiration [µmol 14CO2 m-2 s-1]
-                                    ! n_transform_respiration       , & !< respiration associated with N transformation [µmol CO2 m-2 s-1]
-                                    ! n_fixation_respiration        , & !< respiration associated with N fixation [µmol CO2 m-2 s-1]
-                                    ! n_processing_respiration      , & !< respiration associated with N processing [µmol CO2 m-2 s-1]
-                                    ! n_processing_respiration_c13  , & !< respiration associated with N processing [µmol 13CO2 m-2 s-1]
-                                    ! n_processing_respiration_c14  , & !< respiration associated with N processing [µmol 14CO2 m-2 s-1]
-                                    ! npp                           , & !< net primary production [µmol CO2 m-2 s-1]
-                                    ! npp_c13                       , & !< net primary production [µmol 13CO2 m-2 s-1]
-                                    ! npp_c14                       , & !< net primary production [µmol 14CO2 m-2 s-1]
-                                    ! uptake_nh4                    , & !< NH4 uptake from soil [µmol N m-2 s-1]
-                                    ! uptake_nh4_n15                , & !< 15NH4 uptake from soil [µmol N m-2 s-1]
-                                    ! uptake_no3                    , & !< NO3 uptake from soil [µmol N m-2 s-1]
-                                    ! uptake_no3_n15                , & !< 15NO3 uptake from soil [µmol N m-2 s-1]
-                                    ! uptake_po4                    , & !< PO4 uptake from soil [µmol P m-2 s-1]
-                                    ! n_fixation                    , & !< symbiontic N fixation [µmol N m-2 s-1]
-                                    ! n_fixation_n15                , & !< symbiontic N fixation [µmol 15N m-2 s-1]
+      TYPE(t_jsb_var_real2d)          :: &
+                                    maint_respiration_pot         !, & !< potential maintenance respiration [micro-mol CO2 m-2 s-1]
+                                    ! maint_respiration             , & !< maintenance respiration [micro-mol CO2 m-2 s-1]
+                                    ! maint_respiration_c13         , & !< maintenance respiration [micro-mol 13CO2 m-2 s-1]
+                                    ! maint_respiration_c14         , & !< maintenance respiration [micro-mol 14CO2 m-2 s-1]
+                                    ! growth_respiration            , & !< growth respiration [micro-mol CO2 m-2 s-1]
+                                    ! growth_respiration_c13        , & !< growth respiration [micro-mol 13CO2 m-2 s-1]
+                                    ! growth_respiration_c14        , & !< growth respiration [micro-mol 14CO2 m-2 s-1]
+                                    ! n_transform_respiration       , & !< respiration associated with N transformation [micro-mol CO2 m-2 s-1]
+                                    ! n_fixation_respiration        , & !< respiration associated with N fixation [micro-mol CO2 m-2 s-1]
+                                    ! n_processing_respiration      , & !< respiration associated with N processing [micro-mol CO2 m-2 s-1]
+                                    ! n_processing_respiration_c13  , & !< respiration associated with N processing [micro-mol 13CO2 m-2 s-1]
+                                    ! n_processing_respiration_c14  , & !< respiration associated with N processing [-mol 14CO2 m-2 s-1]
+                                    ! npp                           , & !< net primary production [micro-mol CO2 m-2 s-1]
+                                    ! npp_c13                       , & !< net primary production [micro-mol 13CO2 m-2 s-1]
+                                    ! npp_c14                       , & !< net primary production [micro-mol 14CO2 m-2 s-1]
+                                    ! uptake_nh4                    , & !< NH4 uptake from soil [micro-mol N m-2 s-1]
+                                    ! uptake_nh4_n15                , & !< 15NH4 uptake from soil [micro-mol N m-2 s-1]
+                                    ! uptake_no3                    , & !< NO3 uptake from soil [micro-mol N m-2 s-1]
+                                    ! uptake_no3_n15                , & !< 15NO3 uptake from soil [micro-mol N m-2 s-1]
+                                    ! uptake_po4                    , & !< PO4 uptake from soil [micro-mol P m-2 s-1]
+                                    ! n_fixation                    , & !< symbiontic N fixation [micro-mol N m-2 s-1]
+                                    ! n_fixation_n15                , & !< symbiontic N fixation [micro-mol 15N m-2 s-1]
                                     ! recycling_leaf_n              , & !< net flux of N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     ! recycling_leaf_n15            , & !< net flux of 15N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     ! recycling_leaf_p              , & !< net flux of P from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
@@ -108,7 +108,7 @@ MODULE mo_veg_memory_class
                                     ! recycling_heart_wood_n        , & !< net flux of N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     ! recycling_heart_wood_n15      , & !< net flux of 15N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     ! recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
-                                    ! net_growth                        !< npp minus turnover [µmol CO2 m-2 s-1]
+                                    ! net_growth                        !< npp minus turnover [micro-mol CO2 m-2 s-1]
       TYPE(t_jsb_var_real3d)          :: &
                                     fleaf_sunlit_tfrac_mavg_cl
       ! canopy layers
@@ -123,7 +123,7 @@ MODULE mo_veg_memory_class
                                     lai_cl            , &           !< leaf area in the canopy layer [m2 m-2]
                                     cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
       ! 2D var used for vegetation Pool/Flux replacement
-      TYPE(t_jsb_var_real2d)          :: &   
+      TYPE(t_jsb_var_real2d)          :: &
                                     veg_pool_leaf_carbon          , &
                                     veg_pool_leaf_nitrogen        , &
                                     veg_pool_leaf_phosphorus      , &
@@ -144,7 +144,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
   !!
-  !!  
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
@@ -194,7 +194,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('growth_req_n', mem%growth_req_n, &
             hgrid, vgrid_surface, &
             t_cf('growth_req_n', 'mol N m-2 -1', 'moles N required for a unit of C growth under current allocation fractions '), &
@@ -203,7 +203,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('growth_req_p', mem%growth_req_p, &
             hgrid, vgrid_surface, &
             t_cf('growth_req_p', 'mol P m-2 -1', 'moles P required for a unit of N growth under current allocation fractions '), &
@@ -212,25 +212,25 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
             hgrid, vgrid_surface, &
-            t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
+            t_cf('gpp_tlabile_mavg', 'micro-mol m-2 s-1', 'gpp '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
             hgrid, vgrid_surface, &
-            t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
+            t_cf('maint_respiration_tlabile_mavg', 'micro-mol m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
             hgrid, vgrid_surface, &
             t_cf('growth_req_n_tlabile_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
@@ -239,7 +239,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
             hgrid, vgrid_surface, &
             t_cf('growth_req_p_tlabile_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
@@ -248,7 +248,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('t_air_tphen_mavg', mem%t_air_tphen_mavg, &
             hgrid, vgrid_surface, &
             t_cf('t_air_tphen_mavg', '', 'air temp mavg for phenology calc'), &
@@ -266,7 +266,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('t_air_month_mavg', mem%t_air_month_mavg, &
             hgrid, vgrid_surface, &
             t_cf('t_air_month_mavg', '', 'avrg air temperature across 30 days'), &
@@ -284,7 +284,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
 
       CALL mem%Add_var('beta_sinklim_ps', mem%beta_sinklim_ps, &
             hgrid, vgrid_surface, &
@@ -303,7 +303,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('t_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
             hgrid, vgrid_surface, &
             t_cf('t_air_tacclim_mavg', '', 'average air temperature for respiration acclimation'), &
@@ -315,13 +315,13 @@ CONTAINS
 
       CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
             hgrid, vgrid_surface, &
-            t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
+            t_cf('maint_respiration_pot', 'micro-mol CO2 m-2 s-1', 'potential maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
@@ -330,7 +330,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
             hgrid, vgrid_canopy, &
             t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
@@ -339,7 +339,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
@@ -348,7 +348,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
@@ -357,7 +357,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
@@ -366,7 +366,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
@@ -375,7 +375,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
@@ -384,7 +384,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
@@ -393,7 +393,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('lai_cl', mem%lai_cl, &
             hgrid, vgrid_canopy, &
             t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
@@ -402,7 +402,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
             hgrid, vgrid_canopy, &
             t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
@@ -429,7 +429,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('veg_pool_leaf_phosphorus', mem%veg_pool_leaf_phosphorus, &
             hgrid, vgrid_surface, &
             t_cf('veg_pool_leaf_phosphorus', '[]', 'leaf phosphorus veg pool'), &
@@ -438,7 +438,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('veg_growth_leaf_carbon', mem%veg_growth_leaf_carbon, &
             hgrid, vgrid_surface, &
             t_cf('veg_growth_leaf_carbon', '[]', 'leaf carbon growth flux'), &
@@ -447,7 +447,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-            
+
       CALL mem%Add_var('veg_litterfall_leaf_carbon', mem%veg_litterfall_leaf_carbon, &
             hgrid, vgrid_surface, &
             t_cf('veg_litterfall_leaf_carbon', '[]', 'leaf crabon litterfall flux'), &

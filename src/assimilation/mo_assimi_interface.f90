@@ -123,7 +123,7 @@ MODULE mo_assimi_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_assimi_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_assimi_fluxes
   CONTAINS
@@ -133,7 +133,7 @@ MODULE mo_assimi_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_assimi_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_reset_assimi_fluxes
     PROCEDURE Create_task_reset_assimi_fluxes         !< Constructor function for task
@@ -141,17 +141,17 @@ MODULE mo_assimi_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_canopy_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_canopy_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_fluxes    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_fluxes !< Aggregates computed task variables
   END TYPE tsk_update_canopy_fluxes
-  
+
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_canopy_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_update_canopy_fluxes
     PROCEDURE Create_task_update_canopy_fluxes         !< Constructor function for task
@@ -245,7 +245,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_assimi_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
 
@@ -263,7 +263,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_canopy_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_canopy_fluxes(model_id) RESULT(return_ptr)
 
@@ -276,7 +276,7 @@ CONTAINS
 
     ALLOCATE(tsk_update_canopy_fluxes::return_ptr)
     CALL return_ptr%Construct(name='update_canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_canopy_fluxes
 
 
@@ -298,7 +298,7 @@ CONTAINS
     ! local
     TYPE(t_jsb_model), POINTER :: model
 
-    ! get var / objects 
+    ! get var / objects
     model => Get_model(model_id)
 
     IF (.NOT. model%config%use_quincy) THEN
@@ -495,9 +495,6 @@ CONTAINS
       & CarboxRate, &
       & ETransport
     LOGICAL :: C4Flag
-  
-    !dsl4jsb_Real2D_onChunk :: C4flag ! Photosynthetic pathway (C3: 0; C4: 1)
-                                      ! R: nur falls man C4flag doch als REAL haben wollte
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
@@ -709,7 +706,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
-      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)      
+      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
       canopy_cond_limited(ic) = &
         &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
                                   water_stress(ic),          & ! in, water stress factor
@@ -898,11 +895,6 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder für assimilation noch wo anderst
-    !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
-    ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
-    !                                                             CO2_conc_leaf_cl * dtime
-
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
@@ -925,26 +917,12 @@ CONTAINS
         & )
     END DO
 
-    ! Same for gross_assimilation_ca
-    ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !gross_assimilation(:) = 0._wp
-    !DO icanopy=1,ncanopy
-    !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
-    !END DO
-
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       ! convert from leaf area of layer to canopy ground area
       gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
       ! convert from canopy area to tile box area
       gross_assimilation(ic) = gross_assimilation_ca(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
-
-      ! Same for dark_respiration_ca
-      ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-      !dark_respiration_ca(:) = 0._wp
-      !DO icanopy=1,ncanopy
-      !   dark_respiration_ca(:) =  dark_respiration_ca(:) + dark_respiration_cl(:,icanopy) * lai_cl(:,icanopy)
-      !END DO
 
       dark_respiration_ca(ic) = SUM(dark_respiration_cl(ic,:) * lai_cl(ic,:))
       ! convert from canopy area to tile box area
@@ -1021,8 +999,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_reset_assimi_fluxes(tile, options)
 
-    USE mo_assimi_util, ONLY: reset_assimi_fluxes  
-  
+    USE mo_assimi_util, ONLY: reset_assimi_fluxes
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -1074,11 +1052,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! do not aggregate after this routine
-      
+
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE aggregate_reset_assimi_fluxes
-  
+
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "aggregate": canopy_fluxes task
   !-----------------------------------------------------------------------------------------------------

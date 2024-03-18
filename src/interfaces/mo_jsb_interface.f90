@@ -44,7 +44,7 @@ MODULE mo_jsb_interface
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
     MODULE PROCEDURE interface_tmx
-      ! MODULE PROCEDURE interface_inquire
+    ! MODULE PROCEDURE interface_inquire
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
@@ -237,7 +237,7 @@ CONTAINS
     model => Get_model(model_id)
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
 !!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
@@ -299,6 +299,7 @@ CONTAINS
       & q_bcoef_ice        = q_bcoef_ice            &
       & )
     NULLIFY(tile)
+
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.0 Run tasks in queue
@@ -559,7 +560,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> @TODO not used at the moment
-  !> 
+  !>
   ! SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
   !   & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
   !

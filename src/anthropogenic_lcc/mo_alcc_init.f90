@@ -52,7 +52,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(ALCC_)
 
-!    dsl4jsb_Real2D_onDomain :: 
+!    dsl4jsb_Real2D_onDomain ::
     ! -------------------------------------------------------------------------------------------------- !
 
     dsl4jsb_Get_memory(ALCC_)
@@ -66,7 +66,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Reading of land use data 
+  !> Reading of land use data
   !
   SUBROUTINE read_land_use_data(model_id, current_datetime)
 
@@ -83,7 +83,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),           POINTER :: model
-    TYPE(t_jsb_grid),            POINTER :: hgrid  
+    TYPE(t_jsb_grid),            POINTER :: hgrid
     CLASS(t_jsb_tile_abstract),  POINTER :: tile, current_tile
 
     dsl4jsb_Def_config(ALCC_)
@@ -108,7 +108,7 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
 
-    ! alcc is expected to run on the veg tile 
+    ! alcc is expected to run on the veg tile
     ! -> search for the veg tile
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
@@ -193,12 +193,12 @@ CONTAINS
       IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
         CALL finish(TRIM(routine), &
         & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
+        & // TRIM(current_tile%name)//'. Please check.')
       ENDIF
       IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
         CALL finish(TRIM(routine), &
         & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
+        & // TRIM(current_tile%name)//'. Please check.')
       ENDIF
 
       current_tile => current_tile%Get_next_sibling_tile()

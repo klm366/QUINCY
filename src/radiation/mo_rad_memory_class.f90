@@ -130,7 +130,7 @@ MODULE mo_rad_memory_class
     !   & rad_srf_net_q_,           & !< net radiation at surface [W m-2]
       & net_radiation               !< net radiation at surface [W m-2]
 
-    TYPE(t_jsb_var_real2d)  :: & 
+    TYPE(t_jsb_var_real2d)  :: &
       ! & alb_vis_q_,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       ! & alb_nir_q_,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       ! & alb_vis_snow_q_,          & !< Albedo of snow in the VIS range [unitless]
@@ -152,21 +152,21 @@ MODULE mo_rad_memory_class
       ! & alb_nir_can_q_,                & !< Albedo of canopy (without snow cover) in NIR range [unitless]
       & arad_vis_can,               & !< radiation in VIS range absorbed by the canopy [W m-2]
       & arad_nir_can,               & !< radiation in NIR range absorbed by the canopy [W m-2]
-      & appfd,                      & !< absorbed Photosynthetically Active Photon Flux Density [µmol m-2 s-1]
+      & appfd,                      & !< absorbed Photosynthetically Active Photon Flux Density [micro-mol m-2 s-1]
       & rfr_ratio_boc,              & !< red to far-red ratio at the bottom of the canopy [unitless]
       & rfr_ratio_boc_tvegdyn_mavg    !< red to far-red ratio at the bottom of the canopy [unitless]
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-                            ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [µmol m-2 s-1]
-                            ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves [µmol m-2 s-1]
-                            ppfd_sunlit_daytime_cl      , & !< average PPFD on sunlit leaves of the previous day [µmol m-2 s-1]
-                            ppfd_shaded_daytime_cl      , & !< average PPFD on shaded leaves of the previous day [µmol m-2 s-1]
-                            ppfd_sunlit_daytime_dacc_cl , & !< daily accumulated PPFD on sunlit leaves [µmol m-2 d-1] 
-                            ppfd_shaded_daytime_dacc_cl , & !< daily accumulated PPFD on shaded leaves of the previous day [µmol m-2 d-1]
-                            ppfd_sunlit_tfrac_mavg_cl   , & !< average PPFD on sunlit leaves at tfrac-timescale [µmol m-2 s-1] 
-                            ppfd_shaded_tfrac_mavg_cl   , & !< average PPFD on shaded leaves at tfrac-timescale [µmol m-2 s-1]
-                            ppfd_sunlit_tcnl_mavg_cl    , & !< average PPFD on sunlit leaves at tcnl-timescale [µmol m-2 s-1]
-                            ppfd_shaded_tcnl_mavg_cl        !< average PPFD on shaded leaves at tcnl-timescale [µmol m-2 s-1]
+                            ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [micro-mol m-2 s-1]
+                            ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves [micro-mol m-2 s-1]
+                            ppfd_sunlit_daytime_cl      , & !< average PPFD on sunlit leaves of the previous day [micro-mol m-2 s-1]
+                            ppfd_shaded_daytime_cl      , & !< average PPFD on shaded leaves of the previous day [micro-mol m-2 s-1]
+                            ppfd_sunlit_daytime_dacc_cl , & !< daily accumulated PPFD on sunlit leaves [micro-mol m-2 d-1]
+                            ppfd_shaded_daytime_dacc_cl , & !< daily accumulated PPFD on shaded leaves of the previous day [micro-mol m-2 d-1]
+                            ppfd_sunlit_tfrac_mavg_cl   , & !< average PPFD on sunlit leaves at tfrac-timescale [micro-mol m-2 s-1]
+                            ppfd_shaded_tfrac_mavg_cl   , & !< average PPFD on shaded leaves at tfrac-timescale [micro-mol m-2 s-1]
+                            ppfd_sunlit_tcnl_mavg_cl    , & !< average PPFD on sunlit leaves at tcnl-timescale [micro-mol m-2 s-1]
+                            ppfd_shaded_tcnl_mavg_cl        !< average PPFD on shaded leaves at tcnl-timescale [micro-mol m-2 s-1]
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
                             arad_sunlit_vis_cl   , & !< absorbed radiation in visible band on sunlit leaves [W m-2]
@@ -551,7 +551,7 @@ CONTAINS
         & prefix, suffix,                                                     &
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
-      
+
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                     &
@@ -577,7 +577,7 @@ CONTAINS
 
     IF (.NOT. model%config%use_quincy) RETURN
 
-    !! quincy 
+    !! quincy
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
          One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
       ! CALL mem%Add_var('sw_srf_net_q_', mem%sw_srf_net_q_, &
@@ -588,7 +588,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('swvis_srf_net_q_', mem%swvis_srf_net_q_, &
       !       hgrid, surface, &
       !       t_cf('swvis_srf_net_q_', 'W m-2', 'net shortwave radiation at surface in visible range'), &
@@ -597,7 +597,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('swnir_srf_net_q_', mem%swnir_srf_net_q_, &
       !       hgrid, surface, &
       !       t_cf('swnir_srf_net_q_', 'W m-2', 'net shortwave radiation at surface in NIR range'), &
@@ -606,7 +606,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('lw_srf_net_q_', mem%lw_srf_net_q_, &
       !       hgrid, surface, &
       !       t_cf('lw_srf_net_q_', 'W m-2', 'net longwave radiation at surface'), &
@@ -615,7 +615,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('rad_srf_net_q_', mem%rad_srf_net_q_, &
       !       hgrid, surface, &
       !       t_cf('rad_srf_net_q_', 'W m-2', 'net radiation at surface'), &
@@ -624,7 +624,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       CALL mem%Add_var('net_radiation', mem%net_radiation, &
             hgrid, surface, &
             t_cf('net_radiation', 'W m-2', 'net radiation at surface'), &
@@ -633,7 +633,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-      
+
       ! CALL mem%Add_var('alb_vis_q_', mem%alb_vis_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_vis_q_', 'unitless', 'Albedo of the whole tile in the VIS (visible) range'), &
@@ -642,7 +642,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('alb_nir_q_', mem%alb_nir_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_nir_q_', 'unitless', 'Albedo of the whole tile in the NIR (near-infrared) range'), &
@@ -651,7 +651,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('alb_vis_snow_q_', mem%alb_vis_snow_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_vis_snow_q_', 'unitless', 'Albedo of snow in the VIS range'), &
@@ -660,7 +660,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('alb_nir_snow_q_', mem%alb_nir_snow_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_nir_snow_q_', 'unitless', 'Albedo of snow in the NIR range'), &
@@ -669,7 +669,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      
+
       CALL mem%Add_var('albedo', mem%albedo, &
             hgrid, surface, &
             t_cf('albedo', 'unitless', 'total surface albedo'), &
@@ -678,7 +678,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp )
-      
+
       ! CALL mem%Add_var('alb_vis_soil_q_', mem%alb_vis_soil_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_vis_soil_q_', 'unitless', 'Albedo in VIS range of soil'), &
@@ -687,7 +687,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('alb_nir_soil_q_', mem%alb_nir_soil_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_nir_soil_q_', 'unitless', 'Albedo in VIS range of soil'), &
@@ -696,7 +696,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
             hgrid, surface, &
             t_cf('arad_vis_soil', 'W m-2', 'radiation in VIS range absorbed by the soil'), &
@@ -705,7 +705,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('arad_nir_soil', mem%arad_nir_soil, &
             hgrid, surface, &
             t_cf('arad_nir_soil', 'W m-2', 'radiation in NIR range absorbed by the soil'), &
@@ -714,7 +714,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       ! CALL mem%Add_var('alb_vis_can_q_', mem%alb_vis_can_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_vis_can_q_', 'unitless', 'Albedo of canopy (without snow cover) in VIS range'), &
@@ -723,7 +723,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-      ! 
+      !
       ! CALL mem%Add_var('alb_nir_can_q_', mem%alb_nir_can_q_, &
       !       hgrid, surface, &
       !       t_cf('alb_nir_can_q_', 'unitless', 'Albedo of canopy (without snow cover) in NIR range'), &
@@ -732,7 +732,7 @@ CONTAINS
       !       prefix, suffix, &
       !       loutput=.TRUE., lrestart=.TRUE., &
       !       initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('arad_vis_can', mem%arad_vis_can, &
             hgrid, surface, &
             t_cf('arad_vis_can', 'W m-2', 'radiation in VIS range absorbed by the canopy'), &
@@ -741,7 +741,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('arad_nir_can', mem%arad_nir_can, &
             hgrid, surface, &
             t_cf('arad_nir_can', 'W m-2', 'radiation in NIR range absorbed by the canopy'), &
@@ -750,16 +750,16 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('appfd', mem%appfd, &
             hgrid, surface, &
-            t_cf('appfd', 'µmol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
+            t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('rfr_ratio_boc', mem%rfr_ratio_boc, &
             hgrid, surface, &
             t_cf('rfr_ratio_boc', 'unitless', 'red to far-red ratio at the bottom of the canopy'), &
@@ -768,7 +768,7 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
             hgrid, surface, &
             t_cf('rfr_ratio_boc_tvegdyn_mavg', 'unitless', 'red to far-red ratio at the bottom of the canopy'), &
@@ -777,91 +777,91 @@ CONTAINS
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_sunlit_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
+            t_cf('ppfd_sunlit_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_shaded_cl', mem%ppfd_shaded_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_shaded_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
+            t_cf('ppfd_shaded_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_sunlit_daytime_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
+            t_cf('ppfd_sunlit_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_shaded_daytime_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
+            t_cf('ppfd_shaded_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_sunlit_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
+            t_cf('ppfd_sunlit_daytime_dacc_cl', 'micro-mol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_shaded_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on shaded leaves of the previous day'), &
+            t_cf('ppfd_shaded_daytime_dacc_cl', 'micro-mol m-2 d-1', 'daily accumulated PPFD on shaded leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_sunlit_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
+            t_cf('ppfd_sunlit_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_shaded_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
+            t_cf('ppfd_shaded_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_sunlit_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
+            t_cf('ppfd_sunlit_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL mem%Add_var('ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
             hgrid, vgrid_canopy, &
-            t_cf('ppfd_shaded_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
+            t_cf('ppfd_shaded_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

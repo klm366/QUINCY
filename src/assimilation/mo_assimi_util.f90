@@ -38,7 +38,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset assimilation fluxes (with/to zero)
-  !! 
+  !!
   !! called prior to all Tasks (assimi_interface)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE reset_assimi_fluxes(tile, options)
@@ -48,7 +48,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_math_constants,    ONLY: zero
-    
+
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
 
@@ -57,7 +57,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_assimi_fluxes'
 
-    dsl4jsb_Def_memory(ASSIMI_) 
+    dsl4jsb_Def_memory(ASSIMI_)
 
     ! ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -82,7 +82,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI_) 
+    dsl4jsb_Get_memory(ASSIMI_)
 
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)

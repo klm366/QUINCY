@@ -16,7 +16,6 @@ MODULE mo_jsb_memory_class
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
 #ifdef __ICON__
@@ -29,14 +28,14 @@ MODULE mo_jsb_memory_class
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
     &                             REAL1D, REAL2D, REAL3D
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
-                                  GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
+    &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
   USE mo_jsb_utils_iface,   ONLY: assign_if_present
 
 #ifdef _OPENACC
   use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -44,12 +43,9 @@ MODULE mo_jsb_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
+  PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
-  TYPE, ABSTRACT :: t_jsb_param
-  END TYPE t_jsb_param
-
-  ! This type contains the memory state for each tile for one process
+  !> Abstract type for the memory state of each tile and process (to be extended by each process)
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
     INTEGER :: grid_id = 0
@@ -65,23 +61,20 @@ MODULE mo_jsb_memory_class
     INTEGER :: no_of_vars = 0
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
-    PROCEDURE                                    :: Get_var
-    PROCEDURE                                    :: t_jsb_memory_add_var_r1d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r2d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r3d
-    GENERIC                                      :: Add_var => &
-                                                    t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, t_jsb_memory_add_var_r3d
-    PROCEDURE                                    :: Get_var_position
-    PROCEDURE, PUBLIC                            :: Collect_var_real2d  ! Collect var from its child tiles
-                                                                        ! R: Note, we do not want to keep a "var collection" in the memory
-                                                                        !    because we already have all child values in the memory.
-    PROCEDURE, PUBLIC                            :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE, PUBLIC                            :: HandDown_var_real2d ! Hand back var to child tiles
-    PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
+    PROCEDURE         :: Get_var
+    PROCEDURE         :: t_jsb_memory_add_var_r1d
+    PROCEDURE         :: t_jsb_memory_add_var_r2d
+    PROCEDURE         :: t_jsb_memory_add_var_r3d
+    GENERIC           :: Add_var => &
+      &                  t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, t_jsb_memory_add_var_r3d
+    PROCEDURE         :: Get_var_position
+    PROCEDURE, PUBLIC :: Collect_var_real2d            !< Collect 2d var from its child tiles
+    PROCEDURE, PUBLIC :: Collect_var_real3d            !< Collect 3d var from its child tiles
+    PROCEDURE, PUBLIC :: HandDown_var_real2d           !< Hand back 2d var to child tiles
+    PROCEDURE         :: Average_over_children_real2d  !< Average 2d var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
@@ -92,17 +85,13 @@ MODULE mo_jsb_memory_class
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
     SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
-      IMPORT :: t_jsb_memory, t_jsb_config
+      IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
-      INTEGER,             INTENT(in)    :: lct_ids(:)
+      INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
-
-!  INTERFACE t_jsb_memory
-!    PROCEDURE Create_process_memory
-!  END INTERFACE t_jsb_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_memory_class'
 
@@ -154,7 +143,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r1d'
 
     name_loc = TRIM(name)
@@ -241,11 +230,13 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
@@ -306,7 +297,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
 
     name_loc = TRIM(name)
@@ -383,7 +374,7 @@ CONTAINS
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
-  
+
     IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
     IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
 
@@ -393,11 +384,13 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
@@ -457,7 +450,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r3d'
 
@@ -560,11 +553,13 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
@@ -678,7 +673,6 @@ CONTAINS
       &                    no_children))
 
     DO i=1,no_children
-       ! R: Unterschied zu %ptr(ics:ice,iblk) ???
        var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk)
     END DO
 
@@ -714,7 +708,6 @@ CONTAINS
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children   ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var           ! of the parent tile: tile%mem(iproc)%p%var
-                                                         ! R: kann man auf TYPE(t_jsb_var_real2d) setzen
     REAL(wp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
     REAL(wp), allocatable               :: var_averaged(:)
 

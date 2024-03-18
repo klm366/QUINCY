@@ -42,6 +42,7 @@ title: Authors
 - Petri Raisanen
 - Sanna Sevanto
 - Silvia Kloster
+- Stefanie Falk
 - Suman Halder
 - Sylvia Nyawira
 - Tanja Blome

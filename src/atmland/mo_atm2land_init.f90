@@ -41,8 +41,8 @@ CONTAINS
 
 
     ! Use of process configurations (t_PROC_config)
-    !dsl4jsb_Use_config(A2L_)    
-    
+    !dsl4jsb_Use_config(A2L_)
+
     ! USE PROC_memory
     dsl4jsb_Use_memory(A2L_)
 

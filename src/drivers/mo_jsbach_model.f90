@@ -245,7 +245,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Set times and events
-    !> 
+    !>
     CALL compute_timestep_settings()
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
@@ -272,7 +272,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0) 
+         &                          pio_type, num_dio_procs=0)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -457,7 +457,7 @@ CONTAINS
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics ! R: notwendig siehe Rechnertext
+      CALL update_statistics
       ! --
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
@@ -467,14 +467,14 @@ CONTAINS
     IF (ltimer) CALL timer_start(timer_total)
 
     ! calculate elapsed simulation time in seconds
-    sim_time = getElapsedSimTimeInSeconds(mtime_current) 
-  
+    sim_time = getElapsedSimTimeInSeconds(mtime_current)
+
     ! allocate temporary variable for restarting purposes
     IF (output_mode%l_nml) THEN
       ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
     ENDIF
-   
+
     mtime_old     => newDatetime(mtime_current) ! in
 
     restartDescriptor => createRestartDescriptor("jsbach")
@@ -549,7 +549,7 @@ CONTAINS
     !> 16.0 set time loop properties
     !>
     model_time_step => time_config%tc_dt_model
-  
+
     CALL message('','')
     CALL datetimeToString(mtime_current, dstring)
     WRITE(message_text,'(a,a)') 'Start date of this run: ', dstring
@@ -586,8 +586,8 @@ CONTAINS
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
-  
-      IF (lprint_timestep) THEN  
+
+      IF (lprint_timestep) THEN
         WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
               &             'Time step: ', jstep, ' model time ',                                &
               &             mtime_current%date%year,   '-', mtime_current%date%month,    '-',    &
@@ -596,7 +596,7 @@ CONTAINS
               &             mtime_current%time%ms
         CALL message('',message_text)
       ENDIF
-  
+
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
@@ -617,7 +617,7 @@ CONTAINS
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep)
       ENDIF
-  
+
       ! re-initialize MAX/MIN fields with 'resetval'
       !   @NOTE must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
