@@ -1582,6 +1582,7 @@ CONTAINS
                              &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     ! Compute maximum root zone water content based on soil field capacity
+    ! (replacing the one used for the ARNO scheme (surface hydrology) based on porosity)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
       DO  ic = 1, nc
