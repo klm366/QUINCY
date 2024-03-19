@@ -101,7 +101,7 @@ CONTAINS
                                              rtm_sorption_act, rmm_sorption_act, &
                                              rtm_desorption_act, rmm_desorption_act, &
                                              partition_coef
-    INTEGER                               :: iblk, ics, ice, nc   !< grid dimensions
+    INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
@@ -139,6 +139,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: biological_n_fixation_l2aveghlp
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
@@ -392,7 +394,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation_l2aveghlp)      ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)                     ! in
-    ! ---------------------------
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_,     num_sl_above_bedrock)        ! in
+    ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     bulk_dens_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     percolation_sl)              ! in
@@ -573,13 +577,15 @@ CONTAINS
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !! 
     IF (model%config%qmodel_id==QSOIL) THEN
-        DO isoil = 1,nsoil_sb
-          plant_uptake_nh4_sl(:,isoil)     = plant_uptake_nh4_sl(:,isoil)     * f_n_demand(:)
-          plant_uptake_nh4_n15_sl(:,isoil) = plant_uptake_nh4_n15_sl(:,isoil) * f_n_demand(:)
-          plant_uptake_no3_sl(:,isoil)     = plant_uptake_no3_sl(:,isoil)     * f_n_demand(:)
-          plant_uptake_no3_n15_sl(:,isoil) = plant_uptake_no3_n15_sl(:,isoil) * f_n_demand(:)
-          plant_uptake_po4_sl(:,isoil)     = plant_uptake_po4_sl(:,isoil)     * f_p_demand(:)
+      DO ic = 1,nc
+        DO is = 1,INT(num_sl_above_bedrock(ic))
+          plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)
+          plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * f_n_demand(ic)
+          plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * f_n_demand(ic)
+          plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * f_n_demand(ic)
+          plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * f_p_demand(ic)
         ENDDO
+      ENDDO
     ENDIF
 
     !> 2.0 infrastructure for mass balance checks
@@ -587,17 +593,22 @@ CONTAINS
     !! fluxes are calculated at the end of this routine (to include het_respiration)
     !!   
     !! changes in pools per time step are calculated here AND at the end of this routine
-    sb_delta_pools_mt(ixC,:,:) = SUM(sb_pool_mt(:, ixC, :,:), DIM=1)
-    sb_delta_pools_mt(ixN,:,:) = SUM(sb_pool_mt(:, ixN, :,:), DIM=1) &
-      & + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:)
-    sb_delta_pools_mt(ixP,:,:) = SUM(sb_pool_mt(:, ixP, :,:), DIM=1) &
-      & + po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:) + po4_primary(:,:)
-    sb_delta_pools_mt(ixC13,:,:) = SUM(sb_pool_mt(:, ixC13, :,:), DIM=1)
-    ! for mass balance purposes, already reduce by radioactive decay, since this is not a reported flux
-    sb_delta_pools_mt(ixC14,:,:) = SUM(sb_pool_mt(:, ixC14, :,:), DIM=1) &
-      & * (1._wp - lambda_C14 * dtime)
-    sb_delta_pools_mt(ixN15,:,:) = SUM(sb_pool_mt(:, ixN15, :,:), DIM=1) &
-      & + nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:)
+    DO ic = 1,nc
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        sb_delta_pools_mt(ixC,ic, is) = SUM(sb_pool_mt(:, ixC, ic, is))
+        sb_delta_pools_mt(ixN,ic, is) = SUM(sb_pool_mt(:, ixN, ic, is)) &
+          & + nh4_solute(ic, is) + nh4_assoc(ic, is) + no3_solute(ic, is) + noy(ic, is) + n2o(ic, is) + n2(ic, is)
+        sb_delta_pools_mt(ixP,ic, is) = SUM(sb_pool_mt(:, ixP, ic, is)) &
+          & + po4_solute(ic, is) + po4_occluded(ic, is) + po4_assoc_slow(ic, is) + po4_assoc_fast(ic, is) + po4_primary(ic, is)
+        sb_delta_pools_mt(ixC13,ic, is) = SUM(sb_pool_mt(:, ixC13, ic, is))
+        ! for mass balance purposes, already reduce by radioactive decay, since this is not a reported flux
+        sb_delta_pools_mt(ixC14,ic, is) = SUM(sb_pool_mt(:, ixC14, ic, is)) &
+          & * (1._wp - lambda_C14 * dtime)
+        sb_delta_pools_mt(ixN15,ic, is) = SUM(sb_pool_mt(:, ixN15, ic, is)) &
+          & + nh4_n15_solute(ic, is) + nh4_n15_assoc(ic, is) + no3_n15_solute(ic, is) &
+          & + noy_n15(ic, is) + n2o_n15(ic, is) + n2_n15(ic, is)
+      ENDDO
+    ENDDO
 
     !> 3.0 loss of C14 due to radioactive decay
     !!
@@ -607,43 +618,45 @@ CONTAINS
     !!
     f_myc_sl(:,:)          = root_fraction_sl(:,:) 
 
-    DO isoil = 1,nsoil_sb
-      sb_formation_mt(ix_mycorrhiza, ixC, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixC, :, isoil) &
-        & + f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation_mt(ixC, :) / soil_depth_sl(:,isoil)
-
-      sb_formation_mt(ix_mycorrhiza, ixN, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixN, :, isoil) &
-        & + f_myc_sl(:,isoil) * veg_exudation_mt(ixN, :) / soil_depth_sl(:,isoil)                   &
-        & + (mycorrhiza_uptake_nh4_sl(:,isoil) + mycorrhiza_uptake_no3_sl(:,isoil))                 &
-        & * dtime / 1000000._wp
-
-      sb_formation_mt(ix_mycorrhiza, ixP, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixP, :, isoil) &
-        & + f_myc_sl(:,isoil) * veg_exudation_mt(ixP, :) / soil_depth_sl(:,isoil)                   &
-        & + mycorrhiza_uptake_po4_sl(:,isoil) * dtime / 1000000._wp
-
-      sb_formation_mt(ix_mycorrhiza, ixC13, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixC13, :, isoil) &
-        & + f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation_mt(ixC13, :) / soil_depth_sl(:,isoil)
-
-      sb_formation_mt(ix_mycorrhiza, ixC14, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixC14, :, isoil) &
-        & + f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation_mt(ixC14, :) / soil_depth_sl(:,isoil)
-
-      sb_formation_mt(ix_mycorrhiza, ixN15, :, isoil) = sb_formation_mt(ix_mycorrhiza, ixN15, :, isoil) &
-        & + f_myc_sl(:,isoil) * veg_exudation_mt(ixN15, :) / soil_depth_sl(:,isoil)                     &
-        & + (mycorrhiza_uptake_nh4_n15_sl(:,isoil) + mycorrhiza_uptake_no3_n15_sl(:,isoil))             &
-        & * dtime / 1000000._wp
-
-       het_respiration(:,isoil)     = het_respiration(:,isoil)     + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
-        veg_exudation_mt(ixC,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
-       myc_respiration(:,isoil)     = myc_respiration(:,isoil)     + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
-        veg_exudation_mt(ixC,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
-       het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
-        veg_exudation_mt(ixC13,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
-       myc_respiration_c13(:,isoil) = myc_respiration_c13(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
-        veg_exudation_mt(ixC13,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
-       het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
-        veg_exudation_mt(ixC14,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
-       myc_respiration_c14(:,isoil) = myc_respiration_c14(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
-        veg_exudation_mt(ixC14,:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
-    END DO
+    DO ic = 1,nc
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        sb_formation_mt(ix_mycorrhiza, ixC, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC, ic, is) &
+          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC, ic) / soil_depth_sl(ic, is)
+  
+        sb_formation_mt(ix_mycorrhiza, ixN, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN, ic, is) &
+          & + f_myc_sl(ic, is) * veg_exudation_mt(ixN, ic) / soil_depth_sl(ic, is)                   &
+          & + (mycorrhiza_uptake_nh4_sl(ic, is) + mycorrhiza_uptake_no3_sl(ic, is))                 &
+          & * dtime / 1000000._wp
+  
+        sb_formation_mt(ix_mycorrhiza, ixP, ic, is) = sb_formation_mt(ix_mycorrhiza, ixP, ic, is) &
+          & + f_myc_sl(ic, is) * veg_exudation_mt(ixP, ic) / soil_depth_sl(ic, is)                   &
+          & + mycorrhiza_uptake_po4_sl(ic, is) * dtime / 1000000._wp
+  
+        sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) &
+          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC13, ic) / soil_depth_sl(ic, is)
+  
+        sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) &
+          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC14, ic) / soil_depth_sl(ic, is)
+  
+        sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) &
+          & + f_myc_sl(ic, is) * veg_exudation_mt(ixN15, ic) / soil_depth_sl(ic, is)                     &
+          & + (mycorrhiza_uptake_nh4_n15_sl(ic, is) + mycorrhiza_uptake_no3_n15_sl(ic, is))             &
+          & * dtime / 1000000._wp
+  
+         het_respiration(ic, is)     = het_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * & 
+          veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp                          
+         myc_respiration(ic, is)     = myc_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+          veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+         het_respiration_c13(ic, is) = het_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * & 
+          veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp                          
+         myc_respiration_c13(ic, is) = myc_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+          veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+         het_respiration_c14(ic, is) = het_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * & 
+          veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp                          
+         myc_respiration_c14(ic, is) = myc_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+          veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+      ENDDO
+    ENDDO
 
     sb_loss_mt(ix_mycorrhiza,:,:,:) = sb_loss_mt(ix_mycorrhiza,:,:,:) + sb_mycorrhiza_export_mt(:,:,:)
 
@@ -736,34 +749,40 @@ CONTAINS
     !>
     !>  7.1 update of N pools  
     !>
-    no3_solute(:,:)     = no3_solute(:,:)     + &
-                          (net_mineralisation_no3(:,:) + nitrification_no3(:,:) + transport_no3_solute(:,:) - &
-                           lateral_loss_no3_solute_sl(:,:) - & 
-                           plant_uptake_no3_sl(:,:) - mycorrhiza_uptake_no3_sl(:,:) - &
-                           denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:)) * dtime / 1.e6_wp
-
-    no3_n15_solute(:,:) = no3_n15_solute(:,:) + &
-      (net_mineralisation_no3_n15(:,:) + nitrification_no3_n15(:,:) + transport_no3_n15_solute(:,:) - & 
-      lateral_loss_no3_n15_solute_sl(:,:) - & 
-      plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) - &
-      denitrification_noy_n15(:,:) - denitrification_n2o_n15(:,:) - denitrification_n2_n15(:,:)) * dtime/1.e6_wp
-
-    noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
-                                                 transport_noy(:,:)) * dtime/1.e6_wp
-    noy_n15(:,:)        = noy_n15(:,:)        + (nitrification_noy_n15(:,:) + denitrification_noy_n15(:,:) + & 
-                                                 transport_noy_n15(:,:)) * dtime/1.e6_wp
-    n2o(:,:)            = n2o(:,:)            + (nitrification_n2o(:,:) + denitrification_n2o(:,:) + & 
-                                                 transport_n2o(:,:)) * dtime/1.e6_wp
-    n2o_n15(:,:)        = n2o_n15(:,:)        + (nitrification_n2o_n15(:,:) + denitrification_n2o_n15(:,:) + & 
-                                                 transport_n2o_n15(:,:)) * dtime/1.e6_wp
-    n2(:,:)             = n2(:,:)             + (denitrification_n2(:,:) + transport_n2(:,:)) * dtime/1.e6_wp
-    n2_n15(:,:)         = n2_n15(:,:)         + (denitrification_n2_n15(:,:) + transport_n2_n15(:,:)) * dtime/1.e6_wp
+    DO ic = 1,nc
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        no3_solute(ic, is)     = no3_solute(ic, is)     + &
+                              (net_mineralisation_no3(ic, is) + nitrification_no3(ic, is) + transport_no3_solute(ic, is) - &
+                               lateral_loss_no3_solute_sl(ic, is) - & 
+                               plant_uptake_no3_sl(ic, is) - mycorrhiza_uptake_no3_sl(ic, is) - &
+                               denitrification_noy(ic, is) - denitrification_n2o(ic, is) - denitrification_n2(ic, is)) &
+                               * dtime / 1.e6_wp
+    
+        no3_n15_solute(ic, is) = no3_n15_solute(ic, is) + &
+          (net_mineralisation_no3_n15(ic, is) + nitrification_no3_n15(ic, is) + transport_no3_n15_solute(ic, is) - & 
+          lateral_loss_no3_n15_solute_sl(ic, is) - & 
+          plant_uptake_no3_n15_sl(ic, is) - mycorrhiza_uptake_no3_n15_sl(ic, is) - &
+          denitrification_noy_n15(ic, is) - denitrification_n2o_n15(ic, is) - denitrification_n2_n15(ic, is)) * dtime/1.e6_wp
+    
+        noy(ic, is)     = noy(ic, is)     + (nitrification_noy(ic, is) + denitrification_noy(ic, is) + & 
+                                                     transport_noy(ic, is)) * dtime/1.e6_wp
+        noy_n15(ic, is) = noy_n15(ic, is) + (nitrification_noy_n15(ic, is) + denitrification_noy_n15(ic, is) + & 
+                                                     transport_noy_n15(ic, is)) * dtime/1.e6_wp
+        n2o(ic, is)     = n2o(ic, is)     + (nitrification_n2o(ic, is) + denitrification_n2o(ic, is) + & 
+                                                     transport_n2o(ic, is)) * dtime/1.e6_wp
+        n2o_n15(ic, is) = n2o_n15(ic, is) + (nitrification_n2o_n15(ic, is) + denitrification_n2o_n15(ic, is) + & 
+                                                     transport_n2o_n15(ic, is)) * dtime/1.e6_wp
+        n2(ic, is)      = n2(ic, is)      + (denitrification_n2(ic, is) + transport_n2(ic, is)) * dtime/1.e6_wp
+        n2_n15(ic, is)  = n2_n15(ic, is)  + (denitrification_n2_n15(ic, is) + transport_n2_n15(ic, is)) * dtime/1.e6_wp
+      ENDDO
+    ENDDO
 
     !> 8.0 update diagnostics and other state variables depending on organic matter content 
     !! OC
     CALL calc_bulk_soil_carbon( &
       & nc, &                                        ! in
       & nsoil_sb, &
+      & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & sb_pool_mt(:,:,:,:), &                       ! in
       & bulk_soil_carbon_sl, &                       ! inout
@@ -777,13 +796,31 @@ CONTAINS
     Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1))                                      &
       &                 * (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + sb_pool_mt(ix_woody_litter,ixC,:,1)) &
       &                 / (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
-    CALL calc_Psorption_parameter(dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-                                  clay_sl(:,:), silt_sl(:,:), rmm_sorption(:,:) * 1000._wp, ph_sl(:,:),                      &
-                                  bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), sb_pool_mt(ix_woody_litter,ixC,:,:), &
-                                  bulk_dens_sl(:,:), volume_min_sl(:,:), po4_solute(:,:), &
-                                  qmax_po4_min_sl(:,:), qmax_po4_om_sl(:,:), qmax_po4(:,:), km_adsorpt_po4_sl(:,:), &
-                                  qmax_fast_po4(:,:), qmax_slow_po4(:,:), km_fast_po4(:,:), km_slow_po4(:,:), &
-                                  Qmax_AlFe_cor(:,:))
+    DO ic = 1,nc
+      DO isoil = 1,INT(num_sl_above_bedrock(ic))
+        CALL calc_Psorption_parameter( &
+          & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+          & clay_sl(ic, isoil), &
+          & silt_sl(ic, isoil), &
+          & rmm_sorption(ic, isoil) * 1000._wp, &
+          & ph_sl(ic, isoil), &
+          & bulk_soil_carbon_sl(ic, isoil), &
+          & soil_litter_carbon_sl(ic, isoil), &
+          & sb_pool_mt(ix_woody_litter,ixC,ic, isoil), &
+          & bulk_dens_sl(ic, isoil), &
+          & volume_min_sl(ic, isoil), &
+          & po4_solute(ic, isoil), &
+          & qmax_po4_min_sl(ic, isoil), &
+          & qmax_po4_om_sl(ic, isoil), &
+          & qmax_po4(ic, isoil), &
+          & km_adsorpt_po4_sl(ic, isoil), &
+          & qmax_fast_po4(ic, isoil), &
+          & qmax_slow_po4(ic, isoil), &
+          & km_fast_po4(ic, isoil), &
+          & km_slow_po4(ic, isoil), &
+          & Qmax_AlFe_cor(ic, isoil))
+      ENDDO
+    ENDDO
     !! nh4                              
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    0.0_wp, qmax_nh4_min_sl(:,:), qmax_nh4(:,:))

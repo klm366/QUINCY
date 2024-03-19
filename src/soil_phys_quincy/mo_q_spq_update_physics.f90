@@ -122,6 +122,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: snow_soil_heat_flux
     dsl4jsb_Real2D_onChunk                :: snow_melt_to_soil
     dsl4jsb_Real2D_onChunk                :: snow_srf_heat_flux
+    dsl4jsb_Real2D_onChunk                :: num_sl_above_bedrock
     ! SPQ_ 3D        
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: soil_lay_depth_ubound_sl
@@ -231,6 +232,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_soil_heat_flux)  ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_melt_to_soil)    ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_srf_heat_flux)   ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock) ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_ubound_sl) ! in
@@ -323,6 +325,7 @@ CONTAINS
     !> 4.0 Calculate soil hydrology processes
     !!
     CALL calc_soil_hydrology(nc, nsoil_sb, &
+                             num_sl_above_bedrock, &
                              soil_lay_depth_ubound_sl(:,:), &                                         ! (upper bound > lower bound !)
                              dsl4jsb_Config(VEG_)%flag_dynamic_roots, &
                              lctlib%phi_leaf_min, &
@@ -884,6 +887,7 @@ CONTAINS
   !! Calculates srf_runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, &
+                                 num_sl_above_bedrock, &
                                  soil_layer_w_ubounds, & 
                                  flag_dynamic_roots, &
                                  lctlib_phi_leaf_min, &
@@ -912,7 +916,8 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut 
     INTEGER,                                          INTENT(in)    :: nc, &                   !< dimensions
-                                                                       nsoil_sb
+                                                                       nsoil_sb                !< 
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock    !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
     LOGICAL,                                          INTENT(in)    :: flag_dynamic_roots      !< VEG_ config: use dynmic root scheme if TRUE
     REAL(wp),                                         INTENT(in)    :: lctlib_phi_leaf_min     !< lctlib paramter
@@ -968,7 +973,7 @@ CONTAINS
                                                        w_soil_sl_old  , &
                                                        k_diff         , &
                                                        hlp1_2d
-    INTEGER                                         :: isoil, ichunk 
+    INTEGER                                         :: isoil, ichunk, ic, is 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_hydrology'
 
 
@@ -1196,38 +1201,41 @@ CONTAINS
     ENDWHERE
     w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
     ! compute diffusive fluxes and limit them by field capacity
-    DO isoil = 2,nsoil_sb
-       ! weighted mean of diffusivity (m/s)
-       hlp1(:) = (k_diff(:,isoil-1) * soil_depth_sl(:,isoil-1) + k_diff(:,isoil) * soil_depth_sl(:,isoil)) / &
-                 (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil)) 
-       ! flux resulting from the pressure gradient between the centres of the soil layer
-       ! note that matrix potential is converted to pressure head MPa -> J/N = m
-       hlp1(:) = hlp1(:) * dtime * & 
-                 (w_soil_pot_sl(:,isoil-1) - w_soil_pot_sl(:,isoil)) * &
-                 1000.0_wp / grav / & 
-                 (0.5_wp * (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil)))
-
-       ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
-       hlp3(:) =  soil_depth_sl(:,isoil-1) / (soil_depth_sl(:,isoil))             
-       hlp2(:) = ((w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio) - &
-         &        (w_soil_sl(:,isoil) + w_ice_sl(:,isoil)* water2ice_density_ratio) * hlp3(:)) / (1._wp + hlp3(:))
-       ! ...
-       WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
-       WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
-       ! avoid soil water content exceeding soil water capacity
-       WHERE (hlp1(:) < 0.0_wp)
-         hlp1(:) = MAX( &
-           &       MIN(w_soil_fc_sl(:,isoil-1) - w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio, hlp1(:)), &
-           &       w_soil_sl(:,isoil) + w_ice_sl(:,isoil) * water2ice_density_ratio - w_soil_fc_sl(:,isoil))
-       ELSEWHERE (hlp1(:) >= 0.0_wp)
-         hlp1(:) = MAX(MIN(hlp1(:),w_soil_fc_sl(:,isoil) - (w_soil_sl(:,isoil) + w_ice_sl(:,isoil) * water2ice_density_ratio)), &
-           &       w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio - w_soil_fc_sl(:,isoil-1))
-       END WHERE
-       ! update soil layers with diffusion 
-       w_soil_sl(:,isoil-1)   = w_soil_sl(:,isoil-1) - hlp1(:)
-       w_soil_sl(:,isoil)     = w_soil_sl(:,isoil) + hlp1(:) 
-       drainage_sl(:,isoil-1) = drainage_sl(:,isoil-1) + hlp1(:) * 1000._wp / dtime
-     ENDDO
+    DO ic = 1,nc
+      DO is = 2,INT(num_sl_above_bedrock(ic))
+        ! weighted mean of diffusivity (m/s)
+        hlp1(ic) = (k_diff(ic,is-1) * soil_depth_sl(ic,is-1) + k_diff(ic,is) * soil_depth_sl(ic,is)) / &
+                  (soil_depth_sl(ic,is-1) + soil_depth_sl(ic,is)) 
+        ! flux resulting from the pressure gradient between the centres of the soil layer
+        ! note that matrix potential is converted to pressure head MPa -> J/N = m
+        hlp1(ic) = hlp1(ic) * dtime * & 
+                  (w_soil_pot_sl(ic,is-1) - w_soil_pot_sl(ic,is)) * &
+                  1000.0_wp / grav / & 
+                  (0.5_wp * (soil_depth_sl(ic,is-1) + soil_depth_sl(ic,is)))
+        
+        ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
+        hlp3(ic) =  soil_depth_sl(ic,is-1) / (soil_depth_sl(ic,is))             
+        hlp2(ic) = ((w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio) - &
+          &        (w_soil_sl(ic,is) + w_ice_sl(ic,is)* water2ice_density_ratio) * hlp3(ic)) / (1._wp + hlp3(ic))
+        ! ...
+        IF ((hlp1(ic) < 0.0_wp  .AND. hlp1(ic) < hlp2(ic)) .OR. (hlp1(ic) >= 0.0_wp .AND. hlp1(ic) > hlp2(ic))) THEN
+          hlp1(ic) = hlp2(ic)
+        ENDIF
+        ! avoid soil water content exceeding soil water capacity
+        IF (hlp1(ic) < 0.0_wp) THEN
+          hlp1(ic) = MAX( &
+            &       MIN(w_soil_fc_sl(ic,is-1) - w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio, hlp1(ic)), &
+            &       w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio - w_soil_fc_sl(ic,is))
+        ELSE
+          hlp1(ic) = MAX(MIN(hlp1(ic),w_soil_fc_sl(ic,is) - (w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio)), &
+            &       w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio - w_soil_fc_sl(ic,is-1))
+        ENDIF
+        ! update soil layers with diffusion 
+        w_soil_sl(ic,is-1)   = w_soil_sl(ic,is-1) - hlp1(ic)
+        w_soil_sl(ic,is)     = w_soil_sl(ic,is) + hlp1(ic) 
+        drainage_sl(ic,is-1) = drainage_sl(ic,is-1) + hlp1(ic) * 1000._wp / dtime
+      ENDDO
+    ENDDO
 
     !> 2.5. diagnose deep drainage
     !>

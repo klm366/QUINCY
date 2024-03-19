@@ -109,6 +109,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl 
@@ -331,6 +333,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_,   num_sl_above_bedrock)         ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_,   soil_depth_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,   percolation_sl)               ! in
@@ -620,6 +624,7 @@ CONTAINS
     CALL calc_litter_partitioning( &
       & nc, &                                         ! in
       & nsoil_sb, &
+      & num_sl_above_bedrock(:), &
       & lctlib%sla, &
       & lctlib%growthform, &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
@@ -636,6 +641,7 @@ CONTAINS
     CALL calc_liquid_phase_transport_wrapper( &
       & nc, &                                   ! in
       & nsoil_sb, &
+      & num_sl_above_bedrock(:), &
       & soil_depth_sl(:,:), &
       & rtm_gasdiffusion(:,:), &
       & rmm_gasdiffusion(:,:), &
@@ -704,11 +710,13 @@ CONTAINS
 
     !>  5.2 transport due to bioturbation
     !>
-    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
+    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, num_sl_above_bedrock(:), soil_depth_sl(:,:), &
+      &                                     bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
     ! bioturbation transport for JSM
     CALL calc_bioturbation_transport_wrapper_jsm( &
       & nc, &                                 ! in
       & nsoil_sb, &
+      & num_sl_above_bedrock(:), &
       & soil_depth_sl(:,:), &
       & model%config%elements_index_map(:), &
       & model%config%is_element_used(:), &
@@ -849,6 +857,7 @@ CONTAINS
     CALL calc_sb_inorganic_n15_fluxes( &
       & nc, &
       & nsoil_sb, & 
+      & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & nh4_solute(:,:), &
       & nh4_n15_solute(:,:), &
