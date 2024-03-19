@@ -1595,6 +1595,7 @@ CONTAINS
   SUBROUTINE calc_bulk_soil_carbon( &
     & nc, &
     & nsoil_sb, &
+    & num_sl_above_bedrock, &
     & sb_model_scheme, &
     & sb_pool_mt, &
     & bulk_soil_carbon_sl, &
@@ -1606,13 +1607,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,          INTENT(in)    :: nc                         !< 
     INTEGER,          INTENT(in)    :: nsoil_sb                   !< 
+    REAL(wp),         INTENT(in)    :: num_sl_above_bedrock(:)    !< 
     CHARACTER(len=*), INTENT(in)    :: sb_model_scheme            !< soil model scheme: simple_1d or jsm
     REAL(wp),         INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< pools [mol/m3]
     REAL(wp),         INTENT(inout) :: bulk_soil_carbon_sl(:,:)   !< mol/m3
     REAL(wp),         INTENT(inout) :: soil_litter_carbon_sl(:,:) !< mol/m3
     REAL(wp),         INTENT(inout) :: volume_min_sl(:,:)         !< m3/m3
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                                             :: isoil
+    INTEGER                                             :: isoil, ic
     REAL(wp), DIMENSION(nc,nsoil_sb)                    :: om_dens_sl   !< organic matter density [kg / m3]
     REAL(wp), DIMENSION(nc,nsoil_sb)                    :: lit_dens_sl  !< litter density [kg / m3]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
@@ -1634,10 +1636,12 @@ CONTAINS
     ! ... Woody litter in the lower soil layers are from dying course roots. They disintegrate rather quickly 
     ! and therefore mix with the mineral soil, requiring a correction of the soil bulk density term (mixing 
     ! OM and mineral soils.)
-    DO isoil = 2,nsoil_sb
-      soil_litter_carbon_sl(:,isoil) = sb_pool_mt(ix_woody_litter, ixC, :, isoil)    &
-        &                            + sb_pool_mt(ix_soluable_litter, ixC, :, isoil)  &
-        &                            + sb_pool_mt(ix_polymeric_litter, ixC, :, isoil)
+    DO ic = 1,nc
+      DO isoil = 2,INT(num_sl_above_bedrock(ic))
+        soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_woody_litter, ixC, ic, isoil)    &
+          &                            + sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)  &
+          &                            + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
+      ENDDO
     ENDDO
 
     !>  1.1 Only jsm distinguish litter C from SOM C
@@ -1652,8 +1656,10 @@ CONTAINS
     !>
     om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp    ! OM density [kg/m3]
     lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp  ! litter density [kg/m3]
-    DO isoil = 1,nsoil_sb
-      volume_min_sl(:,isoil) = MAX(0._wp, 1._wp - om_dens_sl(:,isoil) / rho_bulk_org - lit_dens_sl(:,isoil) / rho_bulk_org)
+    DO ic = 1,nc
+      DO isoil = 1,INT(num_sl_above_bedrock(ic))
+        volume_min_sl(ic,isoil) = MAX(0._wp, 1._wp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org)
+      ENDDO
     ENDDO
   END SUBROUTINE calc_bulk_soil_carbon
 
@@ -1664,7 +1670,7 @@ CONTAINS
   !>
   !>  Output: fast_assoc_po4
   !>
-  ELEMENTAL FUNCTION calc_fast_po4(Labile_p, Qmax, km) RESULT (fast_po4)
+  FUNCTION calc_fast_po4(Labile_p, Qmax, km) RESULT (fast_po4)
 
     REAL(wp), INTENT(in) :: Labile_p                    !< labile P pool of the soil layer [mol P / m3]
     REAL(wp), INTENT(in) :: Qmax                        !< maximium sorption capacity of po4 [mol P/ m3]
@@ -1808,7 +1814,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>calculate P sorption parameters, including both single and double Langmuir
   !>
-  ELEMENTAL SUBROUTINE calc_Psorption_parameter( &
+  SUBROUTINE calc_Psorption_parameter( &
     & flag_sb_double_langmuir, &
     & clay_sl, silt_sl, soil_water, ph_sl, & 
     & bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
