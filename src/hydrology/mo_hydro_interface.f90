@@ -884,9 +884,9 @@ CONTAINS
   !!
   SUBROUTINE update_soil_properties(tile, options)
 
-    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matric_pot_org_top, &
       & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_wres_org_top, &
-      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, &
+      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matric_pot_org_below, &
       & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below, vol_wres_org_below, &
       & thresh_org, beta_perc
 
@@ -904,7 +904,7 @@ CONTAINS
       & hyd_cond_sat,         &
       & vol_porosity,         &
       & bclapp,               &
-      & matrix_pot,           &
+      & matric_pot,           &
       & pore_size_index,      &
       & vol_field_cap,        &
       & vol_p_wilt,           &
@@ -914,7 +914,7 @@ CONTAINS
       & hyd_cond_sat_sl,      &
       & vol_porosity_sl,      &
       & bclapp_sl,            &
-      & matrix_pot_sl,        &
+      & matric_pot_sl,        &
       & pore_size_index_sl,   &
       & vol_field_cap_sl,     &
       & vol_p_wilt_sl,        &
@@ -936,7 +936,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
     REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
-    REAL(wp), ALLOCATABLE ::  matrix_pot_org(:,:)
+    REAL(wp), ALLOCATABLE ::  matric_pot_org(:,:)
     REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
@@ -969,7 +969,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, hyd_cond_sat)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_porosity)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, bclapp)             ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)         ! in
@@ -979,7 +979,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)          ! out
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)      ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
@@ -991,7 +991,7 @@ CONTAINS
         hyd_cond_sat_sl   (ic,is) = hyd_cond_sat(ic)
         vol_porosity_sl   (ic,is) = vol_porosity(ic)
         bclapp_sl         (ic,is) = bclapp(ic)
-        matrix_pot_sl     (ic,is) = matrix_pot(ic)
+        matric_pot_sl     (ic,is) = matric_pot(ic)
         pore_size_index_sl(ic,is) = pore_size_index(ic)
         vol_field_cap_sl  (ic,is) = vol_field_cap(ic)
         vol_p_wilt_sl     (ic,is) = vol_p_wilt(ic)
@@ -1004,7 +1004,7 @@ CONTAINS
       ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(bclapp_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(matrix_pot_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(matric_pot_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(pore_size_index_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
@@ -1016,7 +1016,7 @@ CONTAINS
 
       !$ACC DATA &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
-      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org, vol_wres_org)
+      !$ACC   CREATE(bclapp_org, matric_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org, vol_wres_org)
 
       ! Use different parameters for top layer and deeper layers
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1024,7 +1024,7 @@ CONTAINS
         hyd_cond_sat_org(ic,1) = hyd_cond_sat_org_top
         vol_porosity_org(ic,1) = vol_porosity_org_top
         bclapp_org(ic,1) = bclapp_org_top
-        matrix_pot_org(ic,1) = matrix_pot_org_top
+        matric_pot_org(ic,1) = matric_pot_org_top
         pore_size_index_org(ic,1) = pore_size_index_org_top
         vol_field_cap_org(ic,1) = vol_field_cap_org_top
         vol_p_wilt_org(ic,1) = vol_p_wilt_org_top
@@ -1037,7 +1037,7 @@ CONTAINS
           hyd_cond_sat_org(ic,is) = hyd_cond_sat_org_below
           vol_porosity_org(ic,is) = vol_porosity_org_below
           bclapp_org(ic,is) = bclapp_org_below
-          matrix_pot_org(ic,is) = matrix_pot_org_below
+          matric_pot_org(ic,is) = matric_pot_org_below
           pore_size_index_org(ic,is) = pore_size_index_org_below
           vol_field_cap_org(ic,is) = vol_field_cap_org_below
           vol_p_wilt_org(ic,is) = vol_p_wilt_org_below
@@ -1082,8 +1082,8 @@ CONTAINS
             &                       + fract_org_sl(ic,is) * vol_porosity_org(ic,is)
           bclapp_sl         (ic,is) = (1._wp - fract_org_sl(ic,is)) * bclapp_sl         (ic,is) &
             &                       + fract_org_sl(ic,is) * bclapp_org(ic,is)
-          matrix_pot_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * matrix_pot_sl     (ic,is) &
-            &                       + fract_org_sl(ic,is) * matrix_pot_org(ic,is)
+          matric_pot_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * matric_pot_sl     (ic,is) &
+            &                       + fract_org_sl(ic,is) * matric_pot_org(ic,is)
           pore_size_index_sl(ic,is) = (1._wp - fract_org_sl(ic,is)) * pore_size_index_sl(ic,is) &
             &                       + fract_org_sl(ic,is) * pore_size_index_org(ic,is)
           vol_field_cap_sl  (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_field_cap_sl  (ic,is) &
@@ -1103,7 +1103,7 @@ CONTAINS
       DEALLOCATE(hyd_cond_sat_org)
       DEALLOCATE(vol_porosity_org)
       DEALLOCATE(bclapp_org)
-      DEALLOCATE(matrix_pot_org)
+      DEALLOCATE(matric_pot_org)
       DEALLOCATE(pore_size_index_org)
       DEALLOCATE(vol_field_cap_org)
       DEALLOCATE(vol_p_wilt_org)
@@ -1151,7 +1151,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp_sl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, matrix_pot_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pore_size_index_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_field_cap_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt_sl,      weighted_by_fract)
@@ -1268,7 +1268,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, matric_pot_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &

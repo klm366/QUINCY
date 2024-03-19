@@ -348,7 +348,7 @@ CONTAINS
   ! @param      vol_heat_cap  The volume heat capability
   ! @param      heat_cond     The heat condition
   ! @param [in]      ws_max
-  ! @param [in]      matrix_pot
+  ! @param [in]      matric_pot
   ! @param [in]      bclapp
   ! @param [in,out]  t_soil_sl     The t soil across layers
   ! @param [in,out]  t_soil_acoef  The t soil acoef
@@ -374,7 +374,7 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matrix_pot, bclapp, ws,     &
+    & ws_max, matric_pot, bclapp, ws,     &
     & ice, frozen, melt, liquid_max       &
     & )
     !
@@ -458,7 +458,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  matrix_pot(:,:)   !! Matrix potential
+    REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
     REAL(wp), INTENT(inout), OPTIONAL ::  ws(:,:)           !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
@@ -549,7 +549,7 @@ CONTAINS
               liquid_max(jl,jk) = Get_liquid_max( &
                 & t_soil_sl (jl,jk), &
                 & ws_max    (jl,jk), &
-                & matrix_pot(jl,jk), &
+                & matric_pot(jl,jk), &
                 & bclapp    (jl,jk)  &
                 & )
             END DO
@@ -1264,7 +1264,7 @@ CONTAINS
   ELEMENTAL PURE &
 #endif
   FUNCTION Get_liquid_max( &
-    & temp, w_max, matrix_pot, bclapp     &
+    & temp, w_max, matric_pot, bclapp     &
     & ) RESULT(liquid_max)
 
     !$ACC ROUTINE SEQ
@@ -1272,14 +1272,14 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, grav
 
     REAL(wp), INTENT(in) :: &
-      & temp, w_max, matrix_pot, bclapp
+      & temp, w_max, matric_pot, bclapp
     REAL(wp) :: liquid_max
 
     IF (temp < tmelt) THEN
       ! supercooled water equation (Niu&Yang,2006)
       liquid_max =                                                               &
         & w_max                                                                  & ! Maximum water storage
-        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp,  grav * temp * (-matrix_pot)) ) &
+        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp,  grav * temp * (-matric_pot)) ) &
         &   ** ( -1._wp / MAX(1._wp, bclapp))
     ELSE
       liquid_max = 0._wp

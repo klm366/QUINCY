@@ -76,10 +76,10 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  bclapp_oc = 4._wp       ! (type 12 in Beringer)
 
   ! soil-matric potential (s. Beringer et al 2001)
-  REAL(wp), PARAMETER ::  matrix_pot_sand = -0.04729_wp ! (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_silt = -0.45425_wp ! (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_clay = -0.633_wp   ! (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_oc = -0.12_wp      ! (type 12 in Beringer)
+  REAL(wp), PARAMETER ::  matric_pot_sand = -0.04729_wp ! (type 1 in Beringer)
+  REAL(wp), PARAMETER ::  matric_pot_silt = -0.45425_wp ! (type 5 in Beringer)
+  REAL(wp), PARAMETER ::  matric_pot_clay = -0.633_wp   ! (type 10 in Beringer)
+  REAL(wp), PARAMETER ::  matric_pot_oc = -0.12_wp      ! (type 12 in Beringer)
 
   ! factor to compensate profile of hyd_cond_sat with depth in TERRA
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
@@ -99,7 +99,7 @@ MODULE mo_hydro_init
       & soil_depth       (:,:) => NULL(), &
       & vol_porosity     (:,:) => NULL(), &
       & hyd_cond_sat     (:,:) => NULL(), &
-      & matrix_pot       (:,:) => NULL(), &
+      & matric_pot       (:,:) => NULL(), &
       & bclapp           (:,:) => NULL(), &
       & pore_size_index  (:,:) => NULL(), &
       & vol_field_cap    (:,:) => NULL(), &
@@ -161,7 +161,7 @@ CONTAINS
       & hydro_init_vars%soil_depth      ,       &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
-      & hydro_init_vars%matrix_pot      ,       &
+      & hydro_init_vars%matric_pot      ,       &
       & hydro_init_vars%bclapp          ,       &
       & hydro_init_vars%pore_size_index ,       &
       & hydro_init_vars%vol_field_cap   ,       &
@@ -231,7 +231,7 @@ CONTAINS
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
-      & hydro_init_vars%matrix_pot      (nproma, nblks),       &
+      & hydro_init_vars%matric_pot      (nproma, nblks),       &
       & hydro_init_vars%bclapp          (nproma, nblks),       &
       & hydro_init_vars%pore_size_index (nproma, nblks),       &
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
@@ -247,7 +247,7 @@ CONTAINS
       hydro_init_vars%soil_depth     (:,:)   = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
-      hydro_init_vars%matrix_pot     (:,:)   = missval
+      hydro_init_vars%matric_pot     (:,:)   = missval
       hydro_init_vars%bclapp         (:,:)   = missval
       hydro_init_vars%pore_size_index(:,:)   = missval
       hydro_init_vars%vol_field_cap  (:,:)   = missval
@@ -381,10 +381,10 @@ CONTAINS
         ! soil-matric potential
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='moisture_pot',              &
-          & fill_array = hydro_init_vars%matrix_pot)
-        ! @todo Currently, the matrix potential is given with a positiv sign in the bc data while
+          & fill_array = hydro_init_vars%matric_pot)
+        ! @todo Currently, the matric potential is given with a positiv sign in the bc data while
         !       it should be negativ from a soil physics perspective and is expected as such from
-        !       the soil hydrology routine. As matrix potential should be corrected in the bc data
+        !       the soil hydrology routine. As matric potential should be corrected in the bc data
         !       at some point in the future, we check here for negative or positive values and
         !       convert as necessary.
 #ifdef __ICON__
@@ -405,7 +405,7 @@ CONTAINS
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp) * (-1._wp)
         ELSE
           ! Totally wrong: dataset contains positive and negativ values
-          WRITE (message_text,*) 'Found positive and negative values in soil moisture matrix potential: ', &
+          WRITE (message_text,*) 'Found positive and negative values in soil moisture matric potential: ', &
             & MINVAL(ptr_2D(:,:)),' <-> ',MAXVAL(ptr_2D(:,:))
           CALL finish (TRIM(routine), message_text)
         END IF
@@ -498,12 +498,12 @@ CONTAINS
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
            hydro_init_vars%vol_wres(:,:))
 
-        ! calculate matrix potential of mineral soil
+        ! calculate matric potential of mineral soil
         CALL soil_init_from_texture( &
-           matrix_pot_sand, matrix_pot_silt, matrix_pot_clay, matrix_pot_oc,                                        &
+           matric_pot_sand, matric_pot_silt, matric_pot_clay, matric_pot_oc,                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%matrix_pot(:,:))
+           hydro_init_vars%matric_pot(:,:))
 
         ! calculate pore_size_index of mineral soil
         CALL soil_init_from_texture( &
@@ -684,8 +684,8 @@ CONTAINS
       ! Saturated hydraulic conductivity
       dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat) = hydro_init_vars%hyd_cond_sat
 
-      ! Matrix potential
-      dsl4jsb_var_ptr(HYDRO_, matrix_pot) = hydro_init_vars%matrix_pot
+      ! Matric potential
+      dsl4jsb_var_ptr(HYDRO_, matric_pot) = hydro_init_vars%matric_pot
 
       ! Exponent B in Clapp and Hornberger
       dsl4jsb_var_ptr(HYDRO_, bclapp) = hydro_init_vars%bclapp
@@ -746,7 +746,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_wres)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, pore_size_index)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, bclapp)) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, matrix_pot)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, matric_pot)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
@@ -1022,9 +1022,9 @@ CONTAINS
     ! This routine is needed because soil snow and energy (SSE) processes are calculated before
     ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
-    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matric_pot_org_top, &
       & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_wres_org_top, &
-      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, &
+      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matric_pot_org_below, &
       & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below, vol_wres_org_below
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1039,7 +1039,7 @@ CONTAINS
       & hyd_cond_sat,          &
       & vol_porosity,          &
       & bclapp,                &
-      & matrix_pot,            &
+      & matric_pot,            &
       & pore_size_index,       &
       & vol_field_cap,         &
       & vol_p_wilt,            &
@@ -1049,7 +1049,7 @@ CONTAINS
       & hyd_cond_sat_sl,       &
       & vol_porosity_sl,       &
       & bclapp_sl,             &
-      & matrix_pot_sl,         &
+      & matric_pot_sl,         &
       & pore_size_index_sl,    &
       & vol_field_cap_sl,      &
       & vol_p_wilt_sl,         &
@@ -1060,7 +1060,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    REAL(wp) ::  hyd_cond_sat_org, vol_porosity_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
+    REAL(wp) ::  hyd_cond_sat_org, vol_porosity_org, bclapp_org, matric_pot_org, pore_size_index_org, &
       & vol_field_cap_org, vol_p_wilt_org, vol_wres_org
 
     INTEGER  :: nsoil, i
@@ -1085,7 +1085,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)       ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)       ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)             ! in
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, matric_pot)         ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)    ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)      ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)         ! in
@@ -1095,7 +1095,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)    ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)    ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)          ! out
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matric_pot_sl)      ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
@@ -1104,7 +1104,7 @@ CONTAINS
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
     bclapp_sl         (:,:,:) = SPREAD(bclapp         (:,:), DIM=2, ncopies=nsoil)
-    matrix_pot_sl     (:,:,:) = SPREAD(matrix_pot     (:,:), DIM=2, ncopies=nsoil)
+    matric_pot_sl     (:,:,:) = SPREAD(matric_pot     (:,:), DIM=2, ncopies=nsoil)
     pore_size_index_sl(:,:,:) = SPREAD(pore_size_index(:,:), DIM=2, ncopies=nsoil)
     vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
@@ -1117,7 +1117,7 @@ CONTAINS
           hyd_cond_sat_org    = hyd_cond_sat_org_top
           vol_porosity_org    = vol_porosity_org_top
           bclapp_org          = bclapp_org_top
-          matrix_pot_org      = matrix_pot_org_top
+          matric_pot_org      = matric_pot_org_top
           pore_size_index_org = pore_size_index_org_top
           vol_field_cap_org   = vol_field_cap_org_top
           vol_p_wilt_org      = vol_p_wilt_org_top
@@ -1126,7 +1126,7 @@ CONTAINS
           hyd_cond_sat_org    = hyd_cond_sat_org_below
           vol_porosity_org    = vol_porosity_org_below
           bclapp_org          = bclapp_org_below
-          matrix_pot_org      = matrix_pot_org_below
+          matric_pot_org      = matric_pot_org_below
           pore_size_index_org = pore_size_index_org_below
           vol_field_cap_org   = vol_field_cap_org_below
           vol_p_wilt_org      = vol_p_wilt_org_below
@@ -1139,8 +1139,8 @@ CONTAINS
           & + fract_org_sl(:,i,:) * vol_porosity_org
         bclapp_sl         (:,i,:) = (1 - fract_org_sl(:,i,:)) * bclapp_sl         (:,i,:) &
           & + fract_org_sl(:,i,:) * bclapp_org
-        matrix_pot_sl     (:,i,:) = (1 - fract_org_sl(:,i,:)) * matrix_pot_sl     (:,i,:) &
-          & + fract_org_sl(:,i,:) * matrix_pot_org
+        matric_pot_sl     (:,i,:) = (1 - fract_org_sl(:,i,:)) * matric_pot_sl     (:,i,:) &
+          & + fract_org_sl(:,i,:) * matric_pot_org
         pore_size_index_sl(:,i,:) = (1 - fract_org_sl(:,i,:)) * pore_size_index_sl(:,i,:) &
           & + fract_org_sl(:,i,:) * pore_size_index_org
         vol_field_cap_sl  (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_field_cap_sl  (:,i,:) &
@@ -1154,7 +1154,7 @@ CONTAINS
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
-    !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
+    !$ACC   DEVICE(matric_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl, vol_wres_sl)
 
   END SUBROUTINE init_soil_properties

@@ -442,13 +442,12 @@ CONTAINS
       & wtr_soil_sl, &
       & ice_soil_sl, &
       & t_soil_sl, &
-      & matrix_pot_sl, &
+      & matric_pot_sl, &
       & bclapp_sl, &
       & fract_org_sl, &
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
-      & vol_porosity_sl, &
-      & vol_field_cap_sl
+      & vol_porosity_sl
 
     ! Locally allocated vectors
     !
@@ -529,7 +528,7 @@ CONTAINS
     IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, matric_pot_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
 
       ALLOCATE(liquid_max (nproma, nsoil, nblks))
@@ -544,7 +543,7 @@ CONTAINS
               liquid_max(ic,is,ib) = Get_liquid_max( &
                 & t_soil_sl    (ic,is,ib), &
                 & ws_max_sl              , &
-                & matrix_pot_sl(ic,is,ib), &
+                & matric_pot_sl(ic,is,ib), &
                 & bclapp_sl    (ic,is,ib)  &
                 & )
             END DO
@@ -596,7 +595,6 @@ CONTAINS
 
     END IF
 
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
