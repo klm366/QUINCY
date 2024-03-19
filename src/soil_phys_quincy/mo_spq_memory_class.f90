@@ -50,6 +50,9 @@ MODULE mo_spq_memory_class
                                     zril_old        , & !< previous timestep's Reynold's number
                                     elevation           !< currently 0.0 [m]
 
+    TYPE(t_jsb_var_real2d)          :: &
+      &   num_sl_above_bedrock                          !< number of soil layers above bedrock, i.e., with a width larger eps8
+
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
                                     soil_depth_sl, &            !< Width ! of each soil layer that can be saturated with water (until bedrock) [m]
@@ -256,6 +259,17 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart=.FALSE., &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
+        & hgrid, surface, &
+        & t_cf('num_sl_above_bedrock', '[unitless]', 'number of soil layers above bedrock'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=0.0_wp)
 
       CALL mem%Add_var('soil_depth_sl', mem%soil_depth_sl, &
         & hgrid, vgrid_soil_sb, &
