@@ -352,6 +352,10 @@ CONTAINS
   !! Here, the tile tree branches into several copys for, e.g. upland, lowland and floodplain settings
   SUBROUTINE init_usecase_hydrotiles(model)
 
+    TYPE :: t_tilelist_pointer  
+      TYPE(t_jsb_tile), POINTER :: hydro_tile  
+    END TYPE t_tilelist_pointer
+
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, &
@@ -368,6 +372,8 @@ CONTAINS
       & 'upland fraction',  &
       & 'lowland fraction', &
       & 'floodplain fraction']
+
+    TYPE(t_tilelist_pointer) :: hydro_tiles(ntopo)
 
     INTEGER, PARAMETER :: macrotopo_types(ntopo) = [ &
       & UPLAND_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE]
@@ -469,6 +475,9 @@ CONTAINS
           CALL veg_tile%Add_lct(t_jsb_lct(macrotopo_types(t)))
           !$ACC ENTER DATA COPYIN(veg_tile)
 
+          ! Collect this hydrotile in a list of hydrotiles
+          hydro_tiles(t)%hydro_tile => veg_tile
+
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
@@ -501,6 +510,9 @@ CONTAINS
             END DO
 
         ENDDO
+
+        ! Create lateral flow network for HydroTiles
+        hydro_tiles(1)%hydro_tile%downstream_tile => hydro_tiles(2)%hydro_tile ! Upland --> lowland
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
