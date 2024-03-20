@@ -548,7 +548,7 @@ CONTAINS
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      hyd_cond_sat_sl     Hydraulic conductivity of saturated soil [m/s]
-  ! @param [in]      matrix_pot_sl       Soil matrix potential [m]
+  ! @param [in]      matric_pot_sl       Soil matric potential [m]
   ! @param [in]      bclapp_sl           Exponent B in Clapp and Hornberger
   ! @param [in]      pore_size_index_sl  Soil pore size distribution index used in Van Genuchten method
   ! @param [in]      vol_porosity_sl     Soil porosity                      - ice not considered [m/m]
@@ -570,7 +570,7 @@ CONTAINS
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
     & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,                       &
     & soil_depth_sl, root_depth_sl,                                                      &
-    & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
+    & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,               &
     & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
     ! inout
@@ -592,7 +592,7 @@ CONTAINS
     LOGICAL, INTENT(in)  :: ltpe_open
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
-      & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
+      & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                                       &
@@ -664,7 +664,7 @@ CONTAINS
       &    soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,              &
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl, &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,        &
-      &    vol_wres_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
+      &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                &
       &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
       &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
       &    infilt, infilt_over, drain_bot, drainage_sl, wtr_transp_down,             &
@@ -886,7 +886,7 @@ CONTAINS
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,               &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,             &
     & vol_wres_sl,                                                  &
-    & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                 &
+    & bclapp_sl, matric_pot_sl, pore_size_index_sl,                 &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,              &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
     & infilt, infilt_over, drain_bot, drainage_sl, wtr_transp_down, &
@@ -917,7 +917,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         ! Volumetric permanent wilting point [m/m]
     REAL(wp), INTENT(IN)            :: vol_wres_sl(:,:)           !> Volumetric residual water content [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             ! exponent B in Clapp and Hornberger
-    REAL(wp), INTENT(IN)            :: matrix_pot_sl(:,:)         ! matrix potential [m]
+    REAL(wp), INTENT(IN)            :: matric_pot_sl(:,:)         ! Soil matric potential [m]
     REAL(wp), INTENT(IN)            :: pore_size_index_sl(:,:)    ! soil pore size distribution index used in Van Genuchten
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(IN)            :: root_depth_sl(:,:)         ! thicknesses of soil layers until rooting depth [m]
@@ -1073,7 +1073,7 @@ CONTAINS
           & nc, nsoil, dsoil(:,:),                                          &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
-          & weq_wres_sl(:,:), hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),     &
+          & weq_wres_sl(:,:), hyd_cond_sat_sl(:,:), matric_pot_sl(:,:),     &
           & bclapp_sl(:,:), pore_size_index_sl(:,:),                        &
           & dt=dtime, last_soil_layer=last_soil_layer(:),                   &
           & ice_impedance=ice_impedance_sl(:,:),                            &

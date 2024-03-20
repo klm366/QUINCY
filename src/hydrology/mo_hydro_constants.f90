@@ -76,7 +76,7 @@ MODULE mo_hydro_constants
     & vol_wres_org_top        = 0.050_wp,      & !< volumetric residual water content of organic layer [m/m] (Letts et al., 2000)
     & hyd_cond_sat_org_top    = 0.0001_wp,     & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_top          = 4._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    & matrix_pot_org_top      = -0.1_wp,       & !< Matrix potential of organic part of soil layer [m]
+    & matric_pot_org_top      = -0.1_wp,       & !< Soil matric potential of organic part of soil layer [m]
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_top = 0.7_wp,        & !< Pore size distribution index of organic part of soil layer []
     ! Parameters for organic soil component (deep layers)
@@ -86,7 +86,7 @@ MODULE mo_hydro_constants
     & vol_wres_org_below      = 0.150_wp,      & !< volumetric residual water content of organic layer [m/m] (Letts et al., 2000)
     & hyd_cond_sat_org_below  = 0.00000001_wp, & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_below        = 8._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    & matrix_pot_org_below    = -1.0_wp,       & !< Matrix potential of organic part of soil layer [m]
+    & matric_pot_org_below    = -1.0_wp,       & !< Soil matric potential of organic part of soil layer [m]
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form

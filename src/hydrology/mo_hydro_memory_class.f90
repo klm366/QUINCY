@@ -104,7 +104,7 @@ MODULE mo_hydro_memory_class
       & vol_wres,             & !< Volumetric residual water content                                   [m/m]
       & pore_size_index,      & !< Soil pore size distribution index                                   []
       & bclapp,               & !< Exponent B in Clapp and Hornberger
-      & matrix_pot,           & !< Matrix potential [m]
+      & matric_pot,           & !< Soil matric potential [m]
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
@@ -130,7 +130,7 @@ MODULE mo_hydro_memory_class
       & vol_wres_sl,          & !< Volumetric residual water content                                        [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
-      & matrix_pot_sl,        & !< Matrix potential                                                         [m]
+      & matric_pot_sl,        & !< Soil matric potential                                                    [m]
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
@@ -665,17 +665,17 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'matrix_pot', mem%matrix_pot,                          &
+      CALL mem%Add_var( 'matric_pot', mem%matric_pot,                          &
         & hgrid, surface,                                                      &
-        & t_cf('matrix_pot', 'm', 'Soil saturated matrix potential'),          &
+        & t_cf('matric_pot', 'm', 'Soil saturated matric potential'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'matrix_pot_sl', mem%matrix_pot_sl,                    &
+      CALL mem%Add_var( 'matric_pot_sl', mem%matric_pot_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('matrix_pot_sl', 'm', 'Soil saturated matrix potential'),       &
+        & t_cf('matric_pot_sl', 'm', 'Soil saturated matric potential'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
