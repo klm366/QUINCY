@@ -261,7 +261,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
-    dsl4jsb_Real3D_onChunk :: matrix_pot_sl
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl
     dsl4jsb_Real3D_onChunk :: wtr_diflat_sl
@@ -281,7 +281,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl_sibl_tile
-    dsl4jsb_Real3D_onChunk :: matrix_pot_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: bclapp_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_diflat_sl_sibl_tile
@@ -356,7 +356,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl)
     END IF
@@ -500,11 +500,11 @@ CONTAINS
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, ice_soil_sl,              sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl,    sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, hyd_cond_sat_sl,          sibl_tile)
-            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matrix_pot_sl,            sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matric_pot_sl,            sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, bclapp_sl,                sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, pore_size_index_sl,       sibl_tile)
 
-            ! Compute soil ice impedance, diffusivity and matrix potential ...
+            ! Compute soil ice impedance, diffusivity and matric potential ...
             ! ... for source tile
             weq_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:), 0._wp)
             weq_field_cap_sl(:,:) = MAX(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), 0._wp)
@@ -523,12 +523,12 @@ CONTAINS
               weq_p_wilt_sl(:,:),                   & !< soil wilting point (water + ice) [m]
               weq_wres_sl(:,:),                     & !< soil water residual [m]
               hyd_cond_sat_sl(:,:),                 & !< saturated hydraulic conductivity [m s-1]
-              matrix_pot_sl(:,:),                   & !< matric potential
+              matric_pot_sl(:,:),                   & !< matric potential
               bclapp_sl(:,:),                       & !< clapp hornberger b parameter
               pore_size_index_sl(:,:),              & !< pore size index
               ice_impedance=ice_imp_source(:,:),    & !< ice impedance factor
               K=hyd_cond_source(:,:),               & !< hydraulic conductivity
-              mpot_act=mpot_act_source(:,:)         & !< matrix potential
+              mpot_act=mpot_act_source(:,:)         & !< matric potential
             )
 
             ! ... and target tile
@@ -549,12 +549,12 @@ CONTAINS
               weq_p_wilt_sl_sibl_tile(:,:),         & !< soil wilting point (water + ice) [m]
               weq_wres_sl_sibl_tile(:,:),           & !< soil water residual [m]
               hyd_cond_sat_sl_sibl_tile(:,:),       & !< saturated hydraulic conductivity [m s-1]
-              matrix_pot_sl_sibl_tile(:,:),         & !< matric potential
+              matric_pot_sl_sibl_tile(:,:),         & !< matric potential
               bclapp_sl_sibl_tile(:,:),             & !< clapp hornberger b parameter
               pore_size_index_sl_sibl_tile(:,:),    & !< pore size index
               ice_impedance=ice_imp_target(:,:),    & !< ice impedance factor
               K=hyd_cond_target(:,:),               & !< hydraulic conductivity
-              mpot_act=mpot_act_target(:,:)         & !< matrix potential
+              mpot_act=mpot_act_target(:,:)         & !< matric potential
             )
 
             ! Lateral soil water diffusion between upland and lowland
@@ -571,7 +571,7 @@ CONTAINS
                    & wtr_soil_fc_sl(i,:),  wtr_soil_fc_sl_sibl_tile(i,:),  & !< soil field capacity         [m]
                    & wtr_soil_sat_sl(i,:), wtr_soil_sat_sl_sibl_tile(i,:), & !< soil maximum water content  [m]
                    & wtr_soil_pwp_sl(i,:), wtr_soil_pwp_sl_sibl_tile(i,:), & !< soil wilting point          [m]
-                   & matrix_pot_sl(i,:),   matrix_pot_sl_sibl_tile(i,:),   & !< soil matrix potential       [m]
+                   & matric_pot_sl(i,:),   matric_pot_sl_sibl_tile(i,:),   & !< soil matric potential       [m]
                    & hyd_cond_sat_sl(i,:), hyd_cond_sat_sl_sibl_tile(i,:), & !< soil hydraulic conductivity [m s-1]
                    & bclapp_sl(i,:),       bclapp_sl_sibl_tile(i,:),       & !< soil bclapp parameter       []
                    & pore_size_index_sl(i,:), pore_size_index_sl_sibl_tile(i,:), & !< pore size index       []
