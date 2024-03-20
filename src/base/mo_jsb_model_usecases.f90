@@ -512,7 +512,10 @@ CONTAINS
         ENDDO
 
         ! Create lateral flow network for HydroTiles
-        hydro_tiles(1)%hydro_tile%downstream_tile => hydro_tiles(2)%hydro_tile ! Upland --> lowland
+        ! Lateral surface runoff and drainage with flow lag to downstream tile
+        hydro_tiles(1)%hydro_tile%downstream_tile => hydro_tiles(2)%hydro_tile ! Upland   --> Lowland
+        ! Lateral surface runoff, drainage, and lateral diffusion without flow lag
+        hydro_tiles(2)%hydro_tile%adjacent_tile   => hydro_tiles(3)%hydro_tile ! Lowland <--> Floodplain
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE

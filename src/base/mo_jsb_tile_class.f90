@@ -122,8 +122,9 @@ MODULE mo_jsb_tile_class
     CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< pointer to the parent file
     CLASS(t_jsb_tile_abstract),   POINTER :: first_child_tile    => NULL() !< pointer to the first child tile
     CLASS(t_jsb_tile_abstract),   POINTER :: next_sibling_tile   => NULL() !< pointer to the next sibling tile
-    !
-    CLASS(t_jsb_tile_abstract),   POINTER :: downstream_tile     => NULL() !< pointer to the next downstream tile
+    ! The next pointers are used to define a lateral flow network between tiles
+    CLASS(t_jsb_tile_abstract),   POINTER :: downstream_tile     => NULL() !< pointer to the downstream tile for lagged flow
+    CLASS(t_jsb_tile_abstract),   POINTER :: adjacent_tile       => NULL() !< pointer to the adjacent tile for instant flow
     !
     TYPE(real_2d_p),              POINTER :: ptrs2d_cache(:,:,:) => NULL() !< cache of pointers to 2d vars used for GPU porting
     TYPE(real_3d_p),              POINTER :: ptrs3d_cache(:,:,:) => NULL() !< cache of pointers to 3d vars used for GPU porting

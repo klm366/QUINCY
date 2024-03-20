@@ -659,9 +659,16 @@ CONTAINS
       IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
         ! Note, surface depression depth is given as negative value in the data, but represent
         !   a storage on top of the soil --> needs to be converted to positive values!
-        IF (tile%contains_lowland) THEN
+        !   Also, the depression are grid cell averages. As the HydroTiles allow ponds only on the flood
+        !   plain tile, depression depth needs to be scaled accordingly. However, it is limited to 10m.
+        IF (tile%contains_floodplain) THEN
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
+          WHERE (hydro_init_vars%fract_pond_max > 1.0E-10_wp)
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = MIN(10.0_wp, (-1._wp) * &
+              & hydro_init_vars%depth_pond_max / hydro_init_vars%fract_pond_max)
+          ELSE WHERE
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.0_wp
+          END WHERE
         ELSE
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
           dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
