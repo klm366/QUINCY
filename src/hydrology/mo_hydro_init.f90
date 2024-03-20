@@ -643,7 +643,7 @@ CONTAINS
         ! in
         & grid%Get_nproma(),                              & !< Number of gridcells
         & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
-        & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< T: HydroTiles setup is active
+        & TRIM(model%config%usecase) == 'jsbach_hydrotiles', & !< T: HydroTiles setup is active
         & tile%contains_upland,                           & !< T: Upland HydroTile
         & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
         & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
@@ -656,7 +656,7 @@ CONTAINS
 
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       ! Maximum depth and extent of surface water ponds
-      IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+      IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
         ! Note, surface depression depth is given as negative value in the data, but represent
         !   a storage on top of the soil --> needs to be converted to positive values!
         IF (tile%contains_lowland) THEN

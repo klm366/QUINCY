@@ -30,7 +30,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, & !, BARE_TYPE
-    &                               UPLAND_TYPE, LOWLAND_TYPE
+    &                               UPLAND_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -66,8 +66,8 @@ CONTAINS
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
 
-    CASE ('jsbach_qarctic')
-      CALL init_usecase_qarctic(model)
+    CASE ('jsbach_hydrotiles')
+      CALL init_usecase_hydrotiles(model)
 
     CASE ('jsbach_forest_age_classes')
       ! jsbach4 11 PFTs + forest age-classes
@@ -349,8 +349,8 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> This usecase consideres hydrologically different settings for all tiles below the land tile
-  !! Here, the tile tree branches into several copys for, e.g. upland and lowland settings
-  SUBROUTINE init_usecase_qarctic(model)
+  !! Here, the tile tree branches into several copys for, e.g. upland, lowland and floodplain settings
+  SUBROUTINE init_usecase_hydrotiles(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -359,17 +359,18 @@ CONTAINS
 
     INTEGER :: i,t
 
-    INTEGER, PARAMETER :: ntopo = 2
+    INTEGER, PARAMETER :: ntopo = 3
 
     CHARACTER(len=10), PARAMETER :: topo_shortnames(ntopo) = [character(len=10) ::  &
-      & 'upland', 'lowland']
+      & 'up', 'low', 'plain']
 
     CHARACTER(len=50), PARAMETER :: topo_longnames(ntopo) = [character(len=50) :: &
-      & 'upland fraction', &
-      & 'lowland fraction' ]
+      & 'upland fraction',  &
+      & 'lowland fraction', &
+      & 'floodplain fraction']
 
     INTEGER, PARAMETER :: macrotopo_types(ntopo) = [ &
-      & UPLAND_TYPE, LOWLAND_TYPE]
+      & UPLAND_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE]
 
     INTEGER, PARAMETER :: npft = 11
 
@@ -404,13 +405,13 @@ CONTAINS
     !   |      |
     !  land  lakes
     !   |
-    !   |-----------------------------------------------------
-    !   |                          |                         |
-    !  veg_upland                  veg_lowland               glacier
-    !   |                          |
-    !   |-------------             |--------------
-    !   |            |             |             |
-    !  pft01_upland  pftXX_upland  pft01_lowland pftXX_lowland
+    !   |----------------------------------------------------------------------------------
+    !   |                          |                            |                         |
+    !  veg_upland                  veg_lowland                  veg_floodplain            glacier
+    !   |                          |                            |
+    !   |-------------             |--------------              |-----------------
+    !   |            |             |             |              |                |
+    !  pft01_upland  pftXX_upland  pft01_lowland pftXX_lowland  pft01_floodplain pftXX_floodplain
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -510,7 +511,7 @@ CONTAINS
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
-  END SUBROUTINE init_usecase_qarctic
+  END SUBROUTINE init_usecase_hydrotiles
 
   ! ======================================================================================================= !
   !>init routine for usecase pfts with forest age classes

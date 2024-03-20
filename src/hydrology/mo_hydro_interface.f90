@@ -2581,7 +2581,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
     IF (tile%is_process_active(MIX_)) THEN
-      ! MIX_ Process currently only exists for qarctic usecase
+      ! MIX_ Process currently only exists for hydrotiles usecase
       dsl4jsb_Get_memory(MIX_)
     END IF
 

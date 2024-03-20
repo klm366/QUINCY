@@ -36,7 +36,7 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, &
-    &                               UPLAND_TYPE, LOWLAND_TYPE
+    &                               UPLAND_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
@@ -91,6 +91,7 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: is_lake = .FALSE.             !< whether primary lct is LAKE_TYPE
     LOGICAL                                :: is_upland = .FALSE.           !< whether primary lct is UPLAND_TYPE
     LOGICAL                                :: is_lowland = .FALSE.          !< whether primary lct is LOWLAND_TYPE
+    LOGICAL                                :: is_floodplain = .FALSE.       !< whether primary lct is FLOODPLAIN_TYPE
     LOGICAL                                :: contains_vegetation = .FALSE. !< whether any lct of tile is VEG_TYPE
     LOGICAL                                :: contains_bare = .FALSE.       !< whether any lct of tile is BARE_TYPE
     LOGICAL                                :: contains_land = .FALSE.       !< whether any lct of tile is LAND_TYPE
@@ -98,6 +99,7 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_lake = .FALSE.       !< whether any lct of tile is LAKE_TYPE
     LOGICAL                                :: contains_upland = .FALSE.     !< whether any lct of tile is UPLAND_TYPE
     LOGICAL                                :: contains_lowland = .FALSE.    !< whether any lct of tile is LOWLAND_TYPE
+    LOGICAL                                :: contains_floodplain = .FALSE. !< whether any lct of tile is FLOODPLAIN_TYPE
     LOGICAL                                :: contains_soil = .FALSE.       !< whether any lct of tile is one that has soil
     !
     INTEGER,                  ALLOCATABLE :: process_action(:)        !< List of `action` for all processes
@@ -361,6 +363,8 @@ CONTAINS
           this%is_upland = .TRUE.
         CASE (LOWLAND_TYPE)
           this%is_lowland = .TRUE.
+        CASE (FLOODPLAIN_TYPE)
+          this%is_floodplain = .TRUE.
         END SELECT
       END IF
 
@@ -394,6 +398,8 @@ CONTAINS
       this%contains_upland = .TRUE.
     CASE (LOWLAND_TYPE)
       this%contains_lowland = .TRUE.
+    CASE (FLOODPLAIN_TYPE)
+      this%contains_floodplain = .TRUE.
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land
