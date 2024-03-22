@@ -218,9 +218,10 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
     INTEGER  :: nsoil, i               !< Counter variables for soil layers
-    REAL(wp) :: dtime                  !< Model time step [s]
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
+    REAL(wp) :: dtime                  !< Model time step [s]
     REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
+    REAL(wp) :: trans_min_fract        !< min. source or target tile fraction required for lateral transport
 
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_vgrid), POINTER          :: soil_w
@@ -326,6 +327,8 @@ CONTAINS
     dsl4jsb_Get_config(MIX_)
     dsl4jsb_Get_config(HYDRO_)
 
+    trans_min_fract = dsl4jsb_Config(MIX_)%trans_min_fract ! min. tile fraction for lateral transport
+
     ! Get process memories
     dsl4jsb_Get_memory(MIX_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -427,6 +430,7 @@ CONTAINS
           & wtr_pond_max(:),          & !< maximum pond water content   [m]
           & source_fract(:),          & !< area fraction of source tile []
           & target_fract(:),          & !< area fraction of target tile []
+          & trans_min_fract,          & !< min. tile fraction           []
           ! inout
           & runoff(:),                & !< surface runoff               [kg m-2 s-1]
           & wtr_latflow(:),           & !< lateral flow at source tile  [kg m-2 s-1]
@@ -448,6 +452,7 @@ CONTAINS
             & wtr_soil_fc_sl(:,i),                   & !< soil layer field capacity at source tile [m]
             & source_fract(:),                       & !< area fraction of source tile             []
             & target_fract(:),                       & !< area fraction of target tile             []
+            & trans_min_fract,                       & !< min. tile fraction                       []
             ! inout
             & drainage_sl(:,i),                      & !< lateral drainage at source tile          [kg m-2 s-1]
             & drainage(:),                           & !< total drainage at source tile            [kg m-2 s-1]
@@ -548,7 +553,7 @@ CONTAINS
 
         ! ! Lateral soil water diffusion between upland and lowland
         ! DO i = 1, nc
-        !   IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
+        !   IF (source_fract(i) > trans_min_fract .AND. target_fract(i) > trans_min_fract .AND. &
         !       wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_trg_tile(i,1) > 1.0e-10_wp) THEN
 
         !     CALL calc_intertile_diffusion(nsoil,                      & !< Number of soil layers

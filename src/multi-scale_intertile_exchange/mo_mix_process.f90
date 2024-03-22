@@ -29,11 +29,11 @@ CONTAINS
   !>
   !! @brief   Compute intertile exchange of surface runoff
   !!
-  PURE ELEMENTAL SUBROUTINE calc_runoff_transport(             &
-    & l_lag, dtime, retention_time, wtr_pond_max_source,       &
-    & source_fract, target_fract, runoff_source,               &
-    & wtr_latflow_source, wtr_latflow_target, wtr_pond_source, &
-    & wtr_pond_target, runoff_retention_source                 &
+  PURE ELEMENTAL SUBROUTINE calc_runoff_transport(               &
+    & l_lag, dtime, retention_time, wtr_pond_max_source,         &
+    & source_fract, target_fract, trans_min_fract,               &
+    & runoff_source, wtr_latflow_source, wtr_latflow_target,     &
+    & wtr_pond_source, wtr_pond_target, runoff_retention_source  &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -42,8 +42,9 @@ CONTAINS
     REAL(wp), INTENT(in)    :: dtime,                   & !< timestep length                        [s]
       &                        retention_time,          & !< retention time for lateral transport   [s]
       &                        wtr_pond_max_source,     & !< maximum surface water storage on source tile [m]
-      &                        source_fract,            & !< area fraction of water source tile
-      &                        target_fract               !< area fraction of water target tile
+      &                        source_fract,            & !< area fraction of water source tile     []
+      &                        target_fract,            & !< area fraction of water target tile     []
+      &                        trans_min_fract            !< min. tile fraction                     []
     REAL(wp), INTENT(inout) :: runoff_source,           & !< surface runoff on source tile          [kg m-2 s-1]
       &                        wtr_latflow_source,      & !< lateral water flow from source tile    [kg m-2 s-1]
       &                        wtr_latflow_target,      & !< lateral water flow towards target tile [kg m-2 s-1]
@@ -60,7 +61,7 @@ CONTAINS
     !!   In case of long transport routes (upland to lowland) a retention storage is used.
     !! @todo the retention store lag time needs to be physics based, not fixed to some arbitrary value
 
-    IF (target_fract > 1.0e-10_wp) THEN
+    IF (source_fract > trans_min_fract .AND. target_fract > trans_min_fract) THEN
       ! Compute pond overflow on source tile and update source tile pond storage
       overland_flx_source = MAX(0._wp, wtr_pond_source + runoff_source * dtime / rhoh2o - wtr_pond_max_source)
       wtr_pond_source     = MIN(wtr_pond_max_source, wtr_pond_source + runoff_source * dtime / rhoh2o)
@@ -92,8 +93,8 @@ CONTAINS
   !!
   PURE ELEMENTAL SUBROUTINE calc_drainage_transport(        &
     & l_lag, dtime, retention_time, field_cap_source,       &
-    & source_fract, target_fract, drainlat_source,          &
-    & drainage_source, wtr_latflow_source,                  &
+    & source_fract, target_fract, trans_min_fract,          &
+    & drainlat_source, drainage_source, wtr_latflow_source, &
     & wtr_latflow_target, wtr_soil_source, wtr_soil_target, &
     & drainlat_retention_source                             &
     )
@@ -105,7 +106,8 @@ CONTAINS
       &                        retention_time,           & !< retention time for lateral transport   [s]
       &                        field_cap_source,         & !< soil field capacity of source tile     [m]
       &                        source_fract,             & !< area fraction of water source tile     []
-      &                        target_fract                !< area fraction of water target tile     []
+      &                        target_fract,             & !< area fraction of water target tile     []
+      &                        trans_min_fract             !< min. tile fraction                     []
     REAL(wp), INTENT(inout) :: drainlat_source,          & !< lateral drainage on source tile        [kg m-2 s-1]
       &                        drainage_source,          & !< bottom drainage on source tile         [kg m-2 s-1]
       &                        wtr_latflow_source,       & !< lateral water flow from source tile    [kg m-2 s-1]
@@ -137,7 +139,7 @@ CONTAINS
     END IF
 
     ! Compute lateral flow
-    IF (target_fract > 1.0e-10_wp) THEN
+    IF (source_fract > trans_min_fract .AND. target_fract > trans_min_fract) THEN
       ! Compute lateral drainage on source tile and update total drainage and total lateral water flow
       drainlat_flx_source = drainlat_source    * dtime / rhoh2o
       drainage_source     = drainage_source    - drainlat_source
@@ -168,9 +170,9 @@ CONTAINS
   !! @brief   Compute intertile lateral diffusion between tiles
   !!
   PURE ELEMENTAL SUBROUTINE calc_intertile_diffusion_old(           &
-    & dtime, source_fract, target_fract, field_cap_source,      &
-    & field_cap_target, wtr_latflow_source, wtr_latflow_target, &
-    & wtr_soil_source, wtr_soil_target &
+    & dtime, source_fract, target_fract, trans_min_fract,           &
+    & field_cap_source, field_cap_target, wtr_latflow_source,       &
+    & wtr_latflow_target, wtr_soil_source, wtr_soil_target          &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -178,6 +180,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
       &                        source_fract,        & !< area fraction of water source tile
       &                        target_fract,        & !< area fraction of water target tile
+      &                        trans_min_fract,     & !< min. tile fraction                     []
       &                        field_cap_source,    & !< soil field capacity of source tile
       &                        field_cap_target       !< soil field capacity of target tile
     REAL(wp), INTENT(inout) :: wtr_latflow_source,  & !< lateral water flow from source tile
@@ -201,7 +204,7 @@ CONTAINS
     !!   be needed to fully compensate the soil moisture difference. Later on, soil hydraulic
     !!   conductivity should be used.
 
-    IF (source_fract > 1.0e-10_wp .AND. target_fract > 1.0e-10_wp .AND. &
+    IF (source_fract > trans_min_fract .AND. target_fract > trans_min_fract .AND. &
         field_cap_source > 1.0e-10_wp .AND. field_cap_target > 1.0e-10_wp) THEN
       ! Compute relative soil water content as well as the fraction-weighted relative soil water content mean between both tiles
       wtr_soil_rel_source = wtr_soil_source / field_cap_source
