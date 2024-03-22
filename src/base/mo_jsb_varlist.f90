@@ -11,6 +11,8 @@
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
+!! Description: Custom implementation for Jsbach of var_list. It is provided by the Icon-land infrastructure.
+!!
 
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
@@ -19,7 +21,7 @@ MODULE mo_jsb_varlist
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
-  USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
+  USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      & ! Rename imported methods
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
 #ifdef __ICON__
@@ -50,7 +52,7 @@ MODULE mo_jsb_varlist
   PUBLIC :: VARNAME_LEN
   PUBLIC :: BASIC, MEDIUM, FULL
 
-  INTERFACE jsb_add_var
+  INTERFACE jsb_add_var ! Used in init_fractions_on_tile
     MODULE PROCEDURE jsb_add_var_list_element_r2d
   END INTERFACE jsb_add_var
 
@@ -62,13 +64,18 @@ MODULE mo_jsb_varlist
 
 CONTAINS
 
+  ! ====================================================================================================== !
+  !
+  !> Get the varlist pointer from icon-land.
+  !> In case it does not exists, it creates a new one and it provides the pointer of the new varlist.
+  !
   FUNCTION Get_varlist(name, patch_id) RESULT(return_ptr)
 
-    CHARACTER(LEN=*), INTENT(in) :: name
-    INTEGER,          INTENT(in) :: patch_id
+    CHARACTER(LEN=*), INTENT(in) :: name        ! varlist name to get
+    INTEGER,          INTENT(in) :: patch_id    ! icon-land grid
     TYPE(t_jsb_varlist), POINTER :: return_ptr
 
-    CALL jsb_get_var_list(return_ptr, TRIM(name))
+    CALL jsb_get_var_list(return_ptr, TRIM(name)) ! From icon-land
 
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
@@ -122,18 +129,23 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
+    !< set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    !< set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    !< set CF speicification
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
+    !< ldims : local dimension (dimension of chunk block)
+    !< gdims : global dimension for output file (netcdf, hdf, grip ... etc) grid format
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
@@ -146,13 +158,13 @@ CONTAINS
       n_groups = 2
     END IF
     ALLOCATE(groups_loc(n_groups))
+    ! All variables are put into these three catch-all groups
     groups_loc(1) = 'ALL'
     groups_loc(2) = 'jsb_all'
     IF (PRESENT(groups)) THEN
       groups_loc(3:n_groups) = groups(:)
     END IF
 
-    ! calls the generic routine on the host model
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
