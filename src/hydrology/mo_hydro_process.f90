@@ -1097,7 +1097,7 @@ CONTAINS
     END IF
 
     !> Compute subsurface drainage from each layer - only for catchment scale parametrization
-    IF (hydro_scale == Catchment_) THEN
+    IF (hydro_scale == Catchment_ .OR. hydro_scale == Point_) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
@@ -1121,14 +1121,14 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-    !> Compute bottom drainage from lowest layer - only for point scale parametrization
-    ELSE IF (hydro_scale == Point_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
-        drain_bot(ic) = hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
-      END DO
-      !$ACC END PARALLEL LOOP
+    ! !> Compute bottom drainage from lowest layer - only for point scale parametrization
+    ! ELSE IF (hydro_scale == Point_) THEN
+    !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !   DO ic = 1, nc
+    !     ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
+    !     drain_bot(ic) = hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
+    !   END DO
+    !   !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)

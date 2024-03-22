@@ -248,7 +248,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_retention
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real3D_onChunk :: drainage_sl
-    dsl4jsb_Real3D_onChunk :: drain_lat_retention_sl
+    dsl4jsb_Real3D_onChunk :: drainage_retention_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
@@ -337,7 +337,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)            ! inout
     dsl4jsb_Get_var3D_onChunk(MIX_,   wtr_diflat_sl)          ! inout
     dsl4jsb_Get_var2D_onChunk(MIX_,   runoff_retention)       ! inout
-    dsl4jsb_Get_var3D_onChunk(MIX_,   drain_lat_retention_sl) ! inout
+    dsl4jsb_Get_var3D_onChunk(MIX_,   drainage_retention_sl)  ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
     IF (tile%contains_soil) THEN
@@ -460,7 +460,7 @@ CONTAINS
             & wtr_latflow_trg_tile(:),               & !< lateral flow at target tile              [kg m-2 s-1]
             & wtr_soil_sl(:,i),                      & !< soil water content at source tile        [m]
             & wtr_soil_sl_trg_tile(:,i),             & !< soil water content at target tile        [m]
-            & drain_lat_retention_sl(:,i)            & !< lateral drainage retention storage       [m]
+            & drainage_retention_sl(:,i)             & !< lateral drainage retention storage       [m]
             & )
         ENDDO
       END IF
@@ -650,7 +650,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,                 weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MIX_,   drain_lat_retention_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   drainage_retention_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_diflat_sl,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,               weighted_by_fract)

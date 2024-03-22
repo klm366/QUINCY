@@ -41,7 +41,7 @@ MODULE mo_mix_memory_class
       & runoff_retention          !< Runoff retention reservoir                     [m water equivalent]
     TYPE(t_jsb_var_real3d) ::   &
       & wtr_diflat_sl,          & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
-      & drain_lat_retention_sl    !< Lateral drainage retention reservoir           [m water equivalent]
+      & drainage_retention_sl     !< Drainage retention reservoir                   [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_mix_memory
@@ -117,10 +117,10 @@ CONTAINS
       & output_level=BASIC,                                                          &
       & lrestart=.FALSE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'drain_lat_retention_sl', mem%drain_lat_retention_sl,          &
+    CALL mem%Add_var( 'drainage_retention_sl', mem%drainage_retention_sl,            &
       & hgrid, soil_w,                                                               &
-      & t_cf('drain_lat_retention_sl', 'm (water equivalent)',                       &
-      &      'Retention reservoir for lateral drainage'),                            &
+      & t_cf('drainage_retention_sl', 'm (water equivalent)',                        &
+      &      'Retention reservoir for drainage within soil layers'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
       & output_level=BASIC,                                                          &
