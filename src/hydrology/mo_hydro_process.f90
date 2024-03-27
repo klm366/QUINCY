@@ -84,8 +84,8 @@ CONTAINS
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
-    & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & wtr_pond, ice_pond, q_snocpymlt,                              &
+    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
+    & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
@@ -104,7 +104,7 @@ CONTAINS
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
       & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                  &
-      & hyd_cond_sat_sl1(:)
+      & hyd_cond_sat_sl1(:), ice_impedance(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -434,7 +434,7 @@ CONTAINS
         ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
         ! Q-Arctic project. The following is rather a placeholder than a real implementation.
         ELSE IF (hydro_scale == Point_) THEN
-          infilt(ic) = MIN(hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
+          infilt(ic) = MIN(ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
           runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp)
           runoff_horton(ic) = runoff(ic)
 

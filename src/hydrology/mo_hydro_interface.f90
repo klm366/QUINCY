@@ -444,6 +444,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_glac
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -457,6 +458,7 @@ CONTAINS
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & weq_soil,           &
+      & ice_impedance,      &
       & trans_tmp
     REAL(wp), DIMENSION(options%nc,nsoil) :: &
       & weq_soil_sl_tmp,    &
@@ -587,6 +589,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_scool_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   hyd_cond_sat_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)    ! in
@@ -656,7 +659,20 @@ CONTAINS
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
       !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_sat_soil_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(weq_soil(1:nc))
+      !$ACC   CREATE(weq_soil(1:nc), ice_impedance(1:nc))
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      ! Compute top layer ice impedance (replicates part of `get_soilhyd_properties` --> better solution?)
+      DO ic = 1, nc
+        IF (vol_porosity_sl(ic,1) > 1.0e-10_wp) THEN
+          ice_impedance(ic)  = 10._wp**(-6._wp * (                                        &
+            & (ice_soil_sl(ic,1) + MIN(wtr_soil_pot_scool_sl(ic,1), wtr_soil_sl(ic,1))) / &
+            & soil_depth_sl(ic,1)) / vol_porosity_sl(ic,1))
+        ELSE
+          ice_impedance(ic)  = 1._wp
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
@@ -751,6 +767,7 @@ CONTAINS
         & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
         & weq_soil(:),                    & !< total column soil moisture [m]
         & hyd_cond_sat_sl(:,1),           & !< saturated hydraulic conductivity of the top soil layer [m s-1]
+        & ice_impedance(:),               & !< ice impedance factor for top soil layer [-]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
