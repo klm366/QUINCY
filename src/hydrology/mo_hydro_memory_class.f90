@@ -68,7 +68,8 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & infilt,               & !< infiltration
       & runoff,               & !< surface runoff
-      & infilt_over,          & !< overflow of top soil layer
+      & runoff_horton,        & !< horton component of surface runoff (infiltration excess)
+      & runoff_dunne,         & !< dunne component of surface runoff (saturation excess)
       & drainage,             & !< total subsurface drainage
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
@@ -331,9 +332,17 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'infilt_over', mem%infilt_over,                                &
+    CALL mem%Add_var( 'runoff_horton', mem%runoff_horton,                            &
       & hgrid, surface,                                                              &
-      & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
+      & t_cf('runoff_horton', 'kg m-2 s-1', 'Horton component of surface runoff'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'runoff_dunne', mem%runoff_dunne,                              &
+      & hgrid, surface,                                                              &
+      & t_cf('runoff_dunne', 'kg m-2 s-1', 'Dunne component of surface runoff'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

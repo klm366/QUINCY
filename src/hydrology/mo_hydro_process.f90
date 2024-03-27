@@ -83,12 +83,13 @@ CONTAINS
     & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil,                     &
+    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt, runoff)
+    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
+    & runoff, runoff_horton)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Catchment_, Point_
@@ -102,7 +103,8 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
-      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:)
+      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                  &
+      & hyd_cond_sat_sl1(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -110,7 +112,7 @@ CONTAINS
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
       & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),               &
-      & evapo_deficit(:), infilt(:), runoff(:)
+      & evapo_deficit(:), infilt(:), runoff(:), runoff_horton(:)
     !
     !  local variables
     !
@@ -349,29 +351,43 @@ CONTAINS
       END IF
 
       !---------------------
-      !> Infiltration and surface runoff
+      !> Surface water, infiltration and surface runoff
       !---------------------
-      !> Runoff is either set to zero for Terraplanet setup or is computed via the
-      !! ARNO Scheme (default). Note that both, infiltration and runoff, are further
+      !> Runoff is either set to zero for Terraplanet setup, is computed via the
+      !! ARNO Scheme (default for large grid cells) or via point scale equations.
+      !! Note that infiltration, runoff, and pond storage are further
       !! modified in the soil hydrology routine.
 
       IF (ltpe_closed) THEN
-        ! Terra planet setup without runoff
+        ! Terra planet setup without runoff and ponds
         runoff(ic) = 0._wp
         infilt(ic) = water_to_soil(ic)
+        runoff_horton(ic) = 0._wp
 
-      ! Compute fluxes based on catchment scale approach
-      ELSE IF (hydro_scale == Catchment_) THEN
+      ELSE
         ! Lateral water flows from ponds are connected to the choice of the surface runoff
         ! and infiltration scheme. The following pond flow scheme is based on the WEED
         ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
-        ! with the ARNO runoff scheme.
+        ! with the assumptions for the ARNO and point scale scheme.
 
-        ! Compute lateral inflow into ponds, expected to originate
-        ! from the whole grid cell and flow towards the depressions. Thus, most of the
-        ! available water is expected to end up in ponds
-        wtr_pond_inflow = water_to_soil(ic) * fract_pond(ic)**(1.0_wp/3.0_wp)
+        IF (hydro_scale == Catchment_) THEN
+          ! Compute lateral inflow into ponds, expected to originate
+          ! from the whole grid cell and flow towards the depressions.
+          ! Thus, most of the available water is expected to end up in ponds even if not
+          ! the whole cell is flooded.
+          wtr_pond_inflow = water_to_soil(ic) * fract_pond(ic)**(1.0_wp/3.0_wp)
 
+        ELSE IF (hydro_scale == Point_) THEN
+          ! Compute inflow into ponds. If any potential pond fraction exists for the
+          ! actual grid cell / tile it goes into the pond storage first.
+          IF (fract_pond(ic) > 1.0e-10_wp) THEN
+            wtr_pond_inflow = water_to_soil(ic)
+          ELSE
+            wtr_pond_inflow = 0._wp
+          END IF
+
+        END IF
+        
         ! As ponds form in depressions, no lateral outflow is assumed but
         ! rather infiltration into the soil. Here we use several assumptions:
         ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
@@ -384,7 +400,7 @@ CONTAINS
           & k_sat_clay * dtime * fract_pond(ic))
         END IF
         ! Update pond storages
-        wtr_pond(ic)         = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
+        wtr_pond(ic)        = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
 
         ! If pond water (+ ice storage) exceeds the maximum allowed pond content, compute
         ! overflow to be added to water_to_soil
@@ -399,24 +415,30 @@ CONTAINS
 
         ! Update amount of water available for runoff and infiltration
         water_to_soil(ic) = water_to_soil(ic) - wtr_pond_inflow + wtr_pond_outflow &
-          &              + wtr_pond_overflow
+          &               + wtr_pond_overflow
 
-        ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
-        ! Infiltration takes place in the root zone and what doesn't fit goes to the runoff
-        ! Runoff has two components:
-        ! 1) Orographic runoff which depends only on steepness
-        ! 2) Excess water which exceeds the water holding capacity of the root zone
-        CALL arno_scheme(l_infil_subzero, t_soil_sl1(ic),        &
-          &              water_to_soil(ic), weq_rootzone(ic),    &
-          &              steepness(ic), weq_rootzone_max(ic),    &
-          &              runoff(ic), infilt(ic))
+        ! Compute fluxes based on catchment scale approach
+        IF (hydro_scale == Catchment_) THEN
+          ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
+          ! Infiltration takes place in the root zone and what doesn't fit goes to the runoff
+          ! Runoff has two components:
+          ! 1) Orographic runoff which depends only on steepness
+          ! 2) Excess water which exceeds the water holding capacity of the root zone
+          CALL arno_scheme(l_infil_subzero, t_soil_sl1(ic),        &
+            &              water_to_soil(ic), weq_rootzone(ic),    &
+            &              steepness(ic), weq_rootzone_max(ic),    &
+            &              runoff(ic), infilt(ic))
+          runoff_horton(ic) = 0._wp
 
-      ! Compute fluxes based on point approach. Currently, all surface runoff is computed either as infiltration
-      ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
-      ! Q-Arctic project. The following is rather a placeholder than a real implementation.
-      ELSE IF (hydro_scale == Point_) THEN
-        runoff(ic) = 0._wp
-        infilt(ic) = water_to_soil(ic)
+        ! Compute fluxes based on point approach. Currently, all surface runoff is computed either as infiltration
+        ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
+        ! Q-Arctic project. The following is rather a placeholder than a real implementation.
+        ELSE IF (hydro_scale == Point_) THEN
+          infilt(ic) = MIN(hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
+          runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp)
+          runoff_horton(ic) = runoff(ic)
+
+        END IF
 
       END IF
 
@@ -577,7 +599,7 @@ CONTAINS
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
     & tpe_overflow, evapo_deficit,                                                       &
     ! out
-    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, infilt_over, drainage,  &
+    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
     & drainage_sl, wtr_transp_down, wtr_soilhyd_res                                      &
     & )
 
@@ -603,7 +625,7 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt_over, drainage, wtr_soilhyd_res
+      & runoff_dunne, drainage, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down, drainage_sl
@@ -649,9 +671,9 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       ! Initialize diagnostic runoff and drainage variables
-      infilt_over(ic) = 0._wp
-      drain_bot(ic)   = 0._wp
-      drainage(ic)    = 0._wp
+      runoff_dunne(ic) = 0._wp
+      drain_bot(ic)    = 0._wp
+      drainage(ic)     = 0._wp
       ! Note: any dew is removed from these fluxes, as dew is already applied
       !       during the surface hydrology computation
       evapo_soil_in_m(ic)    = MIN(0._wp, evapotrans_soil(ic) - transpiration(ic)) * dtime / rhoh2o
@@ -667,7 +689,7 @@ CONTAINS
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                &
       &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
       &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
-      &    infilt, infilt_over, drain_bot, drainage_sl, wtr_transp_down,             &
+      &    infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down,            &
       &    tpe_overflow, evapo_deficit, wtr_soilhyd_res,                             &
       &    ltpe_closed, ltpe_open)
 
@@ -688,19 +710,19 @@ CONTAINS
       drainage(ic)  = drainage(ic) + drain_bot(ic)
 
       ! Infiltration overflow goes into ponds water storage
-      IF (fract_pond_max(ic) > EPSILON(1._wp) .AND. infilt_over(ic) > 0._wp) THEN
+      IF (fract_pond_max(ic) > EPSILON(1._wp) .AND. runoff_dunne(ic) > 0._wp) THEN
         ! Pond state need to be corrected accordingly
         ! Add infiltration overflow to pond storage
-        wtr_pond_corr(ic)    = MIN(MAX(0._wp, weq_pond_max(ic) - wtr_pond(ic) - ice_pond(ic)), infilt_over(ic))
+        wtr_pond_corr(ic)    = MIN(MAX(0._wp, weq_pond_max(ic) - wtr_pond(ic) - ice_pond(ic)), runoff_dunne(ic))
         wtr_pond(ic)         = wtr_pond(ic) + wtr_pond_corr(ic)
         wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + wtr_pond_corr(ic) * rhoh2o / dtime
         ! Check for remaining overflow and add to surface runoff
-        wtr_pond_corr(ic)    = MAX(0._wp, infilt_over(ic) - wtr_pond_corr(ic))
-        runoff(ic)           = runoff(ic) + wtr_pond_corr(ic)
+        runoff_dunne(ic)     = MAX(0._wp, runoff_dunne(ic) - wtr_pond_corr(ic))
+        runoff(ic)           = runoff(ic) + runoff_dunne(ic)
 
       ! Without ponds, all infitration overflow goes directly into surface runoff
       ELSE
-        runoff(ic)    = runoff(ic) + infilt_over(ic)
+        runoff(ic)    = runoff(ic) + runoff_dunne(ic)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -709,7 +731,7 @@ CONTAINS
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
-      infilt_over(ic)   = infilt_over  (ic) * rhoh2o / dtime
+      runoff_dunne(ic)  = runoff_dunne (ic) * rhoh2o / dtime
       drainage(ic)      = drainage     (ic) * rhoh2o / dtime
       evapo_deficit(ic) = evapo_deficit(ic) * rhoh2o / dtime
     END DO
@@ -879,18 +901,18 @@ CONTAINS
   !!   by Philipp de Vrese (MPI-M)
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
-  SUBROUTINE soilhyd(                                               &
-    & nc, l_fract, lat, lon, nsoil, dtime,                          &
-    & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,  &
-    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                            &
-    & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,               &
-    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,             &
-    & vol_wres_sl,                                                  &
-    & bclapp_sl, matric_pot_sl, pore_size_index_sl,                 &
-    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,              &
-    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
-    & infilt, infilt_over, drain_bot, drainage_sl, wtr_transp_down, &
-    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                 &
+  SUBROUTINE soilhyd(                                                &
+    & nc, l_fract, lat, lon, nsoil, dtime,                           &
+    & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
+    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                             &
+    & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                &
+    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,              &
+    & vol_wres_sl,                                                   &
+    & bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
+    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,               &
+    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,            &
+    & infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down, &
+    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                  &
     & ltpe_closed, ltpe_open)
 
     USE mo_hydro_constants,    ONLY: Catchment_, Point_, &
@@ -926,7 +948,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: infilt(:)                  ! amount of infiltration within timestep [m]
     REAL(wp), INTENT(INOUT)         :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow (Horton + Dunne) [m]
+    REAL(wp), INTENT(INOUT)         :: runoff_dunne(:)            ! amount of saturation overflow (Dunne runoff) [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)            !
     REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: drain_bot(:)               !< drainage towards bedrock [m]
@@ -963,8 +985,6 @@ CONTAINS
     REAL(wp) :: weq_wres_sl(nc,nsoil)        ! residual water content - not reduced relative to soil ice fraction [m]
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
-    REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
-    REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
     REAL(wp) :: wtr_flux_top(nc)             ! water flux entering a soil layer from above [m]
     REAL(wp) :: wtr_residual_sl(nc,nsoil)    ! immobile soil water (supercooled or below residual water content) [m]
     REAL(wp) :: drain_slow_sl(nc,nsoil)      ! slow drainage component (below field capacity) [m]
@@ -978,7 +998,7 @@ CONTAINS
     !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, wtr_flux_top, storage_change_sl) &
     !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl)                 &
-    !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+    !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
     !
@@ -1022,8 +1042,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       !> Initialize different runoff and drainage components
-      wtr_exinfcap(ic) = 0._wp
-      wtr_exwsat(ic)   = 0._wp
+      runoff_dunne(ic) = 0._wp
       drain_bot(ic)    = 0._wp
       !> Initialize active layers
       last_soil_layer(ic) = 0
@@ -1080,21 +1099,6 @@ CONTAINS
           & K=hyd_cond_sl(:,:),       D=diffus_sl(:,:),                     &
           & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &
           )
-
-    !> Limit infitration to maximum infiltration capacity - only for point scale parametrization
-    IF (hydro_scale == Point_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      !> Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
-      !>   However, this is very simplified and needs to be improved
-      DO ic = 1, nc
-        wtr_exinfcap(ic) = infilt(ic)
-        infilt(ic)       = MIN(infilt(ic), hyd_cond_sl(ic,1) * dtime)
-        ! Any water exceeding the infiltration capacity is given to the surface runoff (Horton runoff)
-        !   Currently zero, as it is already included in the surface runoff from the ARNO scheme
-        wtr_exinfcap(ic) = MAX(wtr_exinfcap(ic) - infilt(ic), 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
 
     !> Compute subsurface drainage from each layer - only for catchment scale parametrization
     IF (hydro_scale == Catchment_ .OR. hydro_scale == Point_) THEN
@@ -1388,8 +1392,8 @@ CONTAINS
     DO ic = 1, nc
       ! Top layer saturation excess is added to the surface runoff (Dunne runoff)
       IF (wtr_soil_sl(ic,1) > wtr_wsat_sl(ic,1)) THEN
-        wtr_exwsat(ic)      = wtr_soil_sl(ic,1) - wtr_wsat_sl(ic,1)
-        wtr_soil_sl(ic,1)   = wtr_wsat_sl(ic,1)
+        runoff_dunne(ic)  = wtr_soil_sl(ic,1) - wtr_wsat_sl(ic,1)
+        wtr_soil_sl(ic,1) = wtr_wsat_sl(ic,1)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -1432,13 +1436,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL
     END IF
-
-    ! Add surface runoff components as infiltration overflow
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      infilt_over(ic) = wtr_exinfcap(ic) + wtr_exwsat(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
 
 #ifndef _OPENACC
     ! Check value range for soil moisture

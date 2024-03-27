@@ -437,6 +437,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
+    dsl4jsb_Real2D_onChunk :: runoff_horton
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
@@ -444,6 +445,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
+    dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
@@ -574,6 +576,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, infilt)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff_horton)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
@@ -585,6 +588,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   hyd_cond_sat_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_skin)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_skin)         ! inout
@@ -746,6 +750,7 @@ CONTAINS
         & weq_rootzone(:),                & !< total rootzone water content [m]
         & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
         & weq_soil(:),                    & !< total column soil moisture [m]
+        & hyd_cond_sat_sl(:,1),           & !< saturated hydraulic conductivity of the top soil layer [m s-1]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
@@ -767,7 +772,8 @@ CONTAINS
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
-        & runoff(:)                       & !< Surface runoff [m water equivalent]
+        & runoff(:),                      & !< Surface runoff [m water equivalent]
+        & runoff_horton(:)                & !< Horton component of surface runoff [m water equivalent]
         & )
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -864,6 +870,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_horton,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_pond,         weighted_by_fract)
@@ -1296,7 +1303,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & !< residual soil water content
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & !< dunne component of surface runoff
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & !< subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & !< lateral downards transport of water
@@ -1368,7 +1375,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_dunne,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,    weighted_by_fract)

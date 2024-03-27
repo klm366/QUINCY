@@ -594,6 +594,12 @@ CONTAINS
         END WHERE
       END IF
 
+      ! Pond content which exceeds maximum pond storage capacity goes directly into surface runoff 
+      WHERE (wtr_pond(:) > wtr_pond_max(:))
+        runoff(:)   = runoff(:) + MAX(0._wp, wtr_pond(:) - wtr_pond_max(:)) * rhoh2o / dtime
+        wtr_pond(:) = wtr_pond_max(:)
+      END WHERE
+
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       ! Update total pond storage after lateral water flow
       !$ACC LOOP GANG VECTOR
