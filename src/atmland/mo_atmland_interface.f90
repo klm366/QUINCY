@@ -614,7 +614,7 @@ CONTAINS
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
-    !$ACC DATA CREATE(fact_land, fact_lake)
+    !$ACC DATA CREATE(fact_land, fact_lake) ASYNC(1)
 
     IF (tile%contains_lake .AND. .NOT. use_tmx .AND. .NOT. jsbach_runs_standalone()) THEN
 

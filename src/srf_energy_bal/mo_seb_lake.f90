@@ -242,7 +242,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(hflx_form_ice)
     END IF
 
-    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
+    !$ACC DATA ASYNC(1) CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc

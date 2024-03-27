@@ -99,7 +99,7 @@ CONTAINS
     nc     = SIZE(ws,1)
     nsoil  = SIZE(dz,2)       ! Number of soil layers
 
-    !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
+    !$ACC DATA ASYNC(1) CREATE(bottom, bottom_m1, root_depth)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc

@@ -161,7 +161,8 @@ CONTAINS
     !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m)    &
     !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow)  &
     !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)            &
-    !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
+    !$ACC   PRIVATE(evapo_pond_pot_in_m, pond_change_pot, t_pond)                            &
+    !$ACC   PRIVATE(rain_to_skinres, wtr_skin_pre_rain)
 
     DO ic = 1, nc
       snow_accum(ic)        = 0._wp
@@ -617,7 +618,7 @@ CONTAINS
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
     !$ACC DECLARE COPYIN(ilog)
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_lat_sl)
 
     !
@@ -938,7 +939,7 @@ CONTAINS
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impeda_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
@@ -1486,7 +1487,7 @@ CONTAINS
     !  diagnose evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(dummy_wtr_soil, root_depth)
 
 #ifndef _OPENACC
@@ -2073,7 +2074,7 @@ CONTAINS
   nc    = SIZE(S,1)
   nsoil = SIZE(S,2)
 
-  !$ACC DATA &
+  !$ACC DATA ASYNC(1) &
   !$ACC   CREATE(dzh, matrix)
 
   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -2198,7 +2199,7 @@ CONTAINS
              &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), fc_vol(nc,nsoil), &
              &  pwp_vol(nc,nsoil), ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(ws_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
     !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp, dt)
 

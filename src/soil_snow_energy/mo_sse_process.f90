@@ -477,7 +477,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
+    !$ACC DATA ASYNC(1) CREATE(z1, zd1, zdz1, zdz2, heat_cap)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jk = 1,nsoil-1
@@ -794,7 +794,7 @@ CONTAINS
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
     REAL(wp) :: t_soil_sl1(nidx)                  !< t_soil_sl(:,1)
 
-    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
+    !$ACC DATA ASYNC(1) CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
 
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC(1)
     DO jl=1,nidx
@@ -1094,7 +1094,7 @@ CONTAINS
   !
   !*    1.2 COMPUTING SOME USEFUL CONSTANTS.
   !
-    !$ACC DATA CREATE(zso_cond, zso_capa, z1, zd1, zdz1, zdz2, zkappa, zcapa, zsnow_h, zx1, zx2)
+    !$ACC DATA ASYNC(1) CREATE(zso_cond, zso_capa, z1, zd1, zdz1, zdz2, zkappa, zcapa, zsnow_h, zx1, zx2)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jk = 1,nsoil-1

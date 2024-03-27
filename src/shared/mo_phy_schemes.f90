@@ -373,7 +373,7 @@ CONTAINS
     zcons12 = time_step_len * grav / rd
     zsigma  = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
 
-    !$ACC DATA CREATE(qsat_surf, qsat_surf_upd)
+    !$ACC DATA CREATE(qsat_surf, qsat_surf_upd) ASYNC(1)
 
     IF (PRESENT(t_srf_upd) .AND. PRESENT(zril_old)) THEN
       l_zril_filter = .TRUE.

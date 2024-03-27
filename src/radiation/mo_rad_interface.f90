@@ -288,7 +288,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
-      !$ACC DATA CREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+      !$ACC DATA ASYNC(1) CREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
@@ -555,7 +555,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    !$ACC DATA CREATE(B4_layer_above)
+    !$ACC DATA ASYNC(1) CREATE(B4_layer_above)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO icanopy=1,ncanopy

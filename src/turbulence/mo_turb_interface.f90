@@ -255,7 +255,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
-    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf)
+    !$ACC DATA ASYNC(1) CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -417,7 +417,7 @@ CONTAINS
     dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
 
-    !$ACC DATA CREATE(rough_veg_star, rough_bare_star, rough_snow_star)
+    !$ACC DATA ASYNC(1) CREATE(rough_veg_star, rough_bare_star, rough_snow_star)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
@@ -729,7 +729,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
     !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask, ch_tmp)
 

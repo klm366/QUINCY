@@ -646,7 +646,8 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
     ELSE
-      !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
+      !$ACC DATA ASYNC(1) &
+      !$ACC   CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
       !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), field_cap_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(weq_soil(1:nc))
 
@@ -999,7 +1000,7 @@ CONTAINS
       ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
       ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
-      !$ACC DATA &
+      !$ACC DATA ASYNC(1) &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
       !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
 
@@ -1224,7 +1225,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
 
-    !$ACC DATA CREATE(l_fract, tile_fract)
+    !$ACC DATA CREATE(l_fract, tile_fract) ASYNC(1)
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
@@ -1541,7 +1542,7 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min)
+    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min) ASYNC(1)
 
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
@@ -2301,7 +2302,7 @@ CONTAINS
     END IF
 #endif
 
-    !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef)
+    !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef) ASYNC(1)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc

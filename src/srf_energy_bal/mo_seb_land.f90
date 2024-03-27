@@ -265,7 +265,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(1) &
     !$ACC   CREATE(qsat_srf_old, s_old, dQdT, t2s_conv, heat_tcoef, t_star, liquid_max) &
     !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract)
 
@@ -903,7 +903,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract)
+    !$ACC DATA ASYNC(1) CREATE(s_air, heat_tcoef, frozen_fract)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
 

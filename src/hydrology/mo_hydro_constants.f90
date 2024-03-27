@@ -84,5 +84,8 @@ MODULE mo_hydro_constants
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc               = 0.139_wp         !< Parameter from percolation theory
 
+  !$ACC DECLARE COPYIN(wsn2fract_eps, wsn2fract_sigfac, wsn2fract_const)
+  !$ACC DECLARE COPYIN(conductance_k, conductance_a, conductance_b, conductance_c)
+
 #endif
 END MODULE mo_hydro_constants

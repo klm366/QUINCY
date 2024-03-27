@@ -164,7 +164,8 @@ CONTAINS
     new%configured = .TRUE.
 
     grid => new
-    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm)
+    
+    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm) ASYNC(1)
 
     ! CALL message(routine, 'construction of JSBACH grid completed.')
 
@@ -425,7 +426,7 @@ CONTAINS
     new%lbounds(:) = 0._wp
     new%ubounds(:) = 0._wp
     new%dz     (:) = 0._wp
-    !$ACC ENTER DATA PCREATE(new%levels, new%lbounds, new%ubounds, new%dz)
+    !$ACC ENTER DATA CREATE(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
@@ -530,6 +531,7 @@ CONTAINS
 
     CALL message(routine, 'starting destruction of JSBACH vgrid instance.')
 
+    !$ACC WAIT(1)
     !$ACC EXIT DATA DELETE(self%levels) IF(allocated(self%levels))
     !$ACC EXIT DATA DELETE(self%lbounds) IF(allocated(self%lbounds))
     !$ACC EXIT DATA DELETE(self%ubounds) IF(allocated(self%ubounds))

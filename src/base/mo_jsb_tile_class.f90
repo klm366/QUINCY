@@ -698,6 +698,7 @@ CONTAINS
 
     !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
 
+    !$ACC WAIT(1)
     IF (ALLOCATED(aggregator%fractions)) THEN
       !$ACC EXIT DATA DELETE(aggregator%fractions)
       DEALLOCATE(aggregator%fractions)

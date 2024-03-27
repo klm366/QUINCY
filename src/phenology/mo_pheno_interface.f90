@@ -413,7 +413,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !$ACC DATA CREATE(t_air_in_Celcius, LaiMax_corrected) &
+    !$ACC DATA ASYNC(1) CREATE(t_air_in_Celcius, LaiMax_corrected) &
     !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
 
     ! Set model
