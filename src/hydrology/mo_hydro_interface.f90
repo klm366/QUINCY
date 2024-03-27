@@ -411,6 +411,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: steepness
+    dsl4jsb_Real2D_onChunk :: tile_slope
     dsl4jsb_Real2D_onChunk :: fract_pond
     dsl4jsb_Real2D_onChunk :: weq_pond_max
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -567,6 +568,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, tile_slope)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
@@ -746,7 +748,8 @@ CONTAINS
         & l_dynsnow_config,               & !< in
         & l_infil_subzero_config,         & !< in
         & snow_depth_max_config,          & !< in
-        & steepness,                      & !< Shape parameter describing orography    []
+        & steepness(:),                   & !< Shape parameter describing orography    []
+        & tile_slope(:),                  & !< mean slope of the actual tile           [m m-1]
         & t_soil_sl(:,1),                 & !< Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & !< wind speed at 10m height [m/s]

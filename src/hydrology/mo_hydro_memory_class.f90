@@ -79,8 +79,7 @@ MODULE mo_hydro_memory_class
       & elevation,            & !< Elevation
       & oro_stddev,           & !< Standard deviation of orography
       & steepness,            & !< parameter defining the subgrid slope distribution [/]
-      & macro_slope,          & !< Standard deviation of orography
-      & micro_slope             !< Standard deviation of orography
+      & tile_slope              !< slope on individual tiles
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -434,23 +433,15 @@ CONTAINS
 
     CALL mem%Add_var( 'steepness', mem%steepness,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),        &
+      & t_cf('steepness', '-', 'subgrid slope distribution shape parameter'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'micro_slope', mem%micro_slope,                                &
+    CALL mem%Add_var( 'tile_slope', mem%tile_slope,                                  &
       & hgrid, surface,                                                              &
-      & t_cf('micro_slope', '/', 'Slope within micro-topography tiles'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
-      & hgrid, surface,                                                              &
-      & t_cf('macro_slope', '/', 'Slope within macro-topography tiles'),             &
+      & t_cf('tile_slope', 'm m-1', 'Slope on individual tiles'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

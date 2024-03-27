@@ -77,18 +77,18 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  SUBROUTINE calc_surface_hydrology_land (                          &
-    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
-    & l_infil_subzero, snow_depth_max, steepness, t_soil_sl1,       &
-    & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
-    & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
-    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
-    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
-    & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,              &
-    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
-    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
+  SUBROUTINE calc_surface_hydrology_land (                           &
+    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,            &
+    & l_infil_subzero, snow_depth_max, steepness, tile_slope,        &
+    & t_soil_sl1, t_unfilt, wind_10m, t_air, skinres_canopy_max,     &
+    & skinres_max, weq_pond_max, fract_snow, fract_skin, fract_pond, &
+    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,    &
+    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,    &
+    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,          &
+    & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,               &
+    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,             &
+    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,           &
+    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,        &
     & runoff, runoff_horton)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
@@ -98,20 +98,20 @@ CONTAINS
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
     INTEGER,  INTENT(in) :: hydro_scale
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
-    REAL(wp), INTENT(in) ::                                                 &
-      & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
-      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
-      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
-      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                  &
+    REAL(wp), INTENT(in) ::                                                   &
+      & steepness(:), tile_slope(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), &
+      & t_air(:), skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),     &
+      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),            &
+      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),       &
+      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                    &
       & hyd_cond_sat_sl1(:), ice_impedance(:)
     REAL(wp), INTENT(inout) :: &
-      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
+      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),    &
       & wtr_pond(:), ice_pond(:)
-    REAL(wp), INTENT(out)   ::                                              &
-      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
-      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
-      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),               &
+    REAL(wp), INTENT(out)   ::                                                &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),      &
+      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),       &
+      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),                 &
       & evapo_deficit(:), infilt(:), runoff(:), runoff_horton(:)
     !
     !  local variables
@@ -434,7 +434,8 @@ CONTAINS
         ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
         ! Q-Arctic project. The following is rather a placeholder than a real implementation.
         ELSE IF (hydro_scale == Point_) THEN
-          infilt(ic) = MIN(ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
+          infilt(ic) = MIN(1._wp, MAX(0._wp, 1._wp - tile_slope(ic))) &
+            &        * MIN(ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
           runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp)
           runoff_horton(ic) = runoff(ic)
 
@@ -754,29 +755,23 @@ CONTAINS
   !!
   !! @par Revision History
   !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
-  !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
+  !!   ARNO Scheme infiltration routine
 
-  SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles, l_upland, &
-    & max_slope, oro_stddev, steepness, micro_slope, macro_slope )
+  SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
-    INTEGER,  INTENT(in)  :: nc                    !< Number of gridcells
-    INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
-    LOGICAL,  INTENT(in)  :: l_hydrotiles          !< use HydroTiles setup
-    LOGICAL,  INTENT(in)  :: l_upland              !< Tile belongs to upland fraction
+    INTEGER,  INTENT(in) :: &
+      & nc, nlat
 
-    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
-    REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
-    REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
-    REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
-    REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
+    REAL(wp), INTENT(in)  :: oro_stddev(:)  !< standard deviation of orography                   [m]
+    REAL(wp), INTENT(out) :: steepness(:)   !< parameter defining the subgrid slope distribution [-]
 
     INTEGER :: ic
 
     REAL(wp) ::                       &
-      & sigma_0,                      &            !< minimum value (100 m); below b = 0.01
-      & sigma_max                                  !< resolution-dependent maximum
+      & sigma_0,                      & !< minimum value (100 m); below b = 0.01
+      & sigma_max                       !< resolution-dependent maximum
     !
     ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
     !
@@ -785,35 +780,15 @@ CONTAINS
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-    IF (.NOT. l_hydrotiles) THEN
-      ! Compute steepness parameter for standard setup
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        steepness(ic)   = MAX(0._wp, oro_stddev(ic) - sigma_0) / (oro_stddev(ic) + sigma_max)
-        ! Limit parameter to realistic bounds
-        steepness(ic)   = MAX(MIN(steepness(ic), 0.5_wp), 0.01_wp)
-        micro_slope(ic) = 0._wp
-        macro_slope(ic) = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
+    ! Compute steepness parameter
 
-    ELSE
-      ! Compute tile specific steepness for HydroTiles setup
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        micro_slope(ic) = 0._wp
-        IF (l_upland) THEN
-          macro_slope(ic) = MIN(max_slope, MAX(0.01_wp, &
-            & (oro_stddev(ic) - sigma_0) / (oro_stddev(ic) + sigma_max) ))
-        ELSE
-          macro_slope(ic) = 0.01_wp
-        END IF
-        ! Add micro and macro slopes
-        steepness(ic) = MIN(0.5_wp, macro_slope(ic) + micro_slope(ic))
-      END DO
-      !$ACC END PARALLEL LOOP
-
-    END IF
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      steepness(ic) = MAX(0._wp, oro_stddev(ic) - sigma_0) / (oro_stddev(ic) + sigma_max)
+      ! Limit parameter to realistic bounds
+      steepness(ic) = MAX(MIN(steepness(ic), 0.5_wp), 0.01_wp)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_orographic_features
 

@@ -96,6 +96,9 @@ MODULE mo_hydro_init
     REAL(wp), POINTER ::                  &
       & elevation        (:,:) => NULL(), &
       & oro_stddev       (:,:) => NULL(), &
+      & slope_up         (:,:) => null(), & ! Slopes for certain tiles, temporarily hardcoded
+      & slope_low        (:,:) => null(), & ! Slopes for certain tiles, temporarily hardcoded
+      & slope_plain      (:,:) => null(), & ! Slopes for certain tiles, temporarily hardcoded
       & soil_depth       (:,:) => NULL(), &
       & vol_porosity     (:,:) => NULL(), &
       & hyd_cond_sat     (:,:) => NULL(), &
@@ -158,6 +161,9 @@ CONTAINS
 
     DEALLOCATE( &
       & hydro_init_vars%oro_stddev      ,       &
+      & hydro_init_vars%slope_up        ,       &
+      & hydro_init_vars%slope_low       ,       &
+      & hydro_init_vars%slope_plain     ,       &
       & hydro_init_vars%soil_depth      ,       &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
@@ -228,6 +234,9 @@ CONTAINS
 
     ALLOCATE( &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
+      & hydro_init_vars%slope_up        (nproma, nblks),       &
+      & hydro_init_vars%slope_low       (nproma, nblks),       &
+      & hydro_init_vars%slope_plain     (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
@@ -244,6 +253,9 @@ CONTAINS
       & )
 
       hydro_init_vars%oro_stddev     (:,:)   = missval
+      hydro_init_vars%slope_up       (:,:)   = missval
+      hydro_init_vars%slope_low      (:,:)   = missval
+      hydro_init_vars%slope_plain    (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
@@ -307,6 +319,22 @@ CONTAINS
       & variable_name='orostd',    &
       & fill_array = hydro_init_vars%oro_stddev)
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    ! Reading mean slope for certain tiles. Temporary implementation, needs
+    ! to move into jsb_tile structure to be flexible for a arbirary number of
+    ! Hydrotiles instead of hardcoded.
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='slp_up',    &
+      & fill_array = hydro_init_vars%slope_up)
+    hydro_init_vars%slope_up = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='slp_low',    &
+      & fill_array = hydro_init_vars%slope_low)
+    hydro_init_vars%slope_low = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='slp_plain',    &
+      & fill_array = hydro_init_vars%slope_plain)
+    hydro_init_vars%slope_plain = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
 
     ! Read in maximum fraction and depth of local surface depressions
     IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
@@ -635,24 +663,32 @@ CONTAINS
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
-    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,tile_slope))
 
     ! Compute steepness parameter for surface runoff
     DO i = 1, grid%Get_nblks()
-      CALL calc_orographic_features(                    &
+      CALL calc_orographic_features(                         &
         ! in
-        & grid%Get_nproma(),                              & !< Number of gridcells
-        & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
-        & TRIM(model%config%usecase) == 'jsbach_hydrotiles', & !< T: HydroTiles setup is active
-        & tile%contains_upland,                           & !< T: Upland HydroTile
-        & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
+        & grid%Get_nproma(),                                 & !< Number of gridcells
+        & grid%nlat_g,                                       & !< (Effective) number of latitudes for steepness parameter
+        & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),         & !< Standard deviation of orography [m]
         ! out
-        & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i)          & !< parameter defining the subgrid slope distribution [m/m]
         & )
     END DO
+
+    ! Temporary implementation to assign slope to tiles. Needs to move to jsb_tile module
+    ! in order to be flexible with respect to hydrotile definition
+    IF (tile%is_upland) THEN
+      dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_up
+    ELSE IF (tile%is_lowland) THEN
+      dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_low
+    ELSE IF (tile%is_floodplain) THEN
+      dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_plain
+    ELSE ! Non HydroTile point scale case
+      dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
+    END IF
 
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       ! Maximum depth and extent of surface water ponds
