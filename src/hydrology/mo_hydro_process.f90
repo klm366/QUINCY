@@ -151,7 +151,6 @@ CONTAINS
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
     REAL(wp), PARAMETER :: k_sat_clay = 8.50E-8_wp ! saturated hydraulic conductivity for clay (Terra model) [m s-1]
 
-
     nc = SIZE(snowmelt_soil)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)

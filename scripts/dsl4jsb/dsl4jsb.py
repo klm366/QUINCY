@@ -34,7 +34,6 @@ import hashlib
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
-
 # Search pattern to find hash value of original file in processed file
 re_hash = re.compile(r'with md5 hash:\s*(\S*)\s*', re.IGNORECASE)
 
@@ -140,6 +139,45 @@ macros = {
     'var_ptr': [re.compile(
         r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr'],
+    'def_pool': [re.compile(
+        r'dsl4jsb_Def_pool *\((.*?) *\)', re.IGNORECASE),
+        r'TYPE(\1), POINTER'],
+    'get_pool': [re.compile(
+        r'dsl4jsb_Get_pool *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2'],
+    'get_pool_var2d_onchunk': [re.compile(
+        r'dsl4jsb_Get_pool_var2D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2%\3%ptr(ics:ice,iblk)'],
+    'get_pool_var3d_onchunk': [re.compile(
+        r'dsl4jsb_Get_pool_var3D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2%\3%ptr(ics:ice,:,iblk)'],
+    'pool': [re.compile(
+        r'dsl4jsb_pool *\((.*?)_ *, *(.*?) * *\)', re.IGNORECASE),
+        r'\1__mem%pools%\2'],
+    'def_mt1l2d': [re.compile(
+        r'dsl4jsb_Def_mt1L2D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:)'],
+    'def_mt1l3d': [re.compile(
+        r'dsl4jsb_Def_mt1L3D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
+    'def_mt2l2d': [re.compile(
+        r'dsl4jsb_Def_mt2L2D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
+    'def_mt2l3d': [re.compile(
+        r'dsl4jsb_Def_mt2L3D', re.IGNORECASE),
+        r'REAL(wp), POINTER, DIMENSION(:,:,:,:)'],
+    'get_mt1l2d': [re.compile(
+        r'dsl4jsb_Get_mt1L2D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_1l_2d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt1l3d': [re.compile(
+        r'dsl4jsb_Get_mt1L3D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_1l_3d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt2l2d': [re.compile(
+        r'dsl4jsb_Get_mt2L2D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_2l_2d(\1, ics, ice, iblk, tile%name)'],
+    'get_mt2l3d': [re.compile(
+        r'dsl4jsb_Get_mt2L3D *\((.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => bgcm_store%Get_matrix_from_store_2l_3d(\1, ics, ice, iblk, tile%name)'],
     'aggregate_onchunk': [re.compile(
         r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
         r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
@@ -159,6 +197,7 @@ help_text = """
         -n, --no-header   don't create header with hash of source file
     """
 
+__current_file = ""
 
 def get_input_files(root):
     for dir, subdirs, files in os.walk(root):
@@ -219,14 +258,14 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
                         outfile.write(u'! ' + line.encode('utf-8'))
                 matches = re.finditer(re_function, line)
                 if matches:
-                    for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
+                    for match in matches:         # match.group(1) contains the macro name without "dsl4jsb_"
                         try:
                             key = match.group(1).lower()
                             pat, replace = macros[key]
                             line = pat.sub(replace, line)
                             line = re.sub(r'([A-Z2]*?)_', tolower, line)
                         except:
-                            print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
+                            print('ERROR in ' + inputfile + ': dsl4jsb macro not found: $' + match.group(1).lower())
                             sys.exit()
                 if outputfile == '':
                     if (sys.version_info > (3, 0)):
@@ -239,6 +278,9 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
         os.utime(outputfile, (os.path.getatime(outputfile), os.path.getmtime(inputfile)))
 
 def main(argv):
+
+    global __current_file
+
     inputfile = ''
     outputfile = ''
     inputdir = ''
@@ -316,10 +358,12 @@ def main(argv):
                     ofile = os.path.join(outputdir, root + pp_add + ext)
                 else:
                     ofile = os.path.join(outputdir, os.path.basename(ifile))
-            process_file(os.path.join(inputdir, ifile), ofile, header, verbose, verbose_more, cwd)
+            __current_file = os.path.basename(ifile)
+            process_file(os.path.join(inputdir, ifile), ofile, verbose, verbose_more, cwd)
         os.chdir(cwd)
     else:
-        process_file(inputfile, outputfile, header, verbose, verbose_more, cwd)
+        __current_file = os.path.basename(inputfile)
+        process_file(inputfile, outputfile, verbose, verbose_more, cwd)
 
     return 0
 

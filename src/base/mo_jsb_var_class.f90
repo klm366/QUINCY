@@ -70,7 +70,19 @@ MODULE mo_jsb_var_class
   CONTAINS
     PROCEDURE :: Get_subset         => t_jsb_var_get_subset         ! get chunk and block information for the var and thread
     PROCEDURE :: force_finalization => t_jsb_var_force_finalization ! finalization after operator overload avoiding memory leaks
+    PROCEDURE(associate_pointers_iface), DEFERRED :: Associate_pointers
   END TYPE t_jsb_var
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Associate_pointers_iface(this,ic_start,ic_end,iblk_start,iblk_end)
+      IMPORT t_jsb_var
+      CLASS(t_jsb_var), INTENT(inout), TARGET :: this
+      INTEGER,          INTENT(in)    :: ic_start
+      INTEGER,          INTENT(in)    :: ic_end
+      INTEGER,          INTENT(in)    :: iblk_start
+      INTEGER,          INTENT(in)    :: iblk_end
+    END SUBROUTINE
+  END INTERFACE
 
 !#pragma GCC diagnostic push
 !#pragma GCC diagnostic ignored "-Wsurprising"
@@ -86,6 +98,8 @@ MODULE mo_jsb_var_class
       ! 1d stream elements are not supported with ECHAM
       :: ptr(:,:) => NULL()
 #endif
+  CONTAINS
+    PROCEDURE :: Associate_pointers => t_jsb_var_real1d_associate_pointers
   END TYPE t_jsb_var_real1d
 
   !================================================================================================================================
@@ -254,6 +268,20 @@ CONTAINS
   ! var_real2d & var_real3d
   ! called for each timestep in the mo_jsb_interface "CALL model%Associate_var_pointers(ics, ice, iblk, iblk)"
   !================================================================================================================================
+  SUBROUTINE t_jsb_var_real1d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
+
+    CLASS(t_jsb_var_real1d), INTENT(inout), TARGET :: this
+    INTEGER,                 INTENT(in)    :: ic_start
+    INTEGER,                 INTENT(in)    :: ic_end
+    INTEGER,                 INTENT(in)    :: iblk_start
+    INTEGER,                 INTENT(in)    :: iblk_end
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real1d_associate_pointers'
+
+    ! Do nothing for 1d variables
+
+  END SUBROUTINE t_jsb_var_real1d_associate_pointers
+
   SUBROUTINE t_jsb_var_real2d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
 
     CLASS(t_jsb_var_real2d), INTENT(inout), TARGET :: this

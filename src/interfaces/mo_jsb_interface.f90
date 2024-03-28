@@ -102,8 +102,14 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
+    ! OPTIONAL arguments
     & DEBUG_VAR,        &
-    ! OPTIONAL arguments:
+    ! For QUINCY
+    & nhx_deposition,         & !< in
+    & noy_deposition,         & !< in
+    & nhx_n15_deposition,     & !< in
+    & noy_n15_deposition,     & !< in
+    & p_deposition,           & !< in
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
@@ -154,9 +160,15 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    ! For lakes:
-    REAL(wp), INTENT(in), OPTIONAL ::    &
+    REAL(wp), INTENT(in), OPTIONAL :: &
       & DEBUG_VAR         (:), &
+      ! MODEL_QUINCY
+      & nhx_deposition    (:), &
+      & noy_deposition    (:), &
+      & nhx_n15_deposition(:), &
+      & noy_n15_deposition(:), &
+      & p_deposition      (:), &
+      ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
       & t_acoef_wtr       (:), &
@@ -231,9 +243,7 @@ CONTAINS
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
 #endif
-
     nc = ice - ics + 1
-
     model => Get_model(model_id)
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
     ! ----------------------------------------------------------------------------------------------------- !
@@ -261,7 +271,6 @@ CONTAINS
     !> 3.0 Put atmospheric forcing into the a2l memory
     !>
     CALL model%Get_top_tile(tile)
-
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
@@ -286,7 +295,13 @@ CONTAINS
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
       & DEBUG_VAR          = DEBUG_VAR,             &
-      ! For lakes:
+      ! For QUINCY
+      & nhx_deposition     = nhx_deposition,        &
+      & noy_deposition     = noy_deposition,        &
+      & nhx_n15_deposition = nhx_n15_deposition,    &
+      & noy_n15_deposition = noy_n15_deposition,    &
+      & p_deposition       = p_deposition,          &
+      ! For lakes
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
       & t_acoef_wtr        = t_acoef_wtr,           &
@@ -638,7 +653,6 @@ CONTAINS
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
   SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
-
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
@@ -653,7 +667,6 @@ CONTAINS
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
-
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_processes HYDRO_
     dsl4jsb_Use_processes PHENO_
@@ -671,13 +684,19 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
     no_omp_thread = Get_omp_thread()
 
     model => Get_model(model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+#ifndef __NO_QUINCY__
+    ! TBD: this is only required if restart or output is written for this timestep!
+    ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
+    CALL model%Write_back_to_bgcms()
+#endif
 
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
@@ -735,7 +754,6 @@ CONTAINS
     IF (l_trace_memory) CALL report_memory_usage()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
   END SUBROUTINE jsbach_finish_timestep
 
   ! ====================================================================================================== !

@@ -36,6 +36,7 @@ MODULE mo_jsb_model_class
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
+  PUBLIC :: MODEL_JSBACH, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -91,6 +92,9 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
     PROCEDURE :: Associate_var_pointers
+#ifndef __NO_QUINCY__
+    PROCEDURE :: Write_back_to_bgcms
+#endif
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -106,6 +110,15 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+
+  !>model schemes
+  !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
+  !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
+  ENUM, BIND(C)
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_QUINCY
+  END ENUM
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
@@ -551,6 +564,13 @@ CONTAINS
           END SELECT
         END DO
 
+        ! mem%pools
+        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
+          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+        ! mem%bgc_material
+        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
+          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+
       END DO
 
       CALL this%Goto_next_tile(tile)
@@ -559,7 +579,58 @@ CONTAINS
 
   END SUBROUTINE Associate_var_pointers
 
-    !>
+
+#ifndef __NO_QUINCY__
+  ! ====================================================================================================== !
+  !>
+  !> Write all values from matrices back to the bgcms for all tiles that have a bgcm store
+  !>
+  SUBROUTINE Write_back_to_bgcms(this)
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+    USE mo_jsb_grid,          ONLY: Get_grid
+    USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+    USE mo_jsb_subset,        ONLY: ON_DOMAIN, ON_CHUNK
+    USE mo_jsb_process_class, ONLY: INHERIT_
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    TYPE(t_jsb_grid),  POINTER          :: grid       ! Horizontal grid
+    INTEGER                             :: startblk, endblk, iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    CALL this%Reset_tiles()
+    CALL this%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    grid  => get_grid(this%grid_id)
+    startblk = grid%Get_blk_start()
+    endblk   = grid%Get_blk_end()
+
+    DO WHILE (ASSOCIATED(tile))
+      IF (ASSOCIATED(tile%bgcm_store)) THEN
+        DO iblk = startblk, endblk
+          ! index of gridcell at start of the chunk
+          ics = grid%Get_col_start(iblk)
+          ! index of gridcell at end of the chunk
+          ice = grid%Get_col_end(iblk)
+          CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, ics, ice, iblk)
+        ENDDO
+      ENDIF
+
+      CALL this%Goto_next_tile(tile)
+    END DO
+
+  END SUBROUTINE Write_back_to_bgcms
+#endif
+
+  ! ====================================================================================================== !
+  !>
   !! Destructor method for model instance.
   !!
   !! Subroutine to delete model instance from memory.

@@ -168,7 +168,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
 
-
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &

@@ -1,4 +1,4 @@
-!> Contains some functions for physcial schemes
+!> Routines for physical schemes
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,8 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!>#### Contains some routines for physical schemes
 !>
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
@@ -26,6 +28,7 @@ MODULE mo_phy_schemes
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
+    & calc_peaked_arrhenius_function, &
     & sfc_exchange_coefficients
     ! Note: nvhpc doesn't support function pointers
     ! & register_exchange_coefficients_procedure, exchange_coefficients, registered_exchange_coefficients_procedure
@@ -250,7 +253,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 

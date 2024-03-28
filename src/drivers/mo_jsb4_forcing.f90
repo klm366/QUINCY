@@ -28,10 +28,10 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
-  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1
+  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
 
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -41,12 +41,13 @@ MODULE mo_jsb4_forcing
     & nf90_get_att, NF90_MAX_NAME, NF90_NOERR
 
   USE mo_jsb_class,              ONLY: get_model
+  USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
-    &       forcing_options
+    &       forcing_options, forcing_options_quincy
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -100,12 +101,18 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
+  ! ... and deposition for QUINCY
+  CHARACTER(len=*), PARAMETER :: nhxdep_varname = 'NHx_deposition'
+  CHARACTER(len=*), PARAMETER :: noydep_varname = 'NOy_deposition'
+  CHARACTER(len=*), PARAMETER :: pdep_varname = 'pdep'
 
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
+  CHARACTER(len=*), PARAMETER :: unit_kg_m2_s = 'kg/m2/s'
+  CHARACTER(len=*), PARAMETER :: exp_unit_deposition = unit_kg_m2_s
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
@@ -130,7 +137,7 @@ MODULE mo_jsb4_forcing
 
   ! ======================================================================================================= !
   !>
-  !> Forcing related namelist options
+  !> Forcing-related namelist options
   !>
   TYPE forcing_options_type
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
@@ -150,7 +157,25 @@ MODULE mo_jsb4_forcing
 
   ! ======================================================================================================= !
   !>
-  !> Information on the forcing variables
+  !> this TYPE is NOT used with QUINCY in ICON-Land
+  !> implemented here for compatibility with QS (the quincy standalone model)
+  !>
+  !  QUINCY model
+  TYPE t_q_forcing_options
+    ! namelist
+    ! ..
+    ! calculated
+    ! ..
+    ! read from forcing files
+    INTEGER  :: forcing_year = 0
+    INTEGER  :: forcing_doy  = 0
+    REAL(wp) :: forcing_hour = 0.0_wp
+  END TYPE t_q_forcing_options
+  TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
+
+  ! ======================================================================================================= !
+  !>
+  !> information for single forcing variable and the file it is read from
   !>
   TYPE input_variable_type
     CHARACTER(NF90_MAX_NAME) :: variable_name=""       !! Name of the variable (name in netcdf-data file)
@@ -184,6 +209,10 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
+     ! ... required for Quincy
+     TYPE(input_variable_type) :: nhx_dep       !! NHx deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: noy_dep       !! NOy deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: p_dep         !! P deposition [kg/m2/s]
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
 
@@ -197,16 +226,21 @@ CONTAINS
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !>
   SUBROUTINE get_standalone_driver(                                                        &
-    & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
+    & model_id,                                                                            &  ! in
+    & model_scheme,                                                                        &
+    & startblk, endblk, startidx, endidx,                                                  &
     & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
     & cos_zenith_angle,                                                                    &  ! in
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf                         &
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & p_deposition                                                                         &
     & )
 
     INTEGER,  INTENT(IN)  :: model_id
+    INTEGER,  INTENT(IN)  :: model_scheme
     INTEGER,  INTENT(IN)  :: startblk
     INTEGER,  INTENT(IN)  :: endblk
     INTEGER,  INTENT(IN)  :: startidx(:)
@@ -219,7 +253,6 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
-
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
@@ -233,7 +266,11 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic
@@ -245,7 +282,6 @@ CONTAINS
       &                      sat_spec_humidity(:,:), &
       &                      rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
-
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:)
     REAL(wp), ALLOCATABLE :: help2(:,:)
@@ -288,6 +324,14 @@ CONTAINS
     fract_par_diffuse(:,:) = 0._wp
     press_srf(:,:)         = 0._wp
     sat_spec_humidity(:,:) = 0._wp
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      nhx_deposition(:,:)     = 0._wp
+      noy_deposition(:,:)     = 0._wp
+      nhx_n15_deposition(:,:) = 0._wp
+      noy_n15_deposition(:,:) = 0._wp
+      p_deposition(:,:)       = 0._wp
+    END SELECT
 !$OMP END PARALLEL
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -518,7 +562,40 @@ CONTAINS
     CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 deallocate local variables
+    !> 9.0 N & P deposition
+    !>
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%nhx_dep, nhx_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%noy_dep, noy_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%p_dep, p_deposition)
+
+      ! Convert from kg/m2/s -> mumol/m2/s
+      ! -- This unit should have been tested above if specified correctly using expectedUnit
+      IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
+          & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
+          & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
+        WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
+          & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
+          & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
+          & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
+        CALL finish(TRIM(routine), message_text)
+      ENDIF
+      ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+      nhx_deposition(:,:) = nhx_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      noy_deposition(:,:) = noy_deposition(:,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      p_deposition(:,:) = p_deposition(:,:) * 1000._wp / molar_mass_P / 1.e-6_wp
+
+      ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    END SELECT
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 10.0 deallocate local variables
     !>
     IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
       DEALLOCATE(tmin_data)
@@ -625,6 +702,13 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    CHARACTER(NF90_MAX_NAME) :: forcing_dep_file_prefix        !! Prefix for files with NHx, NOy and P deposition data
+    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
+    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
+    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
+    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
+    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -638,13 +722,14 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit
+      & forcing_qair_unit, forcing_dep_file_prefix, forcing_dep_frequ, forcing_nhx_dep_const,                                 &
+      & forcing_noy_dep_const, forcing_p_dep_const, forcing_dep_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
     !------------------------------------------------------------------------------------
-
+    model => Get_model(model_id)
     delta_time    = dtime
     time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
@@ -707,6 +792,19 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+
+      ! N and P deposition required for QUINCY
+      forcing_dep_file_prefix = 'deposition_'
+      forcing_dep_frequ       = 'DAILY' ! 'CONST'
+      ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
+      !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
+      forcing_nhx_dep_const   = 6.3419e-12_wp / 2._wp
+      forcing_noy_dep_const   = 6.3419e-12_wp / 2._wp
+      ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
+      !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
+      !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
+      forcing_p_dep_const     = 6.3419e-12 / (14.0_wp / molar_mass_N * molar_mass_P)
+      forcing_dep_unit        = exp_unit_deposition
 
       ! ----- read the namelist
 
@@ -857,6 +955,13 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_dep_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_nhx_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_noy_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_p_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -898,6 +1003,16 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
+    ! --- deposition variables required for quincy
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL init_forcing_input_variable(nhxdep_varname, forcing_dep_frequ, forcing_nhx_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_nhx_dep_const, forcing_input(model_id)%nhx_dep)
+      CALL init_forcing_input_variable(noydep_varname, forcing_dep_frequ, forcing_noy_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_noy_dep_const, forcing_input(model_id)%noy_dep)
+      CALL init_forcing_input_variable(pdep_varname, forcing_dep_frequ, forcing_p_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_p_dep_const, forcing_input(model_id)%p_dep)
+    END SELECT
 
   END SUBROUTINE init_forcing
 
@@ -1035,7 +1150,7 @@ CONTAINS
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
       RETURN
-    ENDIF
+    ENDIF ! forcing_input_variable%variable_name == CO2_varname .AND. frequency == GHG_SCENARIO_
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
@@ -1371,6 +1486,12 @@ CONTAINS
       IF (forcing_input(jg)%wind_speed%input_file%is_open) CALL forcing_input(jg)%wind_speed%input_file%Close()
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
+
+      IF (forcing_input(jg)%nhx_dep%input_file%is_open) CALL forcing_input(jg)%nhx_dep%input_file%Close()
+
+      IF (forcing_input(jg)%noy_dep%input_file%is_open) CALL forcing_input(jg)%noy_dep%input_file%Close()
+
+      IF (forcing_input(jg)%p_dep%input_file%is_open) CALL forcing_input(jg)%p_dep%input_file%Close()
 
     END DO
 
