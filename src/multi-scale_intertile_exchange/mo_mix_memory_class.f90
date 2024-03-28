@@ -40,7 +40,7 @@ MODULE mo_mix_memory_class
       & wtr_latflow,            & !< Lateral water flow between tiles               [kg m-2 s-1]
       & runoff_retention          !< Runoff retention reservoir                     [m water equivalent]
     TYPE(t_jsb_var_real3d) ::   &
-      & wtr_diflat_sl,          & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
+      & wtr_latdiff_sl,         & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
       & drainage_retention_sl     !< Drainage retention reservoir                   [m water equivalent]
 
   CONTAINS
@@ -108,10 +108,10 @@ CONTAINS
 
     ! Common soil layer variables
 
-    CALL mem%Add_var( 'wtr_diflat_sl', mem%wtr_diflat_sl,                            &
+    CALL mem%Add_var( 'wtr_latdiff_sl', mem%wtr_latdiff_sl,                          &
       & hgrid, soil_w,                                                               &
-      & t_cf('wtr_diflat_sl', 'kg m-2 s-1',                                          &
-      &      'Diffusion flux from neighbouring tile'),                               &
+      & t_cf('wtr_latdiff_sl', 'kg m-2 s-1',                                         &
+      &      'Diffusion flux from adjacent tile'),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,                                                          &

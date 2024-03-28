@@ -215,9 +215,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
-    INTEGER  :: nsoil, i               !< Counter variables for soil layers
+    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: nsoil, is              !< Counter variables for soil layers
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
     REAL(wp) :: dtime                  !< Model time step [s]
     REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
@@ -264,7 +263,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl
-    dsl4jsb_Real3D_onChunk :: wtr_diflat_sl
+    dsl4jsb_Real3D_onChunk :: wtr_latdiff_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow_trg_tile
     dsl4jsb_Real2D_onChunk :: wtr_pond_trg_tile
@@ -284,13 +283,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matric_pot_sl_trg_tile
     dsl4jsb_Real3D_onChunk :: bclapp_sl_trg_tile
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl_trg_tile
-    dsl4jsb_Real3D_onChunk :: wtr_diflat_sl_trg_tile
+    dsl4jsb_Real3D_onChunk :: wtr_latdiff_sl_trg_tile
 
     REAL(wp), DIMENSION(options%nc) :: source_fract    !< Fractions of water source tile []
     REAL(wp), DIMENSION(options%nc) :: target_fract    !< Fractions of water target tile []
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_max    !< Maximum pond water depth       [m]
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_tmp    !< Temporary pond water storage   [m]
-    REAL(wp), DIMENSION(options%nc) :: fr_dpr_rel      !< ???
 
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) ::         &
     & ice_imp_source,                                & !< Soil layer ice impedance factor on source tile []
@@ -335,7 +333,7 @@ CONTAINS
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)            ! inout
-    dsl4jsb_Get_var3D_onChunk(MIX_,   wtr_diflat_sl)          ! inout
+    dsl4jsb_Get_var3D_onChunk(MIX_,   wtr_latdiff_sl)         ! inout
     dsl4jsb_Get_var2D_onChunk(MIX_,   runoff_retention)       ! inout
     dsl4jsb_Get_var3D_onChunk(MIX_,   drainage_retention_sl)  ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
@@ -443,24 +441,24 @@ CONTAINS
         ! Transport drainage from source to target tile within each soil layer
         retention_time = 360000._wp  ! Hundert hours retention time (
                                      ! outflow = h_re * dt/retention_time)
-        DO i = 1, nsoil
+        DO is = 1, nsoil
           CALL calc_drainage_transport( &
             ! in
             & l_lag,                                 & !< T: Apply lag
             & dtime,                                 & !< model time step                          [s]
             & retention_time,                        & !< lagged flow retention time               [s]
-            & wtr_soil_fc_sl(:,i),                   & !< soil layer field capacity at source tile [m]
+            & wtr_soil_fc_sl(:,is),                  & !< soil layer field capacity at source tile [m]
             & source_fract(:),                       & !< area fraction of source tile             []
             & target_fract(:),                       & !< area fraction of target tile             []
             & trans_min_fract,                       & !< min. tile fraction                       []
             ! inout
-            & drainage_sl(:,i),                      & !< lateral drainage at source tile          [kg m-2 s-1]
+            & drainage_sl(:,is),                     & !< lateral drainage at source tile          [kg m-2 s-1]
             & drainage(:),                           & !< total drainage at source tile            [kg m-2 s-1]
             & wtr_latflow(:),                        & !< lateral flow at source tile              [kg m-2 s-1]
             & wtr_latflow_trg_tile(:),               & !< lateral flow at target tile              [kg m-2 s-1]
-            & wtr_soil_sl(:,i),                      & !< soil water content at source tile        [m]
-            & wtr_soil_sl_trg_tile(:,i),             & !< soil water content at target tile        [m]
-            & drainage_retention_sl(:,i)             & !< lateral drainage retention storage       [m]
+            & wtr_soil_sl(:,is),                     & !< soil water content at source tile        [m]
+            & wtr_soil_sl_trg_tile(:,is),            & !< soil water content at target tile        [m]
+            & drainage_retention_sl(:,is)            & !< lateral drainage retention storage       [m]
             & )
         ENDDO
       END IF
@@ -480,7 +478,7 @@ CONTAINS
         dsl4jsb_Get_memory_tile(MIX_,   trg_tile)
         dsl4jsb_Get_memory_tile(HYDRO_, trg_tile)
         dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_diflat_sl,            trg_tile)
+        dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_latdiff_sl,           trg_tile)
         dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,                 trg_tile)
         dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,              trg_tile)
         dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl,           trg_tile)
@@ -551,38 +549,38 @@ CONTAINS
           mpot_act=mpot_act_target(:,:)        & !< matric potential
         )
 
-        ! ! Lateral soil water diffusion between upland and lowland
-        ! DO i = 1, nc
-        !   IF (source_fract(i) > trans_min_fract .AND. target_fract(i) > trans_min_fract .AND. &
-        !       wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_trg_tile(i,1) > 1.0e-10_wp) THEN
+        ! Lateral soil water diffusion between adjacent tiles
+        DO ic = 1, nc
+          IF (source_fract(ic) > trans_min_fract .AND. target_fract(ic) > trans_min_fract .AND. &
+              wtr_soil_fc_sl(ic,1) > 1.0e-10_wp  .AND. wtr_soil_fc_sl_trg_tile(ic,1) > 1.0e-10_wp) THEN
 
-        !     CALL calc_intertile_diffusion(nsoil,                      & !< Number of soil layers
-        !        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                 & !< Soil hydrology model
-        !        & dtime,                                               & !< time step                   [s]
-        !        & weq_pond_max(i),                                     & !< height difference btw source and target tile [m]
-        !        & source_fract(i),      target_fract(i),               & !< tile fractions              []
-        !        & soil_depth_sl(i,:),   soil_depth_sl_trg_tile(i,:),   & !< soil layer depths           [m]
-        !        & wtr_soil_fc_sl(i,:),  wtr_soil_fc_sl_trg_tile(i,:),  & !< soil field capacity         [m]
-        !        & wtr_soil_sat_sl(i,:), wtr_soil_sat_sl_trg_tile(i,:), & !< soil maximum water content  [m]
-        !        & wtr_soil_pwp_sl(i,:), wtr_soil_pwp_sl_trg_tile(i,:), & !< soil wilting point          [m]
-        !        & matric_pot_sl(i,:),   matric_pot_sl_trg_tile(i,:),   & !< soil matric potential       [m]
-        !        & hyd_cond_sat_sl(i,:), hyd_cond_sat_sl_trg_tile(i,:), & !< soil hydraulic conductivity [m s-1]
-        !        & bclapp_sl(i,:),       bclapp_sl_trg_tile(i,:),       & !< soil bclapp parameter       []
-        !        & pore_size_index_sl(i,:), pore_size_index_sl_trg_tile(i,:), & !< pore size index       []
-        !        & ice_imp_source(i,:),  ice_imp_target(i,:),           & !< ice impedance factor        []
-        !        & hyd_cond_source(i,:), hyd_cond_target(i,:),          & !< hyd. conductivity           [m s-1]
-        !        & mpot_act_source(i,:), mpot_act_target(i,:),          & !< matric potential            [?]
-        !        & ice_soil_sl(i,:),     ice_soil_sl_trg_tile(i,:),     & !< soil ice storage            [m]
-        !        & MIN(wtr_soil_pot_scool_sl(i,:), wtr_soil_sl(i,:)),   & !< supercooled water           [m]
-        !        & MIN(wtr_soil_pot_scool_sl_trg_tile(i,:), wtr_soil_sl_trg_tile(i,:)), &  !< supercooled water [m]
-        !        & wtr_pond(i),          wtr_pond_trg_tile(i),          & !< pond water storage          [m]
-        !        & wtr_latflow(i),       wtr_latflow_trg_tile(i),       & !< lateral water flow          [kg m-2 s-1]
-        !        & wtr_soil_sl(i,:),     wtr_soil_sl_trg_tile(i,:),     & !< soil water storage          [m]
-        !        & wtr_diflat_sl(i,:),   wtr_diflat_sl_trg_tile(i,:)    & !< lateral diffusion flux      [kg m-2 s-1]
-        !        & )
+            CALL calc_intertile_diffusion(nsoil,                        & !< Number of soil layers
+               & dsl4jsb_Config(HYDRO_)%soilhydmodel,                   & !< Soil hydrology model
+               & dtime,                                                 & !< time step                   [s]
+               & weq_pond_max(ic),                                      & !< height difference btw source and target tile [m]
+               & source_fract(ic),      target_fract(ic),               & !< tile fractions              []
+               & soil_depth_sl(ic,:),   soil_depth_sl_trg_tile(ic,:),   & !< soil layer depths           [m]
+               & wtr_soil_fc_sl(ic,:),  wtr_soil_fc_sl_trg_tile(ic,:),  & !< soil field capacity         [m]
+               & wtr_soil_sat_sl(ic,:), wtr_soil_sat_sl_trg_tile(ic,:), & !< soil maximum water content  [m]
+               & wtr_soil_pwp_sl(ic,:), wtr_soil_pwp_sl_trg_tile(ic,:), & !< soil wilting point          [m]
+               & matric_pot_sl(ic,:),   matric_pot_sl_trg_tile(ic,:),   & !< soil matric potential       [m]
+               & hyd_cond_sat_sl(ic,:), hyd_cond_sat_sl_trg_tile(ic,:), & !< soil hydraulic conductivity [m s-1]
+               & bclapp_sl(ic,:),       bclapp_sl_trg_tile(ic,:),       & !< soil bclapp parameter       []
+               & pore_size_index_sl(ic,:), pore_size_index_sl_trg_tile(ic,:), & !< pore size index       []
+               & ice_imp_source(ic,:),  ice_imp_target(ic,:),           & !< ice impedance factor        []
+               & hyd_cond_source(ic,:), hyd_cond_target(ic,:),          & !< hyd. conductivity           [m s-1]
+               & mpot_act_source(ic,:), mpot_act_target(ic,:),          & !< matric potential            [?]
+               & ice_soil_sl(ic,:),     ice_soil_sl_trg_tile(ic,:),     & !< soil ice storage            [m]
+               & MIN(wtr_soil_pot_scool_sl(ic,:), wtr_soil_sl(ic,:)),   & !< supercooled water           [m]
+               & MIN(wtr_soil_pot_scool_sl_trg_tile(ic,:), wtr_soil_sl_trg_tile(ic,:)), &  !< supercooled water [m]
+               & wtr_pond(ic),          wtr_pond_trg_tile(ic),          & !< pond water storage          [m]
+               & wtr_latflow(ic),       wtr_latflow_trg_tile(ic),       & !< lateral water flow          [kg m-2 s-1]
+               & wtr_soil_sl(ic,:),     wtr_soil_sl_trg_tile(ic,:),     & !< soil water storage          [m]
+               & wtr_latdiff_sl(ic,:),  wtr_latdiff_sl_trg_tile(ic,:)   & !< lateral diffusion flux      [kg m-2 s-1]
+               & )
 
-        !   END IF
-        ! ENDDO
+          END IF
+        ENDDO
       END IF
 
       ! Runoff on floodplains is only generated if ponds are filled and overflowing
@@ -635,14 +633,13 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_hydro_mix'
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -657,7 +654,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   drainage_retention_sl,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MIX_,   wtr_diflat_sl,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latdiff_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,            weighted_by_fract)
