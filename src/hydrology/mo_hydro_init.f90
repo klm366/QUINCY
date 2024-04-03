@@ -323,18 +323,20 @@ CONTAINS
     ! Reading mean slope for certain tiles. Temporary implementation, needs
     ! to move into jsb_tile structure to be flexible for a arbirary number of
     ! Hydrotiles instead of hardcoded.
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='slp_up',    &
-      & fill_array = hydro_init_vars%slope_up)
-    hydro_init_vars%slope_up = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='slp_low',    &
-      & fill_array = hydro_init_vars%slope_low)
-    hydro_init_vars%slope_low = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='slp_plain',    &
-      & fill_array = hydro_init_vars%slope_plain)
-    hydro_init_vars%slope_plain = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+    IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_up',    &
+        & fill_array = hydro_init_vars%slope_up)
+      hydro_init_vars%slope_up = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_low',    &
+        & fill_array = hydro_init_vars%slope_low)
+      hydro_init_vars%slope_low = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_plain',    &
+        & fill_array = hydro_init_vars%slope_plain)
+      hydro_init_vars%slope_plain = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+    END IF
 
     ! Read in maximum fraction and depth of local surface depressions
     IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
