@@ -195,7 +195,6 @@ CONTAINS
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
     USE mo_q_rad_init,          ONLY: q_rad_init
-    USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_spq_init,            ONLY: spq_init
@@ -580,12 +579,6 @@ CONTAINS
         END IF
 #endif
       END SELECT
-
-#ifndef __NO_QUINCY__
-      IF (tile%Is_process_active(A2L_)) THEN
-        CALL atm2land_init(tile)
-      END IF
-#endif
 
       SELECT CASE (model%config%model_scheme)
       ! CASE (MODEL_JSBACH)
