@@ -177,8 +177,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
-    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_l2aveghlp
-    dsl4jsb_Real2D_onChunk      :: biological_n_fixation_l2aveghlp
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk      :: biological_n_fixation
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_n
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_p
@@ -319,8 +319,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_l2aveghlp)   ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation_l2aveghlp)      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)                ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_p)                     ! out
@@ -444,7 +444,7 @@ CONTAINS
        veg_pool_mt(ix_heart_wood, ixP, ic) = veg_pool_mt(ix_heart_wood, ixP, ic) - recycling_heart_wood_p(ic)
        ! N15
        veg_pool_mt(ix_labile, ixN15, ic)     = veg_pool_mt(ix_labile, ixN15, ic) &
-         &                                     + recycling_leaf_n15(ic) + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
+         &                                    + recycling_leaf_n15(ic) + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
        veg_pool_mt(ix_leaf, ixN15, ic)       = veg_pool_mt(ix_leaf, ixN15, ic)       - recycling_leaf_n15(ic)
        veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
        veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
@@ -712,10 +712,10 @@ CONTAINS
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
     ! (n_processing_respiration = n_fixation_respiration + n_transform_respiration)
-    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
+    net_biosphere_production(:) = net_biosphere_production(:) &
       & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_processing_respiration(:)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp(:) + n_fixation(:)
+    biological_n_fixation(:)    = biological_n_fixation(:) + n_fixation(:)
 
   END SUBROUTINE update_veg_pools
 

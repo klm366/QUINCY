@@ -136,8 +136,8 @@ CONTAINS
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: net_biosphere_production_l2aveghlp
-    dsl4jsb_Real2D_onChunk :: biological_n_fixation_l2aveghlp
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk :: biological_n_fixation
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! SPQ_ 2D
@@ -391,8 +391,8 @@ CONTAINS
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                           ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_l2aveghlp)   ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation_l2aveghlp)      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)                     ! in
     ! SPQ_ 2D
@@ -1083,10 +1083,10 @@ CONTAINS
     !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
-    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
+    net_biosphere_production(:) = net_biosphere_production(:) &
       &                                     - SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM = 2)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp &
+    biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !------------------------------------------------------------------------------------------------------ !

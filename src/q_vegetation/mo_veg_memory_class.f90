@@ -319,8 +319,8 @@ MODULE mo_veg_memory_class
     !      in 'mo_atmland_interface:update_land2atm' their values are added to the "L2A_ counterpart variables"
     !      this is needed because the L2A_ var are not available at other tiles than the box tile (i.e., top tile)
     TYPE(t_jsb_var_real2d) ::       &
-      & net_biosphere_production_l2aveghlp  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
-      & biological_n_fixation_l2aveghlp         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
+      & net_biosphere_production  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
+      & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
@@ -2666,9 +2666,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('net_biosphere_production_l2aveghlp', mem%net_biosphere_production_l2aveghlp, &
+      CALL mem%Add_var('net_biosphere_production', mem%net_biosphere_production, &
         & hgrid, surface, &
-        & t_cf('net_biosphere_production_l2aveghlp', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
+        & t_cf('net_biosphere_production', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2677,9 +2677,9 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('biological_n_fixation_l2aveghlp', mem%biological_n_fixation_l2aveghlp, &
+      CALL mem%Add_var('biological_n_fixation', mem%biological_n_fixation, &
         & hgrid, surface, &
-        & t_cf('biological_n_fixation_l2aveghlp', '[micro-mol N m-2 s-1]', 'symbiotic + asymbiotic N fixation'), &
+        & t_cf('biological_n_fixation', '[micro-mol N m-2 s-1]', 'symbiotic + asymbiotic N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
