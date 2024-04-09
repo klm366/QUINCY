@@ -387,7 +387,7 @@ CONTAINS
           END IF
 
         END IF
-        
+
         ! As ponds form in depressions, no lateral outflow is assumed but
         ! rather infiltration into the soil. Here we use several assumptions:
         ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
@@ -395,9 +395,12 @@ CONTAINS
         ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
         IF (ice_pond(ic) > 0._wp) THEN
           wtr_pond_outflow = 0._wp
-        ELSE
+        ELSE IF (hydro_scale == Catchment_) THEN
           wtr_pond_outflow = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
           & k_sat_clay * dtime * fract_pond(ic))
+        ELSE IF (hydro_scale == Point_) THEN
+          wtr_pond_outflow = MIN(wtr_pond(ic) + wtr_pond_inflow, &
+          & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime)
         END IF
         ! Update pond storages
         wtr_pond(ic)        = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow

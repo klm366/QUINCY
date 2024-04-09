@@ -352,8 +352,8 @@ CONTAINS
   !! Here, the tile tree branches into several copys for, e.g. upland, lowland and floodplain settings
   SUBROUTINE init_usecase_hydrotiles(model)
 
-    TYPE :: t_tilelist_pointer  
-      TYPE(t_jsb_tile), POINTER :: hydro_tile  
+    TYPE :: t_tilelist_pointer
+      TYPE(t_jsb_tile), POINTER :: hydro_tile
     END TYPE t_tilelist_pointer
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
