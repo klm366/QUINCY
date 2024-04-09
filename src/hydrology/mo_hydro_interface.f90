@@ -644,7 +644,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp) &
+      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp, weq_soil) &
       !$ACC   ASYNC(acc_stream)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
@@ -756,7 +756,7 @@ CONTAINS
         & runoff(:)                       & !< Surface runoff [m water equivalent]
         & )
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       ! Update weq_pond storage
       !$ACC LOOP GANG VECTOR
       DO ic=1,nc
@@ -765,7 +765,7 @@ CONTAINS
       !$ACC END LOOP
 
       IF (l_compat401_config) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        !$ACC LOOP GANG VECTOR
         DO ic=1,nc
           snow_soil_dens(ic) = 330._wp
         END DO
@@ -1278,7 +1278,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     !$ACC LOOP GANG VECTOR
@@ -1287,7 +1287,7 @@ CONTAINS
     END DO
 
     ! Convert soil hydrology balance error to volume
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    !$ACC LOOP GANG VECTOR
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
     END DO

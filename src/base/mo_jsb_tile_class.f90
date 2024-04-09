@@ -63,8 +63,8 @@ MODULE mo_jsb_tile_class
     CHARACTER(len=25) :: name    !< Aggregators are distinguished by using unique names
   CONTAINS
     ! Begin/End routines enable multi-stream OpenACC aggregation
-    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate
-    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate
+    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !> Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !> Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
@@ -269,8 +269,8 @@ MODULE mo_jsb_tile_class
     INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
     !> Functions to make use of the aggregator
-    PROCEDURE :: BeginAggregate => BeginAggregate_weighted_by_fract !< Start  multi-stream aggregation (useful for OpenACC)
-    PROCEDURE :: EndAggregate => EndAggregate_weighted_by_fract     !< Finish multi-stream aggregation (useful for OpenACC)
+    PROCEDURE :: BeginAggregate   => BeginAggregate_weighted_by_fract !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE :: EndAggregate     => EndAggregate_weighted_by_fract   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
     PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
     GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
@@ -488,6 +488,17 @@ CONTAINS
     END IF
 
     !$ACC WAIT(1)
+
+  END SUBROUTINE Set_fraction_1d
+
+  SUBROUTINE Set_fraction_2d(this, fract, fract_old)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    REAL(wp), OPTIONAL,         INTENT(in)    :: &
+      & fract(:,:),        &
+      & fract_old(:,:)
+
+    INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
