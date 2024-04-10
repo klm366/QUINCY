@@ -768,7 +768,7 @@ CONTAINS
 
       __acc_attach(var%ptr2d)
 
-      !$acc update device(var%ptr2d)
+      !$ACC UPDATE DEVICE(var%ptr2d)
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)

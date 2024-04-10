@@ -63,9 +63,9 @@ CONTAINS
     nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
 
     !$ACC PARALLEL DEFAULT(PRESENT) &
-    !$ACC  CREATE(nres_int, akdiv, inflow_cascade) &
-    !$ACC  ASYNC(acc_stream)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod) 
+    !$ACC   CREATE(nres_int, akdiv, inflow_cascade) &
+    !$ACC   ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod)
     DO ic = 1, nc
       IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]

@@ -996,7 +996,7 @@ CONTAINS
 
       !$ACC DATA ASYNC(acc_stream) &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
-      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org) 
+      !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
 
       ! Use different parameters for top layer and deeper layers
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1222,7 +1222,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
 
-    !$ACC DATA CREATE(l_fract, tile_fract)  ASYNC(acc_stream)
+    !$ACC DATA CREATE(l_fract, tile_fract) ASYNC(acc_stream)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = ics, ice

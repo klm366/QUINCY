@@ -264,11 +264,11 @@ CONTAINS
 
     !$ACC ENTER DATA ASYNC(acc_stream) &
     !$ACC   CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
-    !$ACC   CREATE (hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
+    !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
     ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-    !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+    !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -315,9 +315,9 @@ CONTAINS
         & )
 
 
-      !$ACC EXIT DATA ASYNC(acc_stream)  &
+      !$ACC EXIT DATA ASYNC(acc_stream) &
       !$ACC   DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
-      !$ACC   DELETE (hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
+      !$ACC   DELETE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
 
     END IF
@@ -330,7 +330,7 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
 #ifdef _CRAYFTN
         ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -341,7 +341,7 @@ CONTAINS
       ELSE
 #ifdef _CRAYFTN
         ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -354,7 +354,7 @@ CONTAINS
       ! Calculate top snow layer for previous time step
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -366,7 +366,7 @@ CONTAINS
       ! Calculate depths of snow layers
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
@@ -379,7 +379,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -396,7 +396,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL PRESENT(sse__mem,seb__mem,hydro__mem) ASYNC(acc_stream)
+      !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(acc_stream)
 #else
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 #endif
@@ -416,7 +416,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -429,7 +429,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -468,7 +468,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -483,7 +483,7 @@ CONTAINS
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
@@ -496,7 +496,7 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -537,10 +537,10 @@ CONTAINS
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
-      !$ACC ENTER DATA CREATE(ws_max_sl) ASYNC(acc_stream) 
+      !$ACC ENTER DATA CREATE(ws_max_sl) ASYNC(acc_stream)
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
@@ -584,13 +584,13 @@ CONTAINS
         & ice_melt_sl                         (:,:), &
         & wtr_soil_pot_scool_sl               (:,:)  &
         & )
-      !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream) 
+      !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
     END IF
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem,seb__mem,hydro__mem) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
@@ -605,7 +605,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC EXIT DATA  ASYNC(acc_stream) &
+    !$ACC EXIT DATA ASYNC(acc_stream) &
     !$ACC   DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, hcap_grnd_snow) &
     !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
@@ -929,7 +929,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC EXIT DATA DELETE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp) ASYNC(acc_stream)
+      !$ACC EXIT DATA DELETE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp) ASYNC(acc_stream)
       DEALLOCATE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp)
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)

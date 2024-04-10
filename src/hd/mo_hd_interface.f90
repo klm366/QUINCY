@@ -839,7 +839,7 @@ CONTAINS
     water_error_gsum => dsl4jsb_memory(HD_)%water_error_gsum%ptr(:) ! out
 
     ALLOCATE (in_domain(nproma, nblks), ztemp(nproma, nblks))
-    !$ACC ENTER DATA CREATE(in_domain, ztemp) ASYNC(acc_stream) 
+    !$ACC ENTER DATA CREATE(in_domain, ztemp) ASYNC(acc_stream)
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)

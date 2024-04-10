@@ -703,8 +703,8 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 
@@ -825,9 +825,9 @@ CONTAINS
       dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow) = 0._wp
 
       !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow))      &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)) &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))   &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow))
 
     END IF
@@ -881,9 +881,9 @@ CONTAINS
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
 
       !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))      &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))   &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 
@@ -1075,7 +1075,7 @@ CONTAINS
     END IF
 
     !$ACC UPDATE ASYNC(1) &
-    !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
+    !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl) &
     !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl)
     !$ACC WAIT(1)
