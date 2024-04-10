@@ -441,7 +441,8 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc, &
+    &                    nsoil_e, nsoil_w, nsnow_e)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -455,6 +456,9 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
     INTEGER,          OPTIONAL,          INTENT(in)    :: nc
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_e
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_w
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsnow_e
 
     INTEGER :: no_omp_thread
 
@@ -468,6 +472,11 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
     IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
+    ! Set number of soil and snow layers to options on all threads
+    ! Note: The assign_if_present interface does not support assigning a value to a vector.
+    IF (PRESENT(nsoil_e)) this%options(:)%nsoil_e = nsoil_e
+    IF (PRESENT(nsoil_w)) this%options(:)%nsoil_w = nsoil_w
+    IF (PRESENT(nsnow_e)) this%options(:)%nsnow_e = nsnow_e
 
   END SUBROUTINE Set_options
 
