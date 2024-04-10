@@ -679,7 +679,7 @@ CONTAINS
     IF (tile%Is_process_active(CARBON_)) THEN
 
       CALL weighted_by_fract%BeginAggregate()
-      
+
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)

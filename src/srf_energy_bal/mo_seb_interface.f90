@@ -534,7 +534,7 @@ CONTAINS
     IF (model%config%use_tmx) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
     END IF
-    
+
     CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

@@ -1026,7 +1026,7 @@ CONTAINS
       WRITE (message_text,*) 'Water budget imbalance during time step: ', global_water_error,' m3'
       CALL message (routine,message_text)
     END IF
-    
+
     IF (diag_water_budget) THEN
       global_water_budget =     global_sum_array(water_budget,     lacc=.TRUE.)
       global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)

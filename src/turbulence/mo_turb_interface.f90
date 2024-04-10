@@ -441,7 +441,7 @@ CONTAINS
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
-  
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         rough_bare_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2

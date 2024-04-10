@@ -845,7 +845,7 @@ CONTAINS
     !$ACC ENTER DATA CREATE(l_day) ASYNC(acc_stream)
 
     !> 0.9  Set day-or-night-switch
-    !! 
+    !!
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
@@ -1228,7 +1228,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    
+
     CALL weighted_by_fract%BeginAggregate()
 
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
@@ -1249,7 +1249,7 @@ CONTAINS
     ENDIF
 
     CALL weighted_by_fract%EndAggregate()
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_albedo

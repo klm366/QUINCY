@@ -847,7 +847,7 @@ CONTAINS
 
     CALL weighted_by_fract%BeginAggregate()
 
-    ! if running with FLCC (which runs on the veg tile) 
+    ! if running with FLCC (which runs on the veg tile)
     ! the co2flux_fire_all_2_atm_ta variable is changed on the leaves
     ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
     dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
@@ -1912,7 +1912,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-    
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(cflux_ta)
       Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)
