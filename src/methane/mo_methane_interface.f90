@@ -119,6 +119,7 @@ CONTAINS
       specie%prod_out   (ic) = 0._wp
       specie%plant_out  (ic) = 0._wp
       specie%oxid_out   (ic) = 0._wp
+      specie%in_out     (ic) = 0._wp
       specie%total_out  (ic) = 0._wp
       specie%total_final(ic) = 0._wp
 !      IF (ASSOCIATED(specie%other_out)) THEN
@@ -178,6 +179,10 @@ CONTAINS
       IF (PRESENT(to_other_i)) THEN
         IF (to_other_i /= 0) specie%total_out(i) = specie%total_out(i) + specie%other_out(i)
       ENDIF
+    ENDIF
+    specie%in_out(i) = 0._wp
+    IF (specie%total_out(i) > 0._wp) THEN
+      specie%in_out(i) = specie%total_out(i)
     ENDIF
     IF (PRESENT(dbg)) THEN
       IF (dbg) THEN
@@ -464,6 +469,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_dry%total_initial)
@@ -474,6 +480,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%other_out) ! Ebullition
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_wet%total_initial)
@@ -492,6 +499,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_dry%total_initial)
@@ -501,6 +509,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%oxid_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_wet%total_initial)
@@ -511,6 +520,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%other_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_dry%total_initial)
@@ -521,6 +531,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%diff_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%other_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%plant_out)
+    dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%in_out)
 !    dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%excess)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_out)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_initial)
@@ -1070,6 +1081,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%oxid_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%diff_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%plant_out,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%in_out,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%excess,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%total_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_dry%total_initial,  weighted_by_fract)
@@ -1078,6 +1090,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%prod_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%oxid_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%diff_out,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%in_out,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%excess,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%other_out,      weighted_by_fract) ! Ebullition
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_wet%plant_out,      weighted_by_fract)
@@ -1089,6 +1102,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%oxid_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%diff_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%plant_out,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%in_out,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%excess,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%total_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_dry%total_initial,  weighted_by_fract)
@@ -1098,6 +1112,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%oxid_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%diff_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%plant_out,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%in_out,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%excess,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%total_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CO2_wet%total_initial,  weighted_by_fract)
@@ -1108,6 +1123,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%diff_out,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%other_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%plant_out,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%in_out,          weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%excess,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%total_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_dry%total_initial,   weighted_by_fract)
@@ -1118,6 +1134,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%diff_out,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%other_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%plant_out,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%in_out,          weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%excess,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%total_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, O2_wet%total_initial,   weighted_by_fract)
