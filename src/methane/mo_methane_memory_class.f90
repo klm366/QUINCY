@@ -31,9 +31,7 @@ MODULE mo_ch4_memory_class
 
   PUBLIC :: t_ch4_memory, max_no_of_vars, t_chem_specie, t_chem_ptrs
 
-!  INTEGER, PARAMETER :: max_no_of_vars = 80
-!  INTEGER, PARAMETER :: max_no_of_vars = 90
-  INTEGER, PARAMETER :: max_no_of_vars = 120
+  INTEGER, PARAMETER :: max_no_of_vars = 130
 
   ! ======================================================================================================= !
   !>Type definitions for methane production and transport memory
@@ -45,6 +43,7 @@ MODULE mo_ch4_memory_class
       & diff_out,               &
       & other_out,              & ! Ebulition or "other"
       & plant_out,              &
+      & in_out,                 &
       & excess,                 &
       & total_out,              &
       & total_initial,          & ! StW: Initial for ts or run? In latter case ic?
@@ -76,6 +75,7 @@ MODULE mo_ch4_memory_class
       & diff_out,                          &
       & other_out,                         & ! Ebulition or "other"
       & plant_out,                         &
+      & in_out,                            &
       & excess,                            &
       & total_out,                         &
       & total_initial,                     & ! StW: Initial for ts or run? In latter case ic?
@@ -401,6 +401,14 @@ CONTAINS
         & output_level = default_output_level,                                 &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
+      CALL mem%Add_var( specie_name//'_in_out', specie%in_out,                 &
+        & hgrid, surface,                                                      &
+        & t_cf(specie_name//'_in_out', 'mol m-2 s-1', ''),                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, lrestart = .FALSE.,                                  &
+        & output_level = default_output_level,                                 &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
 !      CALL mem%Add_var( specie_name//'_excess_transp', specie%excess,          &
 !        & hgrid, surface,                                                      &
 !        & t_cf(specie_name//'_excess_transp', 'mol m-2 s-1', ''),              &
