@@ -249,6 +249,7 @@ CONTAINS
         & variable_name='hyd_cond_sat',             &
         & fill_array = hydro_init_vars%hyd_cond_sat)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
+!      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) > 0._wp)
 
       ! Matrix potential
       ptr_2D => input_file%Read_2d(                 &
@@ -298,7 +299,8 @@ CONTAINS
       ptr_2D => input_file%Read_2d(       &
         & variable_name='soil_field_cap', & ! TODO change name in infile to w_soil_fcvol or another name that indicates "volumetric"
         & fill_array = hydro_init_vars%vol_field_cap)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+!      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 1.e-6_wp, ptr_2D(:,:) > 0._wp)
 
       ! Volumetric permanent wilting point
       ! @todo: Do we need this for bare soil tiles?
