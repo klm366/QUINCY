@@ -155,12 +155,12 @@ CONTAINS
     use_quincy                 = .FALSE.
     use_parflow                = .FALSE.
     pfl_rotpole                = .TRUE.
-    pfl_rotpole_lon            = 198.0 ! Default is the Euro Cordex domain
+    pfl_rotpole_lon            = -162.0 ! Default is the Euro Cordex domain
     pfl_rotpole_lat            = 39.25
-    pfl_dom_nw_lon             = -28.21
-    pfl_dom_nw_lat             = 21.67
-    pfl_dom_se_lon             = 18.43
-    pfl_dom_se_lat             = -23.65
+    pfl_dom_nw_lon             = -29.0313
+    pfl_dom_nw_lat             = 22.6076
+    pfl_dom_se_lon             = 18.9287
+    pfl_dom_se_lat             = -24.0324
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''

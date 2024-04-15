@@ -946,7 +946,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_interface_parflow,      ONLY: lyac_very_1st_get, is_valid_parflow, parflow_buffer
+    USE mo_interface_parflow,      ONLY: is_valid_parflow, parflow_buffer
     USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -982,7 +982,7 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil, is
     REAL(wp), POINTER :: dz(:)
-    LOGICAL, POINTER :: is_valid_onChunk(:)
+    INTEGER, POINTER :: is_valid_onChunk(:)
     REAL(wp), POINTER :: parflow_buffer_onChunk(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -1045,6 +1045,29 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
+    ! Calculate w_soil_column
+    CALL get_water_in_root_zone(w_soil_sl(:,:), dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column))
+
+    IF (ALLOCATED(is_valid_parflow)) THEN
+      DO ic = 1, nc
+        fract_parflow(ic) = REAL(is_valid_onChunk(ic))
+      END DO
+    END IF
+    ! If running with ParFlow, copy the values from the ParFlow buffer
+    ! (but only within the ParFlow coverage)
+    ! and do not overwrite soil water with zeros at the first time step
+    IF (ALLOCATED(is_valid_parflow)) THEN
+      DO ic = 1, nc
+        IF (is_valid_onChunk(ic) > 1) THEN
+          DO is = 1, nsoil
+            w_soil_sl(ic,is) = parflow_buffer_onChunk(ic,is)
+          END DO
+          is_valid_onChunk(ic) = 1
+        END IF
+      END DO
+    END IF
+
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -1083,30 +1106,6 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, ws_negative       ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow) &
       & )
-
-    IF (ALLOCATED(is_valid_parflow) .AND. lyac_very_1st_get) THEN
-      DO ic = 1, nc
-        IF (is_valid_onChunk(ic)) THEN
-          fract_parflow(ic) = 1.0
-        END IF
-      END DO
-    END IF
-    ! If running with ParFlow, copy the values from the ParFlow buffer
-    ! (but only within the ParFlow coverage)
-    ! and do not overwrite soil water with zeros at the first time step
-    IF (ALLOCATED(is_valid_parflow) .AND. .NOT. lyac_very_1st_get) THEN
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          IF (is_valid_onChunk(ic)) THEN
-            w_soil_sl(ic,is) = parflow_buffer_onChunk(ic,is)
-          END IF
-        END DO
-      END DO
-    END IF
-
-    ! Recalculate w_soil_column
-    CALL get_water_in_root_zone(w_soil_sl(:,:), dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column))
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
     DO ic = 1, nc

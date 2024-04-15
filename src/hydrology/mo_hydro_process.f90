@@ -506,9 +506,8 @@ CONTAINS
       & ws_incl_ice(nidx),   & ! soil moisture including ice [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
     
-    REAL(wp) ::                     &
-      & vfc_times_sd_l(nidx,nsoil), & ! vol_field_cap_l * soil_depth_l needed to compute ws_max
-      & ws_l_last(nidx,nsoil)
+    REAL(wp) ::                    &
+      & vfc_times_sd_l(nidx,nsoil)   ! vol_field_cap_l * soil_depth_l needed to compute ws_max
 
     INTEGER :: jl, i
 
@@ -556,7 +555,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
-    CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
+    !CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG
@@ -574,6 +573,16 @@ CONTAINS
   
     END DO
     !$ACC END PARALLEL
+
+    ! Calculate evapotrans_to_parflow
+    ! (positive contributions are already included in water_to_parflow)
+    DO i = 1, nidx
+      evapotrans_to_parflow(i,1) = (MIN(evapo_soil_in_m(i), 0.0_wp) &
+        & + MIN(transpiration_in_m(i), 0.0_wp) * root_depth_l(i,1)/SUM(root_depth_l(i,:))) / delta_time
+      DO jl = 2, nsoil
+        evapotrans_to_parflow(i,jl) = (MIN(transpiration_in_m(i), 0.0_wp) * root_depth_l(i,jl)/SUM(root_depth_l(i,:))) / delta_time
+      END DO
+    END DO
 
     ! infiltration
     !
@@ -639,23 +648,9 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    ! Save the current ws_l
-    DO i = 1, nidx
-      DO jl = 1, nsoil
-        ws_l_last(i,jl) = ws_l(i,jl)
-      END DO
-    END DO
-
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
          field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
-
-    ! Calculate evapotrans_to_parflow
-    DO i = 1, nidx
-      DO jl = 1, nsoil
-        evapotrans_to_parflow(i,jl) = (ws_l(i,jl) - ws_l_last(i,jl)) / delta_time ! m -> m/s
-      END DO
-    END DO
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
@@ -1391,7 +1386,7 @@ CONTAINS
       WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
          ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
       !CALL finish ('digest_evapotrans', message_text)
-      CALL warning ('digest_evapotrans', message_text)
+      !CALL warning ('digest_evapotrans', message_text)
       ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
     END IF
 #endif

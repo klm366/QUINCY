@@ -64,7 +64,7 @@ MODULE mo_interface_parflow
   INTEGER :: no_of_fields = 2
 
   INTEGER, ALLOCATABLE :: field_id(:)
-  LOGICAL, ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
+  INTEGER, ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
   REAL(wp), ALLOCATABLE, TARGET :: parflow_buffer(:,:,:)
 
   INTEGER, SAVE :: nbr_inner_cells
@@ -74,14 +74,15 @@ MODULE mo_interface_parflow
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE construct_parflow_coupling(model_id)
+  !SUBROUTINE construct_parflow_coupling(model_id)
+  SUBROUTINE construct_parflow_coupling()
 
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
 
-    INTEGER, INTENT(in) :: model_id
+    !INTEGER, INTENT(in) :: model_id
     
     ! Local variables
 
@@ -102,6 +103,7 @@ CONTAINS
     INTEGER :: grid_id           ! yac grid id
 
     INTEGER :: cell_mask_ids(1)
+    INTEGER :: model_id
     INTEGER :: jb, jc, nn
     INTEGER :: nblks
     INTEGER :: nsoil
@@ -115,7 +117,7 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE :: lsmnolake(:,:)
 
-    REAL(wp), PARAMETER :: eps = 1.E-10_wp
+    !REAL(wp), PARAMETER :: eps = 1.E-10_wp
 
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: startdatestring
     CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: stopdatestring
@@ -133,6 +135,9 @@ CONTAINS
     REAL(wp) :: rot_lon, rot_lat
 
     dsl4jsb_Def_config(HYDRO_)
+
+    ! It is assumed that only one domain is active (jg=1) i.e. no nesting.
+    model_id = 1
 
     model => Get_model(model_id)
 
@@ -328,19 +333,18 @@ CONTAINS
 
               rot_lon = rla2rlarot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam, polgam )
               rot_lat = phi2phirot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam )
-              IF ( lsmnolake(jc, jb) .LT. (1.0_wp - eps) &
-                & .OR. (rot_lon .LT. model%config%pfl_dom_nw_lon) & 
-                & .OR. (rot_lon .GT. model%config%pfl_dom_se_lon) &
-                & .OR. (rot_lat .GT. model%config%pfl_dom_nw_lat) &
-                & .OR. (rot_lat .LT. model%config%pfl_dom_se_lat) ) THEN
-                ! ocean point (fraction of ocean is >0., lsmnolake .lt. 1.) is valid
-                ! or grid point outside the Parflow latitude belt
-                is_valid((jb-1)*nproma+jc) = .FALSE.
-                is_valid_parflow(jc,jb) = .FALSE.
-              ELSE
-                ! land point (fraction of land is one, no sea water, lsmnolake=1.) is undef
+              IF ( lsmnolake(jc, jb) .GT. 0._wp &
+                & .AND. (rot_lon .GT. model%config%pfl_dom_nw_lon) & 
+                & .AND. (rot_lon .LT. model%config%pfl_dom_se_lon) &
+                & .AND. (rot_lat .LT. model%config%pfl_dom_nw_lat) &
+                & .AND. (rot_lat .GT. model%config%pfl_dom_se_lat) ) THEN
+                ! land point inside ParFlow domain
                 is_valid((jb-1)*nproma+jc) = .TRUE.
-                is_valid_parflow(jc,jb) = .TRUE.
+                is_valid_parflow(jc,jb) = 1
+              ELSE
+                ! outside point
+                is_valid((jb-1)*nproma+jc) = .FALSE.
+                is_valid_parflow(jc,jb) = 0
               ENDIF
 
             ENDDO
@@ -351,7 +355,7 @@ CONTAINS
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
               is_valid((jb-1)*nproma+jc) = .FALSE.
-              is_valid_parflow(jc,jb) = .FALSE.
+              is_valid_parflow(jc,jb) = 0
             ENDDO
           ENDDO
           !ICON_OMP_END_PARALLEL_DO
@@ -366,7 +370,7 @@ CONTAINS
     ! DO jb = 1, patch_horz%nblks_c
     !   DO jc = 1, nproma
     !     is_valid((jb-1)*nproma+jc) = .TRUE.
-    !     is_valid_parflow(jc,jb) = .TRUE.
+    !     is_valid_parflow(jc,jb) = 1
     !   ENDDO
     ! ENDDO
 
@@ -472,14 +476,14 @@ CONTAINS
       !  nlen = grid%npromz
       !END IF
       DO n = 1, grid%nproma
-        buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) / dz(1)
+        buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) * 3600.0_wp / dz(1)
       END DO
     END DO
     DO is = 2, nsoil
       DO iblk = 1, grid%nblks
         nn = (iblk - 1) * grid%nproma
         DO n = 1, grid%nproma
-          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk) / dz(is)
+          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk) * 3600.0_wp / dz(is)
         END DO
       END DO
     END DO
@@ -513,6 +517,7 @@ CONTAINS
       END DO
 
       lyac_very_1st_get = .FALSE.
+      is_valid_parflow = 2*is_valid_parflow
     END IF
 #endif
 

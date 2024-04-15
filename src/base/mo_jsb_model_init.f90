@@ -727,11 +727,12 @@ CONTAINS
     END IF
 
     ! Initialize coupling to Parflow via YAC
-#ifdef YAC_coupling
-    IF (model%config%use_parflow) THEN
-      CALL construct_parflow_coupling(model_id)
-    END IF
-#endif
+    ! This is now being called in mo_atmo_model (probably not definitively)
+! #ifdef YAC_coupling
+!     IF (model%config%use_parflow) THEN
+!       CALL construct_parflow_coupling(model_id)
+!     END IF
+! #endif
 
 ! #ifdef _OPENACC
 !     IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
