@@ -216,30 +216,31 @@ CONTAINS
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
-      END SELECT
 
-      ! Make number of vertical layers available from the options type
-      IF (model%Is_process_enabled(HYDRO_)) THEN
-        soil_w => Get_vgrid('soil_depth_water')
-        nsoil_w = soil_w%n_levels
-      END IF
-      IF (model%Is_process_enabled(SSE_)) THEN
-        soil_e => Get_vgrid('soil_depth_energy')
-        nsoil_e = soil_e%n_levels
-        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-          snow_e => Get_vgrid('snow_depth_energy')
-          nsnow_e = snow_e%n_levels
+        ! Make number of vertical layers available from the options type
+        IF (model%Is_process_enabled(HYDRO_)) THEN
+          soil_w => Get_vgrid('soil_depth_water')
+          nsoil_w = soil_w%n_levels
         END IF
-      END IF
-      CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
-
-      ! Crosscheck process configs
-      IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
-        & .AND. (nsoil_e /= nsoil_w)) THEN
-        CALL finish(routine, &
-          & 'The number of soil layers used for water and energy currently need to be identical:'  &
-          & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
-      END IF
+        IF (model%Is_process_enabled(SSE_)) THEN
+          soil_e => Get_vgrid('soil_depth_energy')
+          nsoil_e = soil_e%n_levels
+          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+            snow_e => Get_vgrid('snow_depth_energy')
+            nsnow_e = snow_e%n_levels
+          END IF
+        END IF
+        CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+  
+        ! Crosscheck process configs
+        IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+          & .AND. (nsoil_e /= nsoil_w)) THEN
+          CALL finish(routine, &
+            & 'The number of soil layers used for water and energy currently need to be identical:'  &
+            & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+        END IF
+    
+      END SELECT
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
         CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
@@ -257,7 +258,7 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        ! There are several jsbach processes for whom active is set to TRUE as default, however, these are not required for IQ:
+        ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
         model%processes(SSE_)%p%config%active = .FALSE.
         model%processes(SEB_)%p%config%active = .FALSE.
         model%processes(RAD_)%p%config%active = .FALSE.
