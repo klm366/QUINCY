@@ -1,28 +1,29 @@
+!> Contains utility functions
 !>
-!! @brief Contains utility functions
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2014-03-17)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
+  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+                                               !      libmath-support is an external library
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -34,7 +35,7 @@ MODULE mo_util
 CONTAINS
 
   !!
-  ! @brief      Compute soil layer depths from (fixed) layer thicknesses and total depth
+  ! !>      Compute soil layer depths from (fixed) layer thicknesses and total depth
   !
   ! @param      depth    Total soil depth
   ! @param      dz       Fixed layer thicknesses
@@ -141,38 +142,37 @@ CONTAINS
 
   END SUBROUTINE ifs2soil
 
-  !> Calculate soil parameters fom soil texture.
+  !> Calculate mineral soil parameters fom soil texture.
   !!
   !! Input to this routine should conform:
   !! fraction_sand + fraction_silt + fraction_clay = 1
   !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
-  !! Properties of upper soil and deep soil are identical. Their composition is averaged.
-  !! The organic fraction of the soil is the non-mineral fraction of the soil.
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
   PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
     & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
     & fraction_sand, fraction_silt, fraction_clay,                  &
     & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
-    & fraction_oc, fraction_oc_deep,                                &
     & parameter_from_texture)
 
     REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
     REAL(wp), INTENT(in)  ::                                      &
       fraction_sand, fraction_silt, fraction_clay,                &
-      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep, &
-      fraction_oc, fraction_oc_deep
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
     REAL(wp), INTENT(out)  ::  parameter_from_texture
 
-    parameter_from_texture = MAX(1._wp - ((fraction_oc + fraction_oc_deep) &
-                             * 0.5_wp),0._wp) *                            &
-                             MAX(((fraction_sand + fraction_sand_deep)     &
-                             * 0.5_wp * parameter_sand) +                  &
-                             ((fraction_silt + fraction_silt_deep)         &
-                             * 0.5_wp * parameter_silt) +                  &
-                             ((fraction_clay + fraction_clay_deep)         &
-                             * 0.5_wp * parameter_clay),                   &
-                             MIN(parameter_sand,parameter_silt,parameter_clay)) &
-                             + ((fraction_oc + fraction_oc_deep)           &
-                             * 0.5_wp) * parameter_oc
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
 
   END SUBROUTINE soil_init_from_texture
 

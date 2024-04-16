@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #-----------------------------------------------------------------------------
 # Merge extpar output into jsbach4 boundary condition (bc) files
 #

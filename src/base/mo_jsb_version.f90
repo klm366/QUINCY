@@ -1,28 +1,21 @@
+!> Contains methods to define and print JSBACH version number and label a simulation.
 !>
-!! @brief Contains methods to define and print JSBACH version number and label a simulation.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Initial version derived from ECHAM6 mo_version.f90 for JSBACH<4 by Reiner Schnur, MPI Met (2011-02-10)
-!! First version for JSBACH4+ by Reiner Schnur (2014-06-19)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/model-distribution.html and the
-!! file COPYING in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the headers of the routines.
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 #ifdef __xlC__
 @PROCESS STRICT
 #endif
-!!
+
 MODULE mo_jsb_version
 #ifndef __NO_JSBACH__
 
@@ -47,9 +40,6 @@ CONTAINS
   !!
   !! Define JSBACH version number and get some information about a simulation
   !! at model initialization.
-  !!
-  !! @par Revision History
-  !! Initial version derived from ECHAM6 mo_version::init_version by Reiner Schnur, MPI Met (2011-02-10)
   !!
   SUBROUTINE jsbach_init_version(standalone)
 
@@ -142,9 +132,6 @@ CONTAINS
   !!
   !! Write out details of a forecast run after the setup is complete, just before
   !! computing the first timestep
-  !!
-  !! @par Revision History
-  !! Initial version derived from ECHAM6 mo_version::label_run by Reiner Schnur, MPI Met (2011-02-10)
   !!
   SUBROUTINE jsbach_label_run(standalone)
 

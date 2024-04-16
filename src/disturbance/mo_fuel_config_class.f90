@@ -1,23 +1,23 @@
+!> Contains structures and methods for fuel config
 !>
-!! @brief Contains structures and methods for fuel config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (06.04.2017)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_fuel_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -63,7 +63,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_config'
 
-    CALL message(TRIM(routine), 'Starting fuel configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting fuel configuration')
 
     ! Set defaults
     active                 = .FALSE.

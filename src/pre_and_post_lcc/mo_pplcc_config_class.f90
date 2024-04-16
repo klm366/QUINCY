@@ -1,22 +1,23 @@
-!> Summary: pplcc (pre- and post lcc) config (currently of no use beyond being required by the infrastructure)
+!> pplcc (pre- and post lcc) config
 !>
-!>### Could contain namelist info for pplcc, but currently of no use beyond infrastructural requirements
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-02)
+!>#### Could contain namelist info for pplcc, but currently of no use beyond infrastructural requirements
 !>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> currently of no use beyond being required by the infrastructure
 !>
 MODULE mo_pplcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -49,7 +50,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     NAMELIST /jsb_pplcc_nml/      &
          active,                      &
          ic_filename,                 &
@@ -76,7 +77,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    
+
   END SUBROUTINE Init_pplcc_config
 
 #endif

@@ -1,16 +1,16 @@
+!> Contains process task class
 !>
-!! @brief Contains process task class
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2015-09-01)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -37,6 +37,7 @@ MODULE mo_jsb_task_class
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
     REAL(wp)                  :: steplen = -1._wp
+    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
     INTEGER                   :: ics     = -1  ! Index of chunk start
@@ -118,7 +119,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
-    ! If process the task belongs to is not active on this tile, do nothing.
+    ! If process the task belongs to is not to be calculated or aggregated on this tile, do nothing.
     IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
 
     SELECT TYPE (this)

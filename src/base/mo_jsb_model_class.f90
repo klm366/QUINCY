@@ -1,16 +1,16 @@
+!> Contains main JSBACH model class.
 !>
-!! @brief Contains main JSBACH model class.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_var_class.pp-jsb.f90"
 
@@ -83,6 +83,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
+    PROCEDURE :: Is_process_enabled
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
@@ -172,6 +173,24 @@ CONTAINS
 
   END FUNCTION Get_process
 
+  LOGICAL FUNCTION Is_process_enabled(this, iproc)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    INTEGER, INTENT(in) :: iproc
+
+    Is_process_enabled = .FALSE.
+    IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+      IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+        Is_process_enabled = this%processes(iproc)%p%config%active
+      ELSE
+        ! If the process is associated but the configuration is not associated
+        ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
+        Is_process_enabled = .TRUE.
+      ENDIF
+    ENDIF
+
+  END FUNCTION Is_process_enabled
+
   SUBROUTINE Queue_task(this, iproc, name)
 
     CLASS(t_jsb_model),        INTENT(inout) :: this
@@ -205,9 +224,11 @@ CONTAINS
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-        IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
-          l_fractions_change = .TRUE.
-          EXIT
+        IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+          IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+            l_fractions_change = .TRUE.
+            EXIT
+          END IF
         END IF
       END IF
     END DO
@@ -430,7 +451,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -439,6 +460,7 @@ CONTAINS
     TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: alpha
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
@@ -450,6 +472,7 @@ CONTAINS
 
     CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
     CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
+    CALL assign_if_present(this%options(no_omp_thread)%alpha,   alpha)
     CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
@@ -649,14 +672,16 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
@@ -667,6 +692,8 @@ CONTAINS
       CALL this%Goto_next_tile(tile)
 
     END DO
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE Sync_vars_from_gpu_to_cpu
 
@@ -710,14 +737,16 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           END IF
         END DO

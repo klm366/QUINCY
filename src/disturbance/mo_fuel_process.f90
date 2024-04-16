@@ -1,17 +1,16 @@
+!> Contains the routines for the fuel processes
 !>
-!! @brief Contains the routines for the fuel processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_fuel_process
 #ifndef __NO_JSBACH__
 
@@ -36,7 +35,6 @@ CONTAINS
     & c_water_ag2_ta,                         & ! in
     & c_ethanol_ag2_ta,                       & ! in
     & c_nonsoluble_ag2_ta,                    & ! in
-    & fract_fpc_max,                          & ! in
     & fuel                                    & ! out
     & )
 
@@ -49,7 +47,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: c_water_ag2_ta
     REAL(wp), INTENT(in)  :: c_ethanol_ag2_ta
     REAL(wp), INTENT(in)  :: c_nonsoluble_ag2_ta
-    REAL(wp), INTENT(in)  :: fract_fpc_max
 
     ! Output Arguments
     REAL(wp), INTENT(OUT)   :: fuel
@@ -59,13 +56,10 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    fuel =  (   c_acid_ag1_ta    + c_water_ag1_ta       &
+    fuel =      c_acid_ag1_ta    + c_water_ag1_ta       &
       &       + c_ethanol_ag1_ta + c_nonsoluble_ag1_ta  &
       &       + c_acid_ag2_ta    + c_water_ag2_ta       &
-      &       + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta  &
-      &     ) * fract_fpc_max  ! According to fire_litter_threshold, fuel should be relative to potential vegetation area of the veg tile.
-                               ! R: Note, we do not need veg_fract_correction. It was already considered before aggregating the C-pools_ta
-                               !    from pft areas to this veg area. Anyhow it would not be useable on the veg tile here.
+      &       + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta
 
   END SUBROUTINE calc_fuel_jsbach
 

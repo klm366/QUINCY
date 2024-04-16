@@ -1,16 +1,16 @@
+!> Contains abstract tile class that contains the surface structure and memory state
 !>
-!! @brief Contains abstract tile class that contains the surface structure and memory state
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -21,6 +21,7 @@ MODULE mo_jsb_tile_class
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
+  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
@@ -28,6 +29,7 @@ MODULE mo_jsb_tile_class
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
+  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
 
 #ifdef _OPENACC
   USE openacc
@@ -92,15 +94,19 @@ MODULE mo_jsb_tile_class
     REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
-                                                                   !! must be either "fract[_max]_"//tile%name, or specified by
-                                                                   !! fract_varname.
+                                                                   !< must be either "fract[_max]_"//tile%name, or specified by
+                                                                   !< fract_varname.
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
-    INTEGER                                :: nr_of_cqts = 0          ! number of conserved quantity types in use on the tile 
-    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) ! list of conserved quantities sort by type
+
+    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile
+    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
+    TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
-    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
+    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
+    CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
+
     ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
     CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
@@ -115,7 +121,6 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
-    PROCEDURE                              :: Is_process_active
     PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
@@ -134,6 +139,8 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_prev_sibling_tile
+    PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
     PROCEDURE                              :: Cache_GPU_pointers
@@ -145,6 +152,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
+    PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
@@ -177,6 +187,14 @@ MODULE mo_jsb_tile_class
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     END SUBROUTINE Init_vars_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    LOGICAL FUNCTION Check_on_process(this, iproc)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+      INTEGER, INTENT(in) :: iproc
+    END FUNCTION Check_on_process
   END INTERFACE
 
   ABSTRACT INTERFACE
@@ -265,23 +283,6 @@ CONTAINS
     END IF
 
   END FUNCTION Get_parent_memory
-
-  FUNCTION Is_process_active(this, iproc) RESULT(return_value)
-
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-    INTEGER,                    INTENT(in) :: iproc
-    LOGICAL                                :: return_value
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active'
-
-    return_value = .FALSE.
-
-    SELECT TYPE (this)
-    CLASS IS (t_jsb_tile_abstract)
-      return_value = ASSOCIATED(this%mem(iproc)%p)
-    END SELECT
-
-  END FUNCTION Is_process_active
 
   SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
 
@@ -422,7 +423,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -451,7 +452,7 @@ CONTAINS
 
       this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
       this%fract_max    (ics:ice, iblk) = fract_max(:)
-      !$ACC UPDATE DEVICE(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
     IF (PRESENT(fract_old)) THEN
@@ -459,7 +460,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
     IF (PRESENT(fract_max_old)) THEN
@@ -467,7 +468,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
-      !$ACC UPDATE DEVICE(this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
   END SUBROUTINE Set_fraction_1d
@@ -493,7 +494,7 @@ CONTAINS
 
         this%fract_old(:,:) = this%fract(:,:)
         this%fract    (:,:) = fract(:,:)
-        !$ACC UPDATE DEVICE(this%fract, this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract, this%fract_old) ASYNC(1)
 
         IF (ASSOCIATED(this%parent)) THEN
           SELECT TYPE (parent=>this%parent)
@@ -524,7 +525,7 @@ CONTAINS
       IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
         this%fract_max_old(:,:) = this%fract_max(:,:)
         this%fract_max    (:,:) = fract_max(:,:)
-        !$ACC UPDATE DEVICE(this%fract_max, this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max, this%fract_max_old) ASYNC(1)
       END IF
 
     END IF
@@ -535,7 +536,7 @@ CONTAINS
 
       IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
         this%fract_old(:,:) = fract_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract_old) ASYNC(1)
       END IF
 
     END IF
@@ -546,7 +547,7 @@ CONTAINS
 
       IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
         this%fract_max_old(:,:) = fract_max_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max_old) ASYNC(1)
       END IF
 
     END IF
@@ -789,7 +790,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:))
+      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:)) ASYNC(1)
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -830,7 +831,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(:,:,:))
+      !$ACC UPDATE DEVICE(this%fractions(:,:,:)) ASYNC(1)
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -861,6 +862,7 @@ CONTAINS
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
+    LOGICAL :: l_aggregate_all
 
     CHARACTER(len=256) :: routine
 
@@ -889,126 +891,55 @@ CONTAINS
     END IF
 
     tile_ptrs2d_cache => tile%ptrs2d_cache
+    l_aggregate_all = var%l_aggregate_all
 
     ! print*, routine//": working on var ", var%full_name
 
-#ifdef _CRAYFTN
-    ! ACCWA (Cray Fortran) : Use several small parallel regions to make GPU/CPU comparison work
-
-    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-      DO j = ics, ice
-        var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE IF (no_children > 1) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-      DO j = ics, ice
-        this%data_sum (j,iblk) = 0._wp
-        this%fract_sum(j,iblk) = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      icount = 0
-      ichild = 0
+    icount = 0
+    ichild = 0
+    IF (no_children > 1) THEN
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-              & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-          END DO
-          !$ACC END PARALLEL LOOP
           icount = icount + 1
           ichild = i
-        ELSE IF (var%l_aggregate_all) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-          END DO
-          !$ACC END PARALLEL LOOP
+        ELSE IF (l_aggregate_all) THEN
           icount = icount + 1
           ichild = i
         END IF
       END DO
-      
-      ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
-        ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
-
-      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
-      !   ! print*, fract_sum
-      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
-      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-      !     &          all_print=.TRUE.)
-      !   CALL finish(TRIM(routine),  '    ... this should not happen')
-      ! END IF
-
-      IF (icount == 1) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-        DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
-            var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE IF (icount > 1) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-        DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
-            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-          ! ELSE
-          !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        STOP 'Aggregate_weighted_by_fract_2d: This should not happen (icount=0)!'
-      END IF
-
     END IF
 
-    !$ACC WAIT(1)
-
-#else
-
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
     ELSE IF (no_children > 1) THEN
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
         this%fract_sum(j,iblk) = 0._wp
       END DO
 
-      icount = 0
-      ichild = 0
       !$ACC LOOP SEQ
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
-          icount = icount + 1
-          ichild = i
-        ELSE IF (var%l_aggregate_all) THEN
-          !$ACC LOOP GANG VECTOR
+        ELSE IF (l_aggregate_all) THEN
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
-          icount = icount + 1
-          ichild = i
         END IF
       END DO
-      
+
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -1021,14 +952,14 @@ CONTAINS
       ! END IF
 
       IF (icount == 1) THEN
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
         END DO
       ELSE IF (icount > 1) THEN
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1044,9 +975,9 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-#endif
+    !$ACC WAIT(1)
 
-    IF (var%l_aggregate_all) THEN
+    IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
@@ -1066,6 +997,7 @@ CONTAINS
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
+    LOGICAL :: l_aggregate_all
 
     CHARACTER(len=256) :: routine
 
@@ -1094,105 +1026,33 @@ CONTAINS
     END IF
 
     tile_ptrs3d_cache => tile%ptrs3d_cache
+    l_aggregate_all = var%l_aggregate_all
 
     nlev = SIZE(var%ptr,2)
 
     ! print*, routine//": working on var ", var%full_name
 
-#ifdef _CRAYFTN
-    ! ACCWA (Cray Fortran) : Use several small parallel regions to make GPU/CPU comparison work
-
-    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
-      DO ilev = 1, nlev
-        DO j = ics, ice
-          var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
-    ELSE IF (no_children > 1) THEN
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-      DO j = ics, ice
-        this%fract_sum(j,iblk) = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-      icount = 0
-      ichild = 0
+    icount = 0
+    ichild = 0
+    IF (no_children > 1) THEN
       DO i=1,no_children
-        IF (var%child_idx(i) > 0) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-          END DO
-          !$ACC END PARALLEL LOOP
+        IF ( var%child_idx(i) > 0 ) THEN
           icount = icount + 1
           ichild = i
-        ELSE IF (var%l_aggregate_all) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-          END DO
-          !$ACC END PARALLEL LOOP
+        ELSE IF (l_aggregate_all) THEN
           icount = icount + 1
           ichild = i
         END IF
       END DO
-
-      DO ilev = 1, nlev
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-        DO j = ics, ice
-          this%data_sum (j,iblk) = 0._wp
-        END DO
-        !$ACC END PARALLEL LOOP
-
-        DO i=1,no_children
-          IF (var%child_idx(i) > 0) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-            DO j = ics, ice
-              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-                & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
-            END DO
-            !$ACC END PARALLEL LOOP
-          END IF
-        END DO
-
-        IF (icount == 1) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            IF (this%fract_sum(j,iblk) > 0._wp) THEN
-              var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE IF (icount > 1) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-          DO j = ics, ice
-            IF (this%fract_sum(j,iblk) > 0._wp) THEN
-              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          STOP 'Aggregate_weighted_by_fract_3d: This should not happen (icount=0)!'
-        END IF
-      END DO
-
     END IF
 
-    !$ACC WAIT(1)
-
-#else
-
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) PRIVATE(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
@@ -1200,34 +1060,28 @@ CONTAINS
 
     ELSE IF (no_children > 1) THEN
 
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
       END DO
-      icount = 0
-      ichild = 0
       !$ACC LOOP SEQ
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
-          icount = icount + 1
-          ichild = i
-        ELSE IF (var%l_aggregate_all) THEN
-          !$ACC LOOP GANG VECTOR
+        ELSE IF (l_aggregate_all) THEN
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
-          icount = icount + 1
-          ichild = i
         END IF
       END DO
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
           this%data_sum (j,iblk) = 0._wp
         END DO
@@ -1235,7 +1089,7 @@ CONTAINS
         !$ACC LOOP SEQ
         DO i=1,no_children
           IF (var%child_idx(i) > 0) THEN
-            !$ACC LOOP GANG VECTOR
+            !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
@@ -1244,14 +1098,14 @@ CONTAINS
         END DO
 
         IF (icount == 1) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
           END DO
         ELSE IF (icount > 1) THEN
-          !$ACC LOOP GANG VECTOR
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1266,7 +1120,7 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-#endif
+    !$ACC WAIT(1)
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
@@ -1275,7 +1129,7 @@ CONTAINS
     !   CALL finish(TRIM(routine),  '    ... this should not happen')
     ! END IF
 
-    IF (var%l_aggregate_all) THEN
+    IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
@@ -1303,7 +1157,7 @@ CONTAINS
 
     CLASS(t_State), POINTER :: next
 
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_first_child_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_first_child_tile'
 
     next => this%first_child
     IF (.NOT. ASSOCIATED(next)) THEN
@@ -1358,6 +1212,72 @@ CONTAINS
 
   END FUNCTION Get_next_sibling_tile
 
+  ! ====================================================================================================== !
+  !
+  !> Returns the previous sibling of this tile, if it has a previous sibling
+  !
+  FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_State), POINTER :: prev
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    prev => this%prev_sibling
+    IF (.NOT. ASSOCIATED(prev)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (prev)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => prev
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(prev)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find previous sibling tile')
+
+  END FUNCTION Get_prev_sibling_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Collect the names of the children of this tile
+  !
+  SUBROUTINE Get_children_names(this, children_names)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
+    CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER :: i_tile, nr_of_children
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    nr_of_children = this%Get_no_of_children()
+
+    IF (nr_of_children /= size(children_names)) &
+      & CALL finish(routine, 'Call with invalid array size (size does not equal nr of children).')
+
+    current_tile => this%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      children_names(i_tile) = current_tile%name
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+  END SUBROUTINE Get_children_names
+
+
   ! If conserved quantities were collected for this tile
   FUNCTION Has_conserved_quantities(this) RESULT(return_value)
 
@@ -1366,7 +1286,7 @@ CONTAINS
 
     return_value = this%nr_of_cqts /= 0
 
-  END FUNCTION Has_conserved_quantities  
+  END FUNCTION Has_conserved_quantities
 
   LOGICAL FUNCTION Is_last_process_tile(this, process_id)
 
@@ -1461,7 +1381,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Cache_GPU_pointers
-    
 
 #endif
 END MODULE mo_jsb_tile_class

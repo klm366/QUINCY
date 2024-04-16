@@ -1,19 +1,16 @@
+!> Contains the routines for the carbon processes
 !>
-!! @brief Contains the routines for the carbon processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
-!! Julia Nabel (2021-05-28): start of some refactoring (more advisable)
-
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
@@ -21,7 +18,7 @@ MODULE mo_carbon_process
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                               & i_lctlib_nonsoluble, i_lctlib_humus
+                               & i_lctlib_nonsoluble, i_lctlib_humus, molarMassCO2_kg
 
   IMPLICIT NONE
   PRIVATE
@@ -673,8 +670,8 @@ CONTAINS
     & c_green,                           & ! inout
     & c_woods,                           & ! inout
     & c_reserve,                         & ! inout
-    & cflux_dist_greenreserve_2_soil,    & ! inout, because relocate_carbon_fire is called AFTER relocate_carbon_damage
-    & cflux_dist_woods_2_soil,           & ! inout, because relocate_carbon_fire is called AFTER relocate_carbon_damage
+    & cflux_dist_green_2_soil,           & ! inout
+    & cflux_dist_woods_2_soil,           & ! inout
     & c_acid_ag1,                        & ! inout
     & c_water_ag1,                       & ! inout
     & c_ethanol_ag1,                     & ! inout
@@ -693,7 +690,7 @@ CONTAINS
     & c_nonsoluble_bg2,                  & ! inout
     & c_humus_1,                         & ! inout
     & c_humus_2,                         & ! inout
-    & cflux_fire_all_2_atm               & ! out
+    & co2flux_fire_all_2_atm             & ! out
     & )
 
     ! Arguments
@@ -706,9 +703,9 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_green(:)                   ! Value of green carbon pool [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_woods(:)                   ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_reserve(:)                 ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(out)   :: cflux_fire_all_2_atm(:)      ! Carbon immedieatly released by fire per tile [mol(C)m-2(canopy)s-1]
-    REAL(wp), INTENT(inout) :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind and fire damage
-                                                                 ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    ! CO2 immediately released by fire per tile [kg(CO2)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   ! Amount of carbon relocated by wind and fire damage
+                                                            ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
     REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   ! Amount of carbon relocated by wind damage and fire
                                                             ! .. to the wood litter pools [mol(C)/m^2(canopy)s-1]
     !   YASSO
@@ -746,13 +743,13 @@ CONTAINS
 
     !! diagnose amount of carbon released from the green and reserve pool to the green litter pools
     !! diagnose amount of carbon released from the wood pool to the woody litter pools
-    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + &
+    cflux_dist_green_2_soil(:) = cflux_dist_green_2_soil(:) + &
       & (c_green(:) + c_reserve(:)) * (1._wp - fract_green_aboveGround) * burned_fract(:) / sec_per_day
     cflux_dist_woods_2_soil(:)  = cflux_dist_woods_2_soil(:) + &
       & c_woods(:) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(:) / sec_per_day
 
     !! determine amount of carbon released from the wood pool, living tissue pools, and litter pools to the atmosphere
-    cflux_fire_all_2_atm(:) = ( &
+    co2flux_fire_all_2_atm(:) = ( &
         ! take living parts of plants above ground:
       & non_woody_litter(:) * fract_green_aboveGround                      &
         ! now add the YASSO pools above ground:
@@ -762,7 +759,7 @@ CONTAINS
       & + c_nonsoluble_ag2(:)                                              &
         ! now add the fire affected fraction of wood pools above ground:
       & + c_woods(:) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
-      & ) * burned_fract(:) / sec_per_day
+      & ) * burned_fract(:) * molarMassCO2_kg / sec_per_day
 
     ! Lower down density of aboveground litter pools
     fraction(:) = 1._wp - burned_fract(:)
@@ -818,7 +815,7 @@ CONTAINS
     & c_green,                        & ! inout
     & c_woods,                        & ! inout
     & c_reserve,                      & ! inout
-    & cflux_dist_greenreserve_2_soil, & ! inout
+    & cflux_dist_green_2_soil,        & ! inout
     & cflux_dist_woods_2_soil,        & ! inout
     & c_acid_ag1,                     & ! inout
     & c_water_ag1,                    & ! inout
@@ -841,16 +838,16 @@ CONTAINS
     & )
 
     ! Arguments
-    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged till the last
+    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged since the last
                                                        ! call of this routine
     real(wp),intent(in)    :: LeafLit_coef(:)          ! Factor to spread non woody litter into yasso pools [ ]
     real(wp),intent(in)    :: WoodLit_coef(:)          ! Factor to spread woody litterfall into yasso pools [ ]
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage
+    real(wp),intent(inout) :: cflux_dist_green_2_soil(:)          ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
-    real(wp),intent(inout)   :: cflux_dist_woods_2_soil(:)        ! Amount of carbon relocated by wind damage
+    real(wp),intent(inout) :: cflux_dist_woods_2_soil(:)          ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
                                                                   ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
 
@@ -891,7 +888,7 @@ CONTAINS
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
     cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:) / sec_per_day
-    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + non_woody_litter(:) * damaged_fract(:) / sec_per_day
+    cflux_dist_green_2_soil(:) = cflux_dist_green_2_soil(:) + non_woody_litter(:) * damaged_fract(:) / sec_per_day
 
     ! Add damaged green and reserve
     ! AG
@@ -952,7 +949,7 @@ CONTAINS
     !! Yasso - Soil carbon model (Jari Liski)
     !!
     !! The code for the yasso model has been developed and is provided by the Finnish Environment Institute SYKE. It is
-    !! distributed as part of the MPI Earth System Model under the MPI-M license conditions as stated in the header of this module.
+    !! distributed as part of the ICON Earth System Model under the license conditions as stated in the header of this module.
     !!
     !! model to calculate the amount of soil organic carbon, changes in the amount of soil organic carbon and
     !! heterotrophic soil respiration.

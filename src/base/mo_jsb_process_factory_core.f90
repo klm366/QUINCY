@@ -1,17 +1,16 @@
+!> Contains process factory.
 !>
-!! @brief Contains process factory.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2015-06-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_process_factory_core
 #ifndef __NO_JSBACH__
 
@@ -31,8 +30,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
   USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
-  USE mo_tlcc_memory_class,    ONLY: t_tlcc_memory
-  USE mo_tcq_memory_class,     ONLY: t_tcq_memory  
+  USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
@@ -65,12 +63,14 @@ MODULE mo_jsb_process_factory_core
   USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_pplcc_interface,       ONLY: Register_pplcc_tasks
   USE mo_pplcc_config_class,    ONLY: t_pplcc_config
-  USE mo_tlcc_interface,        ONLY: Register_tlcc_tasks
-  USE mo_tlcc_config_class,     ONLY: t_tlcc_config
-  USE mo_tcq_interface,         ONLY: Register_tcq_tasks
-  USE mo_tcq_config_class,      ONLY: t_tcq_config
+  USE mo_fage_interface,        ONLY: Register_fage_tasks
+  USE mo_fage_config_class,     ONLY: t_fage_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
+  USE mo_flcc_interface,        ONLY: Register_flcc_tasks
+  USE mo_flcc_config_class,     ONLY: t_flcc_config
+  USE mo_wlcc_interface,        ONLY: Register_wlcc_tasks
+  USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
@@ -78,7 +78,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, VEG_
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -106,6 +106,8 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
     SELECT CASE (iproc)
+    CASE (A2L_, L2A_)
+      ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
     CASE (RAD_)
       CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
@@ -144,17 +146,24 @@ CONTAINS
     CASE (PPLCC_)
       CALL Register_pplcc_tasks(return_ptr, model_id)
       ALLOCATE(t_pplcc_config::return_ptr%config)
-    CASE (TLCC_)
+    CASE (FAGE_)
       return_ptr%l_changes_fractions = .TRUE.
-      CALL Register_tlcc_tasks(return_ptr, model_id)
-      ALLOCATE(t_tlcc_config::return_ptr%config)
-    CASE (TCQ_)
-      CALL Register_tcq_tasks(return_ptr, model_id)
-      ALLOCATE(t_tcq_config::return_ptr%config)
+      CALL Register_fage_tasks(return_ptr, model_id)
+      ALLOCATE(t_fage_config::return_ptr%config)
     CASE (ALCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
       ALLOCATE(t_alcc_config::return_ptr%config)
+    CASE (FLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      return_ptr%has_memory = .FALSE.
+      CALL Register_flcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_flcc_config::return_ptr%config)
+    CASE (WLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      return_ptr%has_memory = .FALSE.
+      CALL Register_wlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_wlcc_config::return_ptr%config)
     CASE (NLCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_nlcc_tasks(return_ptr, model_id)
@@ -167,7 +176,9 @@ CONTAINS
     END SELECT
 
     IF (ASSOCIATED(return_ptr)) THEN
-      return_ptr%config%namelist_filename = TRIM(namelist_filename)
+      IF (ASSOCIATED(return_ptr%config)) THEN
+        return_ptr%config%namelist_filename = TRIM(namelist_filename)
+      END IF
     END IF
 
   END FUNCTION Create_process
@@ -187,8 +198,7 @@ CONTAINS
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
     USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
-    USE mo_tlcc_memory_class,    ONLY: max_no_of_tlcc_vars => max_no_of_vars
-    USE mo_tcq_memory_class,     ONLY: max_no_of_tcq_vars => max_no_of_vars
+    USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
@@ -244,12 +254,9 @@ CONTAINS
     CASE (PPLCC_)
       ALLOCATE(t_pplcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_pplcc_vars
-    CASE (TLCC_)
-      ALLOCATE(t_tlcc_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_tlcc_vars
-    CASE (TCQ_)
-      ALLOCATE(t_tcq_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_tcq_vars
+    CASE (FAGE_)
+      ALLOCATE(t_fage_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_fage_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars

@@ -1,12 +1,16 @@
+!> Initialization of the the atm2land memory.
 !>
-!! @brief Initialization of the the atm2land memory.
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!!  First version by Jan Engel (20190820)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_atm2land_init
 #ifndef __NO_JSBACH__
 
@@ -60,7 +64,8 @@ CONTAINS
     !dsl4jsb_Real2D_onDomain      :: swpar_fdiffuse
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(A2L_)) RETURN
+    IF (ASSOCIATED(tile%parent_tile)) RETURN ! should only run on the uppermost tile of the hierarchy
+
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of atm2land memory (quincy) for tile '// &
       &                          TRIM(tile%name))
     ! ---------------------------

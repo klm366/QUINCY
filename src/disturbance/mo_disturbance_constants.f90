@@ -1,17 +1,16 @@
+!> Contains constants for the natural disturbances processes
 !>
-!! @brief Contains constants for the natural disturbances processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-04-15)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturbance_constants
 #ifndef __NO_JSBACH__
 
@@ -25,7 +24,7 @@ MODULE mo_disturbance_constants
   !INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE_WOOD        =  1 !! Calculation wrt. burning woody pfts
   !INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE_GRASS       =  2 !! Calculation wrt. burning grass pfts
   INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE             =  3 !! Calculation wrt. any burning pfts
-  !INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK_WOOD   =  4 !! Calculation wrt. windbread of woody types
+  !INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK_WOOD   =  4 !! Calculation wrt. windbreak of woody types
   !INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK_GRASS  =  8 !! Calculation wrt. windbreak of grass types
   !                                                           !! (ok: 8 is unlikely to ever be used - maybe for extreme
   !                                                           !! precipitation events?!)

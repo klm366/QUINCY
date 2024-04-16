@@ -1,17 +1,16 @@
+!> Contains structures and methods for disturbance config
 !>
-!! @brief Contains structures and methods for disturbance config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (06.04.2017)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturb_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -112,10 +111,7 @@ CONTAINS
     windbreak_algorithm    =  1
     lburn_pasture          = .FALSE.
     !
-    fire_litter_threshold  = 27.87_wp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
-                                        ! In JS3 this value was 16.67 because it was related to fuel per gridbox area.
-                                        ! In JS4 it is related to fuel per potential vegetated area of the veg tile,
-                                        ! which is on global average 0.5980 of the grid box area.
+    fire_litter_threshold  = 16.67_wp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
     fire_rel_hum_threshold = 70._wp     ! maximal relative humidity for fire
     fire_minimum_woody     =  0.002_wp  ! minimal fraction of act_fpc of woody PFT to be burned each year
     fire_minimum_grass     =  0.006_wp  ! minimal fraction of act_fpc of grass PFT to be burned each year

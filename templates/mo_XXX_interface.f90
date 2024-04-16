@@ -14,23 +14,19 @@
 ! ===                                                                                                                         ===
 ! === Finally delete this header.                                                                                             ===
 ! ===============================================================================================================================
-
-
-
+!> Contains the interfaces to the <PROCESS_NAME_LOWER_CASE> process
 !>
-!! @brief Contains the interfaces to the <PROCESS_NAME_LOWER_CASE> process
-!!
-!! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 #ifndef __NO_JSBACH__
 
@@ -129,7 +125,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
+  !> Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -220,7 +216,7 @@ CONTAINS
   
   ! ================================================================================================================================
   !>
-  !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
+  !> Another task for "<PROCESS_NAME_LOWER_CASE>"
   !!
   !! @param[in]     options Additional run-time parameters.  
   !! @param[in,out] tile    Tile for which routine is executed.

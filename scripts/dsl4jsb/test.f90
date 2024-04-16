@@ -1,3 +1,14 @@
+! ICON-Land
+!
+! ---------------------------------------
+! Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!
+! Contact: icon-model.org
+! Authors: AUTHORS.md
+! See LICENSES/ for license information
+! SPDX-License-Identifier: BSD-3-Clause
+! ---------------------------------------
+
 PROGRAM example
 
   dsl4jsb_Use_processes SOIL_, &
@@ -12,6 +23,7 @@ PROGRAM example
   dsl4jsb_Def_config(SOIL_)
   dsl4jsb_Get_config(SOIL_)
   x = dsl4jsb_Config(SOIL_)%par1 * dsl4jsb_Config(SOIL_)%par2 * ws(:) ! comment
+  dsl4jsb_Get_lcc_relocations(TLCC_, lcc_relocations)
   CALL sub(dssl4jsb_Lctlib , arg2, dssl4jsb_Lctlib_param(abc)) ! This doesn't work!!!
   CALL sub(dsl4jsb_Lctlib, arg2)
   CALL sub(dsl4jsb_Lctlib)

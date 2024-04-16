@@ -1,12 +1,16 @@
-!! @brief
-!!  Contains parameter for implementation of some specific model code
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena 
-!!
-!! @par Revision History
-!!  First version by Jan Engel (20190114)
-!!
+!> Contains parameter for implementation of some specific model code
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_impl_constants
  
   USE mo_kind,                  ONLY: wp
@@ -16,6 +20,7 @@ MODULE mo_jsb_impl_constants
 
   ! general parameters
   INTEGER, PARAMETER :: SHORT_NAME_LEN = 10
+  INTEGER, PARAMETER :: MEDIUM_NAME_LEN = 20
 
   ! using the functionality of LOGICAL var with REAL var
   REAL(wp), PARAMETER :: false            = 0.0_wp    !< zero

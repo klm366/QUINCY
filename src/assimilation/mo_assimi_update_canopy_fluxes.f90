@@ -1,13 +1,16 @@
+!> Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
 !>
-!! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
-!!
-!! @author
-!!  Sönke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
-!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/vegetation/mo_veg_respiration.pp-jsb.f90"
@@ -88,6 +91,7 @@ CONTAINS
     REAL(wp)                              :: tmp_steplen_times_wind           !  dummy variable
     INTEGER                               :: iblk, ics, ice, nc, ic
     REAL(wp)                              :: steplen
+    REAL(wp)                              :: alpha                            !< implicitness factor
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -155,10 +159,11 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -248,14 +253,13 @@ CONTAINS
     !!
     beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(tmp_steplen_times_wind)
     DO ic=1,nc
       tmp_steplen_times_wind = steplen * MAX(wind_10m(ic), min_wind)
-      ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind) 
+      ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind, alpha)
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
     ! temporary set to 1.0 !
@@ -264,7 +268,7 @@ CONTAINS
     !> 2.0 calculate photosynthesis per layer
     !!
     ! get information about day/nigth (same way as in RAD_)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
     END DO
@@ -489,7 +493,7 @@ CONTAINS
                       leaf_nitrogen_cl
 
 
-    !> @par IF: initialise output for no-light condition
+    !> IF: initialise output for no-light condition
     !! use l_day(:) for consistency with RAD_ 
     !! prev. it was used: "IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN"
     IF (.NOT. l_day) THEN
@@ -500,7 +504,7 @@ CONTAINS
       m_et   = 0.0_wp
       m_rub  = 0.0_wp
       m_pepc = 0.0_wp
-    !> @par ELSE: calculate photosynthesis only if it's day
+    !> ELSE: calculate photosynthesis only if it's day
     ELSE
       !> Michaelis-Menten constant of Rubisco for CO2 (Pa)
       kc  = exp(E0kc - E1kc/rtck) * ppm2Pa
@@ -531,7 +535,7 @@ CONTAINS
       dan_cl    = 1.0_wp
       it        = 1
       last_call = .FALSE.
-      !> @par DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
+      !> DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
       DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
 
         SELECT CASE (ps_pathway)
@@ -593,7 +597,7 @@ CONTAINS
         !> fabsb: fraction of possible PAR absorption in present light conditions
         fabsb = exp(-ka * chl2n * fn_chl_cl * leaf_nitrogen_cl)
 
-        !> @par IF: Case of no direct radiation
+        !> IF: Case of no direct radiation
         IF (.NOT. fleaf_sunlit_cl > eps8) THEN
           !>  Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in sunlit foliage (mmol[N]/m2))
@@ -608,7 +612,7 @@ CONTAINS
           !!  light-limited region (assumed to scale linearily with light)
           ag_cl = agsf1 * nsat + agsf2 * ppfd_shaded_cl * fabs
 
-        !> @par ELSE: Case of direct and diffuse radiation
+        !> ELSE: Case of direct and diffuse radiation
         ELSE
           !>  Theoretical cumulative N at co-limitation by Rubisco and
            !!  light absorption in sunlit foliage (mmol[N]/m2))
@@ -698,7 +702,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> calculate atmospheric drought stress factor
   !!
-  !! @par Literature:
+  !! Literature:
   !! Ball & Berry: beta = q_air/q_sat \n
   !! NOT used, Medlyn et al. 2011: beta = MIN(5._wp,1._wp / SQRT(vpd + eps8))
   !-----------------------------------------------------------------------------------------------------

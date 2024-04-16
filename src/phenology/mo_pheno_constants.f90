@@ -1,19 +1,16 @@
+!> Contains constants for the phenology processes
 !>
-!! @brief Contains constants for the phenology processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added params for optional functionality: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_pheno_constants
 #ifndef __NO_JSBACH__
 
@@ -159,15 +156,15 @@ MODULE mo_pheno_constants
       & leafAlloc_fract = 0.8_wp        ! [-] Fraction of NPP maximally allocated to leaves during growth
   END TYPE t_crop_param
 
-  !> Parameters only required in case of l_forestRegrowth = true -- TODO-JN discuss with KIM
+  !> Parameters only required in case of l_forestRegrowth = true
   TYPE t_forestRegrowth_param
     REAL(wp) :: &
-      & m2toha = 10000._wp,           & ! TODO-JN: this is a more general constant -> move to somewhere else?
-      & kgCtokg = 2._wp,              & ! TODO-JN: same
+      & m2toha = 10000._wp,           & ! JN-TODO: this is a more general constant -> move to somewhere else?
+      & kgCtokg = 2._wp,              & ! JN-TODO: same
       & min_c   = 1._wp,              & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
-      & min_zero = 1.e-8_wp,          & ! TODO-JN: describe
-      & log_maxind = 9.5_wp,          & ! TODO-JN: describe
-      & min_maxLAI = 0.5_wp             ! TODO-JN: describe + why not "PhenoParam%all%laiSeed"?
+      & min_zero = 1.e-8_wp,          & ! JN-TODO: describe
+      & log_maxind = 9.5_wp,          & ! JN-TODO: describe
+      & min_maxLAI = 0.5_wp             ! JN-TODO: describe + why not "PhenoParam%all%laiSeed"?
   END TYPE t_forestRegrowth_param
 
   !> Collects all parameters in a single structure

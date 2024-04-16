@@ -1,17 +1,16 @@
+!> Contains the interfaces to the nlcc process
 !>
-!! @brief Contains the interfaces to the nlcc process
-!!
-!! @author
-!!  Thomas Raddatz, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Thomas Raddatz (2020-03-25)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_nlcc_interface
 #ifndef __NO_JSBACH__
 
@@ -105,7 +104,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "nlcc"
+  !> Implementation of "update" for task "nlcc"
   !! Task "nlcc" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -199,8 +198,8 @@ CONTAINS
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
-    ! If process is not active on this tile, do nothing
-    !IF (.NOT. tile%Is_process_active(NLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
