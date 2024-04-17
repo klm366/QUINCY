@@ -386,7 +386,6 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    INTEGER, PARAMETER :: nsoil = 5  !!!!! TODO: get rid of that parameter !!!!!
 
     ! Local variables
     !
@@ -455,11 +454,11 @@ CONTAINS
       & weq_rootzone_max,   &
       & weq_soil,           &
       & trans_tmp
-    REAL(wp), DIMENSION(options%nc,nsoil) :: &
+    REAL(wp), DIMENSION(options%nc, options%nsoil_w) :: &
       & weq_soil_sl_tmp,    &
       & field_cap_sl_tmp
 
-    INTEGER  :: iblk, ics, ice, nc, ic, is
+    INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: dtime
     ! Variables from configs
     REAL(wp) :: &
@@ -481,6 +480,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsoil = options%nsoil_w
     dtime = options%dtime
     is_experiment_start = is_time_experiment_start(options%current_datetime)
 
@@ -908,7 +908,6 @@ CONTAINS
     ! Locally allocated vectors
     !
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: nsoil, is
@@ -941,8 +940,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
+    nsoil = options%nsoil_w
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1168,7 +1166,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
@@ -1187,6 +1184,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsoil = options%nsoil_w
     dtime = options%dtime
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
@@ -1203,8 +1201,6 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
-    soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
     area => grid%area(ics:ice, iblk)
     lat => grid%lat(ics:ice, iblk)
     lon => grid%lon(ics:ice, iblk)
@@ -1476,7 +1472,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
@@ -1501,7 +1496,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
-    REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5)
+    REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1509,14 +1504,13 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    nsoil = 5
+    nsoil = options%nsoil_w
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    soil_w => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)

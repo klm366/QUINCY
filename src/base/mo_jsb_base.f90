@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_time,            ONLY: init_time
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
@@ -87,10 +87,12 @@ CONTAINS
     dsl4jsb_Def_config(PPLCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
 
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
 
     INTEGER :: no_of_models, model_idx, iproc
+    INTEGER :: nsoil_e, nsoil_w, nsnow_e
     INTEGER :: model_scheme
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
@@ -216,7 +218,29 @@ CONTAINS
         dsl4jsb_Get_config(PPLCC_)
       END SELECT
 
+      ! Make number of vertical layers available from the options type
+      IF (model%Is_process_enabled(HYDRO_)) THEN
+        soil_w => Get_vgrid('soil_depth_water')
+        nsoil_w = soil_w%n_levels
+      END IF
+      IF (model%Is_process_enabled(SSE_)) THEN
+        soil_e => Get_vgrid('soil_depth_energy')
+        nsoil_e = soil_e%n_levels
+        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+          snow_e => Get_vgrid('snow_depth_energy')
+          nsnow_e = snow_e%n_levels
+        END IF
+      END IF
+      CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+
       ! Crosscheck process configs
+      IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+        & .AND. (nsoil_e /= nsoil_w)) THEN
+        CALL finish(routine, &
+          & 'The number of soil layers used for water and energy currently need to be identical:'  &
+          & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+      END IF
+
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
         CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
         IF (model%config%use_lakes) THEN

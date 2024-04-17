@@ -650,8 +650,6 @@ CONTAINS
 
     ! Use declarations
     USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_vgrid
     USE mo_rad_process,       ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
