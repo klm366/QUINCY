@@ -1,18 +1,19 @@
-!> Summary: QUINCY routines for isotope-discrimination
+!> Routines for isotope discrimination (QUINCY)
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
-!>#### routines to calculate isotope discrimination
+!>#### Contains functions and subroutines to calculate isotope discrimination
 !>
+
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 

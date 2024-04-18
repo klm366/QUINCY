@@ -1,17 +1,16 @@
+!> Contains structures and methods for seb config
 !>
-!! @brief Contains structures and methods for seb config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_seb_config_class
 #ifndef __NO_JSBACH__
 
@@ -34,6 +33,7 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
+     INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -53,6 +53,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
+    INTEGER                     :: niter_tmx
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
@@ -63,7 +64,8 @@ CONTAINS
       coef_ril_tm1,                &
       coef_ril_t,                  &
       coef_ril_tp1,                &
-      l_ice_on_lakes
+      l_ice_on_lakes,              &
+      niter_tmx
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -82,6 +84,7 @@ CONTAINS
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
+    niter_tmx       = 0
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -98,6 +101,7 @@ CONTAINS
     config%coef_ril_t                = coef_ril_t
     config%coef_ril_tp1              = coef_ril_tp1
     config%l_ice_on_lakes            = l_ice_on_lakes
+    config%niter_tmx                 = niter_tmx
 
     CALL close_nml(nml_handler)
 

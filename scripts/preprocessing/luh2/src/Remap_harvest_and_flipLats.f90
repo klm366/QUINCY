@@ -1,11 +1,25 @@
-! Program taken from the script collection of SW/TR (rewrite_lu_harvest.f90) to remap 
-! harvested biomass data which was previously aggregated from LUH2_v1 data from 0.25 deg to ires
+!> Program to remap harvested biomass data
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+! Program taken from the script collection of SW/TR (rewrite_lu_harvest.f90) to remap
+! harvested biomass data which was previously aggregated from LUH2_v1 data from 0.25deg to ires
 !
-!-- JN 01.07.16: 
+!-- JN 01.07.16:
 !* changed the expected input grid
 !* new files are in kgC not in MgC
 !* added reading of float variables
-!-- TR 25.08.16: 
+!-- TR 25.08.16:
 !* processing of years with 3 digits
 !-- JN 06.12.16:
 !* also read work path from timeinfo.nml
@@ -18,9 +32,9 @@ PROGRAM remap_harvest_and_flip
    !                   4 byte REAL      8 byte REAL
    !          CRAY:        -            precision =   13
    !                                    exponent  = 2465
-   !          IEEE:    precision =  6   precision =   15  
+   !          IEEE:    precision =  6   precision =   15
    !                   exponent  = 37   exponent  =  307
-   INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND(6,37)  
+   INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND(6,37)
    INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(12,307)
    INTEGER, PARAMETER :: wp = dp   ! working precision
    INTEGER, PARAMETER :: i4 = SELECTED_INT_KIND(9)
@@ -169,7 +183,7 @@ PROGRAM remap_harvest_and_flip
       ALLOCATE (NATTTYP(NVAR,NVARATTMAX))
       ALLOCATE (NATTDIM(NVAR,NVARATTMAX))
       DO I=1,NVAR
-        DO II=1,NVARATT(I)      
+        DO II=1,NVARATT(I)
           IRET = nf_inq_attname(NCID,I,II,FATTNAM(I,II))
           CALL check_err(IRET)
           IRET = nf_inq_att(NCID,I,FATTNAM(I,II),NATTTYP(I,II),NATTDIM(I,II))
@@ -350,13 +364,13 @@ PROGRAM remap_harvest_and_flip
       CALL PUTATT(NVAR,4,NVARATT,NATTTYP,FATTNAM,NATTDIM,FATT,NCIDOUT,NVAROUTID(4),NATT,RATT,INFO)
       CALL check_err(nf_enddef(NCIDOUT))
       CALL check_err(IRET)
-      IF (INFO) WRITE (*,*) 'Dimensions and variables defined.' 
+      IF (INFO) WRITE (*,*) 'Dimensions and variables defined.'
 ! Write data
       CALL check_err(nf_put_var_double (NCIDOUT,NVAROUTID(1),XGLON))
       CALL check_err(nf_put_var_double (NCIDOUT,NVAROUTID(2),XGLAT_SWITCH))
       CALL check_err(nf_put_vara_double(NCIDOUT,NVAROUTID(3),(/1/),(/1/),RVARTIME))
       CALL check_err(nf_put_vara_double(NCIDOUT,NVAROUTID(4),(/1,1,1/),(/NGLON,NGLAT,1/),ROUTPUT_GAUSS(:,:,1)))
-      IF (INFO) WRITE (*,*) 'Data wrote.' 
+      IF (INFO) WRITE (*,*) 'Data wrote.'
 
 ! close the output-file
       CALL check_err(nf_close(NCIDOUT))
@@ -459,7 +473,7 @@ SUBROUTINE INTPOL2(INFO,NXM,NYM,FIELDM,XM,YM,NX,NY,XX,YY,FIELD)
      X(I)=XX(I-1)
    END DO
    DO J=2,NY+1
-     Y(J) = YY(J-1)        
+     Y(J) = YY(J-1)
    END DO
    X(1) = (2. * X(2)) - X(3)
    X(NX+2) = (2. * X(NX+1)) - X(NX)
@@ -485,7 +499,7 @@ SUBROUTINE INTPOL2(INFO,NXM,NYM,FIELDM,XM,YM,NX,NY,XX,YY,FIELD)
        IFLAG=0
        AIN = ABS(SIN((YM(JJ-1) + YM(JJ)) * deg_to_rad / 2.) - SIN((YM(JJ) + YM(JJ+1)) * deg_to_rad / 2.)) * XDEL
        FIELD_FLUX = FIELDM(II,JJ) * kgC_in_molC / & ! translate absolute value [MgC] in flux [mol(C)m-2s-1]
-                    (AIN * EARTH_RADIUS * EARTH_RADIUS * SECONDS_IN_YEAR * PI / 180.) 
+                    (AIN * EARTH_RADIUS * EARTH_RADIUS * SECONDS_IN_YEAR * PI / 180.)
 ! assign lower left corner of the IN GRID BOX to one OUT GRID BOX
        DO I=2,NX+2
          DO J=2,NY+1
@@ -524,7 +538,7 @@ SUBROUTINE INTPOL2(INFO,NXM,NYM,FIELDM,XM,YM,NX,NY,XX,YY,FIELD)
 ! add flux multiplied by the associated area to OUT-GRID
        IF (ICASE == 1) THEN
          AREA(IX-1,IY-1) = AREA(IX-1,IY-1) + AIN
-         FIELD(IX-1,IY-1) = FIELD(IX-1,IY-1) + (FIELD_FLUX * AIN)          
+         FIELD(IX-1,IY-1) = FIELD(IX-1,IY-1) + (FIELD_FLUX * AIN)
        ELSEIF (ICASE == 2) THEN
          IF (IY > NY) WRITE(*,*) 'IY,NY: ATTENTION (ICASE=2)!',IY,NY
          AIN1 = ABS(SIN((YM(JJ-1) + YM(JJ)) * deg_to_rad / 2.) - SIN((Y(IY) + Y(IY+1)) * deg_to_rad / 2.)) * XDEL
@@ -606,14 +620,14 @@ SUBROUTINE GAUAW (pa,nlat)
 
     IMPLICIT NONE
 
-    !  Scalar arguments 
+    !  Scalar arguments
     INTEGER :: nlat
 
-    !  Array arguments 
+    !  Array arguments
     REAL(dp)    :: pa(nlat)
     ! *pa*  - array, length at least *k,* to receive abscis abscissas.
 
-    !  Local scalars: 
+    !  Local scalars:
     REAL, PARAMETER :: eps = EPSILON(0.0)
     INTEGER, PARAMETER :: itemax = 20
 
@@ -622,10 +636,10 @@ SUBROUTINE GAUAW (pa,nlat)
     REAL    :: za, zw, z, zan
     REAL    :: zk, zkm1, zkm2, zx, zxn, zldn, zmod
 
-    !  Intrinsic functions 
+    !  Intrinsic functions
     INTRINSIC ABS, COS, MOD, TAN
 
-    !  Executable statements 
+    !  Executable statements
 
     api    = 2.*ASIN(1.)
 
@@ -633,7 +647,6 @@ SUBROUTINE GAUAW (pa,nlat)
 
     ! Find first approximation of the roots of the
     ! Legendre polynomial of degree nlat
-    
     DO jgl = 1, ins2
        z = REAL(4*jgl-1)*api/REAL(4*nlat+2)
        pa(jgl) = COS(z+1./(TAN(z)*REAL(8*nlat**2)))
@@ -646,12 +659,10 @@ SUBROUTINE GAUAW (pa,nlat)
     DO jgl = 1, ins2
 
        za = pa(jgl)
-    
        DO iter = 1, itemax+1
           zk = 0.0
 
           ! Newton iteration step
-    
           zkm2 = 1.0
           zkm1 = za
           zx = za
@@ -665,9 +676,9 @@ SUBROUTINE GAUAW (pa,nlat)
           zmod = -zk/zldn
           zxn = zx+zmod
           zan = zxn
-    
+
           ! computes weight
-    
+
           zkm2 = 1.0
           zkm1 = zxn
           zx = zxn

@@ -1,4 +1,4 @@
-!> Summary: QUINCY radiation process config
+!> QUINCY radiation process config
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### define radiation config structure, read radiation namelist and init configuration parameters
 !>
 MODULE mo_q_rad_config_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
@@ -104,13 +104,13 @@ CONTAINS
 
     !> Create vertical axis - spectral bands
     !>   spectral bands of the light for Q_RAD_ variables
-    !> 
+    !>
 #ifdef __QUINCY_STANDALONE__
     vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
                       longname='Number of spectral bands the light is divided into, from Q_RAD_ QUINCY') !, &
                       ! units=''  , &
                       ! levels=   , &
-                      ! lbounds=  , & 
+                      ! lbounds=  , &
                       ! ubounds=  , &
                       ! dz=       )
     CALL register_vgrid(vgrid_spectral)

@@ -1,22 +1,21 @@
+!> Contains the routines for the disturb processes
 !>
-!! @brief Contains the routines for the disturb processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish
+  USE mo_exception, ONLY: finish, message_text
 
   IMPLICIT NONE
   PRIVATE
@@ -110,8 +109,8 @@ CONTAINS
 
   FUNCTION get_relative_humidity_air(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
 
-    USE mo_physical_constants_iface, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
-    USE mo_physical_constants_iface, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
+    USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
+    USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
 
     INTEGER, INTENT(in)  :: nc
     REAL(wp), INTENT(in) :: &
@@ -141,48 +140,35 @@ CONTAINS
 
   END FUNCTION get_relative_humidity_air
 
-  ! R: TBD: I copied this subroutine from MO_JSB4_FORCING, because
-  !    this mo is not compiled with icon/echam.
-  !    Reiner has to decide if we change config or the place of this procedure.
-  !    I made some changes because the dimensions (vector lengths) were unnecessary
-  !    cryptic. We could even skip "nc" if we would change the DO loop below...
+  !>
+  !! Returns saturation specific humidity for given temperature and pressure
+  !!
   SUBROUTINE sat_specific_humidity(nc, temp, pressure, qsat)
+
+    USE mo_phy_schemes, ONLY: qsat_water
+
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-    USE mo_exception,                ONLY: message_text
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants,   ONLY: rvd1
 
-    INTEGER,  INTENT(IN) :: nc
-    REAL(wp), INTENT(IN) :: temp(nc)      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure(nc)  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat(nc)
+    INTEGER,  INTENT(in) :: nc
+    REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
+    REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
+    REAL(wp), INTENT(OUT):: qsat(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
-    INTEGER  :: i
-    INTEGER  :: it(nc)
-    REAL(wp) :: tluc(nc)
+    INTEGER :: i
 
-    !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
     DO i = 1,nc
-      IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
-        WRITE (message_text,*)                                                                                      &
-          & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-          & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
+      IF (temp(i) < 50._wp .OR. temp(i) > 400._wp) THEN
+        WRITE (message_text,*) &
+          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
         CALL finish(TRIM(routine), TRIM(message_text))
+      ELSE
+        qsat(i) = qsat_water(temp(i), pressure(i), use_convect_tables=.TRUE.)
       ENDIF
     ENDDO
-
-    it = NINT(temp*1000._wp)
-    tluc = tlucua(it)
-
-    WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - rvd1*tluc)
-    ELSEWHERE
-      qsat = HUGE(1._wp)
-    END WHERE
 
   END SUBROUTINE sat_specific_humidity
 

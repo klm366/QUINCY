@@ -1,17 +1,16 @@
+!> Contains constants for the radiation processes
 !>
-!! @brief Contains constants for the radiation processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-15)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hydro_constants
 #ifndef __NO_JSBACH__
 
@@ -56,7 +55,7 @@ MODULE mo_hydro_constants
     & oro_var_max = 1000._wp,              &
 
     ! Parameters used for pond computations
-    & oro_crit = 100._wp,                   & !< Reference topo std for pond scaling factor [m]
+    & oro_crit = 100._wp,                   & !< Reference topo standard deviation for pond scaling factor [m]
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<

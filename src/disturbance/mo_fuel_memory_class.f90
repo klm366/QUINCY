@@ -1,17 +1,16 @@
+!> Contains the memory class for the fuel process.
 !>
-!! @brief Contains the memory class for the fuel process.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-04-6)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_fuel_memory_class
 #ifndef __NO_JSBACH__
 
@@ -31,7 +30,7 @@ MODULE mo_fuel_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_fuel_memory
 
    TYPE(t_jsb_var_real2d) ::   &
-      fuel                       !< 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'
+      fuel                       !< Carbon fuel for burned area calculations [mol(C) m-2]
 
   CONTAINS
     PROCEDURE :: Init => Init_fuel_memory
@@ -71,10 +70,10 @@ CONTAINS
 
     CALL mem%Add_var( 'fuel', mem%fuel,                                                                      &
       & hgrid, surface,                                                                                           &
-      & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
+      & t_cf('fuel', 'mol(C) m-2', 'Amount of carbon fuel'),                                                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & loutput=.TRUE., output_level=BASIC,                                                                                       &
+      & loutput=.TRUE., output_level=BASIC,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
   END SUBROUTINE Init_fuel_memory

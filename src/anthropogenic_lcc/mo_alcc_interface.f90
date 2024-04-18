@@ -1,18 +1,21 @@
-!> Summary: interface to the alcc process (anthropogenic land cover change)
+!> interface to the alcc process (anthropogenic land cover change)
 !>
-!>### Contains the interfaces to the alcc process, currently annually moving land and to be conserved matter
+!> ICON-Land
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-24 - present)
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### License
+!>#### Contains the interfaces to the alcc process, currently annually moving area fractions and to-be-conserved matter
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 
@@ -41,7 +44,6 @@ MODULE mo_alcc_interface
   PUBLIC :: Register_alcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'alcc'
 
   !> Type definition for alcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
@@ -68,7 +70,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_alcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=ALCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
 
@@ -192,9 +194,8 @@ CONTAINS
 
       ! if running with forest age classes (acs) the forest pfts themselves (i.e. the nodes above the acs)
       ! are not part of the lcc tiles
-      IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
+      IF ((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
           ! Assertion: age-classes are subsequent parts of the lcc structure
-          !IF(debug_on()) THEN
           age_class_tile => current_tile%Get_first_child_tile()
           i_ac_index = i_tile
           DO WHILE (ASSOCIATED(age_class_tile))
@@ -202,17 +203,16 @@ CONTAINS
               CALL finish(TRIM(routine), 'Violation of assertion: age class (' //TRIM(age_class_tile%name) &
                 & //') is not listed in the expected place in the alcc lcc-structure. Found ' &
                 & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!')
-            ENDIF
+            END IF
             age_class_tile => age_class_tile%Get_next_sibling_tile()
             i_ac_index = i_ac_index + 1
           END DO
-          !ENDIF
 
           ! forest pfts are not part of the lcc structure and thus the initial area has not yet been automatically collected
           CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
           cf_diff(:) = cf_current_year(:, i_cf_tile) - current_fract(:)
           ! Prevent numerical issues
-          WHERE(abs(cf_diff(:)) < min_cf_change)
+          WHERE (abs(cf_diff(:)) < min_cf_change)
             cf_diff(:) = 0.0_wp
             cf_current_year(:, i_cf_tile) = current_fract(:)
           END WHERE
@@ -226,18 +226,18 @@ CONTAINS
 
       ELSE
         ! Assert: pft without children
-        IF(current_tile%Has_children()) THEN
-          CALL finish(TRIM(routine), 'Violation of assertion: alcc only expects children of a lcc tile ' &
+        IF (current_tile%Has_children()) THEN
+          CALL finish(TRIM(routine), 'Violation of assertion: alcc only expects children of a lcc tile '  &
             & //'in case of the forest age class usecase, but usecase was '// TRIM(model%config%usecase)  &
             & // '. Tile with children: ' // trim(current_tile%name) // '. Please check.')
-        ENDIF
+        END IF
 
         ! Assert: In mo_alcc_init read_land_use_data assumes that all child tiles of the veg tile
         ! are part of the lcc structure
         IF (one_of(current_tile%name, lcc_relocations%tile_names) <= 0) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
           & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
-        ENDIF
+        END IF
 
         cf_diff(:) = cf_current_year(:, i_cf_tile) - initial_area(:, i_tile)
         ! Prevent numerical issues
@@ -265,7 +265,7 @@ CONTAINS
       WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
         & // 'Max difference of: ', MAXVAL(cf_diff)
       CALL finish(TRIM(routine), TRIM(message_text))
-    ENDIF
+    END IF
 
     !>
     !> 3. collect to be transferred matter
@@ -281,29 +281,29 @@ CONTAINS
     DO WHILE (ASSOCIATED(current_tile))
 
       ! In case of forest age classes we have to decent one level further
-      IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
+      IF ((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
         is_age_class = .TRUE.
         forest_pft_tile => current_tile
         current_tile => current_tile%Get_first_child_tile()
-      ENDIF
+      END IF
 
       IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
         i_tile = i_tile + 1
         IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
           CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
-        ENDIF
-      ENDIF
+        END IF
+      END IF
 
       current_tile => current_tile%Get_next_sibling_tile()
 
       ! In case of forest age classes we have to go up one level and go to the next tile there
-      IF(is_age_class .AND. .NOT. ASSOCIATED(current_tile)) THEN
+      IF (is_age_class .AND. .NOT. ASSOCIATED(current_tile)) THEN
         current_tile => forest_pft_tile
         current_tile => current_tile%Get_next_sibling_tile()
         is_age_class = .FALSE.
-      ENDIF
+      END IF
 
-    ENDDO
+    END DO
 
     !>
     !> 5. make the passive matter transfer

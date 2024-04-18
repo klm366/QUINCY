@@ -1,15 +1,21 @@
+!> Contains basic definitions for variable class
 !>
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish, message
-  USE mo_hermetic,          ONLY: t_hermetic
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
   USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
@@ -48,10 +54,10 @@ MODULE mo_jsb_var_class
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              !
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
-    INTEGER                       :: element_id                ! 
-    INTEGER                       :: owner_model_id            ! 
-    INTEGER                       :: owner_proc_id = -1        ! 
-    INTEGER, ALLOCATABLE          :: owner_tile_path(:)        ! 
+    INTEGER                       :: element_id                !
+    INTEGER                       :: owner_model_id            !
+    INTEGER                       :: owner_proc_id = -1        !
+    INTEGER, ALLOCATABLE          :: owner_tile_path(:)        !
     INTEGER, ALLOCATABLE          :: child_idx(:)
       !< Position-numbers of the same var (as this var) on the children of the current tile (i.e. within mem%vars(:) of that child).
     REAL(dp)                      :: missval
@@ -92,9 +98,8 @@ MODULE mo_jsb_var_class
       ! 1d stream elements are not supported with ECHAM
       :: ptr(:,:) => NULL()
 #endif
-
   CONTAINS
-    PROCEDURE               :: Associate_pointers => t_jsb_var_real1d_associate_pointers
+    PROCEDURE :: Associate_pointers => t_jsb_var_real1d_associate_pointers
   END TYPE t_jsb_var_real1d
 
   !================================================================================================================================
@@ -274,7 +279,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real1d_associate_pointers'
 
     ! Do nothing for 1d variables
-
 
   END SUBROUTINE t_jsb_var_real1d_associate_pointers
 

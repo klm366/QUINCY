@@ -1,17 +1,16 @@
+!> Contains the class and methods for the JSBACH memory structure
 !>
-!! @brief Contains the class and methods for the JSBACH memory structure
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
@@ -30,7 +29,7 @@ MODULE mo_jsb_memory_class
     &                             REAL1D, REAL2D, REAL3D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
-    &                             GRID_LONLAT,GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
+    &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
   USE mo_jsb_utils_iface,   ONLY: assign_if_present
@@ -241,18 +240,19 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
-    ! if we want to add a variable we need to store it in the next position in vars
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
     ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr1d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -394,18 +394,19 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
-    ! if we want to add a variable we need to store it in the next position in vars
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
     ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr2d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -562,18 +563,19 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
-    ! if we want to add a variable we need to store it in the next position in vars
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
     ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr3d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -870,6 +872,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
@@ -891,12 +897,15 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice - ics + 1, &
       &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
       &                    no_children))
 
     DO i=1,no_children
-       ! R: Unterschied zu %ptr(ics:ice,iblk) ???
        var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk)
     END DO
 
@@ -915,6 +924,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     DO i=1,no_children
       this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
@@ -928,7 +941,6 @@ CONTAINS
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children   ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var           ! of the parent tile: tile%mem(iproc)%p%var
-                                                         ! R: kann man auf TYPE(t_jsb_var_real2d) setzen
     REAL(wp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
     REAL(wp), allocatable               :: var_averaged(:)
 
@@ -936,6 +948,10 @@ CONTAINS
     INTEGER :: i
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles

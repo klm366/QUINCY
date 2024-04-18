@@ -1,17 +1,16 @@
+!> Contains structures and methods for hd config
 !>
-!! @brief Contains structures and methods for hd config
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veroniks Gayler (2013-04-20)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hd_config_class
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)

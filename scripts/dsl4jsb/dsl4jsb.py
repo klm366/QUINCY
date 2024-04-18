@@ -1,5 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #
 #  dsl4jsb.py
 #
@@ -232,6 +244,7 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
                 outfile.write(u'!\n! This file was automatically generated from JSBACH source file:\n')
                 outfile.write(u'!    ' + re.sub(r'.*/src', 'src', os.path.realpath(os.path.abspath(inputfile))) + u'\n')
                 outfile.write(u'! with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
+                outfile.write(u'#line 1 "{}"\n'.format(os.path.realpath(os.path.abspath(inputfile))))
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
@@ -245,7 +258,7 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
                         outfile.write(u'! ' + line.encode('utf-8'))
                 matches = re.finditer(re_function, line)
                 if matches:
-                    for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
+                    for match in matches:         # match.group(1) contains the macro name without "dsl4jsb_"
                         try:
                             key = match.group(1).lower()
                             pat, replace = macros[key]

@@ -1,24 +1,23 @@
+!> Contains physical constants
 !>
-!! @brief Contains physical constants
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2016-03-18)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_physical_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 
-  ! most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
-  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90 :
+  ! Most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
+  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90:
   !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
   !   src/shared/mo_util_jsbach.f90         -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface

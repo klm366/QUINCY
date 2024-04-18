@@ -1,4 +1,4 @@
-!> Summary: QUINCY model modes
+!> QUINCY model modes
 !>
 !> ICON-Land
 !>
@@ -16,6 +16,7 @@
 !>#### defines QUINCY model modes and related helper routines
 !>
 MODULE mo_quincy_model_config
+#ifndef __NO_QUINCY__
 
   USE mo_util,             ONLY: tolower
   USE mo_exception,        ONLY: finish
@@ -75,7 +76,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_quincy_model_config_id'
 
-    SELECT CASE(tolower(TRIM(name)))  
+    SELECT CASE(tolower(TRIM(name)))
     CASE ('land')
       return_value = QLAND
     CASE ('plant')
@@ -94,4 +95,5 @@ CONTAINS
 
   END FUNCTION Get_quincy_model_config_id
 
+#endif
 END MODULE mo_quincy_model_config

@@ -1,30 +1,29 @@
+!> Contains the memory class for the hydrology process.
 !>
-!! @brief Contains the memory class for the hydrology process.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-10-29)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hydro_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
+  USE mo_jsb_control,      ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
-  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
@@ -127,7 +126,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
       & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
-      & vol_porosity_sl,      & !< Volumetric porosity of mineral                                           [m/m]
+      & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
       & matrix_pot_sl,        & !< Matrix potential                                                         [m]
@@ -248,8 +247,6 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
-    !! !$acc enter data pcreate(mem)
-
     ! Common variables
 
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -277,34 +274,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
-      & hgrid, surface,                                                              &
-      & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
-      & hgrid, surface,                                                              &
-      & t_cf('weq_pond', 'm (water equivalent)', 'Surface pond reservoir'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
-      & hgrid, surface,                                                              &
-      & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
-      & hgrid, surface,                                                              &
-      & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'runoff_retention', mem%runoff_retention,                         &
       & hgrid, surface,                                                                 &
@@ -343,31 +312,6 @@ CONTAINS
     CALL mem%Add_var( 'snowmelt', mem%snowmelt,                                      &
       & hgrid, surface,                                                              &
       & t_cf('snowmelt', 'kg m-2 s-1', 'Snow melt'),                                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &
-      & hgrid, surface,                                                              &
-      & t_cf('pond_melt', 'kg m-2 s-1', 'Melting of pond ice'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'pond_freeze', mem%pond_freeze,                                &
-      & hgrid, surface,                                                              &
-      & t_cf('pond_freeze', 'kg m-2 s-1', 'Freezing of pond water'),                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'wtr_pond_net_flx', mem%wtr_pond_net_flx,                      &
-      & hgrid, surface,                                                              &
-      & t_cf('wtr_pond_net_flx', 'kg m-2 s-1',                                       &
-      &      'Net water flux into surface water ponds'),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -427,14 +371,14 @@ CONTAINS
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'm3 s-1', 'Local discharge'),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix, output_level=BASIC,                                                              &
+      & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                        &
       & hgrid, surface,                                                              &
       & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix, output_level=BASIC,                                                              &
+      & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'internal_drain', mem%internal_drain,                          &
@@ -470,13 +414,15 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'elevation', mem%elevation,                                    &
-      & hgrid, surface,                                                              &
-      & t_cf('elevation', 'm', 'Mean orography'),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    IF (jsbach_runs_standalone()) THEN
+      CALL mem%Add_var( 'elevation', mem%elevation,                                  &
+        & hgrid, surface,                                                            &
+        & t_cf('elevation', 'm', 'Mean orography'),                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    END IF
 
     CALL mem%Add_var( 'oro_stddev', mem%oro_stddev,                                  &
       & hgrid, surface,                                                              &
@@ -494,20 +440,15 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
-      & hgrid, surface,                                                                   &
-      & t_cf('fract_pond_max', '-', 'Maximum surface fraction available for inundation'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
-
-    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                   &
-      & hgrid, surface,                                                                   &
-      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT )
-
+    IF (model%config%use_tmx) THEN
+      CALL mem%Add_var( 'heating_snow_cpy_melt', mem%q_snocpymlt,                       &
+        & hgrid, surface,                                                               &
+        & t_cf('heating_snow_cpy_melt', 'W m-2', 'Heating due to snow melt on canopy'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & prefix, suffix,                                                               &
+        & lrestart=.FALSE.,                                                             &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    END IF
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -548,14 +489,15 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                          &
-        & hgrid, surface,                                                        &
-        & t_cf('q_snocpymlt', 'W m-2', 'Heating due to snow melt on canopy'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & lrestart=.FALSE.,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                    &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                                 &
+          & hgrid, surface,                                                               &
+          & t_cf('heating_snow_cpy_melt', 'W m-2', 'Heating due to snow melt on canopy'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+          & prefix, suffix,                                                               &
+          & lrestart=.FALSE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      END IF
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,201, grib_bits)
@@ -772,14 +714,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'evapo_pond', mem%evapo_pond,                          &
-        & hgrid, surface,                                                      &
-        & t_cf('evapo_pond', 'kg m-2 s-1',                                     &
-        &      'Evaporation from ponds (w/o snow and skin res.'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'evapo_skin', mem%evapo_skin,                          &
         & hgrid, surface,                                                      &
@@ -826,7 +760,6 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-
       CALL mem%Add_var( 'wtr_rootzone', mem%wtr_rootzone,                      &
         & hgrid, surface,                                                      &
         & t_cf('wtr_rootzone', 'm', 'Liquid water content of the root zone'),  &
@@ -916,6 +849,81 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
+        & hgrid, surface,                                                              &
+        & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
+        & hgrid, surface,                                                              &
+        & t_cf('weq_pond', 'm (water equivalent)', 'Surface pond reservoir'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
+        & hgrid, surface,                                                              &
+        & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
+        & hgrid, surface,                                                              &
+        & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &
+        & hgrid, surface,                                                              &
+        & t_cf('pond_melt', 'kg m-2 s-1', 'Melting of pond ice'),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE.,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'pond_freeze', mem%pond_freeze,                                &
+        & hgrid, surface,                                                              &
+        & t_cf('pond_freeze', 'kg m-2 s-1', 'Freezing of pond water'),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE.,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_pond_net_flx', mem%wtr_pond_net_flx,                      &
+        & hgrid, surface,                                                              &
+        & t_cf('wtr_pond_net_flx', 'kg m-2 s-1',                                       &
+        &      'Net water flux into surface water ponds'),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE.,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
+        & hgrid, surface,                                                                   &
+        & t_cf('fract_pond_max', '-', 'Maximum surface fraction available for inundation'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
+
+      CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                   &
+        & hgrid, surface,                                                                   &
+        & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'evapo_pond', mem%evapo_pond,                          &
+        & hgrid, surface,                                                      &
+        & t_cf('evapo_pond', 'kg m-2 s-1',                                     &
+        &      'Evaporation from ponds (w/o snow and skin res.'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
     ! Additional variables for vegetation

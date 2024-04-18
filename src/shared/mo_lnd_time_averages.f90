@@ -1,4 +1,4 @@
-!> Summary: defines routine for averaging variables
+!> defines routine for averaging variables
 !>
 !> ICON-Land
 !>

@@ -1,20 +1,17 @@
-!> Summary: alcc config - defines vgrid required in alcc memory
+!> alcc config - defines vgrid required in alcc memory
 !>
-!>### Could contain namelist info (e.g. alcc scheme), but currently of no use beyond infrastructural requirements
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2018 Rainer Schneck
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> - First version   by Rainer Schneck (2018-11-28)
-!> - condensed       by Julia Nabel    (2021-06-23)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Could contain namelist info (e.g. alcc scheme), but currently of no use beyond infrastructural requirements
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__

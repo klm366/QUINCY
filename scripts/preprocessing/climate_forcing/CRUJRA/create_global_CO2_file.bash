@@ -1,8 +1,18 @@
 #!/bin/bash
+
+# ICON-Land
 #
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#-----------------------------------------------------------------------------
 # script generating a global CO2 file from global_co2_ann_1700_2020.txt as used for TRENDY_v10 runs
-#
-# Julia E.M.S. Nabel, July 2021 (julia.nabel@mpimet.mpg.de)
 #------------------------------------------------------------------------------
 #############################################################################################################
 

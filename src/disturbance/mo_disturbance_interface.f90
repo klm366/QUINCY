@@ -1,23 +1,19 @@
-!> Summary: interface to the disturb process (disturbances: currently fire and wind)
+!> Contains the interfaces to the disturb process
 !>
-!>### Contains the interface to the disturb process (disturbances: currently fire and wind)
+!> ICON-Land
 !>
-!> Copyright (c) 2017 Rainer Schneck
-!> Copyright (c) 2018-2021 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!> First version                                by Rainer Schneck (2017-05-04)
-!> C conservation test                          by Julia Nabel (2018)
-!> Disassembling of tasks and ongoing changes   by Julia Nabel (2021-10-29)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
-!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_disturb_interface
 #ifndef __NO_JSBACH__
 
@@ -313,16 +309,16 @@ CONTAINS
           CASE DEFAULT
             CALL finish('disturbed_frac','Unknown windbreak algorithm')
         END SELECT
-      ENDIF
+      END IF
 
       ! Init diagnostic carbon fluxes
-      IF ( tile%Has_process_memory(CARBON_) ) THEN
+      IF (tile%Has_process_memory(CARBON_)) THEN
         co2flux_fire_all_2_atm(:) = 0._wp
         cflux_dist_green_2_soil(:) = 0._wp
         cflux_dist_woods_2_soil(:) = 0._wp
-      ENDIF
+      END IF
 
-    ENDIF ! is_newday
+    END IF ! is_newday
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -461,9 +457,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
     !
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)     ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
-    !
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_reserve)                ! inout
@@ -498,7 +491,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
 
-      IF ( tile%Has_process_memory(CARBON_) ) THEN
+      IF (tile%Has_process_memory(CARBON_)) THEN
 
         ! Calculate carbon relocation connected with damages and fires
         IF (.NOT. model%processes(WLCC_)%p%config%active) THEN
@@ -557,6 +550,7 @@ CONTAINS
                 & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
 
               ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp
+              dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)
               dummy_flux = 0._wp
               CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
                 & dummy_flux(:), cconservation_wind(:))
@@ -564,7 +558,7 @@ CONTAINS
             CASE DEFAULT
               CALL finish('disturbed_fract','Unknown windbreak algorithm')
           END SELECT
-        ENDIF
+        END IF
 
         IF (.NOT. model%processes(FLCC_)%p%config%active) THEN
           ! If FLCC is not active, fire disturbance is executed directly on this pft
@@ -581,7 +575,7 @@ CONTAINS
 
               CALL relocate_carbon_fire(                    &
                 & burned_fract(:),                          & ! in, only for windbreak
-                & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
+                & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)),  & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)),  & ! in
                 & c_green(:),                               & ! inout
@@ -628,7 +622,7 @@ CONTAINS
 
               ! For conservation test: negate currently positve co2flux_fire_all_2_atm_ta (flux away from land!)
               ! and convert from CO2 flux to carbon change per day
-
+              dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
               CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
                 & -co2flux_fire_all_2_atm_ta(:) * sec_per_day / molarMassCO2_kg, cconservation_fire(:))
 
@@ -678,7 +672,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    IF ( tile%Is_process_active(CARBON_) ) THEN
+    IF (tile%Is_process_active(CARBON_)) THEN
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)

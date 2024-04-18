@@ -1,17 +1,16 @@
+!> Contains basic model structure
 !>
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-!! @brief basic container (structure) for models
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!!  Reiner Schnur, MPI-M Hamburg
-!!  
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_class
 #ifndef __NO_JSBACH__
 
@@ -55,7 +54,7 @@ CONTAINS
     INTEGER, INTENT(in)        :: id
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_model_by_id'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_model_by_id'
 
     model => jsbach%models(id)%m
 

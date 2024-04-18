@@ -1,19 +1,16 @@
-!> Summary: fage (forest age) memory class
+!> fage (forest age) memory class
 !>
-!>### Contains memory definitions for fage
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2017 and 2022 Julia Nabel
-!>
-!>#### Revision History
-!> - First version    by Julia Nabel (2017-11-21)
-!> - Re-integration   by Julia Nabel (2022-10-05)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Contains memory definitions for fage
 !>
 MODULE mo_fage_memory_class
 #ifndef __NO_JSBACH__
@@ -98,9 +95,9 @@ CONTAINS
 
     dsl4jsb_Get_config(FAGE_)
 
-    IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    IF (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
         &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-        &  )) THEN
+        &  ) THEN
 
       CALL mem%Add_var('mean_age', mem%mean_age,                                &
         & hgrid, surface,                                                       &
@@ -118,7 +115,7 @@ CONTAINS
         & output_level=FULL,                                                   &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-    ENDIF
+    END IF
 
   END SUBROUTINE Init_fage_memory
 

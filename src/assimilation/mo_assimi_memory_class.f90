@@ -29,7 +29,7 @@ MODULE mo_assimi_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 80
 
   ! ======================================================================================================= !
-  !>Type definition for assimi memory
+  !> Type definition for assimi memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
      ! t_canopy_sum variables
@@ -40,7 +40,6 @@ MODULE mo_assimi_memory_class
                                     ! This area is independent of the LAI. So even when the LAI is below 1 this area remains
                                     ! the same (it is still "covered").
       gross_assimilation,         & ! ...on tile area
-                                    ! quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
@@ -90,19 +89,16 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
       & canopy_cond_cl,           & ! Canopy conductance per layer and per leaf area
-                                    ! quincy: conductance for water per canopy layer [m s-1]
       & gross_assimilation_cl,    & ! Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
                                     ! Note, this is the gross assimilation on the leaf area that actually exists.
-                                    ! The influence of the lai on the existing leaf area is aready included.
+                                    ! The influence of the lai on the existing leaf area is already included.
                                     ! It is not the ground area below canopy!
-                                    ! quincy: gross assimilation rate per canopy layer [µmol CO2 m-2 s-1]
       & dark_respiration_cl,      & ! Dark respiration of leaf [ mol(co2) / (m^2(leaf area) * s) ]
       & carbox_rate_max_cl,       & ! [ mol(co2)/(m^2(leaf area) * s) ]
       & e_transport_rate_max_cl,  &
       & carbox_rate_cl,           &
       & e_transport_rate_cl,      &
       & CO2_conc_leaf_cl            ! CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
-                                    ! quincy: internal leaf CO2 concentration per canopy layer [ppm]
 
     TYPE(t_jsb_var_real2d) ::     &
       & canopy_cond_unlimited,    & ! Canopy conductance without water limit  [m/s] (mean value)
@@ -123,9 +119,6 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: assimilation
-  !>
-  !>   init only the variables needed for the particular model
-  !>   (i.e. allocate memory, add to varlist, set metadata)
   !>
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
@@ -365,7 +358,7 @@ CONTAINS
       & t_cf('cover_fract_pot', 'fract', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & initval_r=0.1_wp ) ! initval choosen freely
+      & initval_r=0.1_wp ) ! initval chosen freely
 
   END SUBROUTINE Init_assimi_memory
 

@@ -1,18 +1,18 @@
+!> Contains the interfaces to the carbon process
 !>
-!! @brief Contains the interfaces to the carbon process
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
-!!      ++ subroutines for cpool sums and c conservation test
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -131,28 +131,18 @@ CONTAINS
   !!
   SUBROUTINE Register_carbon_tasks(this, model_id)
 
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
-
     ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
-
-    model   => Get_model(model_id)
-
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH)
-      CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
-      CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
-    END SELECT
+    CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
 
   END SUBROUTINE Register_carbon_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
+  !> Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
   !!        R: Corresponds to update_cbalance_bethy in JSBACH3.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -172,7 +162,7 @@ CONTAINS
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
-    INTEGER                      :: iblk, ics, ice
+    INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp)                     :: dtime
     TYPE(t_subset)               :: subset
     REAL(wp), allocatable        :: precip_total(:)
@@ -324,6 +314,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -425,6 +416,10 @@ CONTAINS
     ! variables needed for NLCC process
     dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)
+
+    lstart   = is_time_experiment_start(options%current_datetime)
+    new_day  = is_newday(options%current_datetime, dtime)
+    new_year = is_newyear(options%current_datetime, dtime)
 
     ! ---------------------------
     ! Go
@@ -633,26 +628,6 @@ CONTAINS
       ELSEIF (new_day) THEN
          max_green_bio = MAX(max_green_bio, c_green)
       ENDIF
-
-
-      ! R: In JSBACH3 wurden alle C-pools auf canopy Flaeche gezogen gerechnet. Ebenso die C Fluxe.
-      !    Fuer den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
-      !    Besser waere fuer JSBACH4 eigentlich auf Tile Flaeche bezogen zu rechnen um alle variablen von JS4
-      !    konsistent auf dieselbe Flaeche zu beziehen. Sonst machen wir den Code unnoetig unuebersichtlich.
-      !    Dadurch wuerde z.B. die Variablen-Verdopplung vermieden.
-      !    Ich habe die Assimilation zwar schon auf tile Flaeche umgerechnet und koennte daher prinzipiell
-      !    die Cpools und Fluxe alle ueber das NPP-auf-Tile-Flaeche rechnen.
-      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepasst
-      !    werden muessten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
-      !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
-      !    Dazu kommt, dass Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden muessten.
-      !    Wie auch immer wenn spaeter etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
-      !    Flaeche zu bleiben.
-      !    => daher habe ich das doppelte Flaechenkonzept von JSBACH3 uebernommen.
-      !
-      !    Um die Benennungen wenigstens richtig zu machen muesste ich jede dieser 30 Variablen in allen
-      !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
-      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Flaeche bezogen sind.
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
@@ -904,7 +879,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief scales all carbon state variables upon reference area change
+  !> scales all carbon state variables upon reference area change
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to scale from somewhere else?
   !!
@@ -925,7 +900,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green
     dsl4jsb_Real2D_onChunk ::  c_reserve
@@ -958,6 +933,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
 
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
+    ! TODO on GPU
+#ifndef _OPENACC
     IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
@@ -968,12 +945,14 @@ CONTAINS
         & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
         & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
     ENDIF
+#endif
 
     dsl4jsb_Get_memory(CARBON_)
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
@@ -1153,7 +1132,7 @@ CONTAINS
   dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)
   dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb)
 
-  CALL recalc_per_tile_vars(tile, options,                                      &
+  CALL recalc_per_tile_vars(tile, options,                                    &
   & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
   & c_crop_harvest = c_crop_harvest(:),                                       &
   & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
@@ -1176,10 +1155,9 @@ CONTAINS
 END SUBROUTINE recalc_carbon_per_tile_vars
 
 
-
   ! ================================================================================================================================
   !>
-  !! @brief Calculates the per tile states from current canopy states
+  !> Calculates the per tile states from current canopy states
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
   !!
@@ -1337,7 +1315,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum_ta)      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum_ta)      ! opt out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_green_2_soil_ta ) ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_green_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta )    ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! opt out
@@ -1436,7 +1414,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
   ! ================================================================================================================================
   !>
-  !! @brief calculates the current sum of all carbon state variables -> on ta! (per canopy vars are not aggregated!)
+  !> calculates the current sum of all carbon state variables -> on ta! (per canopy vars are not aggregated!)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
   !!
@@ -1460,9 +1438,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER :: nc, ic, ics, ice, iblk
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -1494,6 +1472,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green_ta )               ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve_ta )             ! in
@@ -1520,30 +1499,59 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !$claw expand parallel update
-    current_c_state_sum_ta(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
-        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
-        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
-        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
-        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
-        & c_humus_1_ta(:)  + c_humus_2_ta(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      current_c_state_sum_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic) + c_crop_harvest_ta(ic) + &
+        & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
+        & c_acid_ag2_ta(ic) + c_water_ag2_ta(ic) + c_ethanol_ag2_ta(ic) + c_nonsoluble_ag2_ta(ic) + &
+        & c_acid_bg1_ta(ic) + c_water_bg1_ta(ic) + c_ethanol_bg1_ta(ic) + c_nonsoluble_bg1_ta(ic) + &
+        & c_acid_bg2_ta(ic) + c_water_bg2_ta(ic) + c_ethanol_bg2_ta(ic) + c_nonsoluble_bg2_ta(ic) + &
+        & c_humus_1_ta(ic)  + c_humus_2_ta(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
-    IF (PRESENT(c_sum_veg_ta)) c_sum_veg_ta(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:)
+    IF (PRESENT(c_sum_veg_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_veg_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
-    IF (PRESENT(c_sum_litter_ag_ta)) c_sum_litter_ag_ta(ics:ice) =                                    &
-        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
-        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:)
-    IF (PRESENT(c_sum_litter_bg_ta)) c_sum_litter_bg_ta(ics:ice) =                                    &
-        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
-        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:)
-    IF (PRESENT(c_sum_humus_ta)) c_sum_humus_ta(ics:ice) = c_humus_1_ta(:)  + c_humus_2_ta(:)
+    IF (PRESENT(c_sum_litter_ag_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_litter_ag_ta(ic) = &
+          & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
+          & c_acid_ag2_ta(ic) + c_water_ag2_ta(ic) + c_ethanol_ag2_ta(ic) + c_nonsoluble_ag2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ENDIF
+
+    IF (PRESENT(c_sum_litter_bg_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_litter_bg_ta(ic) = &
+          & c_acid_bg1_ta(ic) + c_water_bg1_ta(ic) + c_ethanol_bg1_ta(ic) + c_nonsoluble_bg1_ta(ic) + &
+          & c_acid_bg2_ta(ic) + c_water_bg2_ta(ic) + c_ethanol_bg2_ta(ic) + c_nonsoluble_bg2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
+    IF (PRESENT(c_sum_humus_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_humus_ta(ic) = c_humus_1_ta(ic)  + c_humus_2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
   ! ================================================================================================================================
   !>
-  !! @brief calculates the current sum of all bg carbon state variables (per canopy)
+  !> calculates the current sum of all bg carbon state variables (per canopy)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
   !!
@@ -1562,7 +1570,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ag_1_and_bg_sums'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum
     dsl4jsb_Real2D_onChunk ::  c_ag_sum_1
@@ -1589,6 +1597,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )             ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )           ! out
@@ -1610,13 +1619,16 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
-    !$claw expand parallel update
-    c_bg_sum(:) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
-             & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
-             & c_humus_1(:)  + c_humus_2(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      c_bg_sum(ic) = c_acid_bg1(ic) + c_water_bg1(ic) + c_ethanol_bg1(ic) + c_nonsoluble_bg1(ic) + &
+              & c_acid_bg2(ic) + c_water_bg2(ic) + c_ethanol_bg2(ic) + c_nonsoluble_bg2(ic) + &
+              & c_humus_1(ic)  + c_humus_2(ic)
 
-    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
-    !$claw end expand
+      c_ag_sum_1(ic) =  c_acid_ag1(ic) + c_water_ag1(ic) + c_ethanol_ag1(ic) + c_nonsoluble_ag1(ic) + c_humus_1(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -1863,7 +1875,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
       &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
       &  LAI_yDayMean_source(:), LAI_yDayMean_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:), &
+    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
       &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
       &  current_max_green_source(:), current_max_green_target(:))
     CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
@@ -1875,7 +1887,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
   ! ================================================================================================================================
   !>
-  !! @brief conducts a carbon conservation test on this tile's current states and given old sum + fluxes
+  !> conducts a carbon conservation test on this tile's current states and given old sum + fluxes
   !!        -> on ta! (per canopy vars are not aggregated!)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
@@ -1898,19 +1910,23 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
+    INTEGER :: ic
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
-    !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
 
-    !$claw expand parallel update
-    Cconserve(:) = Cconserve(:) - old_c_state_sum_ta(:) - cflux_ta(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, SIZE(cflux_ta)
+      Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE check_carbon_conservation
 
   ! ================================================================================================================================
   !>
-  !! @brief conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
+  !> conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1939,25 +1955,25 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-!    iblk  = options%iblk
+    ! Note: options is defined here as a local variable. It is needed in calculate_current_c_ta_state_sum
     options%ics = 1
     options%ice = grid%nproma
 
     ics = options%ics
     ice = options%ice
-    nc = ice - ics + 1
 
-    ALLOCATE(C_flux_yday(nc))
+    ALLOCATE(C_flux_yday(grid%nproma))
 
     DO iblk = 1, grid%nblks
 
-      CALL model%Set_options(iblk=iblk)
       options%iblk = iblk
       IF (iblk == grid%nblks) THEN
         options%ice = grid%npromz
         ice = grid%npromz
         ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
       END IF
+      options%nc = ice - ics + 1
+      nc = options%nc
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
@@ -1966,7 +1982,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
 
         ! CO2 flux due to npp, soil respiration and herbivory
-        C_flux_yday(ics:ice) = &
+        C_flux_yday(1:nc) = &
           & - ((  dsl4jsb_var2D_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta)  &
           &     + dsl4jsb_var2D_onChunk(CARBON_, co2flux_soilresp_2_atm_ta)  &
           &     + dsl4jsb_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)      &
@@ -1974,12 +1990,12 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
         ! CO2 flux due to fire
         IF (model%processes(DISTURB_)%p%config%active) THEN
-          C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
+          C_flux_yday(1:nc) =  C_flux_yday(1:nc) &
             & - dsl4jsb_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta) * sec_per_day / molarMassCO2_kg
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(ics:ice)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(1:nc)
 
       ELSE
         carbon_conservation_test = 0._wp
@@ -1995,7 +2011,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
   ! ================================================================================================================================
   !>
-  !! @brief calculations of diagnostic global sums
+  !> calculations of diagnostic global sums
   !!        called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !! @param[in,out] tile    Tile for which routine is executed.
   !

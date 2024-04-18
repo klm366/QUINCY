@@ -1,19 +1,16 @@
+!> Contains the ECHAM driver for ICON-Land standalone using MPI-ESM/ECHAM infrastructure
 !>
-!! @brief Contains the driver for ICON-Land standalone using MPI-ESM/ECHAM infrastructure
-!!        for explic use with ECHAM
-!!        Initial version based on the jsbach3 driver 'jsbalone_driver'
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 PROGRAM jsb4_driver
 #ifndef __NO_JSBACH__
 #ifndef __ICON__

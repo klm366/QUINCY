@@ -1,6 +1,18 @@
-!> Summary: interface to the pplcc process (pre- and postprocessing for all land cover change processes)
+!> interface to the pplcc process
 !>
-!>### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all lcc processes
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all
+!>     land cover change processes
 !>
 !> Note:
 !>
@@ -13,17 +25,9 @@
 !>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>          Also, integration of pool-structure might need some additional work.
 !>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-02 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_pplcc_interface
 #ifndef __NO_JSBACH__
 
@@ -180,11 +184,11 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
 
     ! If not newday, do nothing
-    IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
+    IF (.NOT. is_newday(options%current_datetime,dtime)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    IF( tile%Has_conserved_quantities()) THEN
+    IF (tile%Has_conserved_quantities()) THEN
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -201,7 +205,7 @@ CONTAINS
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types only expected for pft tiles, ' &
                 & //' but found on '// trim(tile%name))
-            ENDIF
+            END IF
 
             ! in jsb4 the carbon variables are specified per canopy
             expected_string_in_unit = 'm-2(canopy)'
@@ -211,7 +215,7 @@ CONTAINS
             IF (.NOT. tile%Has_process_memory(PHENO_)) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for pplcc conversion, ' &
                 & //' but pheno memory is not available for '// trim(tile%name))
-            ENDIF
+            END IF
 
             !- Set pointers to memory on the current tile
             dsl4jsb_Get_memory(PHENO_)
@@ -236,7 +240,7 @@ CONTAINS
           IF (.NOT. INDEX(TRIM(this_unit), expected_string_in_unit) > 0) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: variable does not have the expected unit, ' &
               & // 'unit is expected to contain ' // expected_string_in_unit // ' but '// trim(this_unit) // ' does not.')
-          ENDIF
+          END IF
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
@@ -247,8 +251,8 @@ CONTAINS
             &   * conversion_factor(:)
 
           ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
-        ENDDO
-      ENDDO
+        END DO
+      END DO
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -299,11 +303,16 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
 
     ! If not newday, do nothing
-    IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
+    IF (.NOT. is_newday(options%current_datetime,dtime)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    IF( tile%Has_conserved_quantities()) THEN
+    IF (.NOT. ASSOCIATED(tile%parent)) CALL pplcc_fraction_diagnostics(tile, options)
+
+    ! If process is not calculated on this tile, conversions are not necessary
+    IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
+
+    IF (tile%Has_conserved_quantities()) THEN
 
       ! Iterate over all cq types and their vars and convert and change unit
       DO i_cqt = 1,tile%nr_of_cqts
@@ -320,14 +329,14 @@ CONTAINS
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types only expected for pft tiles, ' &
                 & //' but found on '// trim(tile%name))
-            ENDIF
+            END IF
 
             ! in jsb4 the carbon variables are specified as mol per canopy, therefore adapt the conversion factor
             ! -> Assert that PHENO memory is available on this tile
             IF (.NOT. tile%Has_process_memory(PHENO_)) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for conversion, ' &
                 & //' but pheno memory is not available for '// trim(tile%name))
-            ENDIF
+            END IF
 
             !- Set pointers to memory on the current tile
             dsl4jsb_Get_memory(PHENO_)
@@ -358,14 +367,14 @@ CONTAINS
               &   / conversion_factor(:)
           ELSEWHERE
             tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0
-          ENDWHERE
+          END WHERE
 
-        ENDDO
-      ENDDO
+        END DO
+      END DO
 
       IF (tile%Is_process_calculated(CARBON_)) THEN
         CALL recalc_carbon_per_tile_vars(tile, options)
-      ENDIF
+      END IF
 
     END IF
 
@@ -398,7 +407,7 @@ CONTAINS
     dsl4jsb_Def_memory(PPLCC_)
     dsl4jsb_Def_memory(PHENO_)
 
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':pplc_fraction_diagnostics'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':pplcc_fraction_diagnostics'
 
     ! Pointers to variables in memory
     !
@@ -425,7 +434,7 @@ CONTAINS
 
     ! The fraction variables are defined as fractions relative to the grid cell fraction. Thus
     ! only calculations on the box tile make sense
-    IF (.NOT. tile%name .EQ. 'box') CALL finish(TRIM(routine), 'Should only be called for the box tile')
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     ! Get required variables on this tile
     dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in

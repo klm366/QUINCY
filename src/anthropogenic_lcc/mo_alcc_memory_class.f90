@@ -1,20 +1,17 @@
-!> Summary: alcc (anthropogenic lcc) memory class
+!> alcc (anthropogenic lcc) memory class
 !>
-!>### Contains memory definitions for alcc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2018 Rainer Schneck
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> - First version   by Rainer Schneck (2018-12-03)
-!> - condensed       by Julia Nabel    (2021-06-23)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Contains memory definitions for alcc
 !>
 MODULE mo_alcc_memory_class
 #ifndef __NO_JSBACH__

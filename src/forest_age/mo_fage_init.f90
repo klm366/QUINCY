@@ -1,19 +1,16 @@
-!> Summary: fage (forest age) memory initialisation
+!> fage (forest age) memory initialisation
 !>
-!>### Initialisation of fage (forest age) variables
+!> ICON-Land
 !>
-!> Copyright (c) 2017 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!>
-!> - First version    by Julia Nabel (2017-11-21)
-!> - Re-integration   by Julia Nabel (2022-10-05)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Initialisation of fage (forest age) variables
 !>
 MODULE mo_fage_init
 #ifndef __NO_JSBACH__
@@ -96,14 +93,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(FAGE_, fract_per_age)
 
     ! Assert: does currently not run with openmp
-    IF(Is_enabled_openmp()) THEN
+    IF (Is_enabled_openmp()) THEN
       CALL finish(TRIM(routine), "Currently forest age class implementation does not run with openmp!")
-    ENDIF
+    END IF
 
     ! Assert: l_forestRegrowth
-    IF(.NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF (.NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL finish(TRIM(routine), "Current forest age class implementation requires l_forestRegrowth to be true!")
-    ENDIF
+    END IF
 
     ! Distribution of age fractions - needs to comply with the fractions in the age classes (mo_jsb_tile - Init_tile)
     IF (dsl4jsb_Config(FAGE_)%init_ac_fracts_scheme == 'allFirst') THEN
@@ -117,7 +114,7 @@ CONTAINS
 
     ELSE
       CALL finish(TRIM(routine), 'Currently only "allFirst" implemented for the distribution of age fractions and age classes.')
-    ENDIF
+    END IF
 
     ! input_file = jsb_netcdf_open_input(dsl4jsb_Config(FAGE_)%ic_filename, model%grid_id)
 
@@ -126,7 +123,7 @@ CONTAINS
     ELSE
       !Only one age -> for now initialise age with zero later e.g. from file
       dsl4jsb_var2D_onDomain(FAGE_, mean_age) = 0._wp
-    ENDIF
+    END IF
 
   END SUBROUTINE fage_init_ic
 

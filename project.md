@@ -1,8 +1,8 @@
 ---
 project: ICON-Land
-author: Max Planck Institute for Meteorology, Hamburg, Germany
+author: MPI-M, MPI-BGC
 author_description: [AUTHORS](page/1-general/02-authors.html)
-website: https://mpimet.mpg.de/en/science/modeling-with-icon/icon-configurations/icon-l/jsbach
+website: https://icon-model.org
 email: reiner.schnur@mpimet.mpg.de
 project_dir: .
 src_dir: ./src

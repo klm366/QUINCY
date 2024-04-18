@@ -1,21 +1,16 @@
+!> Contains the memory class for phenology.
 !>
-!! @brief Contains the memory class for phenology.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
-!!                          (derive maxLAI from biomass via allometric relationships)
-!! Jan Engel (2022): add QUINCY variables
-!! Jan Engel (2023-01-05): improve model encapsulation
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
 
@@ -136,9 +131,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: phenology
   !>
-  !>   init only the variables needed for the particular model
-  !>   (i.e. allocate memory, add to varlist, set metadata)
-  !>
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -156,25 +148,19 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),  POINTER :: surface, vgrid_canopy        ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
     INTEGER                     :: table                        ! ...
     TYPE(t_grib2)               :: grib2_desc                   ! used for lai settings
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
-    dsl4jsb_Get_config(PHENO_)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    vgrid_canopy => Get_vgrid('canopy_layer')
-    ! ----------------------------------------------------------------------------------------------------- !
 
     !>initialize memory (variables) for the process phenology of the JSBACH model
     !>
 
-    !! !$acc enter data pcreate(mem)
-
-    ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -182,8 +168,8 @@ CONTAINS
       ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
         ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
-        !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
-        !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+        !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
+        !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
 
       CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
@@ -379,14 +365,6 @@ CONTAINS
         END IF ! l_forestRegrowth
       END IF ! logrop
 
-      ! grib setting for: lai differentiation box tile and other tiles
-      ! this is done because ... TODO
-      IF (TRIM(mem%owner_tile_name) == 'box') THEN
-        grib2_desc = t_grib2(2,0,28, grib_bits)
-      ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
-      END IF
-
       CALL mem%Add_var( 'lai', mem%lai,                                        &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
@@ -425,6 +403,7 @@ CONTAINS
       END IF
 #endif
     END IF !  VEG / LAND
+
   END SUBROUTINE Init_pheno_memory
 
 #endif

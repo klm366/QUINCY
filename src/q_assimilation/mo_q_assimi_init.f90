@@ -1,4 +1,4 @@
-!> Summary: QUINCY assimilation variables init
+!> QUINCY assimilation variables init
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### initialization of assimilation memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_assimi_init
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message
@@ -106,14 +106,14 @@ CONTAINS
     beta_soa_tphen_mavg(:,:)          = 1.0_wp
     beta_soil_ps(:,:)                 = 1.0_wp
     beta_soil_gs(:,:)                 = 1.0_wp
-    
+
     beta_air_daytime(:,:)             = 1.0_wp
     beta_air_daytime_dacc(:,:)        = 1.0_wp
     beta_soil_ps_daytime(:,:)         = 1.0_wp
     beta_soil_ps_daytime_dacc(:,:)    = 1.0_wp
     beta_soil_gs_daytime(:,:)         = 1.0_wp
     beta_soil_gs_daytime_dacc(:,:)    = 1.0_wp
-    
+
     beta_air_tfrac_mavg(:,:)          = 1.0_wp
     beta_air_tcnl_mavg(:,:)           = 1.0_wp
     beta_soil_ps_tfrac_mavg(:,:)      = 1.0_wp
@@ -124,6 +124,6 @@ CONTAINS
 
     t_jmax_opt(:,:)                   = t_jmax_opt_min
   END SUBROUTINE q_assimi_init
-  
+
 #endif
 END MODULE mo_q_assimi_init

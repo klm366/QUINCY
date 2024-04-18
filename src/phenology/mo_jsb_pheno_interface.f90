@@ -1,18 +1,23 @@
+!> Contains the interfaces to the phenology processes
 !>
-!! @brief Contains the interfaces to the phenlogy processes of the jsbach model
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added optional functionality: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_update_phenology.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_time_averages.pp-jsb.f90"
+!NEC$ options "-finline-max-function-size=100"
 
 MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
@@ -26,10 +31,10 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, CARBON_
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -38,13 +43,9 @@ MODULE mo_pheno_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pheno_tasks
-  PUBLIC :: update_phenology
-  PUBLIC :: global_phenology_diagnostics, merge_pheno_variables_upon_ageing
+  PUBLIC :: Register_pheno_tasks, global_phenology_diagnostics, merge_pheno_variables_upon_ageing
 
-  ! ======================================================================================================= !
-  !> Type definition for the phenology task
-  !>
+  !> Type definition for update_phenology task
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
@@ -125,24 +126,26 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !! @brief Implementation to update the phenology state
+  !> Implementation to update the phenology state
   !! Task "phenology" calculates the phenology state of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
   SUBROUTINE update_phenology_jsbach(tile, options)
+
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
-    ! ----------------------------------------------------------------------------------------------------- !
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_jsbach'
-    ! ----------------------------------------------------------------------------------------------------- !
-    model        => Get_model(tile%owner_model_id)
+
+    model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
     IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology') THEN
@@ -162,7 +165,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !! @brief Implementation of 'LOGROP' phenology scheme
+  !> Implementation of 'LOGROP' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -171,18 +174,18 @@ CONTAINS
   SUBROUTINE update_phenology_logrop(tile, options)
 
     ! Declarations
-    USE mo_carbon_interface,        ONLY: rescale_carbon_upon_reference_area_change, &
-      &                                   calculate_current_c_ta_state_sum, check_carbon_conservation, &
-      &                                   recalc_carbon_per_tile_vars
-    USE mo_pheno_process,           ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
-      &                                   calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
-      &                                   track_max_green_pool, derive_maxlai_according_to_allometric_relationships
-    USE mo_jsb_time_iface,          ONLY: get_year_day
-    USE mo_jsb_time,                ONLY: is_newyear, is_newday, timestep_in_days
-    USE mo_pheno_parameters,        ONLY: pheno_param_jsbach
-    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
-    USE mo_jsb_grid,                ONLY: Get_grid
-    USE mo_jsb_physical_constants,  ONLY: tmelt
+    USE mo_carbon_interface,       ONLY: rescale_carbon_upon_reference_area_change, &
+      &                                  calculate_current_c_ta_state_sum, check_carbon_conservation, &
+      &                                  recalc_carbon_per_tile_vars
+    USE mo_pheno_process,          ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
+      &                                  calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
+      &                                  track_max_green_pool, derive_maxlai_according_to_allometric_relationships
+    USE mo_jsb_time_iface,         ONLY: get_year_day
+    USE mo_jsb_time,               ONLY: is_newyear, is_newday, timestep_in_days
+    USE mo_pheno_parameters,       ONLY: pheno_param_jsbach
+    USE mo_jsb_grid_class,         ONLY: t_jsb_grid
+    USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -190,7 +193,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    INTEGER                    :: iblk, ics, ice
+    INTEGER                    :: iblk, ics, ice, nc, ic
 
     INTEGER :: day_of_year
 
@@ -265,6 +268,16 @@ CONTAINS
     REAL(wp) :: MaxLAI
     REAL(wp) :: LAI_negligible_tmp
 
+    LOGICAL :: &
+      & ForestFlag_param
+    REAL(wp) :: &
+      & alpha_nr_ind_param,       &
+      & beta_nr_ind_param,        &
+      & alpha_leaf_param,         &
+      & beta_leaf_param,          &
+      & clumpinessFactor_param,   &
+      & specificLeafArea_C_param, &
+      & MaxLAI_param
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
@@ -272,21 +285,32 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
-    !$claw acc data create(t_air_in_Celcius)  &
-    !$claw create(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw create(old_c_state_sum_ta, dummy_flux)
-    IF ( .NOT. tile%Has_process_memory(ASSIMI_)) THEN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    !$ACC DATA CREATE(t_air_in_Celcius, LaiMax_corrected) &
+    !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
+
     ! Set model
     model => Get_model(tile%owner_model_id)
+    ! Make copies of lctlib parameters to avoid deep copies on GPU
+    ForestFlag_param         = dsl4jsb_Lctlib_param(ForestFlag)
+    alpha_nr_ind_param       = dsl4jsb_Lctlib_param(alpha_nr_ind)
+    beta_nr_ind_param        = dsl4jsb_Lctlib_param(beta_nr_ind)
+    alpha_leaf_param         = dsl4jsb_Lctlib_param(alpha_leaf)
+    beta_leaf_param          = dsl4jsb_Lctlib_param(beta_leaf)
+    clumpinessFactor_param   = dsl4jsb_Lctlib_param(clumpinessFactor)
+    specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+    MaxLAI_param             = dsl4jsb_Lctlib_param(MaxLAI)
+    specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
@@ -305,7 +329,7 @@ CONTAINS
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
       !ASSERTION: l_forestRegrowth only possible when the CARBON process is active
-      IF ( .NOT. tile%Has_process_memory(CARBON_)) THEN
+      IF (.NOT. tile%Has_process_memory(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
       ENDIF
 
@@ -361,8 +385,6 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: NUR ZUR SICHERHEIT:
-    !    Diese Abfrage sollte unnoetig sein, da der Prozess Phaenologie nur fuer veg tiles aufgerufen werden sollte.
     IF (.NOT. tile%is_vegetation) THEN
        CALL finish(TRIM(routine), 'The programm tries to calculate phenology on a non vegetated tile...')
     END IF
@@ -370,15 +392,13 @@ CONTAINS
     ! Initialization of local variables
     l_newday = is_newday(options%current_datetime, options%dtime)
     timestep = timestep_in_days(options%dtime)
-
-    !$claw expand parallel update
-    t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
-
     day_of_year  = INT(get_year_day(options%current_datetime))
 
-    !$claw expand parallel update
-    ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
-    !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic=1,nc
+      t_air_in_Celcius(ic) = t_air(ic) - tmelt  ! convert Kelvin in Celcius
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
     !    procedures the phenology including get_letItDie and get_letItGrow can be called several times a day. Within the
@@ -386,48 +406,47 @@ CONTAINS
 
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
     !    once for the whole hsm (tile%name == 'box'):
-    ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muss man bis auf NPP nicht fuer jedes Tile machen. Daher
-    !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables fuer JSBACH4 getrennt.
-    !    Die Berechnungen die nicht fuer jedes Tile gemacht werden muessen sind in calc_previous_day_variables und die NPP-
-    !    Berechnungen werden im Folgenden vorgenommen. Ausserdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
-    !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
     ! after this routine. At the start of a new day, we here divide the sum by the day length to get
     ! previous_day_NPP_pot_rate_ca (needed in this subroutine) and reset it to zero.
     IF (l_newday) THEN
-      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
-      previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
-      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
-      day_NPP_sum(:) = 0._wp
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._wp
+        day_NPP_sum(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! JN 10.01.18
-    IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth .AND. ForestFlag_param) THEN
       ! to represent forest regrowth LAI needs to be dependant on the available leaf carbon
       ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear(options%current_datetime, options%dtime)) THEN
-        !$claw expand parallel update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_1 tile_name=tile%name
-        veg_fract_correction_old(:) = veg_fract_correction(:)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          veg_fract_correction_old(ic) = veg_fract_correction(ic)
 
-        !$claw sca forward update savepoint=ser_jsb_PHENO_cderive_maxLai_according_to_allometric_relationships_1 tile_name=tile%name
-        CALL derive_maxLai_according_to_allometric_relationships( &
-          & dsl4jsb_Lctlib_param(alpha_nr_ind),                   & ! in
-          & dsl4jsb_Lctlib_param(beta_nr_ind),                    & ! in
-          & dsl4jsb_Lctlib_param(alpha_leaf),                     & ! in
-          & dsl4jsb_Lctlib_param(beta_leaf),                      & ! in
-          & dsl4jsb_Lctlib_param(clumpinessFactor),               & ! in
-          & dsl4jsb_Lctlib_param(specificLeafArea_C),             & ! in
-          & c_woods(:),                                           & ! in
-          & current_max_green(:),                                 & ! InOut
-          & veg_carbon_at_max_green(:),                           & ! InOut
-          & number_of_individuals(:),                             & ! InOut
-          & biomass_per_individual(:),                            & ! InOut
-          & veg_fract_correction(:),                              & ! InOut
-          & maxLAI_allom(:)                                       & ! InOut
-          & )
+          CALL derive_maxLai_according_to_allometric_relationships( &
+            & alpha_nr_ind_param,          & ! in
+            & beta_nr_ind_param,           & ! in
+            & alpha_leaf_param,            & ! in
+            & beta_leaf_param,             & ! in
+            & clumpinessFactor_param,      & ! in
+            & specificLeafArea_C_param,    & ! in
+            & c_woods(ic),                 & ! in
+            & current_max_green(ic),       & ! InOut
+            & veg_carbon_at_max_green(ic), & ! InOut
+            & number_of_individuals(ic),   & ! InOut
+            & biomass_per_individual(ic),  & ! InOut
+            & veg_fract_correction(ic),    & ! InOut
+            & maxLAI_allom(ic)             & ! InOut
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
 
         CALL recalc_carbon_per_tile_vars(tile, options)
         CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
@@ -435,24 +454,34 @@ CONTAINS
         ! redistribute
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
-        !$claw expand parallel update
-        dummy_flux(:) = 0._wp
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          dummy_flux(ic) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
         ! todo: adapt for GPU
+        !$ACC UPDATE HOST(old_c_state_sum_ta) ASYNC(1)
+        !$ACC WAIT(1)
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
           & dummy_flux(:), cconservation_allom(:))
+        !$ACC UPDATE DEVICE(cconservation_allom) ASYNC(1)
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday(options%current_datetime, options%dtime)) THEN
-        !$claw sca forward update savepoint=ser_jsb_PHENO_track_max_green_pool_1 tile_name=tile%name
-        CALL track_max_green_pool(      &
-          & c_green(:),                 & ! in
-          & c_reserve(:),               & ! in
-          & c_woods(:),                 & ! in
-          & current_max_green(:),       & ! InOut
-          & veg_carbon_at_max_green(:)  & ! InOut
-          & )
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          CALL track_max_green_pool(       &
+            & c_green(ic),                 & ! in
+            & c_reserve(ic),               & ! in
+            & c_woods(ic),                 & ! in
+            & current_max_green(ic),       & ! InOut
+            & veg_carbon_at_max_green(ic)  & ! InOut
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
       ENDIF
+
     ENDIF
 
 
@@ -490,29 +519,30 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-       !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_2 tile_name=tile%name
-       LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+       LaiMax_corrected(:) = maxLAI_allom(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
-     ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
-     ! which is for each vegetated tile taken from MaxLAI in the lct library.
-       MaxLAI = dsl4jsb_Lctlib_param(MaxLAI)
-       !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_3 tile_name=tile%name
-       LaiMax_corrected(:) = MaxLAI
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+       LaiMax_corrected(:) = MaxLAI_param
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
-    ! R: wird jedes mal (d.h. fuer jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
     LAI_negligible_tmp = pheno_param_jsbach%all%LAI_negligible
-    !$claw acc data present(LaiMax_corrected, lai)
-    !$claw acc parallel loop gang vector
-    DO i = 1, SIZE(LaiMax_corrected)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO i = 1, nc
       IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
         LaiMax_corrected(i) = LAI_negligible_tmp
         lai(i) = LAI_negligible_tmp - EPSILON(1.0_wp)
       END IF
     END DO
-    !$claw acc end data
+    !$ACC END PARALLEL LOOP
 
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
@@ -521,110 +551,130 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
-      !$claw sca forward update savepoint=ser_jsb_pheno_calc_summergreen_phenology_1 tile_name=tile%name
-      CALL calc_summergreen_phenology(    &
-         & day_of_year,                   & ! in
-         & l_newday,                      & ! in
-         & timestep,                      & ! in
-         & lat(:),                        & ! in
-         & previous_day_temp_mean(:),     & ! in
-         & pseudo_soil_temp(:),           & ! in
-         & LaiMax_corrected(:),           & ! in
-         & days_since_growth_begin_SG(:), & ! inout
-         & chill_days_SG(:),              & ! inout
-         & heat_sum_SG(:),                & ! inout
-         & growth_phase_SG(:),            & ! inout
-         & lai(:)                         & ! inout
-         & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        CALL calc_summergreen_phenology(    &
+          & day_of_year,                    & ! in
+          & l_newday,                       & ! in
+          & timestep,                       & ! in
+          & lat(ic),                        & ! in
+          & previous_day_temp_mean(ic),     & ! in
+          & pseudo_soil_temp(ic),           & ! in
+          & LaiMax_corrected(ic),           & ! in
+          & days_since_growth_begin_SG(ic), & ! inout
+          & chill_days_SG(ic),              & ! inout
+          & heat_sum_SG(ic),                & ! inout
+          & growth_phase_SG(ic),            & ! inout
+          & lai(ic)                         & ! inout
+          & )
+      END DO
+    !$ACC END PARALLEL LOOP
 
     END IF
 
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
-       !$claw sca forward update savepoint=ser_jsb_pheno_calc_evergreen_phenology_1 tile_name=tile%name
-       CALL calc_evergreen_phenology(     &
-         & day_of_year,                   & ! in
-         & l_newday,                      & ! in
-         & timestep,                      & ! in
-         & lat(:),                        & ! in
-         & pseudo_soil_temp(:),           & ! in
-         & LaiMax_corrected(:),           & ! in
-         & days_since_growth_begin_EG(:), & ! inout
-         & chill_days_EG(:),              & ! inout
-         & heat_sum_EG(:),                & ! inout
-         & growth_phase_EG(:),            & ! inout
-         & lai(:)                         & ! inout
-         & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        CALL calc_evergreen_phenology(      &
+          & day_of_year,                    & ! in
+          & l_newday,                       & ! in
+          & timestep,                       & ! in
+          & lat(ic),                        & ! in
+          & pseudo_soil_temp(ic),           & ! in
+          & LaiMax_corrected(ic),           & ! in
+          & days_since_growth_begin_EG(ic), & ! inout
+          & chill_days_EG(ic),              & ! inout
+          & heat_sum_EG(ic),                & ! inout
+          & growth_phase_EG(ic),            & ! inout
+          & lai(ic)                         & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
-       ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
-      !$claw sca forward update savepoint=ser_jsb_pheno_calc_crop_phenology_1 tile_name=tile%name
-      CALL calc_crop_phenology(            &
-        & day_of_year,                     & ! in
-        & l_newday,                        & ! in
-        & timestep,                        & ! in
-        & NPP_pot_rate_ca(:),              & ! in
-        & lat(:),                          & ! in
-        & pseudo_soil_temp(:),             & ! in
-        & LaiMax_corrected(:),             & ! in
-        & previous_day_NPP_pot_rate_ca(:), & ! in
-        & wtr_rootzone_rel(:),             & ! in
-        & previous_day_temp_min(:),        & ! in
-        & previous_day_temp_max(:),        & ! in
-        & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
-        & heat_sum_CRP(:),                 & ! inout
-        & heat_sum_winter,                 & ! inout
-        & growth_phase_CRP(:),             & ! inout
-        & lai(:)                           & ! inout
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        CALL calc_crop_phenology(             &
+          & day_of_year,                      & ! in
+          & l_newday,                         & ! in
+          & timestep,                         & ! in
+          & NPP_pot_rate_ca(ic),              & ! in
+          & lat(ic),                          & ! in
+          & pseudo_soil_temp(ic),             & ! in
+          & LaiMax_corrected(ic),             & ! in
+          & previous_day_NPP_pot_rate_ca(ic), & ! in
+          & wtr_rootzone_rel(ic),             & ! in
+          & previous_day_temp_min(ic),        & ! in
+          & previous_day_temp_max(ic),        & ! in
+          & specificLeafArea_C_param,         & ! in
+          & heat_sum_CRP(ic),                 & ! inout
+          & heat_sum_winter(ic),              & ! inout
+          & growth_phase_CRP(ic),             & ! inout
+          & lai(ic)                           & ! inout
+          & )
+
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
-      !$claw sca forward update savepoint=ser_jsb_pheno_calc_raingreen_phenology_1 tile_name=tile%name
-      CALL calc_raingreen_phenology(        &
-        & timestep,                         & ! in
-        & wtr_rootzone_rel(:),              & ! in
-        & LaiMax_corrected(:),              & ! in
-        & previous_day_NPP_pot_rate_ca(:),  & ! in
-        & lai(:)                            & ! inout
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        CALL calc_raingreen_phenology(        &
+          & timestep,                         & ! in
+          & wtr_rootzone_rel(ic),             & ! in
+          & LaiMax_corrected(ic),             & ! in
+          & previous_day_NPP_pot_rate_ca(ic), & ! in
+          & lai(ic)                           & ! inout
+          & )
+
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
-       !$claw sca forward update savepoint=ser_jsb_pheno_calc_grass_phenology_1 tile_name=tile%name
-       CALL calc_grass_phenology(           &
-         & t_air_in_Celcius(:),             & ! in
-         & timestep,                        & ! in
-         & wtr_rootzone_rel(:),             & ! in
-         & LaiMax_corrected(:),             & ! in
-         & previous_day_NPP_pot_rate_ca(:), & ! in
-         & lai(:)                           & ! inout
-         & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        CALL calc_grass_phenology(            &
+          & t_air_in_Celcius(ic),             & ! in
+          & timestep,                         & ! in
+          & wtr_rootzone_rel(ic),             & ! in
+          & LaiMax_corrected(ic),             & ! in
+          & previous_day_NPP_pot_rate_ca(ic), & ! in
+          & lai(ic)                           & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! Calculated LAI relative to the tile area
-    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_4 tile_name=tile%name
-    lai_ta(:) = lai(:) * veg_fract_correction(:) * fract_fpc_max(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      lai_ta(ic) = lai(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-    !$claw acc end data
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
    END SUBROUTINE update_phenology_logrop
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'climatology' phenology scheme
+  !> Implementation of 'climatology' phenology scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -638,7 +688,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
@@ -654,6 +704,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
@@ -667,15 +718,18 @@ CONTAINS
     lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_climatology_expand_1 tile_name=tile%name
-    lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1) + REAL(wgt2,wp) * lai_mon(:,nmw2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      lai(ic) = REAL(wgt1,wp) * lai_mon(ic,nmw1) + REAL(wgt2,wp) * lai_mon(ic,nmw2)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_phenology_climatology
 
   ! ======================================================================================================= !
-  !>Implementation of "aggregate" of the "phenology" task
+  !> Implementation of "aggregate" of the "phenology" task
   !>
   SUBROUTINE aggregate_phenology(tile, options)
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -706,6 +760,8 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
 
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
@@ -721,7 +777,6 @@ CONTAINS
       ENDIF
     ENDIF
     !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_phenology
@@ -751,7 +806,7 @@ CONTAINS
     REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: wgt1, wgt2, ClumpinessFactor
     INTEGER  :: nmw1,nmw2
 
@@ -762,6 +817,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
@@ -783,20 +839,31 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
-        !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
-        fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          fract_fpc(ic) = get_foliage_projected_cover(fract_fpc_max(ic), lai(ic), 1._wp)
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
         fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
-        fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
     ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
-      !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_3 tile_name=tile%name
-      fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), ClumpinessFactor)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        fract_fpc(ic) = get_foliage_projected_cover(fract_fpc_max(ic), lai(ic), ClumpinessFactor)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
+
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -960,8 +1027,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: scaling (:,:)
     REAL(wp)               :: global_land_area
 
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
-    
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
     dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in

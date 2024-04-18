@@ -1,17 +1,16 @@
+!> Contains the memory class for the soil and snow energy process.
 !>
-!! @brief Contains the memory class for the soil and snow energy process.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_memory_class
 #ifndef __NO_JSBACH__
 
@@ -86,7 +85,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
     INTEGER,             INTENT(in)            :: model_id
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Def_config(SSE_)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
@@ -105,13 +104,6 @@ CONTAINS
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
-
-
-    !! !$acc enter data pcreate(mem)
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! jsbach4 memory
-    !
 
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -161,13 +153,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
-      & hgrid, surface,                                                      &
-      & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
+      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
+        & hgrid, surface,                                                      &
+        & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    END IF
 
     CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &

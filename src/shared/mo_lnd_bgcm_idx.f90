@@ -1,4 +1,4 @@
-!> Summary: declare and define indices for bgc material
+!> declare and define indices for bgc material
 !>
 !> ICON-Land
 !>
@@ -33,9 +33,9 @@ MODULE mo_lnd_bgcm_idx
   PUBLIC :: ixC, ixN, ixP, ixC13, ixC14, ixN15
   PUBLIC :: FIRST_ELEM_ID, LAST_ELEM_ID
   PUBLIC :: set_bgcm_element_idx
-  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit, ix_seed_bed    
+  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit, ix_seed_bed
   PUBLIC :: ix_dom, ix_dom_assoc, ix_soluable_litter, ix_polymeric_litter, ix_woody_litter, ix_fungi, ix_mycorrhiza, &
-    &       ix_microbial, ix_residue, ix_residue_assoc    
+    &       ix_microbial, ix_residue, ix_residue_assoc
 
   ! elements
   INTEGER, SAVE :: ixC   = -1

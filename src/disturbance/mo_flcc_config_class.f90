@@ -1,24 +1,21 @@
-!> Summary: flcc (lcc due to fire) config
+!> flcc (lcc due to fire) config
 !>
-!>### Contains namelist info for the flcc (lcc due to fire) proc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> First version and ongoing changes   by Julia Nabel (2021-10-29)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_flcc_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -63,7 +60,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_flcc_config'
     ! -------------------------------------------------------------------------------------------------- !
 
-    CALL message(TRIM(routine), 'Starting flcc configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting flcc configuration')
 
     ! Set defaults
     separate            = .TRUE.

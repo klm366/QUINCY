@@ -1,17 +1,23 @@
+!> ICON driver for the JSBACH standalone model
 !>
-!! @brief main routine for running ICON-Land standalone using ICON infrastructure, i.e., 'jsbach_model()' 
-!!        it is called from the ICON program `src/drivers/icon:icon`
-!!
-!! @par Revision History
-!!
-!! @par Copyright and License
-!!
-!! This code is subject to the DWD and MPI-M-Software-License-Agreement in
-!! its most recent form.
-!! Please see the file LICENSE in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the
-!! headers of the routines.
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Main routine for running ICON-Land standalone
+!>
+!> `jsbach_model()` is called from the ICON program `src/drivers/icon:icon`
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsbach_model
 
 #ifdef __ICON__
@@ -83,7 +89,7 @@ CONTAINS
     USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_work, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   update_nproma_on_device, num_io_procs, pio_type,                     &
+      &                                   num_io_procs, pio_type,                     &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -116,7 +122,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -141,7 +147,6 @@ CONTAINS
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
-    USE mo_dynamics_config,         ONLY: iequations
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
@@ -188,15 +193,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_model'
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     CALL message('======== ', 'Starting the ICON-Land standalone model ...')
     CALL message('', '')
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
 
     IF (n_dom > 1) CALL finish(routine, 'Only one atmospheric domain allowed')
-
-    iequations = inh_atmosphere
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 0.1 Initialize global registry of lon-lat grids
@@ -246,7 +249,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Set times and events
-    !> 
+    !>
     CALL compute_timestep_settings()
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
@@ -274,9 +277,6 @@ CONTAINS
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
          &                          pio_type, num_dio_procs=0)
-#ifdef _OPENACC
-    CALL update_nproma_on_device( my_process_is_work() )
-#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -377,16 +377,15 @@ CONTAINS
       ! This is a resumed integration. Read model state from restart file(s).
       !
       IF (timers_level > 4) CALL timer_start(timer_read_restart)
-      !
       DO jg = 1,n_dom
         IF (p_patch(jg)%ldom_active) THEN
           CALL read_restart_files( p_patch(jg), n_dom)
         END IF
-      END DO      !
+      END DO
       CALL message(TRIM(routine),'normal exit from read_restart_files')
-      !
+
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
-      !
+
       DO jg=1,no_models
         CALL jsbach_init_after_restart(jg)
       END DO
@@ -461,7 +460,7 @@ CONTAINS
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics ! R: notwendig siehe Rechnertext
+      CALL update_statistics
       ! --
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
@@ -738,6 +737,7 @@ CONTAINS
     !>
     CALL message(routine, 'clean-up finished')
     IF (ltimer) CALL print_timer
+
   END SUBROUTINE jsbach_model
 
   ! ======================================================================================================= !
@@ -749,7 +749,8 @@ CONTAINS
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day
-    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY, MODEL_JSBACH
+    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+    USE mo_jsb_class,                 ONLY: get_model
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
@@ -759,12 +760,16 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_q_atm2land_process,        ONLY: update_local_time_and_daytime_counter
 
+#ifndef __NO_QUINCY__
+    USE mo_iq_atm2land_process,        ONLY: update_local_time_and_daytime_counter
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
+    dsl4jsb_Use_memory(SPQ_)
+#else
+    dsl4jsb_Use_processes A2L_, HYDRO_
+#endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
@@ -788,12 +793,14 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
+#ifndef __NO_QUINCY__
+    ! quincy
     dsl4jsb_Def_memory(SPQ_)
 
-    ! quincy
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
+#endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -808,7 +815,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     ! use forcing from external forcing, such as, observation based data (e.g., CRUJRA)
     !                                             or output from another model simulation
     ! see namelist 'jsb_control_nml' and 'mo_jsb_control:l_force_from_obs'
@@ -927,6 +934,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
           & )
+#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(SPQ_)
         CALL get_standalone_driver( &
@@ -957,6 +965,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
           & dsl4jsb_var2D_onDomain(A2L_, p_deposition)                                 &
           & )
+#endif
       END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
@@ -964,6 +973,7 @@ CONTAINS
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
 
+#ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
@@ -980,11 +990,11 @@ CONTAINS
         CALL update_local_time_and_daytime_counter( &
           &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
       END SELECT
+#endif
 
       DEALLOCATE(evapo_act2pot)
 
     END IF ! IF (use_external_forcing) THEN
-
 
 !$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc) IF(nblks > 1)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1036,6 +1046,7 @@ CONTAINS
     CALL deallocateDatetime(datetime_old)
     CALL deallocateDatetime(datetime_old_old)
     CALL deallocateDatetime(datetime_forcing)
+
   END SUBROUTINE run_one_timestep
 
 #endif

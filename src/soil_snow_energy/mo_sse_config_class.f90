@@ -1,17 +1,16 @@
+!> Contains structures and methods for soil and snow energy config
 !>
-!! @brief Contains structures and methods for soil and snow energy config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_config_class
 #ifndef __NO_JSBACH__
 
@@ -40,10 +39,23 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
+    !! quincy
+    ! INTEGER       :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see quincy-trac ticket #521
+    ! INTEGER       :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see quincy-trac ticket #521
+    REAL(wp)      :: soil_depth           !< actual soil and rooting depth
+    REAL(wp)      :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp)      :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+    REAL(wp)      :: soil_awc_prescribe, &
+                     soil_theta_prescribe
+    REAL(wp)      :: soil_sand            !< soil sand proportion - site specific from forcing info file
+    REAL(wp)      :: soil_silt            !< soil silt proportion - site specific from forcing info file
+    REAL(wp)      :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp)      :: bulk_density
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config
@@ -68,7 +80,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: l_freeze, l_supercool, l_soil_texture
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -79,6 +92,7 @@ CONTAINS
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
+      & l_soil_texture,                         &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename
 
@@ -105,6 +119,7 @@ CONTAINS
     l_heat_cond_dyn  = .TRUE.
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
+    l_soil_texture   = .FALSE.
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
     w_soil_critical  = 5.85036E-3_wp
@@ -156,6 +171,10 @@ CONTAINS
     END IF
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
+    config%l_soil_texture  = l_soil_texture
+    IF (l_soil_texture) THEN
+      CALL message(TRIM(routine), 'Using soil texture to derive heat capacity and heat conductivity')
+    END IF
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
 

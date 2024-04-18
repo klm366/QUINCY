@@ -1,17 +1,16 @@
+!> Contains structures and methods for turbulence config
 !>
-!! @brief Contains structures and methods for turbulence config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2916-04-01)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_turb_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -36,7 +35,8 @@ MODULE mo_turb_config_class
       & roughness_bare,              & !< Roughness length of bare land surfaces [m]
       & roughness_water,             & !< Roughness length of lake open water [m]
       & roughness_lai_saturation,    & !< factor in roughness length dependence on LAI (should be between 0.1 and 1)
-      & roughness_momentum_to_heat     !< factor by which roughness for heat is smaller than roughness for momentum
+      & roughness_momentum_to_heat,  & !< factor by which roughness for heat is smaller than roughness for momentum
+      & max_ini_rough_m                !< Limit roughness length read from ini file (<= 0: no limit)
     LOGICAL :: &
       & l_roughness_lai  !< true:  calculation of roughness length depends on LAI
                          !  false: PFT-specific values from lctlib are used
@@ -62,7 +62,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
-      & roughness_lai_saturation, roughness_momentum_to_heat
+      & roughness_lai_saturation, roughness_momentum_to_heat, max_ini_rough_m
     LOGICAL :: l_roughness_lai
 
     NAMELIST /jsb_turb_nml/           &
@@ -75,6 +75,7 @@ CONTAINS
       &   roughness_water,            &
       &   roughness_lai_saturation,   &
       &   roughness_momentum_to_heat, &
+      &   max_ini_rough_m,            &
       &   l_roughness_lai
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -93,6 +94,7 @@ CONTAINS
     roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
     roughness_lai_saturation   = 0.4_wp
     roughness_momentum_to_heat = 3._wp
+    max_ini_rough_m            = -1._wp      ! No limit
     l_roughness_lai            = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -111,6 +113,7 @@ CONTAINS
     config%roughness_water            = roughness_water
     config%roughness_lai_saturation   = roughness_lai_saturation
     config%roughness_momentum_to_heat = roughness_momentum_to_heat
+    config%max_ini_rough_m            = max_ini_rough_m
     config%l_roughness_lai            = l_roughness_lai
 
   END SUBROUTINE Init_turb_config

@@ -1,16 +1,22 @@
+!> Contains the interfaces to the assimi process
 !>
-!! @brief Contains the interfaces to the assimi process of the jsbach model
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-30)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/assimilation/mo_assimi_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/hydrology/mo_hydro_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+!NEC$ options "-finline-max-function-size=100"
 
 MODULE mo_assimi_interface
 #ifndef __NO_JSBACH__
@@ -118,11 +124,11 @@ MODULE mo_assimi_interface
 CONTAINS
 
   ! ------------------------------------------------------------------------------------------------------- !
-  !>Constructors for tasks
+  !> Constructors for tasks
   !>
-  
+
   ! ======================================================================================================= !
-  !>Constructor for assimilation_scaling_factors task
+  !> Constructor for assimilation_scaling_factors task
   !
   ! @param[in]     model_id     Model id
   ! @return        return_ptr   Instance of process task "assimi"
@@ -201,9 +207,9 @@ CONTAINS
   END FUNCTION Create_task_npp_buffer
 
   ! ======================================================================================================= !
-  !>Register tasks for assimi process
+  !> Register tasks for assimi process
   !>
-  ! docu:
+  ! TODO docu:
   !
   ! @param[in,out] this      Instance of assimi process class
   ! @param[in]     model_id  Model id
@@ -247,7 +253,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
-    INTEGER                      :: iblk, ics, ice !, nc
+    INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp),          POINTER   :: lat(:)
     REAL(wp)                     :: declination ! Solar Declination angle
     INTEGER                      :: i
@@ -269,7 +275,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
@@ -302,7 +308,6 @@ CONTAINS
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
-        !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_scaling_factors_1 tile_name=tile%name canopy_lvl=i
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -312,8 +317,15 @@ CONTAINS
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
-      !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name
-      scaling_fact_cl(:,:) = 1._wp
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO i=1,ncanopy
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          scaling_fact_cl(ic,i) = 1._wp
+        END DO
+      END DO
+      !$ACC END PARALLEL
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -378,7 +390,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
     !REAL(wp)                                  :: dtime
-    INTEGER                                   :: iblk, ics, ice !, nc
+    INTEGER                                   :: iblk, ics, ice, nc, ic
     INTEGER                                   :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
@@ -393,10 +405,11 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
 
     ! Declare pointers to variables in memory
-    INTEGER :: ncanopy                 ! number of canopy layers
-
-    !dsl4jsb_Real2D_onChunk :: C4flag ! Photosynthetic pathway (C3: 0; C4: 1)
-                                      ! R: nur falls man C4flag doch als REAL haben wollte
+    INTEGER :: ncanopy              ! number of canopy layers
+    REAL(wp) :: &
+      & CarboxRate, &
+      & ETransport
+    LOGICAL :: C4Flag
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
@@ -417,7 +430,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
@@ -445,27 +458,40 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
-    ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
+    ncanopy     = dsl4jsb_Config(ASSIMI_)%ncanopy
+    C4Flag      = dsl4jsb_Lctlib_param(C4Flag)
+    CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
+    ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
+    ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
     DO icanopy=1,ncanopy
-      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterunlimited_1 tile_name=tile%name canopy_lvl=icanopy
-      CALL calc_assimilation_waterunlimited( &
-        & dsl4jsb_Lctlib_param(C4Flag),      &
-        & dsl4jsb_Lctlib_param(CarboxRate),  &
-        & dsl4jsb_Lctlib_param(ETransport),  &
-        & t_air(:),                          & ! in
-        & press_srf(:),                      & ! in
-        & par_down_mol(:),                   & ! in
-        & apar_per_lai_cl(:,icanopy),        & ! in
-        & CO2_air_mol(:),                    & ! in
-        & scaling_fact_cl(:,icanopy),        & ! in
-        & canopy_cond_cl(:,icanopy)          & ! out
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
+        & C4Flag,                      &
+        & CarboxRate,                  &
+        & ETransport,                  &
+        & t_air(ic),                   &
+        & press_srf(ic),               &
+        & par_down_mol(ic),            &
+        & apar_per_lai_cl(ic,icanopy), &
+        & CO2_air_mol(ic),             &
+        & scaling_fact_cl(ic,icanopy)  &
         & )
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
     END DO
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_unstressed_expand_0 tile_name=tile%name
-    canopy_cond_unlimited(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -515,7 +541,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !> Implementation of "update" for task "canopy_cond_stressed"
   !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -527,7 +553,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat
+    USE mo_phy_schemes,   ONLY: qsat_water
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -550,10 +576,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice, nc, ic
     INTEGER :: icanopy, ncanopy
-    ! LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
-    LOGICAL, ALLOCATABLE :: q_air_gt_qsat_tmp(:)
+    REAL(wp) :: ratio_lim_over_unlim(options%nc)
+    LOGICAL :: q_air_gt_qsat_tmp
+    LOGICAL :: use_tmx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
@@ -567,6 +594,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    use_tmx = model%config%use_tmx
 
     dsl4jsb_Get_config(ASSIMI_)
 
@@ -588,27 +617,38 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
-    !$cla$w acc data create(q_air_gt_qsat_tmp)
-    ALLOCATE(q_air_gt_qsat_tmp(nc))
-    !$claw acc enter data create(q_air_gt_qsat_tmp)
-    !$claw expand parallel update savepoint=ser_jsb_assimi_update_canopy_cond_stressed_expand_0 tile_name=tile%name
-    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))
-    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
-                                                    water_stress(:),           & ! in, water stress factor
-                                                    q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?
-                                                    )
-    !$claw end expand
-    !$cla$w acc end data
-    !$claw acc exit data delete(q_air_gt_qsat_tmp)
-    DEALLOCATE(q_air_gt_qsat_tmp)
+    !$ACC DATA CREATE(ratio_lim_over_unlim)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(q_air_gt_qsat_tmp)
+    DO ic = 1, nc
+      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      canopy_cond_limited(ic) = &
+        &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
+                                  water_stress(ic),          & ! in, water stress factor
+                                  q_air_gt_qsat_tmp          & ! in, atmosphere saturated?
+                                 )
+      ratio_lim_over_unlim(ic) = canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
     ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_stressed_expand_1 tile_name=tile%name canopy_lvl=icanopy
-      canopy_cond_cl(:,icanopy) = canopy_cond_cl(:,icanopy) * canopy_cond_limited(:) / canopy_cond_unlimited(:)
+      !$ACC LOOP VECTOR
+      DO ic=1,nc
+        ! canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
+         canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * ratio_lim_over_unlim(ic)
+      END DO
+      !$ACC END LOOP
     END DO
-    !$claw end expand
+    !$ACC END LOOP
+    !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -669,7 +709,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    INTEGER                    :: iblk, ics, ice !, nc
+    INTEGER                    :: iblk, ics, ice, nc, ic
     REAL(wp)                   :: dtime
     INTEGER                    :: icanopy
 
@@ -719,7 +759,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
     dtime   = options%dtime
 
     ! If process is not to be calculated on this tile, do nothing
@@ -771,13 +811,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder fuer assimilation noch wo anderst
-    !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
-    ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
-    !                                                             CO2_conc_leaf_cl * dtime
-
     DO icanopy=1,ncanopy
-      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterlimited_1 tile_name=tile%name canopy_lvl=icanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
@@ -799,39 +833,28 @@ CONTAINS
         & )
     END DO
 
-    !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_expand_0 tile_name=tile%name
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic=1,nc
+      ! convert from leaf area of layer to canopy ground area
+      gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
+      ! convert from canopy area to tile box area
+      gross_assimilation(ic) = gross_assimilation_ca(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
 
-    ! Same for gross_assimilation_ca
-    ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !gross_assimilation(:) = 0._wp
-    !DO icanopy=1,ncanopy
-    !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
-    !END DO
+      dark_respiration_ca(ic) = SUM(dark_respiration_cl(ic,:) * lai_cl(ic,:))
+      ! convert from canopy area to tile box area
+      dark_respiration(ic) =  dark_respiration_ca(ic)  * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
-    ! convert from leaf area of layer to canopy ground area
-    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2)
-    ! convert from canopy area to tile box area
-    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) * fract_fpc_max(:)
-
-    ! Same for dark_respiration_ca
-    ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !dark_respiration_ca(:) = 0._wp
-    !DO icanopy=1,ncanopy
-    !   dark_respiration_ca(:) =  dark_respiration_ca(:) + dark_respiration_cl(:,icanopy) * lai_cl(:,icanopy)
-    !END DO
-
-    dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
-    ! convert from canopy area to tile box area
-    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
-    !$claw end expand
-
-    !$claw sca forward update savepoint=ser_jsb_assim_calc_npp_pot_rate_1 tile_name=tile%name
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
-    !$claw expand parallel update savepoint=ser_jsb_assim_day_npp_sum_expand_0 tile_name=tile%name
-    day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic=1,nc
+      day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
+    END DO
+    !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -1,17 +1,18 @@
+!> Contains the interfaces for the surface energy balance process.
 !>
-!! @brief Contains the interfaces for the surface energy balance process.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_seb_interface
 #ifndef __NO_JSBACH__
@@ -179,7 +180,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface energy"
+  !> Implementation of "update" for task "surface energy"
   !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
   !! net radiation, ground heat).
   !!
@@ -194,13 +195,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -242,13 +249,14 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    dsl4jsb_Aggregate_onChunk(SEB_, t,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_old,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_eff,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
@@ -268,7 +276,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "snowmelt_correction"
+  !> Implementation of "update" for task "snowmelt_correction"
   !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
   !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
@@ -303,45 +311,48 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_melt_sl
 
 
-    INTEGER  :: iblk , ics, ice, i
-    REAL(wp) :: dtime
+    INTEGER  :: iblk , ics, ice, nc, ic
+    REAL(wp) :: dtime, dz1
 
+    LOGICAL :: &
+      & l_freeze_config, &
+      & l_snow_config
     REAL(wp), DIMENSION(options%nc) :: &
       & heat_cap
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    INTEGER                    :: nsnow !,  nsoil
+    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    INTEGER                    :: nsnow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%is_land) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
+    nsnow = options%nsnow_e
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
+    l_freeze_config = dsl4jsb_Config(SSE_)%l_freeze
+    l_snow_config   = dsl4jsb_Config(SSE_)%l_snow
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%contains_land) THEN
+    IF (tile%contains_soil .OR. tile%is_glacier) THEN
       dsl4jsb_Get_memory(SSE_)
     END IF
 
     soil_e => Get_vgrid('soil_depth_energy')
-    !nsoil = soil_e%n_levels
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      snow_e => Get_vgrid('snow_depth_energy')
-      nsnow = snow_e%n_levels
-    END IF
+    dz1 = soil_e%dz(1)
 
     IF (tile%contains_lake) THEN
       ! No correction for lake tile
 
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%contains_soil .OR. tile%is_glacier) THEN
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
@@ -352,47 +363,47 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
       END IF
-      dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl) ! in
+      IF (.NOT. tile%is_glacier) THEN
+        dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl) ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl)   ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)       ! in
+      END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$claw acc data create(heat_cap)
+        !$ACC DATA CREATE(heat_cap) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
 
-        ! Correction for snowmelt and pond melting/freezing
-        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
-        t_unfilt(:) = t_unfilt(:) - snowmelt(:)    * dtime * alf / hcap_grnd_old(:)
-        t_unfilt(:) = t_unfilt(:) - pond_melt(:)   * dtime * alf / hcap_grnd_old(:)
-        t_unfilt(:) = t_unfilt(:) + pond_freeze(:) * dtime * alf / hcap_grnd_old(:)
+          ! Correction for snowmelt and pond melting/freezing
+          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          IF (.NOT. tile%is_glacier) THEN
+            t_unfilt(ic) = t_unfilt(ic) - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            t_unfilt(ic) = t_unfilt(ic) + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
-        IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
-          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
-          heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
-          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,ice_melt_sl,wtr_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1,  size(t_unfilt, dim=1)
-              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
-              ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+            IF (l_freeze_config) THEN
+              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+              IF (l_snow_config) THEN
+                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
+                  ! Correction for melting of ice in soil layers
+                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              ELSE   ! No snow layers present
+                IF (heat_cap(ic) > 0._wp) THEN
+                  ! Correction for melting of ice in soil layers
+                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
               END IF
-            END DO
-            !$claw acc end data
-          ELSE   ! No snow layers present
-            !$claw acc data present(t_unfilt,heat_cap,ice_melt_sl,wtr_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1, size(t_unfilt,dim=1)
-              IF (heat_cap(i) > 0._wp) THEN
-                ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
-              END IF
-            END DO
-            !$claw acc end data
+            END IF
           END IF
-        END IF
-        !$claw acc end data
+
+        END DO
+        !$ACC END PARALLEL LOOP
+        !$ACC WAIT(1)
+        !$ACC END DATA
       END IF
 
     ELSE
@@ -442,7 +453,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "asselin_filter"
+  !> Implementation of "update" for task "asselin_filter"
   !! Task "asselin_filter" calculates applies the Asselin time filter to the new surface temperature, if applicable
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -456,13 +467,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_asselin_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -488,6 +505,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk , ics, ice
+    TYPE(t_jsb_model), POINTER :: model
 
     iblk = options%iblk
     ics  = options%ics
@@ -495,12 +513,17 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
+    IF (model%config%use_tmx) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -508,7 +531,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface fluxes"
+  !> Implementation of "update" for task "surface fluxes"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -521,13 +544,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')

@@ -52,6 +52,14 @@ fi
 echo "Building documentation (Revision:${rev}${dirty} Branch:${branch}) ..."
 mkdir pp_temp$$
 python3 scripts/dsl4jsb/dsl4jsb.py -n -d src -t pp_temp$$ -k
+find pp_temp$$ -type f -name '*.f90' -exec \
+    sed -i -e '1s/!> /!> Summary: /' \
+           -e '1,20s/icon-model.org/<https:\/\/icon-model.org>  /' \
+           -e '1,20s/!> ICON-Land/!>#### ICON-Land/' \
+           -e '1,20s/MPI-BGC$/MPI-BGC  /' \
+           -e '1,20s/AUTHORS.md$/AUTHORS.md  /' \
+           -e '1,20s/license information$/license information  /' \
+    '{}' \;
 python3 ./ford.py $no_search $quiet -r "Revision:${rev}${dirty} Branch:${branch}" -d pp_temp$$ ${FORD_MD}
 find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is developed by/' '{}' \;
 rm -rf pp_temp$$

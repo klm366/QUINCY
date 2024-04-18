@@ -1,18 +1,17 @@
-!> Summary: Types for lcc processes
+!> Types for lcc processes
 !>
-!>### Contains types required for dealing with actively or passively relocated conserved quantities upon lcc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-04-12 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Contains types required for dealing with actively or passively relocated conserved quantities upon lcc
 !>
 MODULE mo_jsb_lcc_class
 #ifndef __NO_JSBACH__
@@ -146,7 +145,7 @@ CONTAINS
       this_conversion_fact = 1.0
     ENDIF
 
-    ! Add to be transferred fraction of active content to passive var,
+    ! Add fraction of active content to be transferred to passive var,
     ! potentially converting to the unit of the passive var
     lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk)       &
       & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
@@ -174,7 +173,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations !< lcc structure of the calling lcc process
     INTEGER,                    INTENT(in)    :: i_tile
-        !< index of the tile in the lcc structure for which the actoon should be conducted
+        !< index of the tile in the lcc structure for which the action should be conducted
     INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
     INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
     INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
@@ -183,7 +182,7 @@ CONTAINS
     REAL(wp),  INTENT(in), OPTIONAL :: copy_fract
         !< fraction of matter copied from active to passive var - if not given: 1.0 is assumed
     REAL(wp),  INTENT(in), OPTIONAL :: conversion_fact
-        !< conversion fraction if active var has different unit then passive var - if not given: 1.0 is assumed
+        !< conversion factor if active var has different unit then passive var - if not given: 1.0 is assumed
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':copy_from_active_to_passive_var_onChunk'
 
@@ -227,7 +226,7 @@ CONTAINS
     ! Add active content to passive var
     lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
       & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
-      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) * this_copy_fract * conversion_fact)
+      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) * this_copy_fract * this_conversion_fact)
 
   END SUBROUTINE copy_from_active_to_passive_var_onChunk
 

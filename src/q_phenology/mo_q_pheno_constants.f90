@@ -1,4 +1,4 @@
-!> Summary: QUINCY phenology constants
+!> QUINCY phenology constants
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### declare and define phenology constants
 !>
 MODULE mo_q_pheno_constants
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,              ONLY: wp
 

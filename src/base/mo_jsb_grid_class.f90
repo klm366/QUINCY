@@ -1,17 +1,16 @@
+!> Contains JSBACH grid structure and methods
 !>
-!! @brief Contains JSBACH grid structure and methods
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_grid_class
 #ifndef __NO_JSBACH__
 
@@ -50,8 +49,8 @@ MODULE mo_jsb_grid_class
     REAL(wp), POINTER             :: coslon(:,:) => NULL()
     REAL(wp), POINTER             :: sinlon(:,:) => NULL()
     REAL(wp), POINTER             :: area(:,:) => NULL()
-    LOGICAL,  POINTER             :: lsm(:,:) => NULL()
-    REAL(wp), POINTER             :: lsf(:,:) => NULL()
+    LOGICAL,  ALLOCATABLE         :: lsm(:,:)
+    REAL(wp), ALLOCATABLE         :: lsf(:,:)
     INTEGER                       :: nblks = 1
     INTEGER                       :: nproma = 0
     INTEGER                       :: npromz = 0
@@ -163,9 +162,9 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
-    !$acc enter data copyin(new%lat)
 
     grid => new
+    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm)
 
     ! CALL message(routine, 'construction of JSBACH grid completed.')
 
@@ -242,8 +241,8 @@ CONTAINS
 
     CALL message(routine, 'starting destruction of JSBACH grid instance.')
 
-    IF (ASSOCIATED(self%lsm)) DEALLOCATE(self%lsm)
-    IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
+    IF (ALLOCATED(self%lsm)) DEALLOCATE(self%lsm)
+    IF (ALLOCATED(self%lsf)) DEALLOCATE(self%lsf)
     IF (ASSOCIATED(self%lon)) DEALLOCATE(self%lon)
     IF (ASSOCIATED(self%lat)) DEALLOCATE(self%lat)
     IF (ASSOCIATED(self%coslat)) DEALLOCATE(self%coslat)
@@ -426,7 +425,7 @@ CONTAINS
     new%lbounds(:) = 0._wp
     new%ubounds(:) = 0._wp
     new%dz     (:) = 0._wp
-    !$acc enter data pcreate(new%levels, new%lbounds, new%ubounds, new%dz)
+    !$ACC ENTER DATA PCREATE(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
@@ -509,10 +508,10 @@ CONTAINS
         END IF
       END IF
     END IF
-    !$acc update device(new%levels) if(present(levels))
-    !$acc update device(new%lbounds) if(present(lbounds))
-    !$acc update device(new%ubounds) if(present(ubounds))
-    !$acc update device(new%dz) if(present(dz))
+    !$ACC UPDATE DEVICE(new%levels) ASYNC(1) IF(present(levels))
+    !$ACC UPDATE DEVICE(new%lbounds) ASYNC(1) IF(present(lbounds))
+    !$ACC UPDATE DEVICE(new%ubounds) ASYNC(1) IF(present(ubounds))
+    !$ACC UPDATE DEVICE(new%dz) ASYNC(1) IF(present(dz))
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)
@@ -531,10 +530,10 @@ CONTAINS
 
     CALL message(routine, 'starting destruction of JSBACH vgrid instance.')
 
-    !$acc exit data delete(self%levels) if (allocated(self%levels))
-    !$acc exit data delete(self%lbounds) if (allocated(self%lbounds))
-    !$acc exit data delete(self%ubounds) if (allocated(self%ubounds))
-    !$acc exit data delete(self%dz) if (allocated(self%dz))
+    !$ACC EXIT DATA DELETE(self%levels) IF(allocated(self%levels))
+    !$ACC EXIT DATA DELETE(self%lbounds) IF(allocated(self%lbounds))
+    !$ACC EXIT DATA DELETE(self%ubounds) IF(allocated(self%ubounds))
+    !$ACC EXIT DATA DELETE(self%dz) IF(allocated(self%dz))
     IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
     IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)

@@ -1,24 +1,21 @@
-!> Summary: wlcc (lcc due to wind) config
+!> wlcc (lcc due to wind) config
 !>
-!>### Contains namelist info for the wlcc (lcc due to wind) proc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2022 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> First version and ongoing changes   by Julia Nabel (2022-01-06)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_wlcc_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -51,19 +48,19 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
+    ! -------------------------------------------------------------------------------------------------- !
 
-    NAMELIST /jsb_wlcc_nml/      &
-         active,                 &
-         ic_filename,            &
-         bc_filename,            &
+    NAMELIST /jsb_wlcc_nml/           &
+         active,                      &
+         ic_filename,                 &
+         bc_filename,                 &
          separate
 
     INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_wlcc_config'
-    ! -------------------------------------------------------------------------------------------------- !
 
-    CALL message(TRIM(routine), 'Starting wlcc configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting wlcc configuration')
 
     ! Set defaults
     separate            = .TRUE.

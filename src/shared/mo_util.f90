@@ -1,29 +1,31 @@
-!> Summary: ICON-Land helper routines
+!> Some utility functions
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
-!>#### various helper routines for the ICON-Land framework
+!>#### Various helper routines for ICON-Land
 !>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
+  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+                                               !      libmath-support is an external library
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -34,14 +36,9 @@ MODULE mo_util
 
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
-  !!
-  !! in: soil_depth (until bedrock) and soil-layer thicknesses
-  !!
-  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
-  !-----------------------------------------------------------------------------------------------------
+  !
+  !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
+  !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -174,13 +171,72 @@ CONTAINS
 
   END SUBROUTINE ifs2soil
 
+  !> Calculate mineral soil parameters fom soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
+    & fraction_sand, fraction_silt, fraction_clay,                  &
+    & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
+    & parameter_from_texture)
+
+    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(wp), INTENT(in)  ::                                      &
+      fraction_sand, fraction_silt, fraction_clay,                &
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
+    REAL(wp), INTENT(out)  ::  parameter_from_texture
+
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
+
+  END SUBROUTINE soil_init_from_texture
+
+
   !-----------------------------------------------------------------------------------------------------
-  !> conversion: lowercase -> uppercase
-  !! 
-  !! Copied from ICON module shared/mo_util_string
-  !! 
-  !! 
+  !> conversion: uppercase -> lowercase
+  !!
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !!
   !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
+  !
+  !> Conversion: Lowercase -> Uppercase
+  !
+  !  Copied from ICON module shared/mo_util_string
+  !
   FUNCTION toupper (lowercase)
     CHARACTER(len=*), INTENT(in) :: lowercase
     CHARACTER(len=LEN_TRIM(lowercase)) :: toupper

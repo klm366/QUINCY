@@ -1,18 +1,17 @@
-!> Summary: alcc (anthropogenic lcc) lcc structure initialisation
+!> alcc (anthropogenic lcc) lcc structure initialisation
 !>
-!>### Initialization of the alcc lcc structure
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version   by Julia Nabel (2021-06-23)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Initialization of the alcc lcc structure
 !>
 MODULE mo_alcc_init_lcc
 #ifndef __NO_JSBACH__
@@ -66,14 +65,14 @@ CONTAINS
     passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, FLUX_C_CQ_TYPE /)
 
     ! alcc runs on the leave tiles
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       CALL count_descendants_for_up_to_2layers(tile, nr_of_descendants)
       ALLOCATE(involved_tiles(nr_of_descendants))
       CALL collect_names_of_descendant_leaves_up_to_2layers(tile, involved_tiles)
     ELSE
       ALLOCATE(involved_tiles(1))
       involved_tiles(1) = tile%name
-    ENDIF
+    END IF
 
     CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_tiles)
 

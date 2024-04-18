@@ -1,4 +1,4 @@
-!> Summary: QUINCY phenology process interface
+!> QUINCY phenology process interface
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### definition and init of tasks for the phenology process incl. update and aggregate routines
 !>
 MODULE mo_q_pheno_interface
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
@@ -26,7 +26,7 @@ MODULE mo_q_pheno_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_q_pheno_process,    ONLY: update_q_phenology
+  USE mo_q_pheno_process,    ONLY: update_q_phenology_real => update_q_phenology
 
   dsl4jsb_Use_processes Q_PHENO_, VEG_
   dsl4jsb_Use_config(Q_PHENO_)
@@ -75,6 +75,18 @@ CONTAINS
 
     CALL this%Register_task(tsk_q_phenology(model_id))
   END SUBROUTINE Register_q_pheno_tasks
+
+  ! ------------------------------------------------------------------------------------------------------- !
+  ! Wrapper for update routine from different module
+  ! ------------------------------------------------------------------------------------------------------- !
+  SUBROUTINE update_q_phenology(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CALL update_q_phenology_real(tile, options)
+
+  END SUBROUTINE update_q_phenology
 
   ! ======================================================================================================= !
   !> Implementation of "aggregate" of the "phenology" task

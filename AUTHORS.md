@@ -1,30 +1,55 @@
 ---
 title: Authors
 ---
-##Authors
+## ICON-Land Authors
 
-- Reiner Schnur (1)
-- Rainer Schneck (1)
-- Julia Nabel (1)
-- Veronika Gayler (1)
-- Jan Engel (2)
-- Thomas Raddatz (1)
-- Christian Reick  (1)
-- and all JSBACH3 developers
+- Christian Reick
+- Daniel Goll
+- Dmitry Alexeev
+- Erich Roeckner
+- Fabrice Lacroix
+- Freja Vamborg
+- Jan Engel
+- Julia Nabel
+- Lin Yu
+- Marvin Heidkamp
+- Melanie Thurner
+- Philipp de Vrese
+- Rainer Schneck
+- Reiner Schnur
+- Roland Wirth
+- Silvia Caldararu
+- Soenke Zaehle
+- Stefan Hagemann
+- Stiig Wilkenskjeld
+- Tea Thum
+- Thomas Raddatz
+- Tobias Stacke
+- Tom Riddick
+- Valentin Clement
+- Veronika Gayler
+- Wolfgang Knorr
 
-(1) Max Planck Institute for Meteorology, Hamburg, Germany
-(2) Max Planck Institute for Biogeochemistry, Jena, Germany
+## Contributors to ICON-Land
 
-
-## names from MR !123
-(https://gitlab.dkrz.de/jsbach/jsbach/-/merge_requests/123)
-
-* Soenke Zaehle
-* Reiner Schnur
-* Rainer Schneck
-* Julia Nabel
-* Jan Engel
-* Tea Thum
-* Fabrice Lacroix
-* Lin Yu
-* Silvia Caldararu
+- Altug Ekici
+- Andreas Chlond
+- Bikash Parida
+- Christian Beer
+- Daniela Kracher
+- Gitta Lasslop
+- Gregor Schuermann
+- Jari Liski
+- Julia Pongratz
+- Karl-Georg Schnitzler
+- Martin Claussen
+- Nuno Carvalhais
+- Petri Raisanen
+- Sanna Sevanto
+- Silvia Kloster
+- Stefanie Falk
+- Suman Halder
+- Sylvia Nyawira
+- Tanja Blome
+- Thomas Kleinen
+- Victor Brovkin

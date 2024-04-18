@@ -1,4 +1,4 @@
-!> Summary: QUINCY routines for shortwave surface radiation budget
+!> QUINCY routines for shortwave surface radiation budget
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### routines for routines for the shortwave surface radiation budget, e.g., albedo and short-wave radiation
 !>
 MODULE mo_q_rad_process
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
@@ -34,7 +34,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>calculates surface radiation reflection and absorption
-  !> 
+  !>
   ! @TODO currently no soil and snow albedo calculation in the q_radiation routine
   SUBROUTINE q_radiation(tile, options)
 
@@ -113,12 +113,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! SPQ_ 3D
-    dsl4jsb_Real3D_onChunk :: w_snow_snl    
+    dsl4jsb_Real3D_onChunk :: w_snow_snl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: lai
     ! VEG_ 3D
-    dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
-    dsl4jsb_Real3D_onChunk :: fn_chl_cl 
+    dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onChunk :: fn_chl_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
@@ -217,7 +217,7 @@ CONTAINS
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
-                     lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
+                     lai(:), lai_cl(:,:), cumm_lai_cl(:,:),&
                      alb_vis_soil(:), alb_vis_snow(:), w_snow_snl(:,:), &
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:),arad_vis_soil(:), &
@@ -246,7 +246,7 @@ CONTAINS
           &           / (swvis_srf_down(ic) + swnir_srf_down(ic))
       ELSE
         ! albedo is not defined when radiation <= 0 and set to zero
-        albedo(ic) = 0.0_wp 
+        albedo(ic) = 0.0_wp
       ENDIF
 
       ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
@@ -273,13 +273,15 @@ CONTAINS
     ENDWHERE
 
     DO icanopy=1,ncanopy
-      WHERE(swvis_srf_down(:) > eps8)
-         ppfd_sunlit_cl(:,icanopy) = arad_sunlit_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
-         ppfd_shaded_cl(:,icanopy) = arad_shaded_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
-      ELSEWHERE
-         ppfd_sunlit_cl(:,icanopy) = 0.0_wp
-         ppfd_shaded_cl(:,icanopy) = 0.0_wp
-      ENDWHERE
+      DO ic = 1, nc
+        IF (swvis_srf_down(ic) > eps8) THEN
+          ppfd_sunlit_cl(ic,icanopy) = arad_sunlit_vis_cl(ic,icanopy) * swpar_srf_down(ic)/swvis_srf_down(ic) * rad2ppfd
+          ppfd_shaded_cl(ic,icanopy) = arad_shaded_vis_cl(ic,icanopy) * swpar_srf_down(ic)/swvis_srf_down(ic) * rad2ppfd
+        ELSE
+          ppfd_sunlit_cl(ic,icanopy) = 0.0_wp
+          ppfd_shaded_cl(ic,icanopy) = 0.0_wp
+        END IF
+      END DO
     END DO
 
     !> 7.0 calculate forest floor red to far-red ratio
@@ -314,7 +316,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net( nc                  , &   ! in
                               ncanopy             , &   ! in
-                              nsnow               , &   ! in    
+                              nsnow               , &   ! in
                               lctlib_sigma_vis    , &   ! in
                               lctlib_sigma_nir    , &   ! in
                               lctlib_omega_clumping     , &   ! in
@@ -470,13 +472,13 @@ CONTAINS
 
           !> diffuse upward shortwave flux from soil reflection and absorbed radiation of the soil
           !> first check if there is snow
-          WHERE (w_snow_snl(:,1) < w_snow_min) 
+          WHERE (w_snow_snl(:,1) < w_snow_min)
             irad_dif_up(:) = alb_soil(:) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
             arad_soil(:)   = (1.0_wp - alb_soil(:)) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
-          ELSEWHERE 
+          ELSEWHERE
             irad_dif_up(:) = alb_snow(:) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
             arad_soil(:)   = (1.0_wp - alb_snow(:)) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
-          ENDWHERE 
+          ENDWHERE
           !> factor for the absorption calculation of the upward stream
           radf5(:) = (1.0_wp - rho(:)) * irad_dif_up(:) * kdf(:)            ! eq 10
 
@@ -485,13 +487,13 @@ CONTAINS
 
        ELSEWHERE
           !> case of no LAI: absorped radiation and upward flux from soil only
-          WHERE (w_snow_snl(:,1) < w_snow_min) 
+          WHERE (w_snow_snl(:,1) < w_snow_min)
             arad_soil(:)   = (1.0_wp - alb_soil(:) ) * (irad_dif_down(:) + irad_dir_down(:))
-            irad_dif_up(:) = alb_soil(:)             * (irad_dif_down(:) + irad_dir_down(:)) 
+            irad_dif_up(:) = alb_soil(:)             * (irad_dif_down(:) + irad_dir_down(:))
           ELSEWHERE
             arad_soil(:)   = (1.0_wp - alb_snow(:) ) * (irad_dif_down(:) + irad_dir_down(:))
             irad_dif_up(:) = alb_snow(:)             * (irad_dif_down(:) + irad_dir_down(:))
-          ENDWHERE          
+          ENDWHERE
        ENDWHERE
 
     ENDWHERE

@@ -1,4 +1,4 @@
-!> Summary: QUINCY helper routines for assimilation
+!> lper routines for assimilation
 !>
 !> ICON-Land
 !>
@@ -14,7 +14,7 @@
 !>#### various helper routines for the assimilation process
 !>
 MODULE mo_q_assimi_util
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,        ONLY: wp
   USE mo_jsb_control, ONLY: debug_on
@@ -216,7 +216,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -256,7 +256,7 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tphen (averages at the time-scale of phenology)
     !>
     beta_soil_gs_tphen_mavg(:) = calc_time_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)

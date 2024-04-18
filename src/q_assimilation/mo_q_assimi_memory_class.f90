@@ -1,4 +1,4 @@
-!> Summary: QUINCY assimilation process memory
+!> QUINCY assimilation process memory
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### definition and init of (memory) variables for the assimilation process
 !>
 MODULE mo_q_assimi_memory_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
@@ -223,7 +223,7 @@ CONTAINS
     hgrid                 => Get_grid(mem%grid_id)
     surface               => Get_vgrid('surface')
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    
+
     ! ----------------------------------------------------------------------------------------------------- !
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &

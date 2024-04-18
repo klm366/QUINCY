@@ -1,19 +1,15 @@
-!> Summary: interface to the flcc process (lcc due to fire)
+!> interface to the flcc process (lcc due to fire)
 !>
-!>### Contains the interface to the flcc process (lcc due to fire)
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> First version and ongoing changes   by Julia Nabel (2021-10-29)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_flcc_interface
 #ifndef __NO_JSBACH__
@@ -36,7 +32,6 @@ MODULE mo_flcc_interface
   PUBLIC :: Register_flcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'flcc'
 
   !> Type definition for flcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_flcc
@@ -63,7 +58,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "flcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_flcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=FLCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='flcc', process_id=FLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_flcc
 
@@ -99,8 +94,6 @@ CONTAINS
     dsl4jsb_Use_memory(DISTURB_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(CARBON_)
-
-    IMPLICIT NONE
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
@@ -157,10 +150,10 @@ CONTAINS
     IF(.NOT. INDEX(tile%name, 'pft') > 0) THEN
       IF(.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN
         CALL finish(TRIM(routine), 'Violation of assertion: flcc (currently) is implemented to run on ' &
-          & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the ' &
+          & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the '        &
           & //' acs (if with age classes), but tried to run for: ' // trim(tile%name) // '. Please check.')
-      ENDIF
-    ENDIF
+      END IF
+    END IF
 
     !>
     !> 1. Get lcc structure
@@ -193,26 +186,26 @@ CONTAINS
 
     ! initiate pointers, logicals and indices to enable lcc, particularly if running with forest age classes
     d_tile_is_ac = .FALSE.
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       d_tile => tile%Get_first_child_tile()
-      IF(d_tile%Has_children()) THEN
+      IF (d_tile%Has_children()) THEN
         CALL finish(TRIM(routine), 'Violation of assertion: flcc (currently) is not implemented to run on ' &
           & //'a hierarchy level with more descendants than direct children. Tried to run on ' &
           & // trim(tile%name) // '. Please check.')
-      ENDIF
-      IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+      END IF
+      IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
         ! Assert: for flcc (currently) first age class is expected first in the list of involved tiles
         IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(1))) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: for flcc (currently) the first age class is ' &
             & //'expected to be listed as first involved tile, instead found: '// trim(d_tile%name))
-        ENDIF
+        END IF
         first_ac => d_tile
         i_first_ac = 1
         d_tile_is_ac = .TRUE.
-      ENDIF
+      END IF
     ELSE
       d_tile => tile%self_tile
-    ENDIF
+    END IF
 
     DO i = 1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle
       ! Collect initial area of all involved tiles
@@ -234,13 +227,13 @@ CONTAINS
           i_tile = j
         ENDIF
 
-        IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+        IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
           ! Assertion: if running with age classes all classes are expected to be involved with flcc
           IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(i_tile))) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: for flcc (currently) all age classes are expected ' &
               & //'to be listed as involved, but found not involved age-class: '// trim(d_tile%name))
-          ENDIF
-        ENDIF
+          END IF
+        END IF
 
         ! - add burned area of current child to lost area
         CALL d_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -252,14 +245,14 @@ CONTAINS
           lost_area(:,i_tile) = 0.0_wp
         END WHERE
 
-        IF(ANY(lost_area(:,i_tile) > 0._wp)) THEN
+        IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
           ! - care for the gained area  -> @todo change when bare land tile available
           ! ... if forest age classes are used the area of any disturbed age class is added to the first class
-          IF(d_tile_is_ac) THEN
+          IF (d_tile_is_ac) THEN
             gained_area(:,i_first_ac) = gained_area(:,i_first_ac) + lost_area(:,i_tile)
 
             ! for all but the first age class thus the fractions need to be adapted
-            IF(.NOT. d_tile%Is_first_child()) THEN
+            IF (.NOT. d_tile%Is_first_child()) THEN
               current_fract(:) = current_fract(:) -  lost_area(:,i_tile)
               CALL d_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
               CALL first_ac%Get_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -268,13 +261,13 @@ CONTAINS
 
               ! Updated tracked age
               CALL recalc_fract_per_age_upon_disturbance(tile, options, i_tile, lost_area(:,i_tile))
-            ENDIF
+            END IF
 
           ELSE
             ! else (currently) back to the tile itself
             gained_area(:,i_tile) = burned_fract_d_tile(:) * current_fract(:)
-          ENDIF
-        ENDIF
+          END IF
+        END IF
 
         ! - go to next tile (if associated)
         d_tile => d_tile%Get_next_sibling_tile()
@@ -298,11 +291,11 @@ CONTAINS
         !>     4.b and finally by calling the more general transfer_active_to_passive_onChunk lcc routine where calls to
         !>         process specific relocation routines can be specified
         !>
-        IF(tile%Has_children()) THEN
+        IF (tile%Has_children()) THEN
           current_tile => tile%Get_first_child_tile()
         ELSE
           current_tile => tile%self_tile
-        ENDIF
+        END IF
 
         i_tile = 0
         DO WHILE (i_tile < nr_of_tiles)
@@ -339,14 +332,14 @@ CONTAINS
               transfer_fract = 1._wp - (fire_fract_wood_2_atmos * fract_wood_aboveGround)
               conversion_fact = 1.0_wp / sec_per_day
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
-                & 'c_woods', 'cflux_dist_woods_2_soil', copy_fract = transfer_fract,         &
+                & 'c_woods', 'cflux_dist_woods_2_soil', copy_fract = transfer_fract,                &
                 & conversion_fact = conversion_fact)
               transfer_fract = 1._wp - fract_green_aboveGround
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
-                & 'c_green', 'cflux_dist_green_2_soil', copy_fract = transfer_fract,         &
+                & 'c_green', 'cflux_dist_green_2_soil', copy_fract = transfer_fract,                &
                 & conversion_fact = conversion_fact)
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
-                & 'c_reserve', 'cflux_dist_green_2_soil', copy_fract =  transfer_fract,      &
+                & 'c_reserve', 'cflux_dist_green_2_soil', copy_fract =  transfer_fract,             &
                 & conversion_fact = conversion_fact)
               ! - parts of woody ag part and all green and reserve ag parts are burned
               transfer_fract = fire_fract_wood_2_atmos * fract_wood_aboveGround
@@ -358,24 +351,23 @@ CONTAINS
                 &  'c_green', 'co2flux_fire_all_2_atm', transfer_fract, conversion_fact)
               CALL transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
                 &  'c_reserve', 'co2flux_fire_all_2_atm', transfer_fract, conversion_fact)
-            ENDIF
+            END IF
 
             ! 4b -- general transfer of active vars (transfer the 'rest' of active vars)
             CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
-          ENDIF
+          END IF
 
           ! - go to next tile (if associated)
           current_tile => current_tile%Get_next_sibling_tile()
-
-        ENDDO
+        END DO
 
         !>
         !> 5. Each lcc process needs to call end lcc to make the passive matter transfer
         !>
         CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
-      ENDIF ! ... only to be conducted if there is any area movement
-    ENDDO ! outer loop enclosing one full lcc-cycle: depending on if are movement is to be "separate" or mixed
+      END IF ! ... only to be conducted if there is any area movement
+    END DO ! outer loop enclosing one full lcc-cycle: depending on if are movement is to be "separate" or mixed
 
     !>
     !> 6. Deallocate area vectors

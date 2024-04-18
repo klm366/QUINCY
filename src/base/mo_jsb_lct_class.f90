@@ -1,4 +1,15 @@
-!> Summary: Definitions and methods for landcover types.
+!> Contains definitions and methods for landcover types.
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 !>### Landcover types
 !>
@@ -15,18 +26,6 @@
 !> They are used to determine the logical flow in update routines;
 !> which variables need to be allocated in process memories (for primary ltc but also for aggregation of
 !> contained lcts); and they might provide an lctlib id as well as fractional shares of a tile.
-!>
-!>
-!> Copyright (c) 2013-2021 Reiner Schnur
-!>
-!>#### Revision History
-!> First version by Reiner Schnur (2016-02-01)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
 !> @todo currently the constructor does not catch cases where the id is not contained in the enumerator
 !>
@@ -141,7 +140,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains_lct'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains_lct'
     ! -------------------------------------------------------------------------------------------------- !
 
     return_value = .FALSE.
@@ -163,7 +162,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_name'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_name'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%name /= '') THEN
       return_value = TRIM(this%name)
@@ -193,7 +192,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_longname'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_longname'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%long_name /= '') THEN
       return_value = TRIM(this%long_name)

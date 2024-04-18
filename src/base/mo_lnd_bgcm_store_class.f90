@@ -16,7 +16,7 @@
 !>#### provides types and definitions for storing and providing bgc materials
 !>
 MODULE mo_lnd_bgcm_store_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_pool_class,      ONLY: t_jsb_pool

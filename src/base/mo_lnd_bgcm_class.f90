@@ -1,4 +1,4 @@
-!> Summary: define indices and helper functions for bgc material
+!> define indices and helper functions for bgc material
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### define indices (enumerator) and helper functions for bgc material and their components
 !>
 MODULE mo_lnd_bgcm_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_util,                ONLY: int2string
@@ -46,7 +46,7 @@ MODULE mo_lnd_bgcm_class
   !> ID of first and last bgcm elements
   INTEGER, PARAMETER :: FIRST_ELEM_ID = ELEM_C_ID
   INTEGER, PARAMETER :: LAST_ELEM_ID  = ONEPLUS_LAST_ELEM_ID - 1
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lnd_bgcm_class'
 
 CONTAINS
@@ -74,7 +74,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     ! -------------------------------------------------------------------------------------------------- !
     IF(ASSOCIATED(this%pool_list)) THEN
       IF(.NOT. SIZE(this%pool_list) .EQ. 0) THEN
@@ -97,7 +97,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     INTEGER                                :: this_dim  !< dimension
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: nr_of_elements, i_element
@@ -196,8 +196,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     element_idx = elements_index_map(element_id)
-    
-    ! Assert that the model is running with this element 
+
+    ! Assert that the model is running with this element
     IF ( element_idx == 0 ) THEN
       CALL finish(TRIM(caller), 'Unknown or unused element id: ' // int2string(element_id) &
         & // ' - element name: "' // get_name_for_element_id(element_id) // '". Please check!' )

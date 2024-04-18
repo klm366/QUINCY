@@ -1,44 +1,157 @@
-!> Summary: QUINCY routines for physcial schemes
+!> Routines for physical schemes
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!>#### defines routines for physcial schemes adapted from JSBACH for QUINCY
+!>#### Contains some routines for physical schemes
 !>
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind, ONLY: wp
+  USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
+  USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, potential_temperature
+  USE mo_jsb_surface_exchange_iface, ONLY: sfc_exchange_coefficients
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: qsat, update_drag
-  PUBLIC :: q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    &       thermal_radiation, lwnet_from_lwdown
-  PUBLIC :: calc_peaked_arrhenius_function
+
+  PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, qsat, &
+    & update_drag, tlucua, jptlucu1, jptlucu2, &
+    & q_effective, surface_dry_static_energy, heat_transfer_coef, &
+    & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
+    & calc_peaked_arrhenius_function, &
+    & sfc_exchange_coefficients
+    ! Note: nvhpc doesn't support function pointers
+    ! & register_exchange_coefficients_procedure, exchange_coefficients, registered_exchange_coefficients_procedure
+
+  ! ABSTRACT INTERFACE
+  !   PURE SUBROUTINE i_exchange_coefficients_procedure(           &
+  !     & dz,                                                 &
+  !     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+  !     & km, kh, km_neutral, kh_neutral                      &
+  !     & )
+  !     IMPORT :: wp
+
+  !     REAL(wp), INTENT(in) :: &
+  !       dz,        &
+  !       thetam1,   &
+  !       pqm1 ,     &
+  !       mwind,     &
+  !       rough_m,   &
+  !       theta_sfc, &
+  !       qsat_sfc
+  !       !
+  !     REAL(wp), INTENT(out) :: &
+  !       km,         &
+  !       kh,         &
+  !       km_neutral, &
+  !       kh_neutral
+
+  !   END SUBROUTINE
+  ! END INTERFACE
+
+  ! PROCEDURE(i_exchange_coefficients_procedure), POINTER :: registered_exchange_coefficients_procedure => NULL()
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
 CONTAINS
 
-  !>
+  ! SUBROUTINE register_exchange_coefficients_procedure(exchange_coefficients_procedure)
+
+  !   PROCEDURE(i_exchange_coefficients_procedure) :: exchange_coefficients_procedure
+
+  !   registered_exchange_coefficients_procedure => exchange_coefficients_procedure
+
+  ! END SUBROUTINE register_exchange_coefficients_procedure
+
+  ! SUBROUTINE exchange_coefficients(                       &
+  !   & dz,                                                 &
+  !   & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+  !   & km, kh, km_neutral, kh_neutral                      &
+  !   & )
+
+  !   REAL(wp), DIMENSION(:), INTENT(in) :: &
+  !     dz,        &
+  !     thetam1,   &
+  !     pqm1 ,     &
+  !     mwind,     &
+  !     rough_m,   &
+  !     theta_sfc, &
+  !     qsat_sfc
+  !     !
+  !   REAL(wp), DIMENSION(:), INTENT(out) :: &
+  !     km,         &
+  !     kh,         &
+  !     km_neutral, &
+  !     kh_neutral
+
+  !   INTEGER :: ic, nc
+
+  !   nc = SIZE(dz)
+
+  !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+  !   DO ic = 1, nc
+  !     CALL registered_exchange_coefficients_procedure(                                &
+  !       & dz(ic),                                                                     &
+  !       & pqm1(ic), thetam1(ic), mwind(ic), rough_m(ic), theta_sfc(ic), qsat_sfc(ic), &
+  !       & km(ic), kh(ic), km_neutral(ic), kh_neutral(ic)                              &
+  !       & )
+  !   END DO
+  !   !$ACC END PARALLEL LOOP
+
+  ! END SUBROUTINE exchange_coefficients
+
+  REAL(wp) FUNCTION qsat_water(temperature, pressure, use_convect_tables)
+
+    !$ACC ROUTINE SEQ
+
+    REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
+    REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
+    LOGICAL,  INTENT(in) :: use_convect_tables
+
+    IF (use_convect_tables) THEN
+      qsat_water = qsat(temperature, pressure)
+    ELSE
+      qsat_water = specific_humidity(sat_pres_water(temperature), pressure)
+    END IF
+
+  END FUNCTION qsat_water
+
+  REAL(wp) FUNCTION qsat_ice(temperature, pressure, use_convect_tables)
+
+    !$ACC ROUTINE SEQ
+
+    REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
+    REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
+    LOGICAL,  INTENT(in) :: use_convect_tables
+
+    IF (use_convect_tables) THEN
+      qsat_ice = qsat(temperature, pressure)
+    ELSE
+      qsat_ice = specific_humidity(sat_pres_ice(temperature), pressure)
+    END IF
+
+  END FUNCTION qsat_ice
+
   ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
   ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
   ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
   !
-  REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
+  ! Note: temporary for backward compatibility
+  REAL(wp) FUNCTION qsat(temperature, pressure)
 
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &        ! Table for water vapor pressure e_s multiplied by R_d/R_v
       &                                    jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
@@ -47,8 +160,6 @@ CONTAINS
 
     INTEGER :: it
     REAL(wp) :: tluc
-
-    !$claw sca routine
 
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
@@ -62,20 +173,19 @@ CONTAINS
 
   END FUNCTION qsat
 
-
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
   !!
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
+  REAL(wp) FUNCTION q_effective(qsat, qair, fsat, fair)
+
+    !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(in) :: &
       & qsat,               & !< Surface saturation specific humidity
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
-
-    !$claw sca routine
 
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
@@ -87,19 +197,28 @@ CONTAINS
   !!
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
+  REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf, cpd_or_cvd, jsb_standalone)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: &
-      & cpd,       & !< Specific heat of dry air at constant pressure
       & cpvd1        !< cpv/cpd-1
 
     REAL(wp), INTENT(in) :: &
       & t_srf,                      & !< Surface temperature
-      & qsat_srf                      !< Surface saturation specific humidity
+      & qsat_srf,                   & !< Surface saturation specific humidity
+      & cpd_or_cvd
 
-      !$claw sca routine
+    LOGICAL, INTENT(in) :: &
+      & jsb_standalone
 
-      surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
+    IF (jsb_standalone) THEN
+      ! Todo: Check if this formulation is valid. We re-implement it here, as it was used up to now in
+      !       jsbach:dev, and we do not want to change the model behavior with this merge.
+      surface_dry_static_energy = t_srf * cpd_or_cvd * ( 1._wp + cpvd1 * qsat_srf)
+    ELSE
+      surface_dry_static_energy = t_srf * cpd_or_cvd
+    END IF
 
   END FUNCTION surface_dry_static_energy
 
@@ -109,7 +228,10 @@ CONTAINS
   !!
   !! out: thermal_radiation
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION thermal_radiation(t_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
@@ -127,7 +249,9 @@ CONTAINS
   !!
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
+  REAL(wp) FUNCTION lwnet_from_lwdown(lwdown, t_srf)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
@@ -136,26 +260,29 @@ CONTAINS
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
 
-    !$claw sca routine
-
     lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 
 
-  ! ======================================================================================================= !
-  !> calc heat_transfer_coef
-  !>
-  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen, alpha)
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION heat_transfer_coef
+  !!
+  !! out: heat_transfer_coef
+  !-----------------------------------------------------------------------------------------------------
+  REAL(wp) FUNCTION heat_transfer_coef(drag, steplen, alpha)
 
-    USE mo_jsb_physical_constants,      ONLY: grav
+    !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(in) :: drag      !< ..
-    REAL(wp), INTENT(in) :: steplen   !< ..
-    REAL(wp), INTENT(in) :: alpha     !< differs for standalone & coupled simulations
+    USE mo_jsb_physical_constants, ONLY: grav
 
-    !$claw sca routine
+    REAL(wp), INTENT(in) :: &
+      & drag,      &
+      & steplen,   &
+      & alpha
+
     heat_transfer_coef = drag / (alpha * grav * steplen)
+
   END FUNCTION heat_transfer_coef
 
   ! ======================================================================================================= !
@@ -249,13 +376,7 @@ CONTAINS
     zcons12 = time_step_len * grav / rd
     zsigma  = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
 
-    ! Initializations
-    drag_srf(:) = 0._wp
-    t_acoef (:) = 0._wp
-    t_bcoef (:) = 0._wp
-    q_acoef (:) = 0._wp
-    q_bcoef (:) = 0._wp
-    pch     (:) = 0._wp
+    !$ACC DATA CREATE(qsat_surf, qsat_surf_upd)
 
     IF (PRESENT(t_srf_upd) .AND. PRESENT(zril_old)) THEN
       l_zril_filter = .TRUE.
@@ -263,12 +384,22 @@ CONTAINS
       l_zril_filter = .FALSE.
     END IF
 
-    qsat_surf(:)     = qsat(t_srf_proc(:), pressure(:))
-    IF (l_zril_filter) THEN
-      qsat_surf_upd(:) = qsat(t_srf_upd(:),  pressure(:))
-    END IF
-
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(zdu2, air_pressure, ztvd, ztvir, ztvs_act, ztvs_upd, zg, zgh, zril) &
+    !$ACC   PRIVATE(zril_act, zril_upd, zchnl, zscfl, zucfhl, zcons, zcfnchl, zcfhl)
     DO ic = 1, nc
+      ! Initializations
+      drag_srf(ic) = 0._wp
+      t_acoef (ic) = 0._wp
+      t_bcoef (ic) = 0._wp
+      q_acoef (ic) = 0._wp
+      q_bcoef (ic) = 0._wp
+      pch     (ic) = 0._wp
+
+      qsat_surf(ic)     = qsat(t_srf_proc(ic), pressure(ic))
+      IF (l_zril_filter) THEN
+        qsat_surf_upd(ic) = qsat(t_srf_upd(ic), pressure(ic))
+      END IF
 
       !------------------------------------------------------------------------------------
       ! Approximation of cdrag
@@ -353,6 +484,8 @@ CONTAINS
       q_bcoef(ic) = qair(ic)
 
     END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
   END SUBROUTINE update_drag
 

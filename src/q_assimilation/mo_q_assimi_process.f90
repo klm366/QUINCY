@@ -1,4 +1,4 @@
-!> Summary: QUINCY routines for photosynthesis related processes
+!> QUINCY routines for photosynthesis related processes
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### routines for photosynthesis related processes, e.g., calculation of photosynthesis
 !>
 MODULE mo_q_assimi_process
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
@@ -190,7 +190,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, co2_conc_leaf_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, jmax_cl)                   ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, vcmax_cl)                  ! out
-    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out 
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)                 ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
@@ -213,7 +213,7 @@ CONTAINS
     co2_conc_leaf(:)          = 0.0_wp
 
     !>0.9.2 set g1 according to canopy_conductance_scheme
-    !> 
+    !>
     SELECT CASE(TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
         lctlib_g1 = lctlib%g1_medlyn
@@ -232,7 +232,9 @@ CONTAINS
     !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
 
-    ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MIN( MAX(wind_10m(:), min_wind), max_wind)
+    DO ic = 1, nc
+      ga(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
+    END DO
 
     ! calc scaling factor to account for the 'state of acclimation' of evergreen conifers in spring
     beta_soa(:) = calc_beta_soa(soa_tsoa_mavg(:),lctlib%phenology_type)
@@ -316,7 +318,7 @@ CONTAINS
       !> N specific rate of electron transport rate
       jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * &
                            EXP(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:)) / lctlib%t_jmax_omega) ** 2.0_wp)) * &
-                           beta_soil_ps(:) * beta_sinklim_ps_tacclim_mavg(:) * beta_soa(:) * & 
+                           beta_soil_ps(:) * beta_sinklim_ps_tacclim_mavg(:) * beta_soa(:) * &
                            leaf_nitrogen_cl(:,icanopy)
 
       !> N specific rate of Rubisco turnover
@@ -383,7 +385,7 @@ CONTAINS
                                             m_rub               , &
                                             m_et                , &
                                             m_pepc              , &
-                                            chlfl_yield_cl         ) 
+                                            chlfl_yield_cl         )
 
   USE mo_veg_constants,             ONLY: fmaint_rate_base
   USE mo_jsb_physical_constants,    ONLY: r_gas, Tzero
@@ -564,7 +566,7 @@ CONTAINS
 
           !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
           msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
-          
+
           !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
           nco = msat/(alpha_i * ka * m1)
 
@@ -648,7 +650,7 @@ CONTAINS
           ! calc maximum photosynthesis, all light limited, for shaded leaves
           ag_max_shaded = agsf2 * ppfd_shaded_cl* (1.0_wp - fabsb)
           ! calc fraction of how much photosynthesis taking place from photosynthesis maximum for shaded
-          IF (ag_max_shaded < eps8) THEN 
+          IF (ag_max_shaded < eps8) THEN
             frac_tot_shaded = 0.0_wp
           ELSE
             frac_tot_shaded = agsh / ag_max_shaded
@@ -714,7 +716,7 @@ CONTAINS
       CALL calc_chlorophyll_fluorescence_yield(frac_tot_shaded, t_air, chlfl_yield)
       chlfl_yield_shaded = chlfl_yield
       ! Add in the sunlit and shaded parts of the fluorescence yield
-      chlfl_yield_cl = fleaf_sunlit_cl * chlfl_yield_sunlit + (1.0_wp - fleaf_sunlit_cl) * chlfl_yield_shaded 
+      chlfl_yield_cl = fleaf_sunlit_cl * chlfl_yield_sunlit + (1.0_wp - fleaf_sunlit_cl) * chlfl_yield_shaded
     ELSE
       chlfl_yield_cl = 0.0_wp
     ENDIF
@@ -786,7 +788,7 @@ CONTAINS
   !>    van der Tol et al, JGR, 2014. SCOPE v1.70
   !>    https://doi.org/10.1002/2014JG002713
   !>
-  !> source of parameter values: van der Tol et al, JGR, 2014; 
+  !> source of parameter values: van der Tol et al, JGR, 2014;
   !>   or papers cited within, e.g., Flexas 2002 & Weis and Berry 1987
   !>
   ELEMENTAL SUBROUTINE calc_chlorophyll_fluorescence_yield( &
@@ -809,7 +811,7 @@ CONTAINS
     REAL(wp),     INTENT(OUT) :: chlfl_yield     !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: thermal_dissipation_enrg_constitutive_rate  !< rate constant for energy constitutive thermal dissipation
-    REAL(wp) :: heat_dissipation_enrg_dep_rate  !< rate constant for energy dependent heat dissipation 
+    REAL(wp) :: heat_dissipation_enrg_dep_rate  !< rate constant for energy dependent heat dissipation
     REAL(wp) :: photochemical_yield_rel         !< x in eq. 14 (van der Tol et al., 2014)
     REAL(wp) :: frac_dark_photochemistry        !< dark photochemistry fraction (Genty et al., 1989)
     REAL(wp) :: photochemical_yield             !< photochemical yield
@@ -855,7 +857,7 @@ CONTAINS
     fluorescence_yield_fm_light     = k_fluorescence_rate / (k_fluorescence_rate + thermal_dissipation_enrg_constitutive_rate &
       &                               + heat_dissipation_enrg_dep_rate)
     fluorescence_yield_fm_dark      = k_fluorescence_rate / (k_fluorescence_rate + thermal_dissipation_enrg_constitutive_rate)
-    
+
     !> 2.0 calc chlorophyll fluorescence yield
     !>
     chlfl_yield  = fluorescence_yield_fm_light * (1.0_wp - photochemical_yield)
@@ -877,7 +879,7 @@ CONTAINS
   !>calculate soil moisture stress on photosynthesis or conductance given current soil moisture
   !>
   PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi, phi_leaf_min) RESULT(beta)
-  
+
     REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
     REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
     REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
@@ -929,7 +931,7 @@ CONTAINS
   !>  Output: Discrimination (per mill)
   !>
   PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-  
+
     USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
                                          discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
                                          discr_ps_phi
@@ -942,7 +944,7 @@ CONTAINS
     REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
-  
+
     ! SELECT PS pathway C3 C4
     SELECT CASE(ps_pathway)
     CASE (ic3phot)
@@ -962,7 +964,7 @@ CONTAINS
           discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
       END SELECT
     END SELECT
-  
+
   END FUNCTION discrimination_ps
 
 #endif

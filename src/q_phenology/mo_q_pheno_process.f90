@@ -1,4 +1,4 @@
-!> Summary: QUINCY calculate vegetation phenology
+!> QUINCY calculate vegetation phenology
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### determine onset and end of the growing season across plant functional types (PFT)
 !>
 MODULE mo_q_pheno_process
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: true, false, test_false_true
@@ -34,9 +34,9 @@ CONTAINS
   ! ======================================================================================================= !
   !> update phenology - QUINCY
   !>   determine onset and end of the growing season for some PFT
-  !> 
+  !>
   !>   PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses
-  !> 
+  !>
   !>  @TODO
   !>  OBS: currently uncalibrated, in particular rain green phenology
   !>  Dev: Have more cost-benefit in decision to start/stop growing season
@@ -152,11 +152,11 @@ CONTAINS
       & growth_req_p_tlabile_mavg(:)       , &
       & nd_dormance(:)                     , &
       & gdd(:)                             )    ! inout
-  END SUBROUTINE update_q_phenology 
+  END SUBROUTINE update_q_phenology
 
   ! ======================================================================================================= !
-  !> calculate phenology 
-  !> 
+  !> calculate phenology
+  !>
   ELEMENTAL SUBROUTINE calc_phenology(  &
     & phenology_type                  , &
     & beta_soil_flush                 , &
@@ -230,11 +230,11 @@ CONTAINS
           growth_req_n_tlabile_mavg = 1._wp / cn_leaf
           growth_req_p_tlabile_mavg = 1._wp / np_leaf
         ENDIF
-      CASE (isummergreen)     
+      CASE (isummergreen)
         ! if GDD requirement is exceeded. The latter depends on the length of the
         !  dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
-        IF(gdd > hlp1) THEN 
+        IF(gdd > hlp1) THEN
            growing_season            = true
            growth_req_n_tlabile_mavg = 1._wp / cn_leaf
            growth_req_p_tlabile_mavg = 1._wp / np_leaf
@@ -253,19 +253,19 @@ CONTAINS
       SELECT CASE (phenology_type)
       CASE (ievergreen)
         ! nothing to do here
-      CASE (iraingreen)       
+      CASE (iraingreen)
         ! if soil moisture is below given threshold AND leaves have been out a given number of days
         IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. mean_leaf_age > min_leaf_age ) THEN
           growing_season = false
         ENDIF
-      CASE (isummergreen)     
+      CASE (isummergreen)
         ! if temperature are declining below a certain threshold AND
         !  leaves have been out a given number of days
         IF(t_air_week_mavg < t_air_month_mavg .AND. t_air_tphen_mavg < t_air_senescence .AND. &
           & mean_leaf_age > min_leaf_age) THEN
           growing_season = false
         ENDIF
-      CASE (iperennial)       
+      CASE (iperennial)
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
         IF((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
@@ -277,7 +277,7 @@ CONTAINS
 
     !>2.0 modify phenology counters
     !>
-    
+
     !>  2.1 gdd counter
     !>
     IF(t_air > gdd_t_air_threshold) THEN
@@ -296,7 +296,7 @@ CONTAINS
     ELSE
       nd_dormance = nd_dormance + dtime / one_day
     ENDIF
-  END SUBROUTINE calc_phenology 
+  END SUBROUTINE calc_phenology
 
 #endif
 END MODULE mo_q_pheno_process

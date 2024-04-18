@@ -1,17 +1,16 @@
+!> Contains parameters for the phenology processes
 !>
-!! @brief Contains parameters for the phenology processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena, based on mo_pheno_constants (2023-01-09)
-!!
-!! @par Revision History
-!! see mo_pheno_constants
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_pheno_parameters
 #ifndef __NO_JSBACH__
 
@@ -262,6 +261,13 @@ CONTAINS
     pheno_param_jsbach%FR%min_zero            = 1.E-8_wp            !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%log_maxind          = 9.5_wp              !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%min_maxLAI          = 0.5_wp              !< citation or source ....  [ ? ]
+
+    !$ACC UPDATE DEVICE(pheno_param_jsbach) ASYNC(1)
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG)  &
+    !$ACC   DEVICE(pheno_param_jsbach%SG,  pheno_param_jsbach%RG,    pheno_param_jsbach%GRS) &
+    !$ACC   DEVICE(pheno_param_jsbach%CRP, pheno_param_jsbach%FR)
+
   END SUBROUTINE init_pheno_parameters
 
 #endif

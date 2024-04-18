@@ -1,20 +1,15 @@
-!> Summary: flcc (lcc due to fire) initialisation of lcc structure
+!> flcc (lcc due to fire) initialisation of lcc structure
 !>
-!>### Initialization of the lcc structure for flcc (lcc due to fire)
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> - First version and ongoing changes   by Julia Nabel (2021-10-29)
-!> - added forest age classes            by Julia Nabel (2022-10-06)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_flcc_init_lcc
 #ifndef __NO_JSBACH__
@@ -35,8 +30,7 @@ MODULE mo_flcc_init_lcc
 
   PUBLIC :: flcc_init_lcc
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_init_lcc_class'
-  CHARACTER(len=*), PARAMETER :: procname = 'flcc'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flcc_init_lcc'
 
   INTEGER, PARAMETER :: nr_of_active_cqts = 2
   INTEGER, PARAMETER :: nr_of_passive_cqts = 4
@@ -69,15 +63,15 @@ CONTAINS
     passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
 
     ! FLCC burns area on the leave tiles
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       CALL count_descendants_for_up_to_2layers(tile, nr_of_descendants)
       ALLOCATE(involved_tiles(nr_of_descendants))
       CALL collect_names_of_descendant_leaves_up_to_2layers(tile, involved_tiles)
     ELSE
       ALLOCATE(involved_tiles(1))
       involved_tiles(1) = tile%name
-    ENDIF
-    CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_tiles)
+    END IF
+    CALL init_lcc('flcc', tile, active_cqts, passive_cqts, involved_tiles)
 
     DEALLOCATE(involved_tiles)
 

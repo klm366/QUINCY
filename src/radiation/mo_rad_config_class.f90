@@ -62,7 +62,7 @@ MODULE mo_rad_config_class
                                       ! 0 < albedo_age_weight < 1: snow albedo is calculated by linearly weighting
                                       !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow              ! Snow albedo for snow on canopy. This configuration value is not read in from
-                                      ! the namelist. It is calcultated in subroutine rad_init_ic, but should nevertheless
+                                      ! the namelist. It is calculated in subroutine rad_init_ic, but should nevertheless
                                       ! placed here!
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
@@ -106,12 +106,12 @@ CONTAINS
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL message(TRIM(routine), 'Starting radiation configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
-    bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
-    ic_filename               = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    bc_filename               = 'bc_land_rad.nc'
+    ic_filename               = 'ic_land_rad.nc'
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
     use_alb_soil_organic_C    = ''

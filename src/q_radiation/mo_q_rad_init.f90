@@ -1,4 +1,4 @@
-!> Summary: QUINCY radiation variables init
+!> QUINCY radiation variables init
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### initialization of radiation memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_rad_init
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message

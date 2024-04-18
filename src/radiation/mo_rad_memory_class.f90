@@ -14,14 +14,14 @@
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util,                   ONLY: One_of
-  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_kind,             ONLY: wp
+  USE mo_util,             ONLY: One_of
+  USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
-  dsl4jsb_Use_processes RAD_
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -44,7 +44,7 @@ MODULE mo_rad_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & alb_background,        & !< Background albedo (without snow or canopy) of tile
-                                 !< Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple.
+                                 !< Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       & alb_vis_snow,          & !< Albedo of snow in the VIS range [unitless]
@@ -71,7 +71,7 @@ MODULE mo_rad_memory_class
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
-                                !! for SOC-dependend albedo calculation
+                                !! for SOC-dependent albedo calculation
       & alb_nir_mineralsoil,  & ! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE. for
                                 ! SOC dependend albedo calculation
       & alb_vis_lnd,          & ! Albedo on the non-lake part of tile in the VIS (visible) range
@@ -130,9 +130,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: radiation
   !>
-  !>   init only the variables needed for the particular model 
-  !>   (i.e. allocate memory, add to varlist, set metadata)
-  !>
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
@@ -149,25 +146,70 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
     INTEGER,             INTENT(in)            :: model_id
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Def_config(SEB_)
+
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface                      !< Vertical grid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy                 !< Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface, canopy_layer        !< Vertical grids
     INTEGER                     :: table                        !< ...
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
-    ! ----------------------------------------------------------------------------------------------------- !
+
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
-    ! ----------------------------------------------------------------------------------------------------- !
+
     model        => Get_model(model_id)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    vgrid_canopy => Get_vgrid('canopy_layer')
+    canopy_layer => Get_vgrid('canopy_layer')
+
     dsl4jsb_Get_config(SEB_)
 
-    !! !$acc enter data pcreate(mem)
+    CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
+      & hgrid, surface,                                                    &
+      & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,                    &
+      & hgrid, surface,                                                      &
+      & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM,                                                 &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,                    &
+      & hgrid, surface,                                                      &
+      & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM,                                                 &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                        &
+      & hgrid, surface,                                                    &
+      & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                      &
+      & hgrid, surface,                                                    &
+      & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'alb_background', mem%alb_background,                &
       & hgrid, surface,                                                    &
@@ -225,6 +267,60 @@ CONTAINS
         & initval_r=0.0_wp )
 
     END IF ! land
+
+    ! Additional variables for soil
+    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
+      & ) THEN
+
+      CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,      &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_vis_mineralsoil', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+      CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil,      &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_nir_mineralsoil', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+      CALL mem%Add_var( 'alb_vis_pond', mem%alb_vis_pond,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_vis_pond', '', ''),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                   &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_pond', mem%alb_nir_pond,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('alb_nir_pond', '', ''),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                   &
+        & initval_r=0.0_wp )
+    END IF
 
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
@@ -381,100 +477,6 @@ CONTAINS
 
       END IF ! l_ice_on_lakes
     END IF ! lakes
-
-    CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
-      & hgrid, surface,                                                    &
-      & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.FALSE.,                                                  &
-      & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,                    &
-      & hgrid, surface,                                                      &
-      & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM,                                                 &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,                    &
-      & hgrid, surface,                                                      &
-      & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM,                                                 &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                        &
-      & hgrid, surface,                                                    &
-      & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.FALSE.,                                                  &
-      & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                      &
-      & hgrid, surface,                                                    &
-      & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.FALSE.,                                                  &
-      & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
-      & hgrid, surface,                                                    &
-      & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.TRUE.,                                                   &
-      & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'alb_nir', mem%alb_nir,                              &
-      & hgrid, surface,                                                    &
-      & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.TRUE.,                                                   &
-      & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,                    &
-      & hgrid, surface,                                                    &
-      & t_cf('albedo_vis_snow', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,                    &
-      & hgrid, surface,                                                    &
-      & t_cf('albedo_nir_snow', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var( 'alb_vis_pond', mem%alb_vis_pond,                    &
-      & hgrid, surface,                                                    &
-      & t_cf('alb_vis_pond', '', ''),                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.TRUE.,                                                   &
-      & initval_r=0.0_wp )
-    CALL mem%Add_var( 'alb_nir_pond', mem%alb_nir_pond,                    &
-      & hgrid, surface,                                                    &
-      & t_cf('alb_nir_pond', '', ''),                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix,                                                    &
-      & lrestart=.TRUE.,                                                   &
-      & initval_r=0.0_wp )
 
     ! Additional variables for soil
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &

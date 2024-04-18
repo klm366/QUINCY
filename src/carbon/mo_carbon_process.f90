@@ -1,19 +1,16 @@
+!> Contains the routines for the carbon processes
 !>
-!! @brief Contains the routines for the carbon processes
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
-!! Julia Nabel (2021-05-28): start of some refactoring (more advisable)
-
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
@@ -952,13 +949,13 @@ CONTAINS
     !! Yasso - Soil carbon model (Jari Liski)
     !!
     !! The code for the yasso model has been developed and is provided by the Finnish Environment Institute SYKE. It is
-    !! distributed as part of the MPI Earth System Model under the MPI-M license conditions as stated in the header of this module.
+    !! distributed as part of the ICON Earth System Model under the license conditions as stated in the header of this module.
     !!
     !! model to calculate the amount of soil organic carbon, changes in the amount of soil organic carbon and
     !! heterotrophic soil respiration.
     !! For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
     !!
-    !! implementation: Tea Thum (FMI), Petri Raeisaenen (FMI), Daniel Goll (MPI-M)
+    !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
     USE mo_jsb_physical_constants, ONLY: tmelt
@@ -1400,21 +1397,26 @@ CONTAINS
   !
   ! calculate per tile density from density per canopy m2
   !
-  ELEMENTAL SUBROUTINE get_per_tile(  &
+  SUBROUTINE get_per_tile(  &
     & Cpool_per_tile,                 & ! out
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
 
-    !$claw model-data
-    REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
-    REAL(wp), INTENT(IN) ::  Cpool_per_canopy
-    REAL(wp), INTENT(OUT)::  Cpool_per_tile
-    !$claw end model-data
+    REAL(wp), INTENT(IN), DIMENSION(:) :: &
+      & Cpool_per_canopy, &
+      & fract_fpc_max,    &
+      & veg_fract_correction
+    REAL(wp), INTENT(OUT), DIMENSION(:) :: &
+      & Cpool_per_tile
 
-    !$claw sca
+    INTEGER :: ic
 
-    Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, SIZE(fract_fpc_max)
+      Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE get_per_tile
 

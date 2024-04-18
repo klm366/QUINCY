@@ -1,20 +1,22 @@
+!> Contains function to read the landcover library file
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 !>
 !! This module provides the data from the landcover library file, which contains additional information on the
 !! landcover data used in a particular run of JSBACH.
 !! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
 !! keyword "LCT_FILE".
 !!
-!! Authors: Reiner Schnur, 7/2003
-!!          Christian H. Reick, 8/2003
-!!
-!! @par Revision History
-!! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
@@ -261,15 +263,18 @@ CONTAINS
     !
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
+#ifndef __NO_QUINCY__
 #ifdef __QUINCY_STANDALONE__
     USE mo_util,        ONLY: tolower
+#endif
+    USE mo_util_string, ONLY: tolower
+    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 #else
     USE mo_util_string, ONLY: tolower
 #endif
-    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
-    USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
@@ -287,6 +292,9 @@ CONTAINS
     CHARACTER(len=2)   :: blank_set = " "//achar(9) !< the blank characters: BLANK and TAB
     INTEGER,ALLOCATABLE:: itmp(:)                   !< temporary array used for input of logicals
     INTEGER            :: apu
+
+    INTEGER :: i
+    INTEGER :: nlct, npft
 
     LOGICAL            :: exist_LctNumber              = .FALSE.
     LOGICAL            :: exist_LctName                = .FALSE.
@@ -420,10 +428,8 @@ CONTAINS
     LOGICAL            :: exists_fstore_target = .FALSE.
     LOGICAL            :: exists_k_root_dist = .FALSE.
     ! quincy model - end
-    INTEGER            :: i, j
-    INTEGER            :: nlct, npft
 
-    !>Read lctlib data and eventually allocate also memory for lctlib data on io-processor
+    !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
     !>
     IF (my_process_is_stdio()) THEN
 
@@ -501,7 +507,7 @@ CONTAINS
 
           IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
 
-          ! read the jsabch4 lctLib parameter
+          ! read the JSBACH lctLib parameter
           SELECT CASE (TRIM(key))
           CASE ('lctnumber')
             READ(line(pos:length),*) lctlib(1:nlct)%LctNumber
@@ -775,7 +781,7 @@ CONTAINS
           END SELECT
           ! ------------------------------------------------------------------
           ! read the quincy lctLib parameter
-          IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
+          IF (model_scheme_char == "quincy") THEN
             SELECT CASE (TRIM(key))
             CASE ('growthform')
               READ(line(pos:length),*) lctlib(1:nlct)%growthform
@@ -966,10 +972,10 @@ CONTAINS
        END DO
        DEALLOCATE(itmp)
 
-       !> test if the lctLib parameter could be read, if not finish()
+       !> Test if the lctLib parameter could be read, if not finish()
        !>
 
-       ! three main parameters
+       ! Three main parameters
        IF(.NOT. exist_LctNumber) &
             CALL finish('init_lctlib','No data for LctNumber found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_LctName) &
@@ -979,8 +985,8 @@ CONTAINS
        IF(.NOT. exist_LandcoverClass) &
             CALL finish('init_lctlib','No data for LandcoverClass found in '//TRIM(lctlib_file_name))
 
-       ! model scheme: jsbach / jsbach_quincy
-       IF (model_scheme_char == "jsbach" .OR. model_scheme_char == "jsbach_quincy") THEN
+       ! model scheme: jsbach
+       IF (model_scheme_char == "jsbach") THEN
          IF(.NOT. exist_AlbedoSnowVisMin) &
               CALL finish('init_lctlib','No data for AlbedoSnowVisMin found in '//TRIM(lctlib_file_name))
          IF(.NOT. exist_AlbedoSnowVisMax) &
@@ -1133,8 +1139,9 @@ CONTAINS
          !------------------------------------------------------------------------------------------
        END IF
 
-       ! model scheme: jsbach_quincy / quincy
-       IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
+#ifndef __NO_QUINCY__
+       ! model scheme: quincy
+       IF (model_scheme_char == "quincy") THEN
         IF(.NOT. exists_growthform) &
           CALL finish('init_lctlib','No data for growthform found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_ps_pathway) &
@@ -1253,87 +1260,80 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_root_dist found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
+#endif
 
        CLOSE(unit=lctlib_file_unit) ! Closing access to lctlib file
 
+#ifndef __NO_QUINCY__
        !------------------------------------------------------------------------------------------
        !>Modify the input values of some quincy lctlib parameters
        !>
-       !>  loop over vegetation lct:
-       !>    'jsbach_lite' & 'jsbach_pfts': calculations are applied to vegetation only; the lct = 1 is glacier (and has no values, i.e. is 0, in the quincy lctlib part)!
-       !>    'quincy_eight_pfts':           calculations are applied to all 8  PFT
-       !>    'quincy_11_pfts':              calculations are applied to all 11 PFT
        !>  TODO QUINCY: calculations may not need to be applied for
        !>               bare soil and urban area in usecases quincy_11_pfts / quincy_14_pfts
-       !>    
-       IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
-         IF (usecase == 'quincy_eight_pfts' .OR. usecase == 'quincy_11_pfts') THEN
-           j = 1
-         ELSE
-           j = 2
-         END IF
-
+       !>  TODO - is there any reason why you have an own loop for each parameter?
+       !>
+       IF (model_scheme_char == "quincy") THEN
        ! sla
-         DO i = j,nlct
+         DO i = 1,nlct
              lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
          END DO
        ! cn_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
          END DO
        ! cn_leaf_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
          END DO
        ! cn_leaf_max
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
          END DO
        ! np_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                 lctlib(i)%np_leaf
          END DO
        ! np_leaf_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_min
          END DO
        ! np_leaf_max
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_max
          END DO
        ! fn_oth_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
          END DO
        ! tau_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
          END DO
        ! bnf_base
-         DO i = j,nlct
+         DO i = 1,nlct
           lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
          END DO
        ! t_air_senescence
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + Tzero
          END DO
        ! wood_density
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
          END DO
        ! k_root
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
          END DO
        ! k_sapwood
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
          END DO
         ! k_rtos
-         DO i = j,nlct
+         DO i = 1,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
               !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
@@ -1343,7 +1343,7 @@ CONTAINS
            END IF
          END DO
          ! c0_allom
-         DO i = j,nlct
+         DO i = 1,nlct
            IF(lctlib(i)%growthform == itree) THEN
              lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
                                        lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
@@ -1352,8 +1352,8 @@ CONTAINS
              lctlib(i)%c0_allom = 0.0_wp
            END IF
          END DO
-       END IF
-       ! quincy
+       END IF ! (model_scheme_char == "quincy")
+#endif
 
        !------------------------------------------------------------------------------------------
 
@@ -1452,8 +1452,8 @@ CONTAINS
       CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)
-      ! model scheme: jsbach / jsbach_quincy
-      IF (model_scheme_char == "jsbach" .OR. model_scheme_char == "jsbach_quincy") THEN
+      ! model scheme: jsbach
+      IF (model_scheme_char == "jsbach") THEN
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMin, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMax, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoSnowNirMin, p_io, mpi_comm)
@@ -1526,8 +1526,9 @@ CONTAINS
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
       END IF
-      ! model schmeme: jsbach_quincy / quincy
-      IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
+#ifndef __NO_QUINCY__
+      ! model schmeme: quincy
+      IF (model_scheme_char == "quincy") THEN
         CALL p_bcast(lctlib(:)%growthform, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ps_pathway, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%phenology_type, p_io, mpi_comm)
@@ -1587,6 +1588,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%fstore_target, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
       END IF
+#endif
     END IF
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
@@ -1594,10 +1596,12 @@ CONTAINS
     !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
+#ifndef __NO_QUINCY__
     ! quincy model with 8 / 11 PFT tiles
     CASE ('quincy_eight_pfts', 'quincy_11_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
+#endif
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1
