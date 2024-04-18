@@ -262,7 +262,7 @@ CONTAINS
     !> 2.0 Calculates the biochemical P mineralization and P gross mineralization, and the loss of the contributing pools.
     !> P is assumed to clevage out from dom associated, residue and residue associated 
     !>
-    IF(.NOT. flag_sb_prescribe_po4)THEN
+    ! IF(.NOT. flag_sb_prescribe_po4)THEN
        hlp1 = (dom_assoc_po4 + residue_assoc_po4 + residue_po4 + dom_phosphorus)
        !! Biomineralization only occurs when there is available organic P
        IF (hlp1 > eps8) THEN
@@ -327,10 +327,10 @@ CONTAINS
        ELSE
           biochem_min_po4 = 0.0_wp
        ENDIF
-    ELSE
-       biochem_min_po4 = 0.0_wp
-       gross_min_po4 = 0._wp 
-    ENDIF
+    ! ELSE
+       ! biochem_min_po4 = 0.0_wp
+       ! gross_min_po4 = 0._wp 
+    ! ENDIF
 
     !> 3.0 Pi fluxes between different mineral P pools
     !> weathering, occlusion and slow exchange between sorbed and labile P pools
