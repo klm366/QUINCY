@@ -571,7 +571,6 @@ CONTAINS
             CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
             var%subset_type = itype
           END SELECT
-          END ASSOCIATE
         END DO
 
         ! mem%pools
