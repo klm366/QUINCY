@@ -28,12 +28,12 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
-  dsl4jsb_Use_processes HYDRO_, PHENO_, SSE_
+  dsl4jsb_Use_processes HYDRO_, PHENO_
   dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_config(SSE_)
+  ! dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(SSE_)
+  ! dsl4jsb_Use_memory(SSE_)
 
   IMPLICIT NONE
   PRIVATE

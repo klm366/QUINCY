@@ -86,6 +86,7 @@ MODULE mo_jsb4_forcing
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
   REAL(wp), PARAMETER :: cb = 5._wp
   REAL(wp), PARAMETER :: cc = 5._wp
+  REAL(wp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
 
@@ -1825,21 +1826,21 @@ CONTAINS
 
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
+! !$OMP END PARALLEL DO
 
-    IF (l_error_tmin) THEN
-      WRITE (message_text,*) &
-        & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-        & '- tmin temperature was: ', Tmin(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
-      CALL finish(TRIM(routine), TRIM(message_text))
-    END IF
+    ! IF (l_error_tmin) THEN
+      ! WRITE (message_text,*) &
+        ! & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
+        ! & '- tmin temperature was: ', Tmin(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+      ! CALL finish(TRIM(routine), TRIM(message_text))
+    ! END IF
 
-    IF (l_error_tair) THEN
-      WRITE (message_text,*) &
-        & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-        & '- air temperature was: ', Tair(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
-      CALL finish(TRIM(routine), TRIM(message_text))
-    END IF
+    ! IF (l_error_tair) THEN
+      ! WRITE (message_text,*) &
+        ! & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
+        ! & '- air temperature was: ', Tair(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+      ! CALL finish(TRIM(routine), TRIM(message_text))
+    ! END IF
 
   END FUNCTION vapour_pressure_from_evapor
 
@@ -2376,10 +2377,6 @@ CONTAINS
     longwave_from_daily_longwave = longwave_down_daily * (hlp_r**4) / (dtmp**4)      ! lw-radiation flux Eq. (1)
 
   END FUNCTION longwave_from_daily_longwave
-
-  ! ======================================================================================================= !
-  ! Procedures that exist in ECHAM but not in ICON have to be defined here
-  ! ======================================================================================================= !
 
   ! ======================================================================================================= !
   ! Procedures that exist in ECHAM but not in ICON have to be defined here

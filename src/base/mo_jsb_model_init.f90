@@ -70,7 +70,7 @@ CONTAINS
     ! <<
     USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
     USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: new_grid
+    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,             ONLY: Register_grid
 #endif
 
@@ -242,9 +242,9 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-    grid  => Get_grid(model%grid_id)
-    blks = grid%get_blk_start()
-    blke = grid%get_blk_end()
+    ! grid  => Get_grid(model%grid_id)
+    ! blks = grid%get_blk_start()
+    ! blke = grid%get_blk_end()
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
@@ -625,7 +625,6 @@ CONTAINS
         END IF
       END SELECT
 #endif
-      END SELECT
 
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !

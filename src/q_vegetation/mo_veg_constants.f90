@@ -345,5 +345,5 @@ CONTAINS
       delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
 
   END SUBROUTINE init_veg_constants
-
+#endif
 END MODULE mo_veg_constants

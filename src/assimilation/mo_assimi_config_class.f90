@@ -45,10 +45,6 @@ CONTAINS
   !>
   SUBROUTINE Init_assimi_config(config)
 
-  ! ======================================================================================================= !
-  !> read ASSIMI_ namelist and init configuration parameters
-  !>
-  SUBROUTINE Init_assimi_config(config)
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
@@ -90,12 +86,6 @@ CONTAINS
     nml_handler = open_nml(TRIM(config%namelist_filename))
     nml_unit    = position_nml('jsb_assimi_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_assimi_nml)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! Write namelist values into config
-    config%active                       = active
-    config%ic_filename                  = ic_filename
-    config%bc_filename                  = bc_filename
-    config%init_running_means           = init_running_means
     CALL close_nml(nml_handler)
 
     config%active              = active

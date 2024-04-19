@@ -25,7 +25,7 @@ MODULE mo_carbon_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
@@ -153,7 +153,7 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
-    USE mo_jsb_subset,        ONLY: t_subset
+    ! USE mo_jsb_subset,        ONLY: t_subset
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -164,7 +164,7 @@ CONTAINS
     LOGICAL                      :: lstart, new_day, new_year
     INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp)                     :: dtime
-    TYPE(t_subset)               :: subset
+    ! TYPE(t_subset)               :: subset
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
@@ -424,10 +424,10 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! dynveg a.k.a. vegetation_lcc
-    lstart   = is_time_experiment_start(options%current_datetime)
-    new_day  = is_newday(options%current_datetime, dtime)
-    new_year = is_newyear(options%current_datetime, dtime)
+    ! ! dynveg a.k.a. vegetation_lcc
+    ! lstart   = is_time_experiment_start(options%current_datetime)
+    ! new_day  = is_newday(options%current_datetime, dtime)
+    ! new_year = is_newyear(options%current_datetime, dtime)
 
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
@@ -1331,12 +1331,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
-    IF (PRESENT(c_green)) &
-      & CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_woods)) &
-      & CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_reserve)) &
-      & CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
 
     IF (PRESENT(c_crop_harvest)) CALL get_per_tile(c_crop_harvest_ta(:), &
       & c_crop_harvest(:), veg_fract_correction(:), fract_fpc_max(:))

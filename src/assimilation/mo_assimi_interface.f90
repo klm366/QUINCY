@@ -399,7 +399,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     !dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
 
     dsl4jsb_Def_config(ASSIMI_)
@@ -443,7 +442,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     !dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
     ! Get process variables
@@ -452,7 +450,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      CO2_air_mol)             ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(PHENO_,    lai_cl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,    lai_cl)                  ! in
 
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
@@ -786,8 +784,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)               ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
-
-    dsl4jsb_Get_var3D_onChunk(PHENO_,    lai_cl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
+	
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in

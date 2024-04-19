@@ -481,8 +481,7 @@ CONTAINS
       ! Total evapotranspiration, including sublimation
       CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                    &
         & hgrid, surface,                                                        &
-        & t_cf('evapotrans_lnd', 'kg m-2 s-1',                                   &
-        &      'Evapotranspiration from land surface w/o lakes'),                &
+        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & lrestart=.FALSE.,                                                      &

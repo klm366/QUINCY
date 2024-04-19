@@ -165,7 +165,7 @@ CONTAINS
 
   END SUBROUTINE pheno_read_init_vars
 
-  SUBROUTINE pheno_init_bc_jsbach(tile)
+  SUBROUTINE pheno_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -174,7 +174,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -227,7 +227,7 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
 
-  END SUBROUTINE pheno_init_bc_jsbach
+  END SUBROUTINE pheno_init_bc
 
   SUBROUTINE pheno_init_ic_jsbach(tile)
 
@@ -255,7 +255,7 @@ CONTAINS
 
     REAL(wp) :: ClumpinessFactor_param, MaxLai_param
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
 

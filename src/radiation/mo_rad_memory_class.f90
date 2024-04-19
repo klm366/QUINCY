@@ -104,9 +104,10 @@ MODULE mo_rad_memory_class
       ! & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
+	  & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
-      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl, PHENO_). Only for current time step/dtime.
+      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
                                 ! [(absorbed photons) / (m^2(leaf area) * s)]
       ! & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
       ! & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
@@ -138,9 +139,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
-    dsl4jsb_Use_processes SEB_
-    dsl4jsb_Use_config(SEB_)
-    ! ----------------------------------------------------------------------------------------------------- !
+	
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
@@ -219,29 +218,42 @@ CONTAINS
       & lrestart=.FALSE.,                                                  &
       & output_level=MEDIUM,                                               &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+	  
+    CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
+      & hgrid, surface,                                                    &
+      & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.TRUE.,                                                   &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-    ! Additional variables for soil
-    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
-      & ) THEN
+    CALL mem%Add_var( 'alb_nir', mem%alb_nir,                              &
+      & hgrid, surface,                                                    &
+      & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.TRUE.,                                                   &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )	  
 
-      CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,      &
+
+      CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,      &
         & hgrid, surface,                                                    &
-        & t_cf('alb_vis_mineralsoil', '', ''),                               &
+        & t_cf('alb_vis_snow', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil,      &
+      CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,      &
         & hgrid, surface,                                                    &
-        & t_cf('alb_nir_mineralsoil', '', ''),                               &
+        & t_cf('alb_nir_snow', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-    END IF ! soil
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &
@@ -325,6 +337,24 @@ CONTAINS
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & ) THEN
+	  
+      CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
+        & hgrid, surface,                                                    &
+        & t_cf('albedo_vis_canopy', '', ''),                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE.,                                                  &
+        & output_level=MEDIUM,                                               &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
+        & hgrid, surface,                                                    &
+        & t_cf('albedo_nir_canpy', '', ''),                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE.,                                                  &
+        & output_level=MEDIUM,                                               &
+        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
         & hgrid, surface,                                                    &
@@ -399,29 +429,36 @@ CONTAINS
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
 
+      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+        & hgrid, canopy_layer,                                               &
+        & t_cf('LAI for each canopy layer', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
       CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
-        & hgrid, vgrid_canopy,                                                    &
+        & hgrid, canopy_layer,                                                    &
         & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL mem%Add_var('apar_per_lai_cl', mem%apar_per_lai_cl,               &
-        & hgrid, vgrid_canopy,                                               &
+        & hgrid, canopy_layer,                                               &
         & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
       !  CALL mem%Add_var('apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,                 &
-      !    & hgrid, vgrid_canopy,                                                           &
+      !    & hgrid, canopy_layer,                                                           &
       !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
       !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       !    & prefix, suffix,                                                                &
       !    & lrestart=.TRUE., initval_r=0.0_wp )
 
       !  CALL mem%Add_var('apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,                &
-      !    & hgrid, vgrid_canopy,                                                          &
+      !    & hgrid, canopy_layer,                                                          &
       !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
       !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
       !    & prefix, suffix,                                                               &
@@ -434,7 +471,7 @@ CONTAINS
       !    & prefix, suffix,                                                                &
       !    & lrestart=.TRUE., initval_r=0.0_wp )
 
-    END IF ! vegetation
+    END IF
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
@@ -478,52 +515,6 @@ CONTAINS
       END IF ! l_ice_on_lakes
     END IF ! lakes
 
-    ! Additional variables for soil
-    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
-      & ) THEN
-
-      CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,                    &
-        & hgrid, surface,                                                    &
-        & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
-
-      CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,                    &
-        & hgrid, surface,                                                    &
-        & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
-
-    END IF ! soil
-
-    ! Additional variables for vegetation
-    IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
-      & ) THEN
-
-      CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_vis_canopy', '', ''),                                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_nir_canpy', '', ''),                                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
-
-    END IF ! vegetation
   END SUBROUTINE Init_rad_memory
 
 #endif

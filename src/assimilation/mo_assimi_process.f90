@@ -748,7 +748,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp)             :: hlp
+    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
     INTEGER :: nc, ic

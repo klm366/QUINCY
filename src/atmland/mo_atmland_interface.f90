@@ -608,15 +608,15 @@ CONTAINS
     END IF ! MODEL_QUINCY
 #endif
 
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      IF (.NOT. PRESENT(cos_zenith_angle)) THEN
-        CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
-      END IF
+    ! IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      ! IF (.NOT. PRESENT(cos_zenith_angle)) THEN
+        ! CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
+      ! END IF
 
-      ! Update local time and the daytime counter
-      CALL update_local_time_and_daytime_counter( &
-        &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
-    END IF ! MODEL_QUINCY
+      ! ! Update local time and the daytime counter
+      ! CALL update_local_time_and_daytime_counter( &
+        ! &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+    ! END IF ! MODEL_QUINCY
 
   END SUBROUTINE update_atm2land
 

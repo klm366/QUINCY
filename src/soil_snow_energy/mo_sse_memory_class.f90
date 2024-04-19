@@ -16,18 +16,24 @@ MODULE mo_sse_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
+
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes SSE_
+  
+  ! Use process configurations
+  dsl4jsb_Use_config(SSE_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 80
+  INTEGER, PARAMETER :: max_no_of_vars = 20
 
   ! ======================================================================================================= !
   !>Type definition for soil_snow_energy memory
@@ -71,7 +77,10 @@ CONTAINS
   !>initialize memory (variables) for the process: soil_snow_energy
   !>
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
-
+  
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
+                                    TSTEP_CONSTANT, tables
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid

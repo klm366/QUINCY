@@ -364,13 +364,13 @@ CONTAINS
         & initval_r=0.0_wp )
     END IF
 
-    CALL mem%Add_var( 'richardson', mem%richardson,                          &
-      & hgrid, surface,                                                      &
-      & t_cf('richardson number', '-', ''),                                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & initval_r=0.0_wp )
+    ! CALL mem%Add_var( 'richardson', mem%richardson,                          &
+      ! & hgrid, surface,                                                      &
+      ! & t_cf('richardson number', '-', ''),                                  &
+      ! & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      ! & prefix, suffix,                                                      &
+      ! & lrestart=.TRUE.,                                                     &
+      ! & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
       & hgrid, surface,                                                      &

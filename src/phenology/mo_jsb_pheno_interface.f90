@@ -732,8 +732,8 @@ CONTAINS
   !> Implementation of "aggregate" of the "phenology" task
   !>
   SUBROUTINE aggregate_phenology(tile, options)
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
+    ! USE mo_jsb_model_class,   ONLY: t_jsb_model
+    ! USE mo_jsb_class,         ONLY: Get_model
     USE mo_jsb_time,          ONLY: is_newyear
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -745,18 +745,16 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
-    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! Local variables	
+    INTEGER                                   :: iblk, ics, ice
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
 

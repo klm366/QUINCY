@@ -19,7 +19,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -113,15 +113,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_sse_tasks(process, model_id)
 
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
+    ! USE mo_jsb_model_class,   ONLY: t_jsb_model
+    ! USE mo_jsb_class,         ONLY: Get_model
 
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
+    ! TYPE(t_jsb_model), POINTER :: model
 
-    model   => Get_model(model_id)
+    ! model   => Get_model(model_id)
 
     CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
     CALL process%Register_task(tsk_soil_and_snow_properties(model_id))

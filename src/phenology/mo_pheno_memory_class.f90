@@ -158,8 +158,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
 
-    !>initialize memory (variables) for the process phenology of the JSBACH model
-    !>
+    dsl4jsb_Get_config(PHENO_)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -171,6 +170,18 @@ CONTAINS
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
         !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+      CALL mem%Add_var( 'lai', mem%lai,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
         & hgrid, surface,                                                      &
@@ -364,21 +375,6 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
-
-      CALL mem%Add_var( 'lai', mem%lai,                                        &
-        & hgrid, surface,                                                      &
-        & t_cf('leaf_area_index', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
-        & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, vgrid_canopy,                                               &
-        & t_cf('LAI for each canopy layer', '', ''),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
 
 #ifdef __ICON__
       ! --------------------------------------------------------------------------------------------------- !

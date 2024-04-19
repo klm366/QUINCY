@@ -378,8 +378,6 @@ CONTAINS
 
     END IF
 
-    IF (tile%name .EQ. 'box') CALL pplcc_fraction_diagnostics(tile, options)
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_pplcc_post_lcc

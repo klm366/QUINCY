@@ -356,8 +356,8 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
+      ! dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
+      ! dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
 
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN

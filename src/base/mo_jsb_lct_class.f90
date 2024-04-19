@@ -121,7 +121,7 @@ CONTAINS
 !!$    INTEGER,         INTENT(in) :: lct_type
 !!$    LOGICAL                     :: return_value
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains'
+!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains'
 !!$
 !!$    return_value = Contains_lct(this%id, lct_type)
 !!$

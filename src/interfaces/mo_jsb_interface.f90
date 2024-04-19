@@ -1,19 +1,5 @@
 !> Interface to run ICON-Land for one time step
 !>
-<<<<<<< HEAD
-!! @brief Interface to run ICON-Land for one time step with a coupled simulation ('interface_full')
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-=======
 !> ICON-Land
 !>
 !> ---------------------------------------
@@ -27,7 +13,6 @@
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
->>>>>>> feature/quincy-dev-staging
 
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
@@ -68,15 +53,9 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-<<<<<<< HEAD
-  !> is called by host model (ICON) in a coupled simulation in './atm_phy_echam/mo_surface'
-  !>
-  !> @NOTE for a standalone simulation 'mo_jsbach_model:jsbach_model' is called 
-=======
   !> Called by the host model (i.e. ICON) in simulations with atmospere
   !>
   !> @NOTE In standalone simulations 'mo_jsbach_model:jsbach_model' is called
->>>>>>> feature/quincy-dev-staging
   !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
   !>
   SUBROUTINE interface_full( &
@@ -124,10 +103,7 @@ CONTAINS
     & alb_nir_dif,      &
     & CO2_flux,         &
     ! OPTIONAL arguments
-<<<<<<< HEAD
-=======
     & DEBUG_VAR,        &
->>>>>>> feature/quincy-dev-staging
     ! For QUINCY
     & nhx_deposition,         & !< in
     & noy_deposition,         & !< in
@@ -135,10 +111,6 @@ CONTAINS
     & noy_n15_deposition,     & !< in
     & p_deposition,           & !< in
     ! For lakes
-<<<<<<< HEAD
-    & DEBUG_VAR,                                                        & !< in
-=======
->>>>>>> feature/quincy-dev-staging
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
@@ -149,13 +121,8 @@ CONTAINS
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                    & !< out
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
-<<<<<<< HEAD
-    !   for ICON-Land standalone
-    & evapopot                                                          & !< out, optional
-=======
     ! For ICON-Land standalone
     & evapopot                                                          & !< out
->>>>>>> feature/quincy-dev-staging
     & )
 
 #ifndef __ICON__
@@ -194,16 +161,6 @@ CONTAINS
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
     REAL(wp), INTENT(in), OPTIONAL :: &
-<<<<<<< HEAD
-      ! MODEL_QUINCY
-      & nhx_deposition    (:), &
-      & noy_deposition    (:), &
-      & nhx_n15_deposition(:), &
-      & noy_n15_deposition(:), &
-      & p_deposition      (:), &
-      ! For lakes:
-=======
->>>>>>> feature/quincy-dev-staging
       & DEBUG_VAR         (:), &
       ! MODEL_QUINCY
       & nhx_deposition    (:), &
@@ -262,30 +219,18 @@ CONTAINS
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: &
       & evapopot(:)
-<<<<<<< HEAD
-=======
 
->>>>>>> feature/quincy-dev-staging
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model),         POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     INTEGER                             :: nc
     INTEGER                             :: no_omp_thread
-<<<<<<< HEAD
-    ! INTEGER                             :: p_pe
-    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (timer_on() .OR. l_timer_host) THEN
-      CALL timer_start(timer_jsbach(model_id))
-    END IF
-=======
     ! INTEGER                           :: p_pe
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
     ! ----------------------------------------------------------------------------------------------------- !
 
     IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
 
->>>>>>> feature/quincy-dev-staging
     no_omp_thread = Get_omp_thread()
     ! Note: Since write_interface_variables is not yet implemented for ICON, the call to it is suppressed here for ICON.
     !       This is an exception since we don't want to use conditional compiling, but otherwise there are lots
@@ -301,11 +246,7 @@ CONTAINS
     model => Get_model(model_id)
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
     ! ----------------------------------------------------------------------------------------------------- !
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> feature/quincy-dev-staging
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
 !!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
@@ -317,28 +258,16 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-<<<<<<< HEAD
-      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()))
-    CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 2.0 associate variable pointers to current chunk of gridcells
-=======
       & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Associate variable pointers to current chunk of gridcells
->>>>>>> feature/quincy-dev-staging
     !>
     CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! ----------------------------------------------------------------------------------------------------- !
-<<<<<<< HEAD
-    !> 3.0 put atmospheric forcing into the a2l memory
-=======
     !> 3.0 Put atmospheric forcing into the a2l memory
->>>>>>> feature/quincy-dev-staging
     !>
     CALL model%Get_top_tile(tile)
     CALL update_atm2land(                           &
@@ -372,8 +301,6 @@ CONTAINS
       & p_deposition       = p_deposition,          &
       ! For lakes
       & DEBUG_VAR          = DEBUG_VAR,             &
-<<<<<<< HEAD
-=======
       ! For QUINCY
       & nhx_deposition     = nhx_deposition,        &
       & noy_deposition     = noy_deposition,        &
@@ -381,7 +308,6 @@ CONTAINS
       & noy_n15_deposition = noy_n15_deposition,    &
       & p_deposition       = p_deposition,          &
       ! For lakes
->>>>>>> feature/quincy-dev-staging
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
       & t_acoef_wtr        = t_acoef_wtr,           &
@@ -395,29 +321,16 @@ CONTAINS
       & )
     NULLIFY(tile)
 
-<<<<<<< HEAD
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.0 Run tasks in queue
-    !>
-    !>  run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
-=======
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.0 Run tasks in queue
     !>
     !>  Run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
->>>>>>> feature/quincy-dev-staging
     !>
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! ----------------------------------------------------------------------------------------------------- !
-<<<<<<< HEAD
-    !> 5.0 give the required variables back to the atmosphere
-    !>
-    !>   @NOTE evapopot is an optional parameter, so it has to be passed without the colon!
-=======
     !> 5.0 Give the required variables back to the atmosphere
->>>>>>> feature/quincy-dev-staging
     !>
     CALL model%Get_top_tile(tile)
     CALL update_land2atm(                        &
@@ -468,11 +381,6 @@ CONTAINS
 !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
 !!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
 !!$      &              all_print=.TRUE.)
-<<<<<<< HEAD
-    IF (debug_on('basic') .AND. iblk == 1) THEN
-      CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-    END IF
-=======
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
@@ -480,7 +388,6 @@ CONTAINS
     !> 7.0 update timer
     !>
     IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
->>>>>>> feature/quincy-dev-staging
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 7.0 update timer
@@ -490,11 +397,6 @@ CONTAINS
     END IF
   END SUBROUTINE interface_full
 
-<<<<<<< HEAD
-  ! ======================================================================================================= !
-  !> @TODO not used at the moment
-  !> 
-=======
   SUBROUTINE interface_tmx( &
     & model_id,         &
     & iblk, ics, ice,   &
@@ -685,7 +587,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> @TODO not used at the moment
   !>
->>>>>>> feature/quincy-dev-staging
   ! SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
   !   & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
   !
@@ -709,11 +610,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-<<<<<<< HEAD
-  !> start ICON-Land timestep
-=======
   !> Start ICON-Land timestep
->>>>>>> feature/quincy-dev-staging
   !>
   !>   is called by both:
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
@@ -758,11 +655,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-<<<<<<< HEAD
-  !> finish ICON-land timestep
-=======
   !> Finish ICON-land timestep
->>>>>>> feature/quincy-dev-staging
   !>
   !>   is called by both:
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
@@ -774,19 +667,11 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-<<<<<<< HEAD
-    USE mo_seb_interface,       ONLY: global_seb_diagnostics
-    USE mo_hydro_interface,     ONLY: global_hydrology_diagnostics
-    USE mo_pheno_interface,     ONLY: global_phenology_diagnostics
-    USE mo_carbon_interface,    ONLY: global_carbon_diagnostics
-    USE mo_pplcc_interface,     ONLY: global_pplcc_diagnostics
-=======
     USE mo_seb_interface,      ONLY: global_seb_diagnostics
     USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
     USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
     USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
->>>>>>> feature/quincy-dev-staging
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
@@ -812,14 +697,6 @@ CONTAINS
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
     no_omp_thread = Get_omp_thread()
-<<<<<<< HEAD
-    model => Get_model(model_id)
-    ! ----------------------------------------------------------------------------------------------------- !
-
-    ! TBD: this is only required if restart or output is written for this timestep!
-    ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
-    CALL model%Write_back_to_bgcms()
-=======
 
     model => Get_model(model_id)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -829,7 +706,6 @@ CONTAINS
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif
->>>>>>> feature/quincy-dev-staging
 
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
@@ -889,86 +765,6 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
   END SUBROUTINE jsbach_finish_timestep
 
-<<<<<<< HEAD
-  ! ======================================================================================================= !
-  !> ... @TODO not used anymore ?!
-  !> 
-  ! SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)
-  ! 
-  !   USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
-  !   USE mo_jsb_process_class, ONLY: Get_process_id
-  ! 
-  !   CHARACTER(len=*),  INTENT(in) :: var_name
-  !   INTEGER,           INTENT(in) :: model_id
-  !   INTEGER, OPTIONAL, INTENT(in) :: &
-  !     & iblk,              &
-  !     & ics,               &
-  !     & ice
-  !   REAL(wp), OPTIONAL, POINTER   :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
-  ! 
-  !   TYPE(t_jsb_model),           POINTER :: model
-  !   CLASS(t_jsb_tile_abstract),  POINTER :: tile
-  !   CLASS(t_jsb_var),            POINTER :: var_ptr
-  !   CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-  !   INTEGER :: process_id, pos
-  !   LOGICAL :: l_on_chunk
-  !   INTEGER :: no_omp_thread
-  ! 
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
-  ! 
-  !   IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-  ! 
-  !   model => Get_model(model_id)
-  !   CALL model%Get_top_tile(tile)
-  ! 
-  !   pos = INDEX(var_name, '_')
-  !   IF (pos < 1) CALL finish(routine, 'var_name must have format <process name>_<variable name>')
-  !   process_name = var_name(1:pos-1)
-  !   variable_name = var_name(pos+1:LEN(TRIM(var_name)))
-  !   process_id = Get_process_id(process_name)
-  !   var_ptr => tile%mem(process_id)%p%Get_var(variable_name)
-  ! 
-  !   IF (PRESENT(ics) .OR. PRESENT(ice) .OR. PRESENT(iblk)) THEN
-  !     IF (.NOT. (PRESENT(ics) .AND. PRESENT(ice) .AND. PRESENT(iblk))) THEN
-  !       CALL finish(routine, 'Must provide either none or all of ics,ice,iblk arguments!')
-  !     ELSE
-  !       l_on_chunk = .TRUE.
-  !       IF (var_ptr%type == REAL2d) THEN
-  !         IF (.NOT. PRESENT(ptr1d)) CALL finish(routine, 'Must provide argument ptr1d')
-  !       ELSE
-  !         IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-  !       END IF
-  !     END IF
-  !   ELSE
-  !     IF (.NOT. Is_omp_inside_serial()) THEN
-  !       CALL finish(TRIM(routine), 'Should not be called inside parallel OMP region')
-  !     END IF
-  !     l_on_chunk = .FALSE.
-  !     IF (var_ptr%type == REAL2d) THEN
-  !       IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-  !     ELSE
-  !       IF (.NOT. PRESENT(ptr3d)) CALL finish(routine, 'Must provide argument ptr3d')
-  !     END IF
-  !   END IF
-  ! 
-  !   IF (l_on_chunk) THEN
-  !     IF (var_ptr%type == REAL2d) THEN
-  !       ptr1d => var_ptr%ptr2d(ics:ice,iblk)
-  !     ELSE
-  !       ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
-  !     END IF
-  !   ELSE
-  !     IF (var_ptr%type == REAL2d) THEN
-  !       ptr2d => var_ptr%ptr2d(:,:)
-  !     ELSE
-  !       ptr3d => var_ptr%ptr3d(:,:,:)
-  !     END IF
-  !   END IF
-  ! 
-  !   IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-  ! 
-  ! END SUBROUTINE jsbach_get_var
-=======
   ! ====================================================================================================== !
   !
   !> Routine to be called from host model in order to inquire a variable (section) on a specified tile
@@ -1147,7 +943,6 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_get_var
->>>>>>> feature/quincy-dev-staging
 
 #endif
 END MODULE mo_jsb_interface

@@ -1027,9 +1027,9 @@ do
 
   if [[ ${dryrun} != "true" ]]
   then
-    if [[ ${jsb4icon} != true ]]; then
-      output_dir=${output_root}/${revision}/${grid_name}
-    fi
+    # if [[ ${jsb4icon} != true ]]; then
+      # output_dir=${output_root}/${revision}/${grid_name}
+    # fi
     echo output directory ${output_dir}
     mkdir -p ${output_dir}
   fi

@@ -189,7 +189,7 @@ CONTAINS
 
       ALLOCATE(model%processes(max_no_of_processes))
       DO iproc=1,max_no_of_processes
-        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename), model_scheme)
+        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
       END DO
 
       ! Point from each associated process%config to the model_config
