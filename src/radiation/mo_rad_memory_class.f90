@@ -240,7 +240,7 @@ CONTAINS
 
       CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,      &
         & hgrid, surface,                                                    &
-        & t_cf('alb_vis_snow', '', ''),                               &
+        & t_cf('albedo_vis_snow', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
@@ -248,7 +248,7 @@ CONTAINS
 
       CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,      &
         & hgrid, surface,                                                    &
-        & t_cf('alb_nir_snow', '', ''),                               &
+        & t_cf('albedo_nir_snow', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &

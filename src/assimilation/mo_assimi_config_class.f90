@@ -68,7 +68,6 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    INTEGER                     :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_config'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Starting assimi configuration')

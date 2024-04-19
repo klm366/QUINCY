@@ -39,7 +39,7 @@ MODULE mo_jsb_interface
   PRIVATE
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
-  ! PUBLIC :: jsbach_get_var
+  PUBLIC :: jsbach_get_var
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -293,12 +293,6 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
-      ! For QUINCY
-      & nhx_deposition     = nhx_deposition,        &
-      & noy_deposition     = noy_deposition,        &
-      & nhx_n15_deposition = nhx_n15_deposition,    &
-      & noy_n15_deposition = noy_n15_deposition,    &
-      & p_deposition       = p_deposition,          &
       ! For lakes
       & DEBUG_VAR          = DEBUG_VAR,             &
       ! For QUINCY
@@ -389,12 +383,6 @@ CONTAINS
     !>
     IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 7.0 update timer
-    !>
-    IF (timer_on() .OR. l_timer_host) THEN
-      CALL timer_stop(timer_jsbach(model_id))
-    END IF
   END SUBROUTINE interface_full
 
   SUBROUTINE interface_tmx( &

@@ -229,7 +229,7 @@ CONTAINS
 
   END SUBROUTINE pheno_init_bc
 
-  SUBROUTINE pheno_init_ic_jsbach(tile)
+  SUBROUTINE pheno_init_ic(tile)
 
     USE mo_pheno_process,     ONLY: get_foliage_projected_cover
     USE mo_jsb_time,          ONLY: get_time_interpolation_weights
