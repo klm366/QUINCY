@@ -985,6 +985,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+
       ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(bclapp_org(SIZE(hyd_cond_sat),nsoil))

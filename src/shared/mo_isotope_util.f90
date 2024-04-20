@@ -195,6 +195,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_N15N14(delta) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
 
     IMPLICIT NONE

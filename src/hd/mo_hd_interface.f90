@@ -412,7 +412,6 @@ CONTAINS
     debug_hd              = dsl4jsb_Config(HD_)%debug_hd
     use_bifurcated_rivers = dsl4jsb_Config(HD_)%use_bifurcated_rivers
 
-
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma,nblks), ztemp(nproma,nblks))
     !$ACC DATA CREATE(in_domain, ztemp)

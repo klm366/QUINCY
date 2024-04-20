@@ -104,6 +104,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: drag_srf      ! old turb
@@ -141,8 +143,6 @@ CONTAINS
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
      & liquid_max,                      &
-     & rough_h_srf,                     &
-     & rough_m_srf,                     &
      & t_srf_upd,                       & !< Updated surface temperature for drag filtering
      & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds)
 
@@ -400,19 +400,18 @@ CONTAINS
 
     ! Compute surface drag and exchange coefficients for standalone simulations
     IF (jsb_standalone) THEN
-      !TODO: GPU adaptation still missing!
       !$ACC DATA &
-      !$ACC   CREATE(rough_h_srf, rough_m_srf, t_srf_upd)
+      !$ACC   CREATE(t_srf_upd)
 
       ! Get surface roughness
-      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+      dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)  ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)  ! in
 
       ! Update drag and exchange coefficients based on external forcing data
       CALL update_drag( &
           ! INTENT in
         & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
@@ -463,7 +462,7 @@ CONTAINS
       CALL update_drag( &
           ! INTENT in
         & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
@@ -472,6 +471,7 @@ CONTAINS
         & t_srf_upd(:), richardson(:))
 
       !$ACC END DATA
+
     END IF ! jsbach_runs_standalone
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
