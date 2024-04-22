@@ -231,7 +231,7 @@ CONTAINS
           END IF
         END IF
         CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
-  
+
         ! Crosscheck process configs
         IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
           & .AND. (nsoil_e /= nsoil_w)) THEN
@@ -239,7 +239,7 @@ CONTAINS
             & 'The number of soil layers used for water and energy currently need to be identical:'  &
             & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
         END IF
-    
+
       END SELECT
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
