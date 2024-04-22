@@ -873,7 +873,7 @@ CONTAINS
             ELSE
               heat_excess(ic,isoil)      = hlp1_2d(ic,isoil) - latent_heat_fusion * w_density * w_ice_sl(ic,isoil)
               w_soil_melt_flux(ic,isoil) = w_ice_sl(ic,isoil)
-              t_soil_sl                  = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
+              t_soil_sl(ic,isoil)        = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
                 &                          * soil_depth_sl(ic,isoil))
             END IF
           END IF
@@ -1171,7 +1171,7 @@ CONTAINS
     ELSEWHERE
       drainage_sl(:,nsoil_sb) = MAX(drain_frac ** soil_depth_sl(:,nsoil_sb) * drainage_sl(:,nsoil_sb-1),0.0_wp)
     END WHERE
-    ! Update water content of deeptest layer
+    ! Update water content of deepest layer
     w_soil_sl(:,nsoil_sb)     = w_soil_sl(:,nsoil_sb) + &
                                 (drainage_sl(:,nsoil_sb-1) - drainage_sl(:,nsoil_sb) - &
                                 evaporation(:) * fevaporation(:,nsoil_sb) - &
