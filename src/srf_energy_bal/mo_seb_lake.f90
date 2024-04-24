@@ -96,6 +96,10 @@ CONTAINS
       & t_air,                &
       & q_air,                &
       & wind_air,             &
+      & fact_q_air,           &
+      & fact_qsat_srf,        &
+      & rough_h,              &
+      & rough_m,              &
       & drag_wtr,             &
       & t_acoef_wtr,          &
       & t_bcoef_wtr,          &
@@ -112,10 +116,6 @@ CONTAINS
       & hcap_wtr,           &
       & zero,               &
       & hflx_tmp,           &
-      & fact_q_air,         &
-      & fact_qsat_srf,      &
-      & rough_h_srf,        &
-      & rough_m_srf,        &
       & pch_wtr
 
     REAL(wp), ALLOCATABLE :: &
@@ -201,6 +201,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
     IF (jsb_standalone) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)       ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)    ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_h)          ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_m)          ! in
       dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)          ! OUT if standalone
       dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_wtr)       ! OUT if standalone
       dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_wtr)       ! OUT if standalone
@@ -266,21 +270,14 @@ CONTAINS
 
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
-      !TODO: Adaptation to GPUs only started. It is still very incomplete!
       !$ACC DATA &
-      !$ACC   CREATE(fact_q_air, fact_qsat_srf, rough_h_srf, rough_m_srf, pch_wtr)
-
-      ! Get surface temperature, humidity and roughness for lake tile
-      fact_q_air(:)    = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
-      fact_qsat_srf(:) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
-      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+      !$ACC   CREATE(pch_wtr)
 
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
       ! INTENT in
       & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
       & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
       & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
       ! INTENT out
@@ -289,11 +286,15 @@ CONTAINS
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
         ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-        drag_ice(:)    = drag_wtr(:)
-        t_acoef_ice(:) = t_acoef_wtr(:)
-        t_bcoef_ice(:) = t_bcoef_wtr(:)
-        q_acoef_ice(:) = q_acoef_wtr(:)
-        q_bcoef_ice(:) = q_bcoef_wtr(:)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          drag_ice(ic)    = drag_wtr(ic)
+          t_acoef_ice(ic) = t_acoef_wtr(ic)
+          t_bcoef_ice(ic) = t_bcoef_wtr(ic)
+          q_acoef_ice(ic) = q_acoef_wtr(ic)
+          q_bcoef_ice(ic) = q_bcoef_wtr(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
       !$ACC END DATA
     END IF

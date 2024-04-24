@@ -2194,7 +2194,7 @@ CONTAINS
 
     ! local variables
     INTEGER  :: ic, is ! cell index and soil layer index
-    REAL(wp) :: ck
+    REAL(wp) :: ck, local_dt
     REAL(wp) :: ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil),     &
              &  nvgn(nc,nsoil), mvgn(nc,nsoil), ws_rel_vol(nc,nsoil),         &
              &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), fc_vol(nc,nsoil), &
@@ -2202,7 +2202,7 @@ CONTAINS
 
     !$ACC DATA &
     !$ACC   CREATE(ws_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
-    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp, dt)
+    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp)
 
     ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
@@ -2409,15 +2409,14 @@ CONTAINS
 
       ! Make sure percolation from top layer is limited to water content !!!
       IF (PRESENT(dt)) THEN
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        IF (dt > 0._wp) THEN
-          !$ACC LOOP GANG VECTOR
+        local_dt = dt
+        IF (local_dt > 0._wp) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1, nc
-            K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
+            K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / local_dt))
           END DO
-          !$ACC END LOOP
+          !$ACC END PARALLEL LOOP
         END IF
-        !$ACC END PARALLEL
       END IF
 
     END IF

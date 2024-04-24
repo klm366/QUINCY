@@ -521,13 +521,13 @@ CONTAINS
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-       LaiMax_corrected(:) = maxLAI_allom(ic)
+       LaiMax_corrected(ic) = maxLAI_allom(ic)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-       LaiMax_corrected(:) = MaxLAI_param
+       LaiMax_corrected(ic) = MaxLAI_param
       END DO
       !$ACC END PARALLEL LOOP
     END IF

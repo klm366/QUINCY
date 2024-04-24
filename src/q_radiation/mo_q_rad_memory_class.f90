@@ -69,7 +69,7 @@ MODULE mo_q_rad_memory_class
       & alb_nir_soil            !< Same as alb_vis_soil but for NIR.
 
     ! lakes
-    TYPE(t_jsb_var_real2d) :: &                              
+    TYPE(t_jsb_var_real2d) :: &
       & albedo_lwtr             !< lake albedo [unitless]
 
     ! vegetation

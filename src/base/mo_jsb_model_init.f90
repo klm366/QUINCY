@@ -572,6 +572,10 @@ CONTAINS
         IF (tile%Is_process_active(HYDRO_)) THEN
           CALL hydro_init(tile)
         END IF
+      ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
+        IF (tile%Is_process_active(SSE_)) THEN
+          CALL init_soil_properties(tile)
+        END IF
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(SPQ_)) THEN
