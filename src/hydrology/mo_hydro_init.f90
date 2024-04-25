@@ -682,11 +682,11 @@ CONTAINS
 
     ! Temporary implementation to assign slope to tiles. Needs to move to jsb_tile module
     ! in order to be flexible with respect to hydrotile definition
-    IF (tile%is_upland) THEN
+    IF (tile%contains_upland) THEN
       dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_up
-    ELSE IF (tile%is_lowland) THEN
+    ELSE IF (tile%contains_lowland) THEN
       dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_low
-    ELSE IF (tile%is_floodplain) THEN
+    ELSE IF (tile%contains_floodplain) THEN
       dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = hydro_init_vars%slope_plain
     ELSE ! Non HydroTile point scale case
       dsl4jsb_var2D_onDomain(HYDRO_, tile_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
