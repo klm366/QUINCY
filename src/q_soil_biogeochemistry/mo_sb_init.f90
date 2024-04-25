@@ -1454,9 +1454,9 @@ CONTAINS
           ! calc fraction of mineral-associated C in the soil
           ! @TODO make the '7.0_wp' a parameter
           ! @TODO add docu for this calculation
-          frac_mineral_assoc_soil_c  = EXP(-is / 7._wp)
+          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * 7._wp / 15._wp) )
           ! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
-          IF (is > 10._wp) THEN
+          IF (soil_lay_depth_ubound_sl(ic, is, iblk) > 2._wp) THEN
             frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
           ENDIF
           sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = qmax_org_fine_particle(ic, is, iblk) &

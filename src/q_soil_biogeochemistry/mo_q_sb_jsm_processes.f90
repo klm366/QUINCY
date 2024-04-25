@@ -650,8 +650,8 @@ CONTAINS
                                                                        net_mineralisation_nh4_n15, &   !< net mineralisation rate of 15NH4 [micro-mol/m2/s]
                                                                        rtm_denitrification_act         !< temperature modifier for denitrification
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: nitrification_no3, &            !< nitrification to NO3 [micro-mol/m2/s]
-                                                                       denitrification_n2              !< denitrification to N2 [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: nitrification_noy, &            !< nitrification to NOy [micro-mol/m2/s]
+                                                                       denitrification_n2, &           !< denitrification to N2 [micro-mol/m2/s]
+                                                                       nitrification_noy, &            !< nitrification to NOy [micro-mol/m2/s]
                                                                        nitrification_n2o, &            !< nitrification to N2O [micro-mol/m2/s]
                                                                        denitrification_noy, &          !< denitrification to NOy [micro-mol/m2/s]
                                                                        denitrification_n2o, &          !< denitrification to N2O [micro-mol/m2/s]
