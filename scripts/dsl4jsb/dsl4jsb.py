@@ -190,6 +190,8 @@ help_text = """
         -v, --verbose     print list of conversions (use twice for message for files not processed)
         -i, --ifile=FILE  input file (test.f90 if missing and input directory (-d) not given)
         -o, --ofile=FILE  output file (stdout if missing)
+        --keep-time-ifile don't change timestamp of input file(s)
+        --keep_time-ofile don't chnage timestamp of output file(s)
         -d, --idir=DIR    directory with source files
         -t, --odir=DIR    target directory for output files (must exist)
         -k, --keep-dirs   keep directory tree structure of files in input directory (if -d and -t given)
@@ -212,7 +214,7 @@ def tolower(match):
     return match.group(1).lower() + '_'
 
 
-def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more=False, cwd=None):
+def process_file(inputfile, outputfile, header=True, keep_time_ifile=False, keep_time_ofile=False, verbose=False, verbose_more=False, cwd=None):
     # Compute hash value of input file
     hasher = hashlib.md5()
     with io.open(inputfile, 'rb') as infile:
@@ -233,7 +235,8 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
     if hasher.hexdigest() == hash:
         # Since input file hasn't changed, reset its modification time to the one
         # of the output file, so that make doesn't think the input file is newer
-        os.utime(inputfile, (os.path.getatime(inputfile), os.path.getmtime(outputfile)))
+        if not keep_time_ifile:
+            os.utime(inputfile, (os.path.getatime(inputfile), os.path.getmtime(outputfile)))
         if verbose_more:
             print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
         return
@@ -274,7 +277,7 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
                         outfile.write(line.encode('utf-8'))
                 else:
                     outfile.write(line)
-    if outputfile != '':
+    if outputfile != '' and not keep_time_ofile:
         os.utime(outputfile, (os.path.getatime(outputfile), os.path.getmtime(inputfile)))
 
 def main(argv):
@@ -287,11 +290,13 @@ def main(argv):
     outputdir = ''
     verbose = False
     verbose_more = False
+    keep_time_ofile = False
+    keep_time_ifile = False
     keep = False
     header = True
     pp_add = None
     try:
-        opts, args = getopt.getopt(argv,"hvkni:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
+        opts, args = getopt.getopt(argv,"hvkni:o:d:t:p:",["verbose","keep-time-ifile","keep-time-ofile","ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
         print(help_text)
         sys.exit(2)
@@ -306,6 +311,10 @@ def main(argv):
                 verbose_more = True
         elif opt in ("-k", "--keep-dirs"):
             keep = True
+        elif opt == "--keep-time-ifile":
+            keep_time_ifile = True
+        elif opt == "--keep-time-ofile":
+            keep_time_ofile = True
         elif opt in ("-n", "--no-header"):
             header = False
         elif opt in ("-p", "--pp-add"):
@@ -359,11 +368,11 @@ def main(argv):
                 else:
                     ofile = os.path.join(outputdir, os.path.basename(ifile))
             __current_file = os.path.basename(ifile)
-            process_file(os.path.join(inputdir, ifile), ofile, verbose, verbose_more, cwd)
+            process_file(os.path.join(inputdir, ifile), ofile, header, keep_time_ifile, keep_time_ofile, verbose, verbose_more, cwd)
         os.chdir(cwd)
     else:
         __current_file = os.path.basename(inputfile)
-        process_file(inputfile, outputfile, verbose, verbose_more, cwd)
+        process_file(inputfile, outputfile, header, keep_time_ifile, keep_time_ofile, verbose, verbose_more, cwd)
 
     return 0
 
