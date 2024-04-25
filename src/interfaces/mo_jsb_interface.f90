@@ -652,6 +652,7 @@ CONTAINS
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+    USE mo_coupling_config,    ONLY: is_coupled_to_parflow
     USE mo_interface_parflow,  ONLY: interface_parflow
 
     dsl4jsb_Use_processes SEB_
@@ -700,7 +701,7 @@ CONTAINS
     CALL interface_hd_ocean(tile, model%options(no_omp_thread))
 #endif
 
-    IF (model%config%use_parflow) THEN
+    IF ( is_coupled_to_parflow() ) THEN
       CALL interface_parflow(tile, model%options(no_omp_thread))
     END IF
 

@@ -200,9 +200,6 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
-#ifdef YAC_coupling
-    USE mo_interface_parflow,   ONLY: construct_parflow_coupling
-#endif
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
@@ -765,14 +762,6 @@ CONTAINS
 
       END DO
     END IF
-
-    ! Initialize coupling to Parflow via YAC
-    ! This is now being called in mo_atmo_model (probably not definitively)
-! #ifdef YAC_coupling
-!     IF (model%config%use_parflow) THEN
-!       CALL construct_parflow_coupling(model_id)
-!     END IF
-! #endif
 
 ! #ifdef _OPENACC
 !     IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()

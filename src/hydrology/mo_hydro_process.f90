@@ -559,9 +559,9 @@ CONTAINS
     ! (positive contributions are already included in water_to_parflow)
     DO ic = 1, nc
       evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
-        & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_l(ic,1)/SUM(root_depth_l(ic,:))) / dtime
+        & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,1)/SUM(root_depth_sl(ic,:))) / dtime
       DO is = 2, nsoil
-        evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_l(ic,is)/SUM(root_depth_l(ic,:))) / dtime
+        evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
       END DO
     END DO
 

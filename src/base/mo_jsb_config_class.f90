@@ -19,7 +19,6 @@ MODULE mo_jsb_config_class
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_io_netcdf,      ONLY: t_input_file
-  USE mo_kind,               ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -36,14 +35,6 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
-    LOGICAL                        :: use_parflow
-    LOGICAL                        :: pfl_rotpole
-    REAL(wp)                       :: pfl_rotpole_lon  ! Coordinates of the rotated pole
-    REAL(wp)                       :: pfl_rotpole_lat
-    REAL(wp)                       :: pfl_dom_nw_lon   ! Upper left corner of the ParFlow domain (in rotated coordinates)
-    REAL(wp)                       :: pfl_dom_nw_lat
-    REAL(wp)                       :: pfl_dom_se_lon   ! Lower right corner of the ParFlow domain
-    REAL(wp)                       :: pfl_dom_se_lat
     LOGICAL                        :: enforce_water_budget
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
@@ -102,14 +93,6 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
-    LOGICAL                       :: use_parflow
-    LOGICAL                       :: pfl_rotpole
-    REAL(wp)                      :: pfl_rotpole_lon
-    REAL(wp)                      :: pfl_rotpole_lat
-    REAL(wp)                      :: pfl_dom_nw_lon
-    REAL(wp)                      :: pfl_dom_nw_lat
-    REAL(wp)                      :: pfl_dom_se_lon
-    REAL(wp)                      :: pfl_dom_se_lat
     LOGICAL                       :: enforce_water_budget
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
@@ -126,14 +109,6 @@ CONTAINS
       use_lakes, &
       use_glacier, &
       use_quincy, &
-      use_parflow, &
-      pfl_rotpole, &
-      pfl_rotpole_lon, &
-      pfl_rotpole_lat, &
-      pfl_dom_nw_lon, &
-      pfl_dom_nw_lat, &
-      pfl_dom_se_lon, &
-      pfl_dom_se_lat, &
       enforce_water_budget, &
       l_compat401, &
       usecase, &
@@ -158,14 +133,6 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
-    use_parflow                = .FALSE.
-    pfl_rotpole                = .TRUE.
-    pfl_rotpole_lon            = -162.0 ! Default is the Euro Cordex domain
-    pfl_rotpole_lat            = 39.25
-    pfl_dom_nw_lon             = -29.0313
-    pfl_dom_nw_lat             = 22.6076
-    pfl_dom_se_lon             = 18.9287
-    pfl_dom_se_lat             = -24.0324
     enforce_water_budget       = .FALSE.
     l_compat401                = .FALSE.
     grid_filename              = ''
@@ -198,14 +165,6 @@ CONTAINS
     model_config%use_glacier                = use_glacier
     model_config%enforce_water_budget       = enforce_water_budget
     model_config%use_quincy                 = use_quincy
-    model_config%use_parflow                = use_parflow
-    model_config%pfl_rotpole                = pfl_rotpole
-    model_config%pfl_rotpole_lon            = pfl_rotpole_lon
-    model_config%pfl_rotpole_lat            = pfl_rotpole_lat
-    model_config%pfl_dom_nw_lon             = pfl_dom_nw_lon
-    model_config%pfl_dom_nw_lat             = pfl_dom_nw_lat
-    model_config%pfl_dom_se_lon             = pfl_dom_se_lon
-    model_config%pfl_dom_se_lat             = pfl_dom_se_lat
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme

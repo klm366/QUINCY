@@ -129,7 +129,9 @@ MODULE mo_hydro_memory_class
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
       & wtr_soil_pot_scool_sl, & !< Potentially supercooled water in soil layer                              [m]
-      & evapotrans_to_parflow   !< Evapotranspiration to Parflow                                            [m/s]
+      & evapotrans_to_parflow, & !< Evapotranspiration to Parflow                                            [m/s]
+      & change_by_parflow,    & !< Water content change by Parflow                                          [m]
+      & tracked_diff_parflow    !< Water content difference between Parflow and here                        [m]
 
     ! Additional variables for PFT lct_type
 
@@ -384,6 +386,22 @@ CONTAINS
     CALL mem%Add_var( 'evapotrans_to_parflow', mem%evapotrans_to_parflow,     &
       & hgrid, soil_w,                                                        &
       & t_cf('evapotrans_to_parflow', 'm s-1', 'evapotrans to parflow'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'change_by_parflow', mem%change_by_parflow,             &
+      & hgrid, soil_w,                                                        &
+      & t_cf('change_by_parflow', 'm', 'change by parflow'),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'tracked_diff_parflow', mem%tracked_diff_parflow,       &
+      & hgrid, soil_w,                                                        &
+      & t_cf('tracked_diff_parflow', 'm', 'tracked diff parflow'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & loutput=.TRUE.,                                                       &
