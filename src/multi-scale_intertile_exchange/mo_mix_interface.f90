@@ -472,116 +472,116 @@ CONTAINS
         trg_tile => NULL()
       END IF
 
-      ! Enable lateral diffusion between adjacent tiles
-      IF (ASSOCIATED(trg_tile)) THEN
-        ! Get memory MIX_ and HYDRO_ memory for target tile
-        dsl4jsb_Get_memory_tile(MIX_,   trg_tile)
-        dsl4jsb_Get_memory_tile(HYDRO_, trg_tile)
-        dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_latdiff_sl,           trg_tile)
-        dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,                 trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,              trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl,           trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, soil_depth_sl,            trg_tile)
-        dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_porosity_sl,          trg_tile) ! in
-        dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_field_cap_sl,         trg_tile) ! in
-        dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_p_wilt_sl,            trg_tile) ! in
-        dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_wres_sl,              trg_tile) ! in
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sat_sl,          trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pwp_sl,          trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, ice_soil_sl,              trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl,    trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, hyd_cond_sat_sl,          trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matric_pot_sl,            trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, bclapp_sl,                trg_tile)
-        dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, pore_size_index_sl,       trg_tile)
+      ! ! Enable lateral diffusion between adjacent tiles
+      ! IF (ASSOCIATED(trg_tile)) THEN
+      !   ! Get memory MIX_ and HYDRO_ memory for target tile
+      !   dsl4jsb_Get_memory_tile(MIX_,   trg_tile)
+      !   dsl4jsb_Get_memory_tile(HYDRO_, trg_tile)
+      !   dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_latdiff_sl,           trg_tile)
+      !   dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,                 trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,              trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl,           trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, soil_depth_sl,            trg_tile)
+      !   dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_porosity_sl,          trg_tile) ! in
+      !   dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_field_cap_sl,         trg_tile) ! in
+      !   dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_p_wilt_sl,            trg_tile) ! in
+      !   dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_wres_sl,              trg_tile) ! in
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sat_sl,          trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pwp_sl,          trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, ice_soil_sl,              trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl,    trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, hyd_cond_sat_sl,          trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matric_pot_sl,            trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, bclapp_sl,                trg_tile)
+      !   dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, pore_size_index_sl,       trg_tile)
 
-        ! Compute soil ice impedance, diffusivity and matric potential ...
-        ! ... for source tile
-        weq_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:), 0._wp)
-        weq_field_cap_sl(:,:) = MAX(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), 0._wp)
-        weq_p_wilt_sl   (:,:) = MAX(vol_p_wilt_sl(:,:)    * soil_depth_sl(:,:), 0._wp)
-        weq_wres_sl     (:,:) = MAX(vol_wres_sl(:,:)      * soil_depth_sl(:,:), 0._wp)
-        CALL get_soilhyd_properties(       &
-          dsl4jsb_Config(HYDRO_)%soilhydmodel,  & !< Soil hydrology model
-          1,                                    & !< interpolation methods (not applied in this case)
-          nc, nsoil,                            & !< number of cells and soil layers
-          soil_depth_sl(:,:),                   & !< soil layer depth   [m]
-          wtr_soil_sl(:,:),                     & !< soil water content [m]
-          ice_soil_sl(:,:),                     & !< soil ice content   [m]
-          wtr_soil_pot_scool_sl(:,:),           & !< potential supercooled water [m]
-          weq_wsat_sl(:,:),                     & !< maximum soil moisture storage (water + ice) [m]
-          weq_field_cap_sl(:,:),                & !< soil field capacity (water + ice) [m]
-          weq_p_wilt_sl(:,:),                   & !< soil wilting point (water + ice) [m]
-          weq_wres_sl(:,:),                     & !< soil water residual [m]
-          hyd_cond_sat_sl(:,:),                 & !< saturated hydraulic conductivity [m s-1]
-          matric_pot_sl(:,:),                   & !< matric potential
-          bclapp_sl(:,:),                       & !< clapp hornberger b parameter
-          pore_size_index_sl(:,:),              & !< pore size index
-          ice_impedance=ice_imp_source(:,:),    & !< ice impedance factor
-          K=hyd_cond_source(:,:),               & !< hydraulic conductivity
-          mpot_act=mpot_act_source(:,:)         & !< matric potential
-        )
+      !   ! Compute soil ice impedance, diffusivity and matric potential ...
+      !   ! ... for source tile
+      !   weq_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:), 0._wp)
+      !   weq_field_cap_sl(:,:) = MAX(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), 0._wp)
+      !   weq_p_wilt_sl   (:,:) = MAX(vol_p_wilt_sl(:,:)    * soil_depth_sl(:,:), 0._wp)
+      !   weq_wres_sl     (:,:) = MAX(vol_wres_sl(:,:)      * soil_depth_sl(:,:), 0._wp)
+      !   CALL get_soilhyd_properties(       &
+      !     dsl4jsb_Config(HYDRO_)%soilhydmodel,  & !< Soil hydrology model
+      !     1,                                    & !< interpolation methods (not applied in this case)
+      !     nc, nsoil,                            & !< number of cells and soil layers
+      !     soil_depth_sl(:,:),                   & !< soil layer depth   [m]
+      !     wtr_soil_sl(:,:),                     & !< soil water content [m]
+      !     ice_soil_sl(:,:),                     & !< soil ice content   [m]
+      !     wtr_soil_pot_scool_sl(:,:),           & !< potential supercooled water [m]
+      !     weq_wsat_sl(:,:),                     & !< maximum soil moisture storage (water + ice) [m]
+      !     weq_field_cap_sl(:,:),                & !< soil field capacity (water + ice) [m]
+      !     weq_p_wilt_sl(:,:),                   & !< soil wilting point (water + ice) [m]
+      !     weq_wres_sl(:,:),                     & !< soil water residual [m]
+      !     hyd_cond_sat_sl(:,:),                 & !< saturated hydraulic conductivity [m s-1]
+      !     matric_pot_sl(:,:),                   & !< matric potential
+      !     bclapp_sl(:,:),                       & !< clapp hornberger b parameter
+      !     pore_size_index_sl(:,:),              & !< pore size index
+      !     ice_impedance=ice_imp_source(:,:),    & !< ice impedance factor
+      !     K=hyd_cond_source(:,:),               & !< hydraulic conductivity
+      !     mpot_act=mpot_act_source(:,:)         & !< matric potential
+      !   )
 
-        ! ... and target tile
-        weq_wsat_sl_trg_tile     (:,:) = MAX(vol_porosity_sl_trg_tile (:,:) * soil_depth_sl_trg_tile(:,:), 0._wp)
-        weq_field_cap_sl_trg_tile(:,:) = MAX(vol_field_cap_sl_trg_tile(:,:) * soil_depth_sl_trg_tile(:,:), 0._wp)
-        weq_p_wilt_sl_trg_tile   (:,:) = MAX(vol_p_wilt_sl_trg_tile(:,:)    * soil_depth_sl_trg_tile(:,:), 0._wp)
-        weq_wres_sl_trg_tile     (:,:) = MAX(vol_wres_sl_trg_tile(:,:)      * soil_depth_sl_trg_tile(:,:), 0._wp)
-        CALL get_soilhyd_properties(       &
-          dsl4jsb_Config(HYDRO_)%soilhydmodel, & !< Soil hydrology model
-          1,                                   & !< interpolation methods (not applied in this case)
-          nc, nsoil,                           & !< number of cells and soil layers
-          soil_depth_sl_trg_tile(:,:),         & !< soil layer depth   [m]
-          wtr_soil_sl_trg_tile(:,:),           & !< soil water content [m]
-          ice_soil_sl_trg_tile(:,:),           & !< soil ice content   [m]
-          wtr_soil_pot_scool_sl_trg_tile(:,:), & !< potential supercooled water [m]
-          weq_wsat_sl_trg_tile(:,:),           & !< maximum soil moisture storage (water + ice) [m]
-          weq_field_cap_sl_trg_tile(:,:),      & !< soil field capacity (water + ice) [m]
-          weq_p_wilt_sl_trg_tile(:,:),         & !< soil wilting point (water + ice) [m]
-          weq_wres_sl_trg_tile(:,:),           & !< soil water residual [m]
-          hyd_cond_sat_sl_trg_tile(:,:),       & !< saturated hydraulic conductivity [m s-1]
-          matric_pot_sl_trg_tile(:,:),         & !< matric potential
-          bclapp_sl_trg_tile(:,:),             & !< clapp hornberger b parameter
-          pore_size_index_sl_trg_tile(:,:),    & !< pore size index
-          ice_impedance=ice_imp_target(:,:),   & !< ice impedance factor
-          K=hyd_cond_target(:,:),              & !< hydraulic conductivity
-          mpot_act=mpot_act_target(:,:)        & !< matric potential
-        )
+      !   ! ... and target tile
+      !   weq_wsat_sl_trg_tile     (:,:) = MAX(vol_porosity_sl_trg_tile (:,:) * soil_depth_sl_trg_tile(:,:), 0._wp)
+      !   weq_field_cap_sl_trg_tile(:,:) = MAX(vol_field_cap_sl_trg_tile(:,:) * soil_depth_sl_trg_tile(:,:), 0._wp)
+      !   weq_p_wilt_sl_trg_tile   (:,:) = MAX(vol_p_wilt_sl_trg_tile(:,:)    * soil_depth_sl_trg_tile(:,:), 0._wp)
+      !   weq_wres_sl_trg_tile     (:,:) = MAX(vol_wres_sl_trg_tile(:,:)      * soil_depth_sl_trg_tile(:,:), 0._wp)
+      !   CALL get_soilhyd_properties(       &
+      !     dsl4jsb_Config(HYDRO_)%soilhydmodel, & !< Soil hydrology model
+      !     1,                                   & !< interpolation methods (not applied in this case)
+      !     nc, nsoil,                           & !< number of cells and soil layers
+      !     soil_depth_sl_trg_tile(:,:),         & !< soil layer depth   [m]
+      !     wtr_soil_sl_trg_tile(:,:),           & !< soil water content [m]
+      !     ice_soil_sl_trg_tile(:,:),           & !< soil ice content   [m]
+      !     wtr_soil_pot_scool_sl_trg_tile(:,:), & !< potential supercooled water [m]
+      !     weq_wsat_sl_trg_tile(:,:),           & !< maximum soil moisture storage (water + ice) [m]
+      !     weq_field_cap_sl_trg_tile(:,:),      & !< soil field capacity (water + ice) [m]
+      !     weq_p_wilt_sl_trg_tile(:,:),         & !< soil wilting point (water + ice) [m]
+      !     weq_wres_sl_trg_tile(:,:),           & !< soil water residual [m]
+      !     hyd_cond_sat_sl_trg_tile(:,:),       & !< saturated hydraulic conductivity [m s-1]
+      !     matric_pot_sl_trg_tile(:,:),         & !< matric potential
+      !     bclapp_sl_trg_tile(:,:),             & !< clapp hornberger b parameter
+      !     pore_size_index_sl_trg_tile(:,:),    & !< pore size index
+      !     ice_impedance=ice_imp_target(:,:),   & !< ice impedance factor
+      !     K=hyd_cond_target(:,:),              & !< hydraulic conductivity
+      !     mpot_act=mpot_act_target(:,:)        & !< matric potential
+      !   )
 
-        ! Lateral soil water diffusion between adjacent tiles
-        DO ic = 1, nc
-          IF (source_fract(ic) > trans_min_fract .AND. target_fract(ic) > trans_min_fract .AND. &
-              wtr_soil_fc_sl(ic,1) > 1.0e-10_wp  .AND. wtr_soil_fc_sl_trg_tile(ic,1) > 1.0e-10_wp) THEN
+      !   ! Lateral soil water diffusion between adjacent tiles
+      !   DO ic = 1, nc
+      !     IF (source_fract(ic) > trans_min_fract .AND. target_fract(ic) > trans_min_fract .AND. &
+      !         wtr_soil_fc_sl(ic,1) > 1.0e-10_wp  .AND. wtr_soil_fc_sl_trg_tile(ic,1) > 1.0e-10_wp) THEN
 
-            CALL calc_intertile_diffusion(nsoil,                        & !< Number of soil layers
-               & dsl4jsb_Config(HYDRO_)%soilhydmodel,                   & !< Soil hydrology model
-               & dtime,                                                 & !< time step                   [s]
-               & weq_pond_max(ic),                                      & !< height difference btw source and target tile [m]
-               & source_fract(ic),      target_fract(ic),               & !< tile fractions              []
-               & soil_depth_sl(ic,:),   soil_depth_sl_trg_tile(ic,:),   & !< soil layer depths           [m]
-               & wtr_soil_fc_sl(ic,:),  wtr_soil_fc_sl_trg_tile(ic,:),  & !< soil field capacity         [m]
-               & wtr_soil_sat_sl(ic,:), wtr_soil_sat_sl_trg_tile(ic,:), & !< soil maximum water content  [m]
-               & wtr_soil_pwp_sl(ic,:), wtr_soil_pwp_sl_trg_tile(ic,:), & !< soil wilting point          [m]
-               & matric_pot_sl(ic,:),   matric_pot_sl_trg_tile(ic,:),   & !< soil matric potential       [m]
-               & hyd_cond_sat_sl(ic,:), hyd_cond_sat_sl_trg_tile(ic,:), & !< soil hydraulic conductivity [m s-1]
-               & bclapp_sl(ic,:),       bclapp_sl_trg_tile(ic,:),       & !< soil bclapp parameter       []
-               & pore_size_index_sl(ic,:), pore_size_index_sl_trg_tile(ic,:), & !< pore size index       []
-               & ice_imp_source(ic,:),  ice_imp_target(ic,:),           & !< ice impedance factor        []
-               & hyd_cond_source(ic,:), hyd_cond_target(ic,:),          & !< hyd. conductivity           [m s-1]
-               & mpot_act_source(ic,:), mpot_act_target(ic,:),          & !< matric potential            [?]
-               & ice_soil_sl(ic,:),     ice_soil_sl_trg_tile(ic,:),     & !< soil ice storage            [m]
-               & MIN(wtr_soil_pot_scool_sl(ic,:), wtr_soil_sl(ic,:)),   & !< supercooled water           [m]
-               & MIN(wtr_soil_pot_scool_sl_trg_tile(ic,:), wtr_soil_sl_trg_tile(ic,:)), &  !< supercooled water [m]
-               & wtr_pond(ic),          wtr_pond_trg_tile(ic),          & !< pond water storage          [m]
-               & wtr_latflow(ic),       wtr_latflow_trg_tile(ic),       & !< lateral water flow          [kg m-2 s-1]
-               & wtr_soil_sl(ic,:),     wtr_soil_sl_trg_tile(ic,:),     & !< soil water storage          [m]
-               & wtr_latdiff_sl(ic,:),  wtr_latdiff_sl_trg_tile(ic,:)   & !< lateral diffusion flux      [kg m-2 s-1]
-               & )
+      !       CALL calc_intertile_diffusion(nsoil,                        & !< Number of soil layers
+      !          & dsl4jsb_Config(HYDRO_)%soilhydmodel,                   & !< Soil hydrology model
+      !          & dtime,                                                 & !< time step                   [s]
+      !          & weq_pond_max(ic),                                      & !< height difference btw source and target tile [m]
+      !          & source_fract(ic),      target_fract(ic),               & !< tile fractions              []
+      !          & soil_depth_sl(ic,:),   soil_depth_sl_trg_tile(ic,:),   & !< soil layer depths           [m]
+      !          & wtr_soil_fc_sl(ic,:),  wtr_soil_fc_sl_trg_tile(ic,:),  & !< soil field capacity         [m]
+      !          & wtr_soil_sat_sl(ic,:), wtr_soil_sat_sl_trg_tile(ic,:), & !< soil maximum water content  [m]
+      !          & wtr_soil_pwp_sl(ic,:), wtr_soil_pwp_sl_trg_tile(ic,:), & !< soil wilting point          [m]
+      !          & matric_pot_sl(ic,:),   matric_pot_sl_trg_tile(ic,:),   & !< soil matric potential       [m]
+      !          & hyd_cond_sat_sl(ic,:), hyd_cond_sat_sl_trg_tile(ic,:), & !< soil hydraulic conductivity [m s-1]
+      !          & bclapp_sl(ic,:),       bclapp_sl_trg_tile(ic,:),       & !< soil bclapp parameter       []
+      !          & pore_size_index_sl(ic,:), pore_size_index_sl_trg_tile(ic,:), & !< pore size index       []
+      !          & ice_imp_source(ic,:),  ice_imp_target(ic,:),           & !< ice impedance factor        []
+      !          & hyd_cond_source(ic,:), hyd_cond_target(ic,:),          & !< hyd. conductivity           [m s-1]
+      !          & mpot_act_source(ic,:), mpot_act_target(ic,:),          & !< matric potential            [?]
+      !          & ice_soil_sl(ic,:),     ice_soil_sl_trg_tile(ic,:),     & !< soil ice storage            [m]
+      !          & MIN(wtr_soil_pot_scool_sl(ic,:), wtr_soil_sl(ic,:)),   & !< supercooled water           [m]
+      !          & MIN(wtr_soil_pot_scool_sl_trg_tile(ic,:), wtr_soil_sl_trg_tile(ic,:)), &  !< supercooled water [m]
+      !          & wtr_pond(ic),          wtr_pond_trg_tile(ic),          & !< pond water storage          [m]
+      !          & wtr_latflow(ic),       wtr_latflow_trg_tile(ic),       & !< lateral water flow          [kg m-2 s-1]
+      !          & wtr_soil_sl(ic,:),     wtr_soil_sl_trg_tile(ic,:),     & !< soil water storage          [m]
+      !          & wtr_latdiff_sl(ic,:),  wtr_latdiff_sl_trg_tile(ic,:)   & !< lateral diffusion flux      [kg m-2 s-1]
+      !          & )
 
-          END IF
-        ENDDO
-      END IF
+      !     END IF
+      !   ENDDO
+      ! END IF
 
       ! Runoff on floodplains is only generated if ponds are filled and overflowing
       IF (tile%contains_floodplain) THEN
