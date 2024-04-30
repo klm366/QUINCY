@@ -347,7 +347,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond_max)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)      ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_Cap_sl)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_wres_sl)          ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)       ! in
