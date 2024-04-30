@@ -796,6 +796,12 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
+      ! Modify parameters for floodplains
+      IF (tile%contains_floodplain) THEN
+        dsl4jsb_var2D_onDomain(HYDRO_, hyd_cond_sat) = 8.50E-8_wp ! saturated hydraulic conductivity for clay (Terra model) [m s-1]
+        WRITE (message_text,*) 'Set hydrological conductivity below floodplains to clay values'
+        CALL message(routine, message_text)
+      END IF
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_pwp_sl)) &
@@ -1193,8 +1199,11 @@ CONTAINS
           vol_wres_org        = vol_wres_org_below
         END IF
 
-        hyd_cond_sat_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * hyd_cond_sat_sl   (:,i,:) &
-          & + fract_org_sl(:,i,:) * hyd_cond_sat_org
+        IF (.NOT. tile%contains_floodplain) THEN
+          ! Soil below floodplains show stick to clay value without modifications
+          hyd_cond_sat_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * hyd_cond_sat_sl   (:,i,:) &
+            & + fract_org_sl(:,i,:) * hyd_cond_sat_org
+        END IF
         vol_porosity_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_porosity_sl   (:,i,:) &
           & + fract_org_sl(:,i,:) * vol_porosity_org
         bclapp_sl         (:,i,:) = (1 - fract_org_sl(:,i,:)) * bclapp_sl         (:,i,:) &

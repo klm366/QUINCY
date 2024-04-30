@@ -381,7 +381,8 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: get_soilhyd_properties, calc_surface_hydrology_land, &
+      &                                  calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
@@ -447,7 +448,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl
+    dsl4jsb_Real3D_onChunk :: vol_wres_sl
     dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl
+    dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real3D_onChunk :: pore_size_index_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
@@ -459,11 +466,15 @@ CONTAINS
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & weq_soil,           &
-      & ice_impedance,      &
       & trans_tmp
     REAL(wp), DIMENSION(options%nc,nsoil) :: &
-      & weq_soil_sl_tmp,    &
-      & weq_sat_soil_sl_tmp
+      & wtr_soil_sl_tmp,           &
+      & weq_soil_sl_tmp,           &
+      & weq_wsat_soil_sl_tmp,      &
+      & weq_field_cap_soil_sl_tmp, &
+      & weq_p_wilt_soil_sl_tmp,    &
+      & weq_wres_soil_sl_tmp,      &
+      & hyd_cond_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, is
     REAL(wp) :: dtime
@@ -593,7 +604,13 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_scool_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_p_wilt_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_wres_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   hyd_cond_sat_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   matric_pot_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   bclapp_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   pore_size_index_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_skin)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_skin)         ! inout
@@ -660,29 +677,21 @@ CONTAINS
       !$ACC WAIT(1)
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_sat_soil_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(weq_soil(1:nc), ice_impedance(1:nc))
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      ! Compute top layer ice impedance (replicates part of `get_soilhyd_properties` --> better solution?)
-      DO ic = 1, nc
-        IF (vol_porosity_sl(ic,1) > 1.0e-10_wp) THEN
-          ice_impedance(ic)  = 10._wp**(-6._wp * (                                        &
-            & (ice_soil_sl(ic,1) + MIN(wtr_soil_pot_scool_sl(ic,1), wtr_soil_sl(ic,1))) / &
-            & soil_depth_sl(ic,1)) / vol_porosity_sl(ic,1))
-        ELSE
-          ice_impedance(ic)  = 1._wp
-        END IF
-      END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC   CREATE(trans_tmp, wtr_soil_sl_tmp(1:nc,1:nsoil), weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
+      !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_field_cap_soil_sl_tmp(1:nc,1:nsoil)) &
+      !$ACC   CREATE(weq_p_wilt_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
+      !$ACC   CREATE(hyd_cond_sl(1:nc,1:nsoil))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO  ic = 1, nc
-          weq_sat_soil_sl_tmp(ic,is) = vol_porosity_sl(ic,is) * soil_depth_sl(ic,is)
+          weq_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
+          weq_field_cap_soil_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+          weq_p_wilt_soil_sl_tmp(ic,is)    = vol_p_wilt_sl(ic,is)    * soil_depth_sl(ic,is)
+          weq_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
           !       necessary. WHY?
-          IF (weq_sat_soil_sl_tmp(ic,is) > 0._wp) THEN
+          IF (weq_wsat_soil_sl_tmp(ic,is) > 0._wp) THEN
             weq_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
           ELSE
             weq_soil_sl_tmp(ic,is) = 0._wp
@@ -701,7 +710,17 @@ CONTAINS
       DO is = 1, nsoil
         DO  ic = 1, nc
           weq_soil(ic) = weq_soil(ic) + weq_soil_sl_tmp(ic,is)
+          wtr_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is)
         END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO  ic = 1, nc
+        ! Estimate top layer moisture including potential infiltration
+        weq_soil_sl_tmp(ic,1) = MIN(weq_wsat_soil_sl_tmp(ic,1),      &
+          & weq_soil_sl_tmp(ic,1) + rain(ic) * dtime + wtr_pond(ic)) &
+          & - ice_soil_sl(ic,1)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -714,7 +733,7 @@ CONTAINS
       CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone(:))
-      CALL get_amount_in_rootzone(weq_sat_soil_sl_tmp(:,:),                                              &
+      CALL get_amount_in_rootzone(weq_wsat_soil_sl_tmp(:,:),                                             &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max(:))
 
@@ -738,6 +757,20 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
+
+      ! Compute soil hydrological properties to get top layer ice impedance and
+      ! soil hydrological conductivity for point scale infiltration
+      ! TODO: GPU missing
+      CALL get_soilhyd_properties(                                                           &
+        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                                               &
+        & dsl4jsb_Config(HYDRO_)%interpol_mean,                                              &
+        & nc, nsoil, soil_depth_sl(:,:),                                                     &
+        & wtr_soil_sl_tmp(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                &
+        & weq_wsat_soil_sl_tmp(:,:), weq_field_cap_soil_sl_tmp(:,:),                         &
+        & weq_p_wilt_soil_sl_tmp(:,:), weq_wres_soil_sl_tmp(:,:),                            &
+        & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &
+        & dt=dtime, K=hyd_cond_sl(:,:)                                                       &
+        )
 
       CALL calc_surface_hydrology_land(   &
         ! in
@@ -769,8 +802,7 @@ CONTAINS
         & weq_rootzone(:),                & !< total rootzone water content [m]
         & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
         & weq_soil(:),                    & !< total column soil moisture [m]
-        & hyd_cond_sat_sl(:,1),           & !< saturated hydraulic conductivity of the top soil layer [m s-1]
-        & ice_impedance(:),               & !< ice impedance factor for top soil layer [-]
+        & hyd_cond_sl(:,1),               & !< actual hydraulic conductivity of the top soil layer [m s-1]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
@@ -1092,7 +1124,7 @@ CONTAINS
             fract_uncon(ic,is) = 1._wp
           END IF
 
-          IF (fract_org_sl(ic,is) > 0._wp) THEN
+          IF (fract_org_sl(ic,is) > 0._wp .AND. .NOT. tile%contains_floodplain) THEN
             hyd_cond_sat_uncon(ic,is) = fract_uncon(ic,is)                                           &
               &                       * ( (1._wp - fract_org_sl(ic,is)) / hyd_cond_sat_sl(ic,is)     &
               &                            + (fract_org_sl(ic,is) - fract_perc(ic,is)) / hyd_cond_sat_org(ic,is) )**(-1._wp)

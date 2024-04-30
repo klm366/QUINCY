@@ -83,8 +83,8 @@ CONTAINS
     & t_soil_sl1, t_unfilt, wind_10m, t_air, skinres_canopy_max,     &
     & skinres_max, weq_pond_max, fract_snow, fract_skin, fract_pond, &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,    &
-    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,    &
-    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,          &
+    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sl1,        &
+    & wtr_skin, weq_snow_soil, weq_snow_can,                         &
     & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,               &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,             &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,           &
@@ -104,7 +104,7 @@ CONTAINS
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),            &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),       &
       & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                    &
-      & hyd_cond_sat_sl1(:), ice_impedance(:)
+      & hyd_cond_sl1(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),    &
       & wtr_pond(:), ice_pond(:)
@@ -399,8 +399,7 @@ CONTAINS
           wtr_pond_outflow = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
           & k_sat_clay * dtime * fract_pond(ic))
         ELSE IF (hydro_scale == Point_) THEN
-          wtr_pond_outflow = MIN(wtr_pond(ic) + wtr_pond_inflow, &
-          & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime)
+          wtr_pond_outflow = MIN(wtr_pond(ic) + wtr_pond_inflow, hyd_cond_sl1(ic) * dtime)
         END IF
         ! Update pond storages
         wtr_pond(ic)        = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
@@ -438,7 +437,7 @@ CONTAINS
         ! Q-Arctic project. The following is rather a placeholder than a real implementation.
         ELSE IF (hydro_scale == Point_) THEN
           infilt(ic) = MIN(1._wp, MAX(0._wp, 1._wp - tile_slope(ic))) &
-            &        * MIN(ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
+            &        * MIN(hyd_cond_sl1(ic) * dtime, water_to_soil(ic))
           runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp)
           runoff_horton(ic) = runoff(ic)
 
