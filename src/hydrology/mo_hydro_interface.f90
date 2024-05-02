@@ -474,6 +474,7 @@ CONTAINS
       & weq_field_cap_soil_sl_tmp, &
       & weq_p_wilt_soil_sl_tmp,    &
       & weq_wres_soil_sl_tmp,      &
+      & ice_impedance_sl,          &
       & hyd_cond_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, is
@@ -680,7 +681,7 @@ CONTAINS
       !$ACC   CREATE(trans_tmp, wtr_soil_sl_tmp(1:nc,1:nsoil), weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
       !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_field_cap_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(weq_p_wilt_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(hyd_cond_sl(1:nc,1:nsoil))
+      !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil), hyd_cond_sl(1:nc,1:nsoil))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
@@ -769,8 +770,17 @@ CONTAINS
         & weq_wsat_soil_sl_tmp(:,:), weq_field_cap_soil_sl_tmp(:,:),                         &
         & weq_p_wilt_soil_sl_tmp(:,:), weq_wres_soil_sl_tmp(:,:),                            &
         & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &
-        & dt=dtime, K=hyd_cond_sl(:,:)                                                       &
+        & dt=dtime, ice_impedance=ice_impedance_sl(:,:), K=hyd_cond_sl(:,:)                  &
         )
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO is = 1, nsoil
+        DO  ic = 1, nc
+          hyd_cond_sl(ic,is) = ice_impedance_sl(ic,is) * hyd_cond_sat_sl(ic,is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
 
       CALL calc_surface_hydrology_land(   &
         ! in

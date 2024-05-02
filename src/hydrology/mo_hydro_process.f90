@@ -1108,7 +1108,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
-        drain_bot(ic) = hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
+        drain_bot(ic) = 0.1_wp * hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
       END DO
       !$ACC END PARALLEL LOOP
     END IF
