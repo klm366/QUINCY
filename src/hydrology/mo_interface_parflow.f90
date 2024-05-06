@@ -296,7 +296,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, water_to_parflow)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, evapotrans_to_parflow)
 
-    ! Send river discharge
+    ! Send water_to_parflow
     ! --------------------
 
     write_coupler_restart = .FALSE.

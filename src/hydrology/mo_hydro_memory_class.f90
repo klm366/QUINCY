@@ -39,7 +39,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 90
+  INTEGER, PARAMETER :: max_no_of_vars = 100
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -67,7 +67,8 @@ MODULE mo_hydro_memory_class
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain,       & !< internal drain
       & fract_parflow,        & !< fraction of ParFlow coverage
-      & water_to_parflow        !< water to Parflow
+      & water_to_parflow,     & !< water to Parflow
+      & deficit_corr_parflow
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
@@ -378,6 +379,14 @@ CONTAINS
     CALL mem%Add_var( 'water_to_parflow', mem%water_to_parflow,              &
       & hgrid, surface,                                                      &
       & t_cf('water_to_parflow', 'm s-1', 'water to parflow'),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & loutput=.TRUE.,                                                      &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'deficit_corr_parflow', mem%deficit_corr_parflow,      &
+      & hgrid, surface,                                                      &
+      & t_cf('deficit_corr_parflow', 'm', 'deficit corr parflow'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & loutput=.TRUE.,                                                      &
