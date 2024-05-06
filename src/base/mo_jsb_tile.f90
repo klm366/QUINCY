@@ -530,6 +530,16 @@ CONTAINS
       END IF
       ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
+    ELSE IF (this%fract_varname == 'allFirst') THEN
+      IF(ASSOCIATED(this%parent_tile)) THEN
+        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        IF (.NOT. this%Is_first_child()) THEN
+          tmp_fract(:,:) = 0._wp
+        END IF
+      ELSE
+        tmp_fract(:,:) = 1._wp
+      END IF
+      CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
       ! Determine the name of the tile fraction variable in the input file

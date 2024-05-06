@@ -163,7 +163,7 @@ MODULE mo_pheno_process
               chill_days_SG = chill_days_SG + 1._wp                     ! then => increment chill days counter
                                                                         !         and limit the number of chill days to prevent
                                                                         !         values beyond any limit in polar regions
-              chill_days_SG = MIN(REAL(chill_days_SG),REAL(pheno_param_jsbach%EG_SG%max_chill_days))
+              chill_days_SG = MIN(chill_days_SG, pheno_param_jsbach%EG_SG%max_chill_days)
            ELSE                                                       ! else
                                                                         ! then => increase heat sum:
                                                                         !         add mean day temperature excess above
@@ -316,7 +316,7 @@ MODULE mo_pheno_process
             IF(pseudo_soil_temp < pheno_param_jsbach%EG%alternation_temp ) THEN    ! the day is a chill day ..
                chill_days_EG = chill_days_EG + 1._wp                                                  ! --> increment chill days counter
                chill_days_EG = &                                                                      !     limit the number of chill days to prevent
-                    MIN(REAL(chill_days_EG),REAL(pheno_param_jsbach%EG_SG%max_chill_days))            !     values beyond any limit in polar regions
+                    MIN(chill_days_EG, pheno_param_jsbach%EG_SG%max_chill_days)                       !     values beyond any limit in polar regions
             ELSE                                                                                      ! increase heat sum:
                heat_sum_EG = heat_sum_EG +  pseudo_soil_temp - pheno_param_jsbach%EG%alternation_temp ! --> add mean day temperature excess
                                                                                                       !     above alternating temperature
@@ -694,7 +694,7 @@ MODULE mo_pheno_process
 
      ! R: Note, as in JSBACH3 all soil layers had the same water content we skiped the soil layers for w_soil_filling in JSBACH4
      !    (see update_phenology). Therefore, the following line is unnecessary.
-     !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil)
+     !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil,wp)
      average_filling = w_soil_filling
 
      IF (average_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp) THEN  ! IF soil water is above wilt point

@@ -682,7 +682,7 @@ CONTAINS
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
     ! write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
-    sla(:) = REAL(dsl4jsb_Lctlib_param(specificLeafArea_C))
+    sla(:) = dsl4jsb_Lctlib_param(specificLeafArea_C)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

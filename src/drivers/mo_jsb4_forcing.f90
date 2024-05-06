@@ -2171,7 +2171,7 @@ CONTAINS
       ics = startidx(ib)
       ice = endidx  (ib)
       DO ic = ics, ice
-        IF (ABS(REAL(array(ic,ib)) - REAL(missval)) <= EPSILON(1.0_wp)) array(ic,ib) = constant
+        IF (ABS(array(ic,ib) - missval) <= EPSILON(1.0_wp)) array(ic,ib) = constant
       END DO
     END DO
 !$OMP END PARALLEL DO

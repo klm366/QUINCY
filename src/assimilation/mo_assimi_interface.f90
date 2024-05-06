@@ -1000,13 +1000,13 @@ CONTAINS
     ENDIF
 
     ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
-    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass))
-    bclimit_min_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp))
-    bclimit_max_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp))
-    bclimit_max_warm_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp))
-    bclimit_min_temprange(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_temprange))
-    bclimit_min_gdd(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_gdd))
-    tau_c_woods(:) = REAL(dsl4jsb_Lctlib_param(tau_c_woods))
+    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), wp)
+    bclimit_min_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp)
+    bclimit_max_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp)
+    bclimit_max_warm_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp)
+    bclimit_min_temprange(:) = dsl4jsb_Lctlib_param(bclimit_min_temprange)
+    bclimit_min_gdd(:) = dsl4jsb_Lctlib_param(bclimit_min_gdd)
+    tau_c_woods(:) = dsl4jsb_Lctlib_param(tau_c_woods)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

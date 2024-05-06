@@ -384,7 +384,7 @@ CONTAINS
 
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE
@@ -425,7 +425,6 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
-        frozen_fract(ic) = fract_snow(ic)
 
         IF (lstart) THEN
           s_star(ic) = s_old(ic)
@@ -920,7 +919,7 @@ CONTAINS
       !
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE

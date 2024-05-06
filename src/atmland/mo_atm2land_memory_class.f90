@@ -19,6 +19,7 @@ MODULE mo_a2l_memory_class
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_control,       ONLY: jsbach_runs_standalone
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
@@ -398,7 +399,7 @@ CONTAINS
         & t_cf('surface_drag', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=jsbach_runs_standalone(),                                   &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
       CALL mem%Add_var( 'pch', mem%pch,                                        &

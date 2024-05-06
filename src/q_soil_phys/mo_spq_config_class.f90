@@ -208,7 +208,7 @@ CONTAINS
       ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
       DO isoil=1,nsoil_water
         soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * &
-                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - &
+                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers,wp)/REAL(nsoil_water,wp)) - &
                                                     min_layer_depth
       ENDDO
       ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness

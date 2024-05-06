@@ -287,7 +287,7 @@ CONTAINS
       DO ic = 1,nproma
         DO is = 1,nsoil_sb
           IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
-            num_sl_above_bedrock(ic, iblk) = REAL(is)
+            num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
           ELSE
             EXIT  ! stop looping over further soil layers with thickness < eps8
           ENDIF
