@@ -16,7 +16,7 @@ MODULE mo_util
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
-  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+  USE mo_lib_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
                                                !      libmath-support is an external library
 
   IMPLICIT NONE
