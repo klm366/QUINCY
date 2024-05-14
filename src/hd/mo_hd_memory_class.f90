@@ -52,7 +52,7 @@ MODULE mo_hd_memory_class
       nres_overlflow  , &  !< number of overland flow reservoirs
       nres_baseflow   , &  !< number of baseflow reservoirs
       nres_riverflow  , &  !< number of riverflow reservoirs
-      nsplit          , &  !< number of channels river splits into 
+      nsplit          , &  !< number of channels river splits into
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers

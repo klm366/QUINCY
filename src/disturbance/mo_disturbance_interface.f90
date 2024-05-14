@@ -323,7 +323,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_damaged_area
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "damaged_area"

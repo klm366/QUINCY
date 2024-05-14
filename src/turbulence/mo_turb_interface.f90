@@ -439,7 +439,7 @@ CONTAINS
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
-  
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         rough_bare_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
@@ -483,7 +483,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) = (1._wp - fract_fpc_max(ic)) * rough_bare_star(ic) + fract_fpc_max(ic) * rough_veg_star(ic)
-  
+
           ! Modify roughness length heat for non-vegetated part by snow cover
           ! TODO Note by TR from JSBACH3: lower z0 for snow covered surfaces should be discussed again,
           !      if a multi-layer snow model is implemented.
@@ -508,7 +508,7 @@ CONTAINS
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
         END DO
         !$ACC END PARALLEL LOOP
-  
+
       ELSE  ! bare or glacier tile
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
@@ -812,7 +812,7 @@ CONTAINS
           fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) *  &
             & (1._wp - fract_wet(ic)) /                     &
             & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_cond_limited(ic)))
-        ELSE 
+        ELSE
           fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
           fact_qsat_trans(ic) = 0._wp
         END IF

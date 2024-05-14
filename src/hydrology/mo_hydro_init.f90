@@ -100,6 +100,8 @@ MODULE mo_hydro_init
       & vol_p_wilt       (:,:) => NULL(), &
       & root_depth       (:,:) => NULL(), &
       & weq_snow_soil    (:,:) => NULL(), &
+      & fract_pond_max   (:,:) => NULL(), &
+      & depth_pond_max   (:,:) => NULL(), &
       & wtr_soil_sl    (:,:,:) => NULL(), &
       & fract_org_sl   (:,:,:) => NULL(), &
       & fr_sand          (:,:) => NULL(), &
@@ -159,6 +161,8 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%fract_org_sl    ,       &
+      & hydro_init_vars%fract_pond_max  ,       &
+      & hydro_init_vars%depth_pond_max  ,       &
       & hydro_init_vars%weq_snow_soil)
 
     IF (ASSOCIATED(hydro_init_vars%elevation))    DEALLOCATE(hydro_init_vars%elevation)
@@ -225,6 +229,8 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
+      & hydro_init_vars%fract_pond_max  (nproma, nblks),       &
+      & hydro_init_vars%depth_pond_max  (nproma, nblks),       &
       & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
       & )
 
@@ -238,6 +244,8 @@ CONTAINS
       hydro_init_vars%vol_field_cap  (:,:)   = missval
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
+      hydro_init_vars%fract_pond_max (:,:)   = missval
+      hydro_init_vars%depth_pond_max (:,:)   = missval
       hydro_init_vars%weq_snow_soil  (:,:)   = missval
 
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
@@ -289,6 +297,25 @@ CONTAINS
       & variable_name='orostd',    &
       & fill_array = hydro_init_vars%oro_stddev)
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    ! Read in maximum fraction and depth of local surface depressions
+    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+      IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
+        ! Use depression area fraction as maximum pond fraction
+        ptr_2D => input_file%Read_2d(                                 &
+          & variable_name='surf_depr_fract',                           &
+          & fill_array=hydro_init_vars%fract_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        ! Use depression depth as maximum pond depth (Attention: Values are negative!)
+        ptr_2D => input_file%Read_2d(                                 &
+          & variable_name='surf_depr_depth',                           &
+          & fill_array=hydro_init_vars%depth_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) <= 0._wp)
+      ELSE
+        CALL finish(TRIM(routine), '*** Error: surf_depr_fract and/or surf_depr_depth not found in bc_sso file. '// &
+          & 'Pond scheme cannot run without these fields')
+      END IF
+    END IF
 
     CALL input_file%Close()
 
@@ -587,6 +614,22 @@ CONTAINS
         & )
     END DO
 
+    IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+      ! Maximum depth and extent of surface water ponds
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+        ! Note, surface depression depth is given as negative value in the data, but represent
+        !   a storage on top of the soil --> needs to be converted to positive values!
+        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
+      ELSE
+        ! Note, that ponds are implicitely disabled by setting the maximum allowed pond fraction
+        !   and depth to zero. Thus, we can avoid a large number of l_ponds conditions for surface
+        !   and soil hydrology processes.
+        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
+      END IF
+    END IF
+
     IF (tile%contains_soil) THEN
 
       ! Initialize hydrology variables from bc file
@@ -660,6 +703,8 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 
@@ -834,9 +879,9 @@ CONTAINS
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
 
       !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))      &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))   &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 
@@ -1027,7 +1072,7 @@ CONTAINS
     END IF
 
     !$ACC UPDATE ASYNC(1) &
-    !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
+    !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl) &
     !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl)
 

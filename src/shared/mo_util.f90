@@ -1,4 +1,4 @@
-!> Contains utility functions
+!> Some utility functions
 !>
 !> ICON-Land
 !>
@@ -11,6 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Various helper routines for ICON-Land
+!>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
@@ -22,7 +24,7 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, int2string, real2string, logical2string, &
+  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
     &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
 
   INTERFACE one_of
@@ -34,14 +36,9 @@ MODULE mo_util
 
 CONTAINS
 
-  !!
-  ! !>      Compute soil layer depths from (fixed) layer thicknesses and total depth
   !
-  ! @param      depth    Total soil depth
-  ! @param      dz       Fixed layer thicknesses
-  !
-  ! @return     Layer thicknesses until soil depth
-  !!
+  !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
+  !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -176,6 +173,33 @@ CONTAINS
 
   END SUBROUTINE soil_init_from_texture
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: uppercase -> lowercase
+  !!
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
   !
   !> Conversion: Lowercase -> Uppercase
   !
@@ -249,11 +273,12 @@ CONTAINS
     END DO
   END FUNCTION one_of_int
 
-  !
-  ! returns integer n as a string (often needed in printing messages)
-  !
-  ! Copied from ICON module shared/mo_util_string
-  !
+  !-----------------------------------------------------------------------------------------------------
+  !> returns integer n as a string (often needed in printing messages)
+  !!
+  !! Copied from ICON module shared/mo\_util\_string
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION int2string(n, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: int2string ! result
     INTEGER, INTENT(in) :: n
@@ -272,6 +297,10 @@ CONTAINS
     !
   END FUNCTION int2string
 
+  !-----------------------------------------------------------------------------------------------------
+  !> returns real x as a string (often needed in printing messages)
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION real2string(x, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: real2string ! result
     REAL(wp), INTENT(in) :: x
