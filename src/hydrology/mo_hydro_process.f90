@@ -2069,6 +2069,13 @@ CONTAINS
     &         matrix(SIZE(S,1),SIZE(S,2),4) ! Matrix containing sub-diagonal (1), diagonal (2),
                                             ! super-diagonal (3) of triangular matrix and rhs (4) of
                                             ! linear equation system
+  LOGICAL  :: i_am_accel_node
+
+  i_am_accel_node = .FALSE.
+
+#ifdef _OPENACC
+  i_am_accel_node = .TRUE.
+#endif
 
   nc    = SIZE(S,1)
   nsoil = SIZE(S,2)
@@ -2145,7 +2152,7 @@ CONTAINS
 #endif
 
   CALL tdma_solver_vec(matrix(:,:,1), matrix(:,:,2), matrix(:,:,3), matrix(:,:,4), &
-    &                  1, nsoil, 1, nc, X(:,:))
+    &                  1, nsoil, 1, nc, X(:,:), lacc = i_am_accel_node)
 
   !$ACC WAIT(1)
   !$ACC END DATA
