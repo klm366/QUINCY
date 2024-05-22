@@ -973,8 +973,6 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
-
     IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
@@ -1142,8 +1140,6 @@ CONTAINS
     END IF
 
     !$ACC END PARALLEL
-
-    !$ACC WAIT(1)
 
     IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
