@@ -16,7 +16,7 @@ MODULE mo_sse_process
 
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception, ONLY: message, finish
 
   IMPLICIT NONE
   PRIVATE
@@ -796,7 +796,6 @@ CONTAINS
     REAL(wp) :: t_soil_sl1(nidx)                  !< t_soil_sl(:,1)
     CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
 
-
     !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
 
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC(1)
@@ -842,6 +841,8 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Reset old values accounting for changes in number of snow layers
+    ! Note: this is not needed, as the temperatures for all layers are initialized in
+    !       the next section
     !
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
@@ -849,7 +850,7 @@ CONTAINS
       itop_new = itop(jl)
       !$ACC LOOP SEQ
       DO jk = 1, itop_new - 1
-        t_snow      (jl,jk) = 0._wp
+        t_snow (jl,jk) = t_unfilt(jl)
       END DO
       !$ACC END LOOP
     END DO
@@ -864,7 +865,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO jl=1,nidx
         DO jk=1,nsnow
-          t_snow(jl,jk) = 0._wp
+          t_snow(jl,jk) = t_unfilt(jl)
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -968,7 +969,7 @@ CONTAINS
         END IF
       END DO
       !$ACC END LOOP
-      IF (abs(t_soil_top(jl) - t_snow(jl,nsnow)) > 10.0_wp .AND. .NOT. lstart .AND. itop_old(jl) < nsnow+1) THEN
+      IF (abs(t_soil_top(jl) - t_snow(jl,nsnow)) > 10.0_wp .AND. .NOT. lstart) THEN
         WRITE (message_text_long,*) 'Large difference between snow and soil temperature ', NEW_LINE('a'), &
           & 'Surface temperature:       ', t_unfilt(jl),       NEW_LINE('a'), &
           & 'Snow bottom temperature:   ', t_snow(jl,nsnow),   NEW_LINE('a'), &
