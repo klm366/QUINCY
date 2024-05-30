@@ -272,8 +272,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: CH4_out_net
     dsl4jsb_Real2D_onChunk :: CO2_out_net
     dsl4jsb_Real2D_onChunk :: CH4_prod_ratio_out_wet
-    dsl4jsb_Real2D_onChunk :: cflux_herb_2_atm
-    dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm
+    dsl4jsb_Real2D_onChunk :: co2flux_herb_2_atm_ta
+    dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm_ta
     dsl4jsb_Real2D_onChunk :: CH4_out_fire
     dsl4jsb_Real2D_onChunk :: CH4_out_termite
     dsl4jsb_Real2D_onChunk :: CH4_out_herbivore
@@ -281,7 +281,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fire_em_CO
     dsl4jsb_Real2D_onChunk :: fire_em_iso
     dsl4jsb_Real2D_onChunk :: termite_biomass
-    dsl4jsb_Real2D_onChunk :: GPP_prev_year
+    dsl4jsb_Real2D_onChunk :: GPP_prev_year_ta
     dsl4jsb_Real2D_onChunk :: GDD_prev_year
     dsl4jsb_Real2D_onChunk :: GDD_sum
     dsl4jsb_Real2D_onChunk :: min_mmtemp20
@@ -449,9 +449,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_, c_green)
     dsl4jsb_Get_var2D_onChunk(CARBON_, acrotelm_height_ag)
     dsl4jsb_Get_var2D_onChunk(CARBON_, acrotelm_height_bg)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, cflux_herb_2_atm)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, GPP_prev_year)
+    dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta)
+    dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)
+    dsl4jsb_Get_var2D_onChunk(CARBON_, GPP_prev_year_ta)
     ! PHENO_ variables
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)
     dsl4jsb_Get_var2D_onChunk(PHENO_, GDD_prev_year)
@@ -932,7 +932,7 @@ CONTAINS
       !   Fire
       IF (dsl4jsb_Config(CH4_)%do_fire) THEN
         DO ic = 1, nc
-          CALL calc_methane_fire(co2flux_fire_all_2_atm(ic),lt,CH4_out_fire(ic),fire_em_NO(ic),fire_em_CO(ic),fire_em_iso(ic))
+          CALL calc_methane_fire(co2flux_fire_all_2_atm_ta(ic),lt,CH4_out_fire(ic),fire_em_NO(ic),fire_em_CO(ic),fire_em_iso(ic))
         ENDDO
       ENDIF
 
@@ -948,10 +948,11 @@ CONTAINS
         ELSE
           GDD => GDD_prev_year ! Any other year: Use sum of previous year
         ENDIF
+
         DO ic = 1, nc
-          CALL calc_methane_termites(dsl4jsb_Lctlib_param(CropFlag),                                         &
-                                     frac_tile(ic), GPP_prev_year(ic), GDD(ic), min_mmtemp20(ic), l_GPP_dep, &
-                                     termite_biomass(ic), CH4_out_termite(ic),                               &
+          CALL calc_methane_termites(dsl4jsb_Lctlib_param(CropFlag),                                            &
+                                     frac_tile(ic), GPP_prev_year_ta(ic), GDD(ic), min_mmtemp20(ic), l_GPP_dep, &
+                                     termite_biomass(ic), CH4_out_termite(ic),                                  &
                                      frac_non_crop(ics+ic-1,iblk), sum_non_crop(ics+ic-1,iblk))
         ENDDO
         IF (.NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
@@ -968,7 +969,8 @@ CONTAINS
       !   Herbivores
       IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
         DO ic = 1, nc
-          CALL calc_methane_herbivores(cflux_herb_2_atm(ic),dsl4jsb_Lctlib_param(woody_pft),CH4_out_herbivore(ic))
+          CALL calc_methane_herbivores(co2flux_herb_2_atm_ta(ic)/molarMassCO2_kg,dsl4jsb_Lctlib_param(woody_pft), &
+                                       CH4_out_herbivore(ic))
           CH4_out_herbivore(ic) = CH4_out_herbivore(ic) * dsl4jsb_Config(CH4_)%scale_herbivore
         ENDDO
       ENDIF
