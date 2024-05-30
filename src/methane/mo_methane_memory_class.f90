@@ -500,7 +500,7 @@ CONTAINS
         & t_cf(specie_name//'_total_initial', 'mol m-2', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
-        & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
+        & output_level = FULL, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     
       CALL mem%Add_var( specie_name//'_total_final', specie%total_final,       &
