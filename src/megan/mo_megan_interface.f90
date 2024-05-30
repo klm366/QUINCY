@@ -138,14 +138,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai_ta
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: temp_relax_short
-    dsl4jsb_Real2D_onChunk ::  lai_relax_short
-    dsl4jsb_Real2D_onChunk ::  pfd_relax_short
-    dsl4jsb_Real2D_onChunk ::  lai_relax_long
-    dsl4jsb_Real2D_onChunk ::  pfd_relax_long
-    dsl4jsb_Real2D_onChunk ::  gamma_lai
-    dsl4jsb_Real2D_onChunk ::  gamma_pfd
-    dsl4jsb_Real2D_onChunk ::  gamma_CO2
-    dsl4jsb_Real2D_onChunk ::  gamma_sm
+    dsl4jsb_Real2D_onChunk :: lai_relax_short
+    dsl4jsb_Real2D_onChunk :: pfd_relax_short
+    dsl4jsb_Real2D_onChunk :: lai_relax_long
+    dsl4jsb_Real2D_onChunk :: pfd_relax_long
+    dsl4jsb_Real2D_onChunk :: gamma_lai
+    dsl4jsb_Real2D_onChunk :: gamma_pfd
+    dsl4jsb_Real2D_onChunk :: gamma_CO2
+    dsl4jsb_Real2D_onChunk :: gamma_sm
 
     TYPE (t_megan_ptrs) :: &
       & iso,               &
@@ -171,6 +171,7 @@ CONTAINS
     REAL(wp), PARAMETER :: Wm2_pfd = 4.766_wp          ! factor to convert W to umol s-1
     REAL(wp), PARAMETER :: rho_iso = 0.96_wp           ! MEGAN model parameter
     REAL(wp), PARAMETER :: cce = 1.00_wp               ! MEGAN canopy model factor - not yet used
+    REAL(wp), PARAMETER :: unit_scale = 1.e-6_wp / 3600._wp ! Scaling from [ug h-1] to [g s-1]
 
     !--- local variables ---
 
@@ -275,15 +276,15 @@ CONTAINS
     ! Isoprene (only one using gamma_CO2 and gamma_sm)
     CALL calc_gamma_age(isos%cafac, lai_relax_short, lai_relax_long, temp_relax_short, iso%gamma_age)
     CALL calc_gamma_temp_iso(t_air, temp_relax_short, iso%gamma_temp)
-    iso%total_out = iso%em_fac * gamma_lai * iso%gamma_temp * iso%gamma_age * gamma_CO2 * gamma_sm * &
-                     (1._wp - isos%ldf + isos%ldf * gamma_pfd)
+    iso%total_out = isos%ef * gamma_lai * iso%gamma_temp * iso%gamma_age * gamma_CO2 * gamma_sm * &
+                     (1._wp - isos%ldf + isos%ldf * gamma_pfd) * unit_scale
     ! CO
     CALL calc_gamma_age(COs%cafac, lai_relax_short, lai_relax_long, temp_relax_short, CO%gamma_age)
     CALL calc_gamma_temp_other(t_air(:), COs%beta, CO%gamma_temp)
-    CO%total_out = CO%em_fac * gamma_lai * CO%gamma_temp * CO%gamma_age * &
-                    (1._wp - COs%ldf + COs%ldf * gamma_pfd)
+    CO%total_out = COs%ef * gamma_lai * CO%gamma_temp * CO%gamma_age * &
+                    (1._wp - COs%ldf + COs%ldf * gamma_pfd) * unit_scale
     ! NO
-    NO%total_out = NO%em_fac * gamma_lai * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd)
+    NO%total_out = NOs%ef * gamma_lai * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd) * unit_scale
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
