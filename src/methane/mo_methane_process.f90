@@ -1248,7 +1248,7 @@ CONTAINS
     ENDIF
 
     herbivore_methane = herbivory2atm * molarMassC_kg / C_2_biomass_ratio * mammalfrac * CH4prod_mammal
-    CH4_out_herbivore = herbivore_methane / 1000._wp / molarMassCH4_kg   ! convert to mol
+    CH4_out_herbivore = -herbivore_methane / 1000._wp / molarMassCH4_kg   ! convert to mol and switch sign -> loss of CH4 is < 0
 
   END SUBROUTINE calc_methane_herbivores
 
