@@ -180,10 +180,8 @@ CONTAINS
         IF (to_other_i /= 0) specie%total_out(i) = specie%total_out(i) + specie%other_out(i)
       ENDIF
     ENDIF
-    specie%in_out(i) = 0._wp
-    IF (specie%total_out(i) > 0._wp) THEN
-      specie%in_out(i) = specie%total_out(i)
-    ENDIF
+    specie%in_out   (i) = MAX(0._wp,specie%total_out(i))
+    specie%total_out(i) = MIN(0._wp,specie%total_out(i))
     IF (PRESENT(dbg)) THEN
       IF (dbg) THEN
         DO j = 1, nly
