@@ -282,6 +282,7 @@ CONTAINS
     & fire_fract_wood_2_atmos,           & ! in
     & LeafLit_coef,                      & ! in
     & WoodLit_coef,                      & ! in
+    & fuel_moisture,                     & ! in
     & c_green,                           & ! inout
     & c_woods,                           & ! inout
     & c_reserve,                         & ! inout
@@ -313,6 +314,7 @@ CONTAINS
                                                             ! call of this routine
     REAL(wp), INTENT(in)    :: fire_fract_wood_2_atmos      ! Fraction of above ground wood immediately emitted to atmosphere
                                                             ! by fire
+    REAL(wp), INTENT(in)    :: fuel_moisture(:)             !
     REAL(wp), INTENT(in)    :: LeafLit_coef(:)              ! Factor to spread non woody litterfall into yasso pools [ ]
     REAL(wp), INTENT(in)    :: WoodLit_coef(:)              ! Factor to spread woody litterfall into yasso pools [ ]
     REAL(wp), INTENT(inout) :: c_green(:)                   ! Value of green carbon pool [mol(C)/m^2(canopy)]
@@ -350,18 +352,19 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_humus_2(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
 
     ! Local variables
-    REAL(wp), DIMENSION(SIZE(burned_fract))  :: non_woody_litter, fraction ! Helper
+    REAL(wp), DIMENSION(SIZE(burned_fract))  :: non_woody_litter, fraction, bfe ! Helper
     INTEGER                                  :: ind, nc
 
     nc = SIZE(burned_fract)
     non_woody_litter(:) = c_green(:) + c_reserve(:)
+    bfe(:) = burned_fract(:) * MIN(0.945,1._wp-fuel_moisture(:))
 
     !! diagnose amount of carbon released from the green and reserve pool to the green litter pools
     !! diagnose amount of carbon released from the wood pool to the woody litter pools
     cflux_dist_green_2_soil(:) = cflux_dist_green_2_soil(:) + &
-      & (c_green(:) + c_reserve(:)) * (1._wp - fract_green_aboveGround) * burned_fract(:) / sec_per_day
+      & (c_green(:) + c_reserve(:)) * (1._wp - fract_green_aboveGround) * bfe(:) / sec_per_day
     cflux_dist_woods_2_soil(:)  = cflux_dist_woods_2_soil(:) + &
-      & c_woods(:) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(:) / sec_per_day
+      & c_woods(:) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * bfe(:) / sec_per_day
 
     !! determine amount of carbon released from the wood pool, living tissue pools, and litter pools to the atmosphere
     co2flux_fire_all_2_atm(:) = ( &
@@ -374,10 +377,10 @@ CONTAINS
       & + c_nonsoluble_ag2(:)                                              &
         ! now add the fire affected fraction of wood pools above ground:
       & + c_woods(:) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
-      & ) * burned_fract(:) * molarMassCO2_kg / sec_per_day
+      & ) * bfe(:) * molarMassCO2_kg / sec_per_day
 
     ! Lower down density of aboveground litter pools
-    fraction(:) = 1._wp - burned_fract(:)
+    fraction(:) = 1._wp - bfe(:)
     c_acid_ag1      (:) = fraction(:) * c_acid_ag1       (:)
     c_water_ag1     (:) = fraction(:) * c_water_ag1      (:)
     c_ethanol_ag1   (:) = fraction(:) * c_ethanol_ag1    (:)
@@ -389,7 +392,7 @@ CONTAINS
     c_nonsoluble_ag2(:) = fraction(:) * c_nonsoluble_ag2 (:)
 
     ! Add green and reserve vegetation carbon to belowground green litter pools
-    fraction(:) = (1._wp-fract_green_aboveGround) * burned_fract(:)
+    fraction(:) = (1._wp-fract_green_aboveGround) * bfe(:)
     DO ind = 1,nc
       CALL distribute_yasso_litter(c_acid_bg1(ind), c_water_bg1(ind), c_ethanol_bg1(ind), c_nonsoluble_bg1(ind), c_humus_1(ind), &
         &                          non_woody_litter(ind), fraction(ind), LeafLit_coef)
@@ -397,20 +400,20 @@ CONTAINS
 
     ! Add the remaings of burned wood:
     ! AG
-    fraction(:) = (1._wp-fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(:)
+    fraction(:) = (1._wp-fire_fract_wood_2_atmos) * fract_wood_aboveGround * bfe(:)
     DO ind = 1,nc
       CALL distribute_yasso_litter(c_acid_ag2(ind), c_water_ag2(ind), c_ethanol_ag2(ind), c_nonsoluble_ag2(ind), c_humus_2(ind), &
         &                          c_woods(ind), fraction(ind), WoodLit_coef)
     ENDDO
     ! BG
-    fraction(:) = (1._wp-fract_wood_aboveGround) * burned_fract(:)
+    fraction(:) = (1._wp-fract_wood_aboveGround) * bfe(:)
     DO ind = 1,nc
       CALL distribute_yasso_litter(c_acid_bg2(ind), c_water_bg2(ind), c_ethanol_bg2(ind), c_nonsoluble_bg2(ind), c_humus_2(ind), &
         &                          c_woods(ind), fraction(ind), WoodLit_coef)
     ENDDO
 
     ! Lower down the carbon density of living plant pools
-    fraction(:) = 1._wp - burned_fract(:)
+    fraction(:) = 1._wp - bfe(:)
     c_green(:)   = c_green(:)   * fraction(:)
     c_woods(:)   = c_woods(:)   * fraction(:)
     c_reserve(:) = c_reserve(:) * fraction(:)

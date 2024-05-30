@@ -37,7 +37,7 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_, HYDRO_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -50,6 +50,7 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -396,10 +397,12 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(CARBON_)
 
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: cconservation_fire
     dsl4jsb_Real2D_onChunk :: cconservation_wind
     !
@@ -456,8 +459,11 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,     wtr_rootzone_rel)         ! in
+
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
     !
@@ -586,6 +592,7 @@ CONTAINS
                 & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)),  & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)),  & ! in
+                & wtr_rootzone_rel(:),                      & ! in
                 & c_green(:),                               & ! inout
                 & c_woods(:),                               & ! inout
                 & c_reserve(:),                             & ! inout
