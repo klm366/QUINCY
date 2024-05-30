@@ -378,13 +378,12 @@ CONTAINS
       ENDDO
 
       DO ic = 1, nc
+
         ! Secure calculations are done on contiguous data - may be faster
         t_soil  (:) = t_soil_sl  (ic,:)
         wtr_soil(:) = wtr_soil_sl(ic,:)
         ice_soil(:) = ice_soil_sl(ic,:)
-      ENDDO
 
-      DO ic = 1, nc
         ! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
         CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
           &  soil_depth(ic),dsl4jsb_Config(TOP_)%soil_depth_min,                                &
