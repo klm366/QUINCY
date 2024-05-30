@@ -85,7 +85,7 @@ CONTAINS
   END FUNCTION Create_task_methane
 
   !-----------------------------------------------------------------------------------------------------
-  !> Register tasks: TOP_ process
+  !> Register tasks: CH4_ process
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_methane_tasks(process, model_id)

@@ -126,7 +126,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':topmodel_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':methane_init_bc'
 
     model => get_model(tile%owner_model_id)
 
