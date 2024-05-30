@@ -27,6 +27,7 @@ MODULE mo_methane_interface
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_methane_constants,      ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts
 
   dsl4jsb_Use_config(CH4_)
   dsl4jsb_Use_config(TOP_)
@@ -197,13 +198,69 @@ CONTAINS
 
   END SUBROUTINE update_chem_specie
 
+  SUBROUTINE methane_update_atm_GHG_conc(options,GAS,source,atm_conc,nml_conc,GHG_atm,dst,dbg)
+    USE mo_jsb_time,          ONLY: is_newyear, is_time_experiment_start, is_time_restart, get_date_components
+    USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3
+    USE mo_methane_constants, ONLY: t_specie_const
+    USE mo_ch4_memory_class,  ONLY: t_timeseries
+    USE mo_util,              ONLY: real2string
+
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    TYPE(t_specie_const),       INTENT(in)    :: GAS
+    INTEGER,                    INTENT(in)    :: source
+    REAL(wp),                   INTENT(in)    :: atm_conc(:)
+    REAL(wp),                   INTENT(in)    :: nml_conc
+    TYPE(t_timeseries),         INTENT(in)    :: GHG_atm
+    REAL(wp),                   INTENT(inout) :: dst(:)
+    LOGICAL,                    INTENT(in)    :: dbg
+
+    LOGICAL :: lstart, lrestart, lyear, lupdate
+    INTEGER :: src, ic, nc, iy, year
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':methane_update_atm_GHG_conc'
+
+    src = MIN(source,3) ! Different file specifications are already converted
+    nc  = SIZE(dst)
+    lstart   = is_time_experiment_start(options%current_datetime)
+    lrestart = is_time_restart(options%current_datetime)
+    lyear    = is_newyear(options%current_datetime,options%dtime)
+    CALL get_date_components(options%current_datetime, year=year)
+
+    lupdate = .FALSE.
+    SELECT CASE (src)
+      CASE (1) ! Constamt from namelist - just copy if not already done
+        IF (lrestart .OR. lstart) THEN
+          DO ic = 1, nc
+            dst(ic) = nml_conc
+          ENDDO
+          lupdate = .TRUE.
+        ENDIF
+      CASE (2) ! From atmospheric model - update every timestep
+        DO ic = 1, nc
+          dst(ic) = concentration_mmr_2_mol_m3(GAS,atm_conc(ic))
+        ENDDO
+      CASE (3) ! From timeseries file - update at year start
+        IF (lrestart .OR. lstart .OR. lyear) THEN
+          iy = MAX(1,MIN(SIZE(GHG_atm%atm_vmr),year - GHG_atm%atm_year_min + 1))
+          dst(1) = concentration_vmr_2_mol_m3(GAS,GHG_atm%atm_vmr(iy))
+          DO ic = 2, nc
+            dst(ic) = dst(1)
+          ENDDO
+          lupdate = .TRUE.
+        ENDIF
+    END SELECT
+    IF (lupdate .AND. dbg) &
+      CALL message(routine,'Updated atmospheric '//TRIM(GAS%specie_name)//' concentration: '//real2string(dst(1)))
+
+  END SUBROUTINE methane_update_atm_GHG_conc
+
   !-----------------------------------------------------------------------------------------------------
   !> update_methane
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_methane(tile, options)
 
-    USE mo_jsb_time,          ONLY: is_newday, timesteps_per_day, is_time_experiment_start, is_time_restart, get_date_components
+    USE mo_jsb_time,          ONLY: is_newyear, timesteps_per_day, is_time_experiment_start, is_time_restart, get_date_components
     USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
     USE mo_methane_constants, ONLY: CH4_consts, CO2_consts, O2_consts, emission_factors_for_methane,                   &
     &                               LT_TROPICAL_FOREST, LT_EXTRATROPICAL_FOREST, LT_SAVANNAH, LT_AGRICULTURE, LT_PEAT
@@ -211,6 +268,7 @@ CONTAINS
     USE mo_methane_process,   ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire
     USE mo_methane_process,   ONLY: soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm
     USE mo_methane_process,   ONLY: reaction_diffusion, ebullition, init_gas_pools
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -242,11 +300,12 @@ CONTAINS
 
     ! Pointers to variables in memory
     ! Inputs
-    dsl4jsb_Real2D_onChunk :: CO2_air_ptr
-    dsl4jsb_Real2D_onChunk :: CH4_air_ptr ! StW: TODO: Presently not available from interface - always using namelist value
-    dsl4jsb_Real2D_onChunk :: CO2_air
-    dsl4jsb_Real2D_onChunk :: CH4_air
-    dsl4jsb_Real2D_onChunk :: O2_air
+    dsl4jsb_Real2D_onChunk :: CH4_air     ! Should be from interface but not yet available
+    dsl4jsb_Real2D_onChunk :: CO2_air     ! Values from atmosphere
+    dsl4jsb_Real2D_onChunk :: O2_air      ! Should be from interface but not yet available
+    dsl4jsb_Real2D_onChunk :: CO2_conc
+    dsl4jsb_Real2D_onChunk :: CH4_conc
+    dsl4jsb_Real2D_onChunk :: O2_conc
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: soil_respiration
     dsl4jsb_Real2D_onChunk :: soil_respiration_oxic_ta
@@ -310,10 +369,10 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     REAL(wp) :: stored_C_sum
     LOGICAL  :: lnew_day, lstart, lrestart
-    INTEGER  :: hour, minute, sec
+    INTEGER  :: year, hour, minute, sec
     LOGICAL  :: is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep
-    LOGICAL  :: lissue, lissue_tst, dbg
-    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, lt, ic, is
+    LOGICAL  :: lissue, lissue_tst, dbg, lmsg
+    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, lt, ic, is, iy
     INTEGER  :: iWetness, iWetness_st, iWetness_en
     REAL(wp) :: dt
     REAL(wp) :: acro_height, frac_inun_loc, frac
@@ -333,7 +392,7 @@ CONTAINS
 
     dt    = 86400._wp / REAL(dsl4jsb_Config(CH4_)%nstep_per_day,wp)
 
-    CALL get_date_components(options%current_datetime, hour=hour, minute=minute, second=sec)
+    CALL get_date_components(options%current_datetime, year=year, hour=hour, minute=minute, second=sec)
     sec = sec + minute*60 + hour*3600
     IF (MOD(sec,INT(dt)) /= 0) RETURN ! Not a methane time step
 
@@ -355,6 +414,7 @@ CONTAINS
     soil_e => Get_vgrid('soil_depth_energy')
     soil_w => Get_vgrid('soil_depth_water')
     nsoil  = soil_e%n_levels
+
     ! TODO: This test should be moved outside the time/blk loop
     l_stop  = .FALSE.
     IF (nsoil /= soil_w%n_levels) l_stop = .TRUE.
@@ -455,9 +515,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, GDD_prev_year)
     dsl4jsb_Get_var2D_onChunk(PHENO_, GDD_sum)
     ! CH4_ variables
-    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_air)
-    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_air)
-    dsl4jsb_Get_var2D_onChunk(CH4_, O2_air)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_conc)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_conc)
+    dsl4jsb_Get_var2D_onChunk(CH4_, O2_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, mxlay_above_rock)
     dsl4jsb_Get_var3D_onChunk(CH4_, root_dist_sl)
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_net)
@@ -597,30 +657,12 @@ CONTAINS
 
     IF (lstart .AND. dbg .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
 
-    IF (dsl4jsb_Config(CH4_)%GHG_from_atm) THEN
-      IF (.FALSE.) THEN ! TODO: Some test for atmospheric CH4 concentration available
-        CH4_air_ptr => dsl4jsb_var2D_onChunk(CH4_, CH4_air)
-        DO ic = 1, nc
-          CH4_air(ic) = concentration_mmr_2_mol_m3(CH4_consts,CH4_air_ptr(ic))
-        ENDDO
-      ELSE
-        DO ic = 1, nc
-          CH4_air(ic) = dsl4jsb_Config(CH4_)%CH4_conc ! Equal to below
-        ENDDO
-      ENDIF
-      CO2_air_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
-      DO ic = 1, nc
-        CO2_air(ic) = concentration_mmr_2_mol_m3(CO2_consts,CO2_air_ptr(ic))
-      ENDDO
-    ELSE
-      DO ic = 1, nc
-        CH4_air(ic) = dsl4jsb_Config(CH4_)%CH4_conc
-        CO2_air(ic) = dsl4jsb_Config(CH4_)%CO2_conc
-      ENDDO
-    ENDIF
-    DO ic = 1, nc
-      O2_air(ic) = dsl4jsb_Config(CH4_)%O2_conc
-    ENDDO
+    CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
+                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,iblk==1)
+    CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
+                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,iblk==1)
+    CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
+                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,iblk==1)
 
     ! determine carbon input during time step for oxic and anoxic conditions
     ! convert respiration flux, respiration is defined NEGATIVE
@@ -806,19 +848,19 @@ CONTAINS
             CALL plant_transport(CH4_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,   &
                                  dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_CH4_surface, &
-                                 CH4_air(ic), CH4_act(:), CH4_Plant_sl(:)) !, CH4_excess_sl(:))
+                                 CH4_conc(ic), CH4_act(:), CH4_Plant_sl(:)) !, CH4_excess_sl(:))
 
             ! PLANT TRANSPORT OF CO2
             CALL plant_transport(CO2_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,   &
                                  dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_CO2_surface, &
-                                 CO2_air(ic), CO2_act(:), CO2_Plant_sl(:)) !, CO2_excess_sl(:))
+                                 CO2_conc(ic), CO2_act(:), CO2_Plant_sl(:)) !, CO2_excess_sl(:))
 
             ! PLANT TRANSPORT OF O2
             CALL plant_transport(O2_consts, soil_w%dz(:), soil_w%ubounds(:), nly, mxlay_above_wt,    &
                                  dt, t_soil_sl(ic,:), relative_porevol_sl(:),                        &
                                  dens2conc_sl(:), conc2dens_sl(:), tiller_area_sl(:), D_O2_surface,  &
-                                 O2_air(ic), O2_act(:), O2_Plant_sl(:)) !, O2_excess_sl(:))
+                                 O2_conc(ic), O2_act(:), O2_Plant_sl(:)) !, O2_excess_sl(:))
 
             ! EBULLITION OF CH4
 
@@ -861,7 +903,7 @@ CONTAINS
                                     CH4_plant_sl(:), CO2_plant_sl(:), O2_plant_sl(:), &
                                     D_CH4,           D_CO2,           D_O2,           &
                                     D_CH4_surface,   D_CO2_surface,   D_O2_surface,   &
-                                    CH4_air     (ic), CO2_air   (ic), O2_air    (ic), &
+                                    CH4_conc   (ic), CO2_conc   (ic), O2_conc   (ic), &
                                     CH4_act     (:), CO2_act     (:), O2_act     (:), &
                                     CH4_oxid_sl (:), CO2_oxid_sl (:), O2_oxid_sl (:), &
                                     CH4_ebul_sl (:),                  O2_other_sl(:), &
@@ -1028,7 +1070,6 @@ CONTAINS
   END SUBROUTINE update_methane
 
   SUBROUTINE aggregate_methane(tile, options)
-    USE mo_jsb_time,          ONLY: is_newday, timesteps_per_day, is_time_experiment_start
     USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1069,9 +1110,9 @@ CONTAINS
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_tot%total_initial,  weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CH4_, CH4_tot%total_final  ,  weighted_by_fract)
     ! TODO: Do we need the next three for production runs?
-    dsl4jsb_Aggregate_onChunk(CH4_, CH4_air,                weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, CO2_air,                weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CH4_, O2_air,                 weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CH4_conc,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, CO2_conc,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CH4_, O2_conc,                weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, mxlay_above_rock,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, root_dist_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CH4_, CH4_out_net,            weighted_by_fract)

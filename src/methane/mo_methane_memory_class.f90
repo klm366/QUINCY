@@ -29,7 +29,7 @@ MODULE mo_ch4_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_ch4_memory, max_no_of_vars, t_chem_specie, t_chem_ptrs
+  PUBLIC :: t_ch4_memory, max_no_of_vars, t_chem_specie, t_chem_ptrs, t_timeseries
 
   INTEGER, PARAMETER :: max_no_of_vars = 130
 
@@ -67,6 +67,12 @@ MODULE mo_ch4_memory_class
     CHARACTER(len=8) :: specie_name
  
   END TYPE t_chem_specie
+
+  TYPE t_timeseries
+    REAL(wp), POINTER :: atm_vmr(:)
+    INTEGER           :: atm_year_min
+    INTEGER           :: atm_year_max
+  END TYPE t_timeseries
 
   TYPE t_chem_ptrs
     REAL(wp), DIMENSION(:), POINTER ::     &
@@ -114,9 +120,9 @@ MODULE mo_ch4_memory_class
 
     ! Basic variables and constants
     TYPE(t_jsb_var_real2d) ::   &
-      & CH4_air,                & ! StW: Collect for all tiles?
-      & CO2_air,                &
-      & O2_air,                 &
+      & CH4_conc,               & ! StW: Collect for all tiles?
+      & CO2_conc,               &
+      & O2_conc,                &
       & fire_em_NO,             &
       & fire_em_CO,             &
       & fire_em_iso,            &
@@ -135,11 +141,17 @@ MODULE mo_ch4_memory_class
       & anox_prod_in,           & ! StW: Production of what?
       & oxic_prod_in              ! StW: Production of what?
 
+    ! Data for obtaining time dependent atmospheric GHG from file
+    TYPE(t_timeseries) ::       &
+      & GHG_atm_CH4,            &
+      & GHG_atm_CO2,            &
+      & GHG_atm_O2
+
     ! per layer
     TYPE(t_jsb_var_real3d) :: &
       & root_dist_sl
 
-    REAL(wp), POINTER ::               &
+    REAL(wp), POINTER ::                &
       & layer_midpoint_dz(:) => NULL()
 
   CONTAINS
@@ -198,6 +210,10 @@ CONTAINS
     !$acc enter data create(mem%layer_midpoint_dz)
     !$acc enter data attach(mem%layer_midpoint_dz)
 
+    NULLIFY(mem%GHG_atm_CH4%atm_vmr)
+    NULLIFY(mem%GHG_atm_CO2%atm_vmr)
+    NULLIFY(mem%GHG_atm_O2%atm_vmr)
+
     CALL Init_chem_specie('CH4_dry',mem%CH4_dry,.FALSE.)
     CALL Init_chem_specie('CH4_wet',mem%CH4_wet,.TRUE.,'ebul')
     CALL Init_chem_specie('CO2_dry',mem%CO2_dry,.FALSE.)
@@ -206,25 +222,25 @@ CONTAINS
     CALL Init_chem_specie('O2_wet', mem%O2_wet, .TRUE.)
 !    CALL Init_chem_specie('CH4_tot',mem%CH4_tot,.TRUE.,'ebul')
 
-    CALL mem%Add_var( 'CH4_air', mem%CH4_air,                                &
+    CALL mem%Add_var( 'CH4_conc', mem%CH4_conc,                              &
       & hgrid, surface,                                                      &
-      & t_cf('CH4_air', 'mol m-3', ''),                                      &
+      & t_cf('CH4_conc', 'mol m-3', ''),                                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=7.706281e-5_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
-    CALL mem%Add_var( 'CO2_air', mem%CO2_air,                                &
+    CALL mem%Add_var( 'CO2_conc', mem%CO2_conc,                              &
       & hgrid, surface,                                                      &
-      & t_cf('CO2_air', 'mol m-3', ''),                                      &
+      & t_cf('CO2_conc', 'mol m-3', ''),                                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
       & initval_r=1.6349598227e-2_wp, isteptype=TSTEP_INSTANT )
 
-    CALL mem%Add_var( 'O2_air', mem%O2_air,                                  &
+    CALL mem%Add_var( 'O2_conc', mem%O2_conc,                                &
       & hgrid, surface,                                                      &
-      & t_cf('O2_air', 'mol m-3', ''),                                       &
+      & t_cf('O2_conc', 'mol m-3', ''),                                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
