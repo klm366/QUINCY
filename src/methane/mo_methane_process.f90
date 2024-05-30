@@ -1168,7 +1168,8 @@ CONTAINS
   PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
                                         termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
 
-    USE mo_methane_constants, ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
+    USE mo_methane_constants,      ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL,            INTENT(in)    :: is_crop            ! Is this a crop type
     REAL(wp),           INTENT(in)    :: frac_tile          ! Fraction of tile
@@ -1201,7 +1202,7 @@ CONTAINS
       ELSE
         ! non-tropical environment fixed termite biomass
         ! only if gddsum > 1200 and tmin > 3
-        IF ((min_mmtemp20 > 3._wp) .AND. (GDD > 1200._wp)) THEN
+        IF ((min_mmtemp20-tmelt > 3._wp) .AND. (GDD > 1200._wp)) THEN
           termite_biomass = 3._wp
           termite_CH4_g_h = termite_biomass * efactor_CH4_TEM
         END IF
