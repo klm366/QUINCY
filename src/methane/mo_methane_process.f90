@@ -1173,19 +1173,18 @@ CONTAINS
 
     LOGICAL,            INTENT(in)    :: is_crop            ! Is this a crop type
     REAL(wp),           INTENT(in)    :: frac_tile          ! Fraction of tile
-    REAL(wp),           INTENT(in)    :: GPP                ! GPP of last year [mol(C) m-2(canopy) s-1]
-    REAL(wp),           INTENT(in)    :: GDD                ! Growing degree days (of last year) [degC]
-    REAL(wp),           INTENT(in)    :: min_mmtemp20       ! Growing degree days (of last years) [degC]
+    REAL(wp),           INTENT(in)    :: GPP                ! GPP of last year [mol(C) m-2 s-1]
+    REAL(wp),           INTENT(in)    :: GDD                ! Growing degree days (of last year) [degC d]
+    REAL(wp),           INTENT(in)    :: min_mmtemp20       ! Long term minimum temperature [degC]
     LOGICAL,            INTENT(in)    :: GPP_dep_termites   ! Does termite biomass depend on GPP for this tile?
-    REAL(wp),           INTENT(out)   :: termite_biomass    ! Biomass of termites [g m-2(canopy)]
-    REAL(wp),           INTENT(out)   :: CH4_out_termite    ! Methane production flux by termites [mol m-2(canopy) s-1]
+    REAL(wp),           INTENT(out)   :: termite_biomass    ! Biomass of termites [g m-2]
+    REAL(wp),           INTENT(out)   :: CH4_out_termite    ! Methane production flux by termites [mol m-2 s-1]
     REAL(wp),           INTENT(inout) :: frac_non_crop      ! Fraction of area over which sum_non_crop has been summed
     REAL(wp),           INTENT(inout) :: sum_non_crop       ! CH4 production from all non-crop tiles
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_methane_termites'
     REAL(wp), PARAMETER  :: efactor_CH4_TRO = 2.8e-6_wp     ! [g CH4 / g termite / h]
     REAL(wp), PARAMETER  :: efactor_CH4_TEM = 1.7e-6_wp     ! [g CH4 / g termite / h]
-    REAL(wp), PARAMETER  :: seconds_per_year = 31536000._wp
     REAL(wp), PARAMETER  :: seconds_per_hour = 3600._wp
 
     ! locals
@@ -1226,7 +1225,7 @@ CONTAINS
 
     USE mo_methane_constants, ONLY: molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
 
-    REAL(wp), INTENT(in)  :: herbivory2atm                 ! herbivory C-flux to atmosphere
+    REAL(wp), INTENT(in)  :: herbivory2atm                 ! herbivory C-flux to atmosphere [mol(C) m-2 s-1]
     LOGICAL,  INTENT(in)  :: iswoody                       ! Is type woody (forest/shrub)
     REAL(wp), INTENT(out) :: CH4_out_herbivore             ! methane production from herbivores
 
