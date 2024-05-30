@@ -221,7 +221,7 @@ CONTAINS
             IF (saturation > saturation_threshold) THEN
               water_table = water_table + dz
             ELSE
-              layer_below_unfrozen = .FALSE.
+              layer_below_saturated = .FALSE.
               water_table = water_table + saturation * dz
             ENDIF
           ENDIF
