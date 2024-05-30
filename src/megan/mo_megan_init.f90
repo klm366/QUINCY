@@ -143,31 +143,31 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%iso%beta     = 0._wp
     dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._wp
     dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_iso
-    dsl4jsb_memory(MEGAN_)%iso%ef       = 0._wp ! TODO: lctlib-something
+    dsl4jsb_memory(MEGAN_)%iso%ef       = dsl4jsb_Lctlib_param(em_fac_iso)
     
     ! --- carbon monoxide ---
-    dsl4jsb_memory(MEGAN_)%iso%longname  = 'carbon monoxide'
-    dsl4jsb_memory(MEGAN_)%iso%shortname = 'CO'
-    dsl4jsb_memory(MEGAN_)%iso%class    = 16
-    dsl4jsb_memory(MEGAN_)%iso%mweight  = 28.01_wp
-    dsl4jsb_memory(MEGAN_)%iso%cnumber  = 1
-    dsl4jsb_memory(MEGAN_)%iso%cafac    = 1
-    dsl4jsb_memory(MEGAN_)%iso%beta     = dsl4jsb_Config(MEGAN_)%beta_CO
-    dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._wp
-    dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_CO
-    dsl4jsb_memory(MEGAN_)%iso%ef       = 0._wp ! TODO: lctlib-something
+    dsl4jsb_memory(MEGAN_)%CO%longname  = 'carbon monoxide'
+    dsl4jsb_memory(MEGAN_)%CO%shortname = 'CO'
+    dsl4jsb_memory(MEGAN_)%CO%class    = 16
+    dsl4jsb_memory(MEGAN_)%CO%mweight  = 28.01_wp
+    dsl4jsb_memory(MEGAN_)%CO%cnumber  = 1
+    dsl4jsb_memory(MEGAN_)%CO%cafac    = 1
+    dsl4jsb_memory(MEGAN_)%CO%beta     = dsl4jsb_Config(MEGAN_)%beta_CO
+    dsl4jsb_memory(MEGAN_)%CO%ldf      = 1._wp
+    dsl4jsb_memory(MEGAN_)%CO%scale    = dsl4jsb_Config(MEGAN_)%scale_CO
+    dsl4jsb_memory(MEGAN_)%CO%ef       = dsl4jsb_Lctlib_param(em_fac_CO)
     
     ! --- nitricoxide ---
-    dsl4jsb_memory(MEGAN_)%iso%longname  = 'nitricoxide'
-    dsl4jsb_memory(MEGAN_)%iso%shortname = 'NO'
-    dsl4jsb_memory(MEGAN_)%iso%class    = 17
-    dsl4jsb_memory(MEGAN_)%iso%mweight  = 30.01_wp
-    dsl4jsb_memory(MEGAN_)%iso%cnumber  = 0
-    dsl4jsb_memory(MEGAN_)%iso%cafac    = 1
-    dsl4jsb_memory(MEGAN_)%iso%beta     = dsl4jsb_Config(MEGAN_)%beta_NO
-    dsl4jsb_memory(MEGAN_)%iso%ldf      = 0._wp
-    dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
-    dsl4jsb_memory(MEGAN_)%iso%ef       = 0._wp ! TODO: lctlib-something
+    dsl4jsb_memory(MEGAN_)%NO%longname  = 'nitricoxide'
+    dsl4jsb_memory(MEGAN_)%NO%shortname = 'NO'
+    dsl4jsb_memory(MEGAN_)%NO%class    = 17
+    dsl4jsb_memory(MEGAN_)%NO%mweight  = 30.01_wp
+    dsl4jsb_memory(MEGAN_)%NO%cnumber  = 0
+    dsl4jsb_memory(MEGAN_)%NO%cafac    = 1
+    dsl4jsb_memory(MEGAN_)%NO%beta     = dsl4jsb_Config(MEGAN_)%beta_NO
+    dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._wp
+    dsl4jsb_memory(MEGAN_)%NO%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
+    dsl4jsb_memory(MEGAN_)%NO%ef       = dsl4jsb_Lctlib_param(em_fac_CO)
     
 !    IF (debug_on() .OR. dsl4jsb_Config(MEGAN_)%dbg_process) &
 !      CALL message(TRIM(routine), 'Setting megan boundary conditions for tile '//TRIM(tile%name))
