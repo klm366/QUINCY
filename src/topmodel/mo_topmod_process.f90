@@ -168,7 +168,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: frac_liquid_top      ! fraction of liquid water in top <=0.5m (full layers) []
 
     ! Local variables
-    REAL(wp) :: h2o
+    REAL(wp) :: weq
     REAL(wp) :: saturation
     REAL(wp) :: dz                          ! Thickness of current layer
     REAL(wp) :: local_depth
@@ -193,13 +193,13 @@ CONTAINS
 
       ! Absolute and relative water content (liquid and frozen) in layer isoil
       frac_liquid = 1._wp
-      h2o = wtr_soil_sl(isoil)
-      IF (with_permafrost) h2o = h2o + ice_soil_sl(isoil)
-      IF (h2o > 0._wp) THEN
+      weq = wtr_soil_sl(isoil)
+      IF (with_permafrost) weq = weq + ice_soil_sl(isoil)
+      IF (weq > 0._wp) THEN
         IF (with_permafrost) THEN
-          frac_liquid = wtr_soil_sl(isoil) / h2o
+          frac_liquid = wtr_soil_sl(isoil) / weq
         ELSE
-          ! Piecewise linear function, 0 for T < ~0.5 degC, increasing to 1 between ~-0.5 degC and 5 degC and 1 afterwards
+          ! Piecewise linear function, 0 for T < ~0.5 degC, increasing to 1 between ~-0.5 degC and 0.5 degC and 1 afterwards
           frac_liquid = MAX(0._wp, MIN(1._wp, (t_soil_sl(isoil) - (tmelt-0.5_wp))))
         ENDIF
       ENDIF
@@ -212,7 +212,7 @@ CONTAINS
 
       ! Water table for grids with sufficient soil_depth
       IF (soil_depth > soil_depth_min) THEN
-        saturation = MAX(0._wp, MIN(1._wp, h2o / dz / field_capacity))
+        saturation = MAX(0._wp, MIN(1._wp, weq / dz / field_capacity))
         IF (layer_below_saturated) THEN
           IF ((t_soil_sl(isoil) < tmelt) .AND. .NOT. layer_below_unfrozen) THEN
             water_table = water_table + dz
