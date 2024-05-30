@@ -133,7 +133,7 @@ MODULE mo_carbon_memory_class
                                     ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
-      GPP_prev_year,              & !
+      GPP_prev_year_ta,           & !
       root_exudates,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(canopy) s]
       cflux_c_green_2_herb,       & ! Total carbon flux from C pool green to herbivory.
       cflux_herb_2_littergreen,   & ! ..part of cflux_c_green_2_herb that goes into green litter
@@ -698,9 +698,9 @@ CONTAINS
       & prefix, suffix,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('gpp_prev_year', mem%GPP_prev_year,                                      &
+    CALL mem%Add_var('gpp_prev_year', mem%GPP_prev_year_ta,                                   &
       & hgrid, surface,                                                                       &
-      & t_cf('GPP_prev_year', 'mol(C) m-2(canopy) yr-1', 'Total GPP of the previous year.'),  &
+      & t_cf('GPP_prev_year', 'mol(C) m-2 yr-1', 'Total GPP of the previous year.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
