@@ -345,7 +345,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_damaged_area'
 
+    dsl4jsb_Real2D_onChunk :: burned_fract
+
     INTEGER  :: iblk, ics, ice
+
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
