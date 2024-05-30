@@ -330,6 +330,9 @@ CONTAINS
         CALL model%Queue_task(TURB_, "surface_roughness")
         CALL model%Queue_task(TURB_, "exchange_coefficients")
       END IF
+      ! The first call to task `snow_and_wet_fraction` currently needs to be before `surface_hydrology`,
+      ! `soil_hydrology` and `update_albedo` because of pond scheme
+      ! TODO: add cross-check
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")

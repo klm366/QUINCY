@@ -1216,10 +1216,10 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
 
     !$ACC DATA CREATE(l_fract, tile_fract)
 
@@ -2435,7 +2435,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_skin,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,       weighted_by_fract)
