@@ -277,7 +277,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  NPP_pot_sum            ! used to accumulated NPP-Rate over a day
     dsl4jsb_Real2D_onChunk ::  GPP_sum                ! used to accumulated GPP-Rate over a day
     dsl4jsb_Real2D_onChunk ::  GPP_ann_sum            ! used to accumulated GPP-Rate over a year (for the methane process)
-    dsl4jsb_Real2D_onChunk ::  GPP_prev_year          ! previous year mean (for the methane process)
+    dsl4jsb_Real2D_onChunk ::  GPP_prev_year_ta       ! previous year mean (for the methane process)
     dsl4jsb_Real2D_onChunk ::  LAI_yDayMean           ! previous days mean
     dsl4jsb_Real2D_onChunk ::  LAI_yyDayMean          ! previous previous days mean
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean       ! mean value of NPP-Rate yesterday (from NPP_pot_sum())
@@ -287,6 +287,7 @@ CONTAINS
                                                       ! Actual NPP after N-limitation and excess carbon drop.
                                                       ! [mol(CO2)/(m^2(canopy) s)]
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
+    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta
 
     dsl4jsb_Real2D_onChunk ::  soil_respiration       ! mean daily rate of heterotrophic (soil) respiration Without N limitation!
                                                       ! [mol m-2(ground) d-1].
@@ -418,7 +419,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean )              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_prev_year )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean_ta )           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_prev_year_ta )          ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout
@@ -556,8 +558,8 @@ CONTAINS
 
     ! Give some "initial" value for GPP_yYear and initalize sum for next year
     IF (lstart) THEN
-      GPP_prev_year = GPP_ann_sum
-      GPP_ann_sum = GPP_yDayMean
+      GPP_prev_year_ta = GPP_ann_sum
+      GPP_ann_sum = GPP_yDayMean_ta
     ENDIF
 
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
@@ -821,10 +823,10 @@ CONTAINS
 
     ! Calc sum of GPP for total GPP of previous year for the methane process
     IF (new_year) THEN
-      GPP_prev_year = GPP_ann_sum
-      GPP_ann_sum = GPP_yDayMean
+      GPP_prev_year_ta = GPP_ann_sum / 365._wp
+      GPP_ann_sum = GPP_yDayMean_ta
     ELSE
-      GPP_ann_sum = GPP_ann_sum + GPP_yDayMean
+      GPP_ann_sum = GPP_ann_sum + GPP_yDayMean_ta
     ENDIF
 
     ! Compute net CO2 fluxes exchanged with atmosphere at each time step
@@ -946,6 +948,8 @@ CONTAINS
 !    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_prev_year_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,  weighted_by_fract)
