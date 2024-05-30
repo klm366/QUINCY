@@ -16,7 +16,6 @@ MODULE mo_sse_process
 
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish
 
   IMPLICIT NONE
   PRIVATE
@@ -794,7 +793,6 @@ CONTAINS
     REAL(wp) :: zd1(nidx,nsnow+1)
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
     REAL(wp) :: t_soil_sl1(nidx)                  !< t_soil_sl(:,1)
-    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
 
     !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
 
@@ -969,17 +967,6 @@ CONTAINS
         END IF
       END DO
       !$ACC END LOOP
-      IF (abs(t_soil_top(jl) - t_snow(jl,nsnow)) > 10.0_wp .AND. .NOT. lstart) THEN
-        WRITE (message_text_long,*) 'Large difference between snow and soil temperature ', NEW_LINE('a'), &
-          & 'Surface temperature:       ', t_unfilt(jl),       NEW_LINE('a'), &
-          & 'Snow bottom temperature:   ', t_snow(jl,nsnow),   NEW_LINE('a'), &
-          & 'Top soil temperature:      ', t_soil_top(jl),     NEW_LINE('a'), &
-          & 'Snow A Coeff:              ', t_snow_acoef(jl,:), NEW_LINE('a'), &
-          & 'Snow B Coeff:              ', t_snow_bcoef(jl,:), NEW_LINE('a'), &
-          & 'Act. top layer:            ', itop(jl),           NEW_LINE('a'), &
-          & 'Prv. top layer:            ', itop_old(jl)
-        CALL finish ('calc_snow_temperature', message_text_long)
-      END IF
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL

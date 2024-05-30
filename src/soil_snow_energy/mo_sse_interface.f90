@@ -19,7 +19,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -194,6 +194,7 @@ CONTAINS
     INTEGER                    :: nsoil, is, nsnow, isnow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
+    CHARACTER(len=8192) :: message_text_long ! long string for soil checks
 
     iblk  = options%iblk
     ics   = options%ics
@@ -588,6 +589,17 @@ CONTAINS
       !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(ws_max_sl)
       DEALLOCATE(ws_max_sl)
+
+      DO ic = 1, nc
+        IF (abs(t_soil_sl(ic,1) - t_snow(ic,nsnow)) > 10.0_wp .AND. .NOT. lstart) THEN
+          WRITE (message_text_long,*) 'Large difference between snow and soil temperature ', NEW_LINE('a'), &
+            & 'Snow depths:               ', snow_depth_sl(ic,:), NEW_LINE('a'), &
+            & 'Surface temperature:       ', t_unfilt(ic),        NEW_LINE('a'), &
+            & 'Snow layer temperature:    ', t_snow(ic,:),        NEW_LINE('a'), &
+            & 'Soil layer temperature:    ', t_soil_sl(ic,:)
+          CALL finish ('update_sse_temp', message_text_long)
+        END IF
+      END DO
     END IF
 
 #ifdef _CRAYFTN
