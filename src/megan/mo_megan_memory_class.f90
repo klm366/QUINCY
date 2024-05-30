@@ -56,7 +56,6 @@ MODULE mo_megan_memory_class
     ! 2D Fields
     TYPE(t_jsb_var_real2d) ::              &
       & total_out,                         &  ! Emission [kg m-2 s-1]
-      & em_fac,                            &  ! Emission factor
       & gamma_age,                         &
       & gamma_temp
   END TYPE t_megan_specie
@@ -64,7 +63,6 @@ MODULE mo_megan_memory_class
   TYPE t_megan_ptrs
     REAL(wp), DIMENSION(:), POINTER ::     &
       & total_out,                         &  ! Emission [kg m-2 s-1]
-      & em_fac,                            &  ! Emission factor
       & gamma_age,                         &
       & gamma_temp
   END TYPE t_megan_ptrs
@@ -131,16 +129,12 @@ CONTAINS
     table         = tables(1)
     hgrid         => Get_grid(mem%grid_id)
     surface       => Get_vgrid('surface')
-!    soil_w        => Get_vgrid('soil_depth_water')
 
     !! !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! jsbach4 memory
     !
-!      ALLOCATE(mem%cti_chi      (hgrid%nproma, hgrid%nblks))
-!      !$acc enter data pcreate(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
-!      !$acc enter data attach(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
 
     CALL Init_megan_specie('iso',mem%iso,.TRUE.)
     CALL Init_megan_specie('CO', mem%CO, .TRUE.)
@@ -266,14 +260,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-
-      CALL mem%Add_var( specie_name//'_emission_factor', specie%em_fac,        &
-        & hgrid, surface,                                                      &
-        & t_cf(specie_name//'_emission_factor', '', ''),                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix, lrestart = .FALSE.,                                  &
-        & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       IF (uother) THEN

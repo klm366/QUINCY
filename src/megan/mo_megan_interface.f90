@@ -111,7 +111,6 @@ CONTAINS
     USE mo_nwp_phy_state,      ONLY: prm_diag
     ! And these likely only for ECHAM physics
     USE mo_echam_phy_memory,   ONLY: t_echam_phy_field, prm_field
-    ! <<<
     USE mo_run_config,         ONLY: iforcing
     USE mo_impl_constants,     ONLY: inwp
 
@@ -241,15 +240,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)
     ! MEGAN_ variables
     dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%total_out)
-    dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%em_fac)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%gamma_age)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%gamma_temp)
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  CO%total_out)
-    dsl4jsb_Get_var2D_onChunk(MEGAN_,  CO%em_fac)
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  CO%gamma_age)
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  CO%gamma_temp)
     dsl4jsb_Get_var2D_onChunk(MEGAN_,  NO%total_out)
-    dsl4jsb_Get_var2D_onChunk(MEGAN_,  NO%em_fac)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_lai)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_pfd)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_CO2)
@@ -322,15 +318,12 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(MEGAN_, iso%total_out,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MEGAN_, iso%em_fac,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_, iso%gamma_age,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_, iso%gamma_temp,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%total_out,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%em_fac,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%gamma_age,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  CO%gamma_temp,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  NO%total_out,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MEGAN_,  NO%em_fac,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_lai,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_pfd,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_, gamma_CO2,        weighted_by_fract)
@@ -340,7 +333,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MEGAN_,  pfd_relax_short, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  lai_relax_long,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MEGAN_,  pfd_relax_long,  weighted_by_fract)
-
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
