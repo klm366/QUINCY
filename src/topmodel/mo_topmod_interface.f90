@@ -295,6 +295,13 @@ CONTAINS
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
+        ylen = 365 ! Only need to be correct if lnew_year
+        mlen = 30  ! Only need to be correct if lnew_month
+        IF (lnew_month) THEN
+          mlen = get_month_length(year,month)
+          IF (lnew_year) ylen = get_year_length(year)
+        ENDIF
+
         DO ic = 1, nc
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
             &                      lnew_year,lnew_month,lnew_day,                                                  &
@@ -432,14 +439,13 @@ CONTAINS
         IF (lstart) frac_inun_pre(ic) = frac_inun(ic)
 
       ENDDO
+      !$acc end parallel
 
     ENDIF
 
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
-     summer_state = -1
-      ylen = 365 ! Only need to be correct if lnew_year
-      mlen = 30  ! Only need to be correct if lnew_month
+      summer_state = -1
       CALL get_date_components(options%current_datetime,YEAR=year,MONTH=month)
       IF (lnew_month) THEN
         ! Get the previous month and evt. year
@@ -456,8 +462,6 @@ CONTAINS
           ! Include month values in summer season sum and compute the average
           summer_state = dsl4jsb_Config(TOP_)%month_summer_end - dsl4jsb_Config(TOP_)%month_summer_start + 1
         ENDIF
-        mlen = get_month_length(year,month)
-        IF (lnew_year) ylen = get_year_length(year)
       ENDIF
 
       IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
