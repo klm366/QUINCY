@@ -276,11 +276,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_volume)
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_flux)
 
+      !$acc data parallel
+      !$acc loop gang vector
       DO ic = 1, nc
         CALL update_aet(tmelt,t_air(ic),rad_srf_net(ic),aet(ic))
       ENDDO
 
       ! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
+      !$acc parallel loop gang vector
       DO ic = 1, nc
         CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
           & dsl4jsb_Config(TOP_)%peat_runoff_fac,            & ! Configuration parameters
@@ -302,6 +305,7 @@ CONTAINS
           IF (lnew_year) ylen = get_year_length(year)
         ENDIF
 
+        !$acc loop gang vector
         DO ic = 1, nc
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
             &                      lnew_year,lnew_month,lnew_day,                                                  &
@@ -313,6 +317,7 @@ CONTAINS
             &                      poaet_mean_day(ic), poaet_sum_year (ic), poaet_mean_year(ic),     poaet_lt(ic))
         ENDDO
       ENDIF
+      !$acc end parallel
 
     ENDIF
 
@@ -324,16 +329,20 @@ CONTAINS
     ALLOCATE(wtr_soil        (nsoil))
     ALLOCATE(ice_soil        (nsoil))
     ALLOCATE(PE_mask         (nc))
+    !$acc data pcreate(t_soil, wtr_soil, ice_soil, PE_mask)
 
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
       IF (is_newmonth(options%current_datetime,dtime)) THEN
         CALL get_date_components(options%current_datetime,MONTH=month)
         frac_inun_clim => dsl4jsb_memory(TOP_)%frac_inun_clim(ics:ice,iblk,:)
+
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           CALL get_climatological_inun(frac_inun_clim(ic,month),frac_inun(ic),wt_inun(ic))
         ENDDO
       ENDIF
       IF (lstart) THEN
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           frac_inun_pre(ic) = frac_inun(ic)
         ENDDO
@@ -364,19 +373,26 @@ CONTAINS
       cti_phi       => dsl4jsb_memory(TOP_)%cti_phi      (ics:ice,iblk)
       cti_chi       => dsl4jsb_memory(TOP_)%cti_chi      (ics:ice,iblk)
       cti_mu        => dsl4jsb_memory(TOP_)%cti_mu       (ics:ice,iblk)
+      !$acc enter data attach (lat, cti_mean, cti_basin, cti_openwater, cti_phi, cti_chi, cti_mu)
+      !$acc update device (lat, cti_mean, cti_basin, cti_openwater, cti_phi, cti_chi, cti_mu)
 
       ! Save inundated fraction from last time step for the methane process
+      !$acc data parallel default(present)
       IF (.NOT. lrestart) THEN
-        frac_inun_pre(:) = frac_inun(:)
+        !$acc loop gang vector
+        DO ic = 1, nc
+          frac_inun_pre(ic) = frac_inun(ic)
+        ENDDO
       ENDIF
 
       ! Calculate water table
-      !
+      !$acc loop gang vector
       DO ic = 1, nc
         water_table      (ic  ) = 0._wp
         frac_liquid_top  (ic  ) = 0._wp
       ENDDO
 
+      !$acc loop gang vector
       DO ic = 1, nc
 
         ! Secure calculations are done on contiguous data - may be faster
@@ -397,10 +413,13 @@ CONTAINS
         frac_liquid_top(ic  ) = frac_liquid_top_t
 !        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
       ENDDO
+
+      !$acc loop gang vector
       DO ic = 1, nc
         frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
         frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
       ENDDO
+      !$acc loop gang vector
       DO ic = 1, nc
         IF (aet_relax(ic) > 0._wp) THEN
           PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
@@ -410,6 +429,7 @@ CONTAINS
       ENDDO
 
       ! Calculate inundated area
+      !$acc loop gang vector
       DO ic = 1, nc
         CALL update_inun_frac(                            &
           & dsl4jsb_Config(TOP_)%soil_depth_min,          & ! Scalar parameters
@@ -464,6 +484,7 @@ CONTAINS
       ENDIF
 
       IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           CALL update_topmodel_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                         &
             &                          lnew_year,lnew_month,lnew_day,                                    &

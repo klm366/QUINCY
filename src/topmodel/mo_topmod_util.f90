@@ -33,6 +33,7 @@ CONTAINS
   !        Either dt and t_relax or nstep must be present
   !
   !!
+  !$acc routine seq
   PURE SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
     REAL(wp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
     REAL(wp),           INTENT(inout) :: relax   ! Mean value to update [?]
@@ -63,6 +64,7 @@ CONTAINS
   !------------------------------------------------------------------------------------
 
   !   Returns the incomplete gamma function P (a, x).
+  !$acc routine seq
   PURE FUNCTION gamm_p(a,x)
     REAL(wp), INTENT(in) :: a, x
     REAL(wp)             :: gamm_p
@@ -86,6 +88,7 @@ CONTAINS
   END FUNCTION gamm_p
 
   !------------------------------------------------------------------------------------
+  !$acc routine seq
   PURE FUNCTION gamm_inv_p(p, a)
 
     REAL(wp), INTENT(IN) :: p, a
@@ -154,6 +157,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
+  !$acc routine seq
   PURE FUNCTION gamm_q(a,x)
     REAL(wp), INTENT(in) :: a,x
     REAL(wp) :: gamm_q
@@ -179,6 +183,7 @@ CONTAINS
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function P (a, x) evaluated by its series representation as
   !   gamser . Also RETURNs ln Γ(a) as gln.
+  !$acc routine seq
   PURE SUBROUTINE gser(gamser,a,x,gln)
     REAL(wp), INTENT(inout) :: gamser, gln
     REAL(wp), INTENT(in)    :: a, x
@@ -216,6 +221,7 @@ CONTAINS
   !   sentation as gammcf. Also RETURNs ln Γ(a) as gln.
   !   Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative accu-
   !   racy; FPMIN is a number near the smallest representable floating-point number.
+  !$acc routine seq
   PURE SUBROUTINE gcf(gammcf,a,x,gln)
     REAL(wp), INTENT(inout) :: gammcf, gln
     REAL(wp), INTENT(in)    :: a,x
@@ -258,6 +264,7 @@ CONTAINS
   END SUBROUTINE gcf
 
   !------------------------------------------------------------------------------------
+  !$acc routine seq
   PURE FUNCTION gamm_ln(xx)
     REAL(wp), INTENT(in) :: xx
     REAL(wp)             :: gamm_ln

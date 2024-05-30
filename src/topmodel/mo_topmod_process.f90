@@ -34,6 +34,7 @@ CONTAINS
   !
   !!
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_aet( &
     & tmelt, &
     & temp_air, net_radiation, &
@@ -70,6 +71,7 @@ CONTAINS
   !
   !!
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_water_balance_peatland(           &
     & tspd, delta_time,                                    &
     & peat_runoff_fac, peat_runoff_exp,                    &
@@ -138,6 +140,7 @@ CONTAINS
   ! @brief      Updates the water table for individual tile
   !
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_water_table(     &
     &  with_permafrost, tmelt,            &
     &  soil_depth, soil_depth_min,        &
@@ -242,6 +245,7 @@ CONTAINS
   ! @brief      Updates inundated area
   !
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_inun_frac(              &
     & soil_depth_min,                            &
     & use_cti_basin, use_cti_flood, use_cti_max, &
@@ -355,6 +359,7 @@ CONTAINS
   ! @brief      Updates necessary averages for the topmodel
   !
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_topmodel_runmean(                  &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
@@ -461,6 +466,7 @@ CONTAINS
   ! @brief      Updates necessary averages for peatland calculations
   !
   !!
+  !$acc routine seq
   PURE SUBROUTINE update_peat_runmean(                      &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
@@ -535,6 +541,7 @@ CONTAINS
   !
   !!
   !!
+  !$acc routine seq
   PURE SUBROUTINE get_climatological_inun( &
     & frac_inun_clim,                      & ! Input
     & frac_inun, wt_inun                   & ! Output
