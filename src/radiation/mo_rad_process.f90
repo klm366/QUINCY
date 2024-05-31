@@ -859,7 +859,7 @@ CONTAINS
     & wtr_pond,          & ! in
     & ice_pond,          & ! in
     & alb_pond_vis,      & ! inout
-    & alb_pond_nir       & ! inout
+    & alb_pond_nir       & ! out
     & )
 
     !$ACC ROUTINE SEQ
@@ -877,7 +877,8 @@ CONTAINS
                              ice_pond
 
     REAL(wp), INTENT(inout) ::              &
-                             alb_pond_vis,  & ! Albedo of canopy in the VIS range without snow cover.
+                             alb_pond_vis     ! Albedo of canopy in the VIS range without snow cover.
+    REAL(wp), INTENT(out) ::                &
                              alb_pond_nir     ! Albedo of canopy in the NIR range without snow cover.
 
     ! Local variables
