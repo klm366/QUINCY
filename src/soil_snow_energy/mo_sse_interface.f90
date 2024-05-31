@@ -26,8 +26,8 @@ MODULE mo_sse_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_vgrid, Get_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -119,7 +119,7 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -129,6 +129,7 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
@@ -196,6 +197,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
     CHARACTER(len=8192) :: message_text_long ! long string for soil checks
 
+    REAL(wp), POINTER :: lat(:), lon(:)
+    REAL(wp) :: tile_fract(options%nc)
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -214,6 +218,11 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
+
+    grid => Get_grid(model%grid_id)
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
     ! Get reference to variables for current block
     !
@@ -386,7 +395,8 @@ CONTAINS
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
         IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
-          snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
+          ! snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
+          snow_fract(ic) = 1._wp
         ELSE
           snow_depth(ic) = 0._wp
           snow_fract(ic) = 0._wp
@@ -444,18 +454,10 @@ CONTAINS
         ! in
         & nc,                     &
         & nsnow,                  &
-        & soil_e%dz(1:2),         &
-        & dtime,                  &
         & lstart,                 &
-        & snow_depth_sl    (:,:), &
         & itop_old           (:), &
         & itop               (:), &
         & t_unfilt_corrected (:), &
-        & vol_heat_cap_snow  (:), &
-        & heat_cond_snow     (:), &
-        & vol_heat_cap_sl  (:,1), &
-        & heat_cond_sl     (:,1), &
-        & t_soil_sl        (:,:), &
         & t_soil_acoef     (:,1), &
         & t_soil_bcoef     (:,1), &
         ! inout
@@ -463,25 +465,23 @@ CONTAINS
         & t_snow_acoef     (:,:), &
         & t_snow_bcoef     (:,:), &
         ! out
-        & t_soil_top         (:), &
-        & hcap_grnd_snow     (:), &
-        & grnd_hflx_snow     (:)  &
+        & t_soil_top         (:)  &
         & )
 
-#ifdef _CRAYFTN
-      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
-#else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-#endif
-      DO ic = 1, nc
-        IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-          t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_unfilt_corrected(ic)
-        ELSE                                ! No snow
-          t_soil_top(ic) = t_unfilt_corrected(ic)
-        END IF
-      END DO
-      !$ACC END PARALLEL LOOP
+!#ifdef _CRAYFTN
+!      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+!      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+!#else
+!      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+!#endif
+!      DO ic = 1, nc
+!        IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
+!          t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_unfilt_corrected(ic)
+!        ELSE                                ! No snow
+!          t_soil_top(ic) = t_unfilt_corrected(ic)
+!        END IF
+!      END DO
+!      !$ACC END PARALLEL LOOP
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -590,14 +590,42 @@ CONTAINS
       !$ACC EXIT DATA DELETE(ws_max_sl)
       DEALLOCATE(ws_max_sl)
 
+      CALL calc_snow_abcoeff( &
+        ! in
+        & nc,                     &
+        & nsnow,                  &
+        & soil_e%dz(1:2),         &
+        & dtime,                  &
+        & lstart,                 &
+        & snow_depth_sl    (:,:), &
+        & itop_old           (:), &
+        & itop               (:), &
+        & t_unfilt_corrected (:), &
+        & vol_heat_cap_snow  (:), &
+        & heat_cond_snow     (:), &
+        & vol_heat_cap_sl  (:,1), &
+        & heat_cond_sl     (:,1), &
+        & t_soil_sl        (:,:), &
+        & t_soil_acoef     (:,:), &
+        & t_soil_bcoef     (:,:), &
+        ! inout
+        & t_snow           (:,:), &
+        & t_snow_acoef     (:,:), &
+        & t_snow_bcoef     (:,:), &
+        ! out
+        & hcap_grnd_snow     (:), &
+        & grnd_hflx_snow     (:)  &
+        & )
+
       DO ic = 1, nc
-        IF (abs(t_soil_sl(ic,1) - t_snow(ic,nsnow)) > 10.0_wp .AND. .NOT. lstart) THEN
-          WRITE (message_text_long,*) 'Large difference between snow and soil temperature ', NEW_LINE('a'), &
+        IF (t_soil_sl(ic,1) - t_snow(ic,nsnow) < -10.0_wp .AND. .NOT. lstart) THEN
+          WRITE (message_text_long,*) ' on tile ',tile%name, ' with fraction ', tile_fract(ic), ' at ', &
+            & lat(ic),'N and ',lon(ic),'E', '(',ic,')', NEW_LINE('a'), &
             & 'Snow depths:               ', snow_depth_sl(ic,:), NEW_LINE('a'), &
             & 'Surface temperature:       ', t_unfilt(ic),        NEW_LINE('a'), &
             & 'Snow layer temperature:    ', t_snow(ic,:),        NEW_LINE('a'), &
             & 'Soil layer temperature:    ', t_soil_sl(ic,:)
-          CALL finish ('update_sse_temp', message_text_long)
+          CALL finish ('SoilTempFail', message_text_long)
         END IF
       END DO
     END IF

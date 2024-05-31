@@ -22,7 +22,7 @@ MODULE mo_sse_process
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature, &
     & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
-    & calc_soiltemp_old, Get_liquid_max
+    & calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -366,7 +366,7 @@ CONTAINS
     & nidx, nsoil, dz, mids,              &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
-    & t_unfilt,                           &
+    & t_soil_top,                         &
     & vol_heat_cap, heat_cond,            &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
@@ -445,7 +445,7 @@ CONTAINS
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
-    REAL(wp), INTENT(in)    ::  t_unfilt(:)              !! surface temperature at top of soil [K]
+    REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
 
@@ -521,7 +521,7 @@ CONTAINS
       ! uppermost layer
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
-        t_soil_sl(jl,1) = t_unfilt(jl)
+        t_soil_sl(jl,1) = t_soil_top(jl)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -688,7 +688,172 @@ CONTAINS
 
   END SUBROUTINE calc_soil_temperature
 
-  SUBROUTINE calc_snow_temperature(       &
+  SUBROUTINE calc_snow_temperature(         &
+    & nidx, nsnow,                          &
+    & lstart,                               &
+    & itop_old, itop,                       &
+    & t_unfilt, t_soil_acoef, t_soil_bcoef, &
+    & t_snow, t_snow_acoef, t_snow_bcoef,   &
+    & t_soil_top)
+    !
+    !
+    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
+    !
+    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
+    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
+    !
+    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
+    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
+    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
+    !               ECHAM4 GCM.
+    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
+    !            U.Schlese DKRZ - February 2000  new soil temperatures
+    !            L Kornblueh, MPI, January 2003, removed MERGE
+    !
+    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
+    !
+    !   OBJECTIVE:  COMPUTATION OF:
+    !               THE GROUND TEMPERATURE EVOLUTION
+    !               THE GROUND SPECIFIC HEAT "CAPCAL"
+    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
+    !
+    !
+    !   METHOD:  IMPLICIT TIME INTEGRATION
+    !
+    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
+    !           T(K+1) = C(K) + D(K)*T(K)  (1)
+    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
+    !   T-DT TIME-STEP.
+    !   ROUTINE STRUCTURE:
+    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
+    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
+    !     PROFILE FOR THE T+DT TIME-STEP
+    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
+    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
+    !            FDIFF = A + B TS(T+DT)
+    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
+    !            WITH F0 = A + B (TS(T))
+    !                 CAPCAL = B*DT
+    !
+    !
+    !     ------------------------------------------------------------------
+    !
+    !     MODIFIED BY ALTUG EKICI
+    !
+    !     INCLUDED:
+    !     -PHASE CHANGE
+    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
+    !     -SUPERCOOLED WATER EQUATION
+    !     -THAW DEPTH CALCULATION
+    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
+    !     -ORGANIC LAYER ABOVE THE SOIL
+    !
+    !----------------------------------------------------------------------------------------------
+
+    IMPLICIT NONE
+
+    !-----------------------------------------------------------------------
+    !  arguments
+
+    INTEGER,  INTENT(in)    :: nidx                       !! length of the vector
+    INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
+    LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
+    INTEGER,  INTENT(in)    :: itop(:), itop_old(:)       !! Top snow layer for previous and new time step
+    REAL(wp), INTENT(in)    :: t_unfilt(:)                !! Surface temperature at top of snow [K]
+    REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! Top layer soil A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! Top layer soil B coefficient of Richtmyer and Morton scheme
+
+    REAL(wp), INTENT(inout) :: t_snow(:,:)                !! Snow temperature [K]
+    REAL(wp), INTENT(inout) :: t_snow_acoef(:,:)          !! Snow A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(inout) :: t_snow_bcoef(:,:)          !! Snow B coefficient of Richtmyer and Morton scheme
+
+    REAL(wp), INTENT(out)   :: t_soil_top(:)              !! New temperature of top soil layer
+
+    !------------------------------------------------------------------
+    !  local Variables
+
+    INTEGER  :: jl, jk, itop_new !, itop_prev
+    REAL(wp) :: zmid(nidx,nsnow+2)
+    REAL(wp) :: z1(nidx)
+    REAL(wp) :: zd1(nidx,nsnow+1)
+    REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
+
+    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2)
+
+    ! ! Reset old values accounting for changes in number of snow layers
+    ! ! Note: this is not needed, as the temperatures for all layers are initialized in
+    ! !       the next section
+    ! !
+    ! !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    ! !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
+    ! DO jl=1,nidx
+    !   itop_new = itop(jl)
+    !   !$ACC LOOP SEQ
+    !   DO jk = 1, itop_new - 1
+    !     t_snow (jl,jk) = t_unfilt(jl)
+    !   END DO
+    !   !$ACC END LOOP
+    ! END DO
+    ! !$ACC END LOOP
+    ! !$ACC END PARALLEL
+    !
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO jl=1,nidx
+      DO jk=1,nsnow
+        t_snow(jl,jk) = t_unfilt(jl)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !-----------------------------------------------------------------------------------------------
+    !  Computation of new snow temperatures
+    !-----------------------------------------------------------------------------------------------
+    !
+    IF (.NOT. lstart) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO jl=1,nidx
+        DO jk=1,nsnow
+          IF (itop(jl) <= jk .AND. itop_old(jl) > nsnow) THEN         ! New snow layers on formerly snowfree soil
+            t_snow_acoef(jl,jk) = t_soil_acoef(jl)                    ! --> use old top soil coefficients
+            t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
+          ELSE IF (itop(jl) <= jk .AND. jk <= itop_old(jl)) THEN      ! zero+ new snow layers: from new top layer to top prev layer
+            t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_old(jl))       ! --> use old top snow coefficients
+            t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_old(jl))
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO jl=1,nidx
+        !$ACC LOOP SEQ
+        DO jk=2,nsnow
+          IF (jk > itop(jl)) THEN                                     ! Snow layers below new top layer
+            t_snow(jl,jk) = t_snow_acoef(jl,jk-1) + t_snow_bcoef(jl,jk-1) * t_snow(jl,jk-1)
+          END IF
+        END DO
+        !$ACC END LOOP
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO jl=1,nidx
+        ! New temperature for top soil layer (t_unfilt where there was or is no snow)
+        IF (itop(jl) <= nsnow) THEN
+          t_soil_top(jl) = t_snow_acoef(jl,nsnow) + t_snow_bcoef(jl,nsnow) * t_snow(jl,nsnow)
+        ELSE
+          t_soil_top(jl) = t_unfilt(jl)
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+
+    END IF
+
+  END SUBROUTINE calc_snow_temperature
+
+  SUBROUTINE calc_snow_abcoeff(           &
     & nidx, nsnow,                        &
     & dz_soil,                            &
     & delta_time, lstart,                 &
@@ -699,7 +864,7 @@ CONTAINS
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & t_snow, t_snow_acoef, t_snow_bcoef, &
-    & t_soil_top, hcap_grnd, grnd_hflx)
+    & hcap_grnd, grnd_hflx)
     !
     !
     !   AUTHOR:  FREDERIC HOURDIN     30/01/92
@@ -773,14 +938,12 @@ CONTAINS
     REAL(wp), INTENT(in)    :: vol_heat_cap_soil(:)       !! top soil layer volumetric heat capacity
     REAL(wp), INTENT(in)    :: heat_cond_soil(:)          !! top soil layer heat conductivity
     REAL(wp), INTENT(in)    :: t_soil_sl(:,:)             !! Temperature of soil layers [K]
-    REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! top soil layer A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! top soil layer B coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    :: t_soil_acoef(:,:)          !! top soil layer A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    :: t_soil_bcoef(:,:)          !! top soil layer B coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    :: t_snow(:,:)                !! snow temperature [K]
 
-    REAL(wp), INTENT(inout) :: t_snow(:,:)                !! snow temperature [K]
-    REAL(wp), INTENT(inout) :: t_snow_acoef(:,:)          !! snow A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(inout) :: t_snow_bcoef(:,:)          !! snow B coefficient of Richtmyer and Morton scheme
-
-    REAL(wp), INTENT(out)   :: t_soil_top(:)              !! new temperature of top soil layer
+    REAL(wp), INTENT(out)   :: t_snow_acoef(:,:)          !! snow A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(out)   :: t_snow_bcoef(:,:)          !! snow B coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(out)   :: hcap_grnd(:)               !! heat capacity of the top snow layer [J m-2 K-1]
     REAL(wp), INTENT(out)   :: grnd_hflx(:)               !! ground heat flux [J m-2 s-1]
 
@@ -801,7 +964,6 @@ CONTAINS
       t_soil_sl1(jl) = t_soil_sl(jl,1)
       grnd_hflx(jl) = 0._wp
       hcap_grnd(jl) = 0._wp
-      t_soil_top(jl) = t_unfilt(jl)
 
       !-----------------------------------------------------------------------------------------------
       !  Computation of useful constants
@@ -837,75 +999,6 @@ CONTAINS
       zd1(jl,nsnow+1) = 1._wp / (zmid(jl,nsnow+2) - zmid(jl,nsnow+1))
     END DO
     !$ACC END PARALLEL LOOP
-
-    ! Reset old values accounting for changes in number of snow layers
-    ! Note: this is not needed, as the temperatures for all layers are initialized in
-    !       the next section
-    !
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
-    DO jl=1,nidx
-      itop_new = itop(jl)
-      !$ACC LOOP SEQ
-      DO jk = 1, itop_new - 1
-        t_snow (jl,jk) = t_unfilt(jl)
-      END DO
-      !$ACC END LOOP
-    END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
-    !
-    !-----------------------------------------------------------------------------------------------
-    !  Computation of new snow temperatures
-    !-----------------------------------------------------------------------------------------------
-    !
-    IF (.NOT. lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-      DO jl=1,nidx
-        DO jk=1,nsnow
-          t_snow(jl,jk) = t_unfilt(jl)
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-      DO jl=1,nidx
-        DO jk=1,nsnow
-          IF (itop(jl) <= jk .AND. jk <= itop_old(jl)) THEN          ! zero+ new snow layers: from new top layer to top prev layer
-            t_snow(jl,jk) = t_unfilt(jl)
-          ELSE IF (itop(jl) > itop_old(jl) .AND. jk == itop(jl)) THEN ! snow present but fewer snow layers : new top layer
-            t_snow(jl,jk) = t_unfilt(jl)
-          END IF
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG VECTOR
-      DO jl=1,nidx
-        !$ACC LOOP SEQ
-        DO jk=2,nsnow
-          IF (jk > MAX(itop(jl), itop_old(jl))) THEN                  ! Snow layers below top new and old layer
-            t_snow(jl,jk) = t_snow_acoef(jl,jk-1) + t_snow_bcoef(jl,jk-1) * t_snow(jl,jk-1)
-          END IF
-        END DO
-        !$ACC END LOOP
-      END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO jl=1,nidx
-        ! New temperature for top soil layer (t_unfilt where there was or is no snow)
-        IF (MAX(itop(jl),itop_old(jl)) <= nsnow) THEN
-          t_soil_top(jl) = t_snow_acoef(jl,nsnow) + t_snow_bcoef(jl,nsnow) * t_snow(jl,nsnow)
-        ELSE
-          t_soil_top(jl) = t_unfilt(jl)
-        END IF
-      END DO
-      !$ACC END PARALLEL LOOP
-
-    END IF
 
     !
     !------------------------------------------------------------------------------------------------
@@ -944,8 +1037,8 @@ CONTAINS
 
       ! lowest snow layer
       IF (itop(jl) <= nsnow) THEN  ! Snow present
-        z1(jl) = 1._wp / (zdz2(jl,nsnow+1) + zdz1(jl,nsnow) + zdz1(jl,nsnow+1) * (1._wp - t_soil_bcoef(jl)))
-        t_snow_acoef(jl,nsnow) = (t_soil_sl1(jl) * zdz2(jl,nsnow+1) + zdz1(jl,nsnow+1) * t_soil_acoef(jl)) * z1(jl)
+        z1(jl) = 1._wp / (zdz2(jl,nsnow+1) + zdz1(jl,nsnow) + zdz1(jl,nsnow+1) * (1._wp - t_soil_bcoef(jl,1)))
+        t_snow_acoef(jl,nsnow) = (t_soil_sl(jl,1) * zdz2(jl,nsnow+1) + zdz1(jl,nsnow+1) * t_soil_acoef(jl,1)) * z1(jl)
         t_snow_bcoef(jl,nsnow) = zdz1(jl,nsnow) * z1(jl)
       ELSE
         t_snow_acoef(jl,nsnow) = 0._wp
@@ -989,7 +1082,7 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
-  END SUBROUTINE calc_snow_temperature
+  END SUBROUTINE calc_snow_abcoeff
 
   SUBROUTINE calc_soiltemp_old( &
     & nidx,nsoil,cdel,cmid,     &
