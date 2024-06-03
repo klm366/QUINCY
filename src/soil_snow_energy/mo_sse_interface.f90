@@ -186,7 +186,7 @@ CONTAINS
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
-    LOGICAL  :: lstart
+    LOGICAL  :: lstart, lbugfix
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
 
@@ -261,6 +261,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
+    lbugfix = dsl4jsb_Config(SSE_)%l_tempbugfix
 
     !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
@@ -385,8 +386,12 @@ CONTAINS
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
         IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
-          ! snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
-          snow_fract(ic) = 1._wp
+          IF (lbugfix) THEN
+            ! Assume equal snow cover for consistent richtmeyer morton coefficients
+            snow_fract(ic) = 1._wp
+          ELSE
+            snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
+          END IF
         ELSE
           snow_depth(ic) = 0._wp
           snow_fract(ic) = 0._wp
@@ -458,20 +463,22 @@ CONTAINS
         & t_soil_top         (:)  &
         & )
 
-!#ifdef _CRAYFTN
-!      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-!      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
-!#else
-!      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-!#endif
-!      DO ic = 1, nc
-!        IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-!          t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_unfilt_corrected(ic)
-!        ELSE                                ! No snow
-!          t_soil_top(ic) = t_unfilt_corrected(ic)
-!        END IF
-!      END DO
-!      !$ACC END PARALLEL LOOP
+      IF (.NOT. lbugfix) THEN
+#ifdef _CRAYFTN
+        ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+#else
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+#endif
+        DO ic = 1, nc
+          IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
+            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_unfilt_corrected(ic)
+          ELSE                                ! No snow
+            t_soil_top(ic) = t_unfilt_corrected(ic)
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -616,9 +623,12 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 #endif
     DO ic = 1,nc
-      IF (snow_depth_sl(ic,nsnow) > 0._wp) THEN
+      IF (snow_depth_sl(ic,nsnow) > 0._wp .AND. .NOT. lbugfix) THEN
         grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._wp - snow_fract(ic)) * grnd_hflx_soil(ic)
         hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._wp - snow_fract(ic)) * hcap_grnd_soil(ic)
+      ELSE IF (snow_depth_sl(ic,nsnow) > 0._wp .AND. lbugfix) THEN
+        grnd_hflx(ic) = grnd_hflx_snow(ic)
+        hcap_grnd(ic) = hcap_grnd_snow(ic)
       ELSE
         grnd_hflx(ic) = grnd_hflx_soil(ic)
         hcap_grnd(ic) = hcap_grnd_soil(ic)
