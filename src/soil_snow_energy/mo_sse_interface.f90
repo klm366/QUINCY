@@ -19,15 +19,15 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, t_jsb_grid
-  USE mo_jsb_grid,           ONLY: Get_vgrid, Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -129,7 +129,6 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
@@ -195,10 +194,6 @@ CONTAINS
     INTEGER                    :: nsoil, is, nsnow, isnow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
-    CHARACTER(len=8192) :: message_text_long ! long string for soil checks
-
-    REAL(wp), POINTER :: lat(:), lon(:)
-    REAL(wp) :: tile_fract(options%nc)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -218,11 +213,6 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
-
-    grid => Get_grid(model%grid_id)
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
     ! Get reference to variables for current block
     !
@@ -617,17 +607,6 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      DO ic = 1, nc
-        IF (t_soil_sl(ic,1) - t_snow(ic,nsnow) < -10.0_wp .AND. .NOT. lstart) THEN
-          WRITE (message_text_long,*) ' on tile ',tile%name, ' with fraction ', tile_fract(ic), ' at ', &
-            & lat(ic),'N and ',lon(ic),'E', '(',ic,')', NEW_LINE('a'), &
-            & 'Snow depths:               ', snow_depth_sl(ic,:), NEW_LINE('a'), &
-            & 'Surface temperature:       ', t_unfilt(ic),        NEW_LINE('a'), &
-            & 'Snow layer temperature:    ', t_snow(ic,:),        NEW_LINE('a'), &
-            & 'Soil layer temperature:    ', t_soil_sl(ic,:)
-          CALL finish ('SoilTempFail', message_text_long)
-        END IF
-      END DO
     END IF
 
 #ifdef _CRAYFTN
