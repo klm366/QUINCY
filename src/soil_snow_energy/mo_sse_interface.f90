@@ -138,8 +138,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-    dsl4jsb_Real3D_onChunk :: t_soil_acoef
-    dsl4jsb_Real3D_onChunk :: t_soil_bcoef
+    dsl4jsb_Real3D_onChunk :: dt_soil_withsnow_sl
+    dsl4jsb_Real3D_onChunk :: dt_soil_snowfree_sl
+    dsl4jsb_Real3D_onChunk :: t_soil_withsnow_acoef
+    dsl4jsb_Real3D_onChunk :: t_soil_withsnow_bcoef
+    dsl4jsb_Real3D_onChunk :: t_soil_snowfree_acoef
+    dsl4jsb_Real3D_onChunk :: t_soil_snowfree_bcoef
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
     dsl4jsb_Real3D_onChunk :: heat_cond_sl
     dsl4jsb_Real3D_onChunk :: t_snow
@@ -174,14 +178,23 @@ CONTAINS
       & snow_depth,                    &
       & snow_fract,                    &
       & t_unfilt_corrected,            &
-      & t_soil_top,                    &
+      & t_soil_withsnow_top,           &
       & hcap_grnd_snow,                &
       & hcap_grnd_soil,                &
       & grnd_hflx_snow,                &
       & grnd_hflx_soil
     LOGICAL, DIMENSION(options%nc)  :: &
       & ldglac
-    REAL(wp), ALLOCATABLE :: ws_max_sl(:,:)
+    REAL(wp), ALLOCATABLE ::           &
+      & ws_max_sl(:,:),                &
+      & t_soil_withsnow_sl(:,:),       &
+      & t_soil_snowfree_sl(:,:),       &
+      & wtr_freeze_withsnow_sl(:,:),   &
+      & wtr_freeze_snowfree_sl(:,:),   &
+      & ice_melt_withsnow_sl(:,:),     &
+      & ice_melt_snowfree_sl(:,:),     &
+      & wtr_scool_withsnow_sl(:,:),    &
+      & wtr_scool_snowfree_sl(:,:)
 
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
@@ -226,8 +239,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, dt_soil_withsnow_sl)   ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, dt_soil_snowfree_sl)   ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_withsnow_acoef) ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_withsnow_bcoef) ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_snowfree_acoef) ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_snowfree_bcoef) ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
@@ -263,7 +280,7 @@ CONTAINS
     lstart = is_time_experiment_start(options%current_datetime)
     lbugfix = dsl4jsb_Config(SSE_)%l_tempbugfix
 
-    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
+    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_withsnow_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
@@ -316,7 +333,7 @@ CONTAINS
 
       !$ACC WAIT(1)
       !$ACC EXIT DATA &
-      !$ACC   DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
+      !$ACC   DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_withsnow_top) &
       !$ACC   DELETE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
 
@@ -387,7 +404,7 @@ CONTAINS
         snow_fract(ic) = fract_snow_soil(ic)
         IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
           IF (lbugfix) THEN
-            ! Assume equal snow cover for consistent richtmeyer morton coefficients
+            ! Assume equal snow cover for consistent Richtmyer Morton coefficients
             snow_fract(ic) = 1._wp
           ELSE
             snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
@@ -445,40 +462,47 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! Derive soil temperatures for snow covered and snow free grid cell fraction
+
+      ALLOCATE(t_soil_withsnow_sl(nc,nsoil), t_soil_snowfree_sl(nc,nsoil))
+      !$ACC ENTER DATA CREATE(t_soil_withsnow_sl, t_soil_snowfree_sl)
+
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(1)
+#else
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+#endif
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          t_soil_withsnow_sl(ic,is) = t_soil_sl(ic,is) + dt_soil_snowfree_sl(ic,is)
+          t_soil_snowfree_sl(ic,is) = t_soil_sl(ic,is) + dt_soil_withsnow_sl(ic,is)
+        END DO
+        !$ACC END LOOP
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
+
       CALL calc_snow_temperature( &
         ! in
-        & nc,                     &
-        & nsnow,                  &
-        & lstart,                 &
-        & itop_old           (:), &
-        & itop               (:), &
-        & t_unfilt_corrected (:), &
-        & t_soil_acoef     (:,1), &
-        & t_soil_bcoef     (:,1), &
+        & nc,                         &
+        & nsnow,                      &
+        & lstart,                     &
+        & itop_old               (:), &
+        & itop                   (:), &
+        & t_unfilt_corrected     (:), &
+        & t_soil_withsnow_acoef(:,1), &
+        & t_soil_withsnow_bcoef(:,1), &
         ! inout
-        & t_snow           (:,:), &
-        & t_snow_acoef     (:,:), &
-        & t_snow_bcoef     (:,:), &
+        & t_snow               (:,:), &
+        & t_snow_acoef         (:,:), &
+        & t_snow_bcoef         (:,:), &
         ! out
-        & t_soil_top         (:)  &
+        & t_soil_withsnow_top    (:)  &
         & )
 
-      IF (.NOT. lbugfix) THEN
-#ifdef _CRAYFTN
-        ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
-#else
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-#endif
-        DO ic = 1, nc
-          IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_unfilt_corrected(ic)
-          ELSE                                ! No snow
-            t_soil_top(ic) = t_unfilt_corrected(ic)
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -502,7 +526,6 @@ CONTAINS
       DO ic = 1, nc
         snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / dens_snow
         snow_fract(ic) = 0._wp
-        t_soil_top(ic) = t_unfilt_corrected(ic)
         grnd_hflx_snow(ic) = 0._wp
         hcap_grnd_snow(ic) = 0._wp
       END DO
@@ -522,7 +545,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
-        & t_soil_top                          (:  ), &
+        & t_unfilt_corrected                  (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
@@ -536,7 +559,12 @@ CONTAINS
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
-      !$ACC ENTER DATA CREATE(ws_max_sl)
+      ALLOCATE(wtr_freeze_withsnow_sl(nc,nsoil), wtr_freeze_snowfree_sl(nc,nsoil))
+      ALLOCATE(ice_melt_withsnow_sl  (nc,nsoil), ice_melt_snowfree_sl  (nc,nsoil))
+      ALLOCATE(wtr_scool_withsnow_sl (nc,nsoil), wtr_scool_snowfree_sl (nc,nsoil))
+      !$ACC ENTER DATA CREATE(ws_max_sl, wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl) &
+      !$ACC   CREATE(ice_melt_withsnow_sl, ice_melt_snowfree_sl) &
+      !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
       !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
@@ -550,6 +578,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! Compute soil temperatures for snow-covered fraction
       CALL calc_soil_temperature( &
         ! in
         & nc                                       , &
@@ -560,13 +589,13 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
-        & t_soil_top                          (:  ), &
+        & t_soil_withsnow_top                 (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
-        & t_soil_sl                           (:,:), &
-        & t_soil_acoef                        (:,:), &
-        & t_soil_bcoef                        (:,:), &
+        & t_soil_withsnow_sl                  (:,:), &
+        & t_soil_withsnow_acoef               (:,:), &
+        & t_soil_withsnow_bcoef               (:,:), &
         ! out
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  ), &
@@ -576,13 +605,50 @@ CONTAINS
         & matrix_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
         ! optional, inout
-        & wtr_soil_sl                         (:,:), &
-        & ice_soil_sl                         (:,:), &
+        & wtr_soil_withsnow_sl                (:,:), &
+        & ice_soil_withsnow_sl                (:,:), &
         ! optional, out
-        & wtr_freeze_sl                       (:,:), &
-        & ice_melt_sl                         (:,:), &
-        & wtr_soil_pot_scool_sl               (:,:)  &
+        & wtr_freeze_withsnow_sl              (:,:), &
+        & ice_melt_withsnow_sl                (:,:), &
+        & wtr_scool_withsnow_sl               (:,:)  &
         & )
+
+      ! Compute soil temperatures for snow-free fraction (needs to be second to overwrite
+      !   the soil heat fluxes from the snow covered fraction!)
+      CALL calc_soil_temperature( &
+        ! in
+        & nc                                       , &
+        & nsoil                                    , &
+        & soil_e%dz(:)                             , &
+        & soil_e%levels(:)                         , &
+        & dtime                                    , &
+        & lstart                                   , &
+        & dsl4jsb_Config(SSE_)%l_freeze            , &
+        & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & t_unfilt_corrected                  (:  ), &
+        & vol_heat_cap_sl                     (:,:), &
+        & heat_cond_sl                        (:,:), &
+        ! inout
+        & t_soil_snowfree_sl                  (:,:), &
+        & t_soil_snowfree_acoef               (:,:), &
+        & t_soil_snowfree_bcoef               (:,:), &
+        ! out
+        & hcap_grnd_soil                      (:  ), &
+        & grnd_hflx_soil                      (:  ), &
+        & thaw_depth                          (:  ), &
+        ! optional, in
+        & ws_max_sl                           (:,:), &
+        & matrix_pot_sl                       (:,:), &
+        & bclapp_sl                           (:,:), &
+        ! optional, inout
+        & wtr_soil_snowfree_sl                (:,:), &
+        & ice_soil_snowfree_sl                (:,:), &
+        ! optional, out
+        & wtr_freeze_snowfree_sl              (:,:), &
+        & ice_melt_snowfree_sl                (:,:), &
+        & wtr_scool_snowfree_sl               (:,:)  &
+        & )
+
       !$ACC WAIT(1)
       !$ACC EXIT DATA DELETE(ws_max_sl)
       DEALLOCATE(ws_max_sl)
@@ -614,6 +680,40 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(1)
+#else
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+#endif
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          ! Get average soil temperatures for cells with snow covered and snow free parts
+          ! and differences between soil column tile mean soil temperatures
+          t_soil_sl(ic,is)             = snow_fract(ic) * t_soil_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * t_soil_snowfree_sl(ic,is)
+          wtr_freeze_sl(ic,is)         = snow_fract(ic) * wtr_freeze_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * wtr_freeze_snowfree_sl(ic,is)
+          ice_melt_sl(ic,is)           = snow_fract(ic) * ice_melt_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * ice_melt_snowfree_sl(ic,is)
+          wtr_soil_pot_scool_sl(ic,is) = snow_fract(ic) * wtr_scool_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * wtr_scool_snowfree_sl(ic,is)
+          dt_soil_withsnow_sl(ic,is)   = t_soil_withsnow_sl(ic,is) - t_soil_sl(ic,is)
+          dt_soil_snowfree_sl(ic,is)   = t_soil_snowfree_sl(ic,is) - t_soil_sl(ic,is)
+        END DO
+        !$ACC END LOOP
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
+
+      !$ACC EXIT DATA DELETE(t_soil_withsnow_sl, t_soil_snowfree_sl, wtr_freeze_withsnow_sl) &
+      !$ACC   DELETE(wtr_freeze_snowfree_sl, ice_melt_withsnow_sl, ice_melt_snowfree_sl)     &
+      !$ACC   DELETE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
+      DEALLOCATE(t_soil_withsnow_sl, t_soil_snowfree_sl, wtr_freeze_withsnow_sl)
+      DEALLOCATE(wtr_freeze_snowfree_sl, ice_melt_withsnow_sl, ice_melt_snowfree_sl)
+      DEALLOCATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
     END IF
 
 #ifdef _CRAYFTN
@@ -637,7 +737,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     !$ACC WAIT(1)
-    !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, hcap_grnd_snow) &
+    !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_withsnow_top, hcap_grnd_snow) &
     !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

@@ -45,16 +45,20 @@ MODULE mo_sse_memory_class
       & heat_cond_snow,       & !< Thermal conductivity of snow [J m-1 s-1 K-1]
       & thermal_diffusivity     !< Thermal diffusivity of soil [m2 s-1]
     !
-    TYPE(t_jsb_var_real3d) :: &
-      & vol_heat_cap_sl,      & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
-      & heat_cond_sl,         & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
-      & t_soil_sl,            & !< Temperature of soil layers [K]
-      & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
-      & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
-      & snow_depth_sl,        & !< Depth of snow layers [m]
-      & t_snow,               & !< Temperature of snow layers [K]
-      & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
-      & t_snow_bcoef            !< Snow B coefficient of Richtmeyer and Morton scheme
+    TYPE(t_jsb_var_real3d) ::  &
+      & vol_heat_cap_sl,       & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
+      & heat_cond_sl,          & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
+      & t_soil_sl,             & !< Temperature of soil layers [K]
+      & dt_soil_withsnow_sl,   & !< Difference between snow-covered and tile avg soil layers temperatures [K]
+      & dt_soil_snowfree_sl,   & !< Difference between snow-free and tile avg soil layers temperatures [K]
+      & t_soil_withsnow_acoef, & !< Soil A coefficient of Richtmeyer and Morton scheme for snow covered fraction
+      & t_soil_withsnow_bcoef, & !< Soil B coefficient of Richtmeyer and Morton scheme for snow covered fraction
+      & t_soil_snowfree_acoef, & !< Soil A coefficient of Richtmeyer and Morton scheme for snow free fraction
+      & t_soil_snowfree_bcoef, & !< Soil B coefficient of Richtmeyer and Morton scheme for snow free fraction
+      & snow_depth_sl,         & !< Depth of snow layers [m]
+      & t_snow,                & !< Temperature of snow layers [K]
+      & t_snow_acoef,          & !< Snow A coefficient of Richtmeyer and Morton scheme
+      & t_snow_bcoef             !< Snow B coefficient of Richtmeyer and Morton scheme
     TYPE(t_jsb_var_real2d) :: &
       & hcap_grnd,            & !< Heat capacity of the ground (uppermost layer)        [J m-2 K-1]
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
@@ -176,16 +180,52 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
 
-    CALL mem%Add_var( 't_soil_acoef', mem%t_soil_acoef,                      &
+    CALL mem%Add_var( 'dt_soil_withsnow_sl', mem%dt_soil_withsnow_sl,        &
       & hgrid, soil_e,                                                       &
-      & t_cf('soil_temperature_acoef', '', ''),                              &
+      & t_cf('soil_temperature_difference', 'K',                             &
+      &      'Soil temp diff. between snow-covered fraction and mean'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'dt_soil_snowfree_sl', mem%dt_soil_snowfree_sl,        &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_difference', 'K',                             &
+      &      'Soil temp diff. between snow-free fraction and mean'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 't_soil_withsnow_acoef', mem%t_soil_withsnow_acoef,    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_acoef_withsnow', '',                          &
+      &      'Soil temperature A coefficient for snow covered soil'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 't_soil_bcoef', mem%t_soil_bcoef,                      &
+    CALL mem%Add_var( 't_soil_withsnow_bcoef', mem%t_soil_withsnow_bcoef,    &
       & hgrid, soil_e,                                                       &
-      & t_cf('soil_temperature_bcoef', '', ''),                              &
+      & t_cf('soil_temperature_bcoef_withsnow', '',                          &
+      &      'Soil temperature B coefficient for snow covered soil'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 't_soil_snowfree_acoef', mem%t_soil_snowfree_acoef,    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_acoef_snowfree', '',                          &
+      &      'Soil temperature A coefficient for snow free soil'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 't_soil_snowfree_bcoef', mem%t_soil_snowfree_bcoef,    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_bcoef_snowfree', '',                          &
+      &      'Soil temperature B coefficient for snow free soil'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
