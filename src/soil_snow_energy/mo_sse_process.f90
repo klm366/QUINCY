@@ -841,11 +841,18 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO jl=1,nidx
         ! New temperature for top soil layer (t_unfilt where there was or is no snow)
-        IF (itop(jl) <= nsnow) THEN
+        IF (MAX(itop(jl), itop_old(jl)) <= nsnow) THEN
           t_soil_top(jl) = t_snow_acoef(jl,nsnow) + t_snow_bcoef(jl,nsnow) * t_snow(jl,nsnow)
         ELSE
           t_soil_top(jl) = t_unfilt(jl)
         END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO jl=1,nidx
+        t_soil_top(jl) = t_unfilt(jl)
       END DO
       !$ACC END PARALLEL LOOP
 
