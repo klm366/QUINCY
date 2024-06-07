@@ -590,11 +590,8 @@ CONTAINS
         & nsnow,                  &
         & soil_e%dz(1:2),         &
         & dtime,                  &
-        & lstart,                 &
         & snow_depth_sl    (:,:), &
-        & itop_old           (:), &
         & itop               (:), &
-        & t_unfilt_corrected (:), &
         & vol_heat_cap_snow  (:), &
         & heat_cond_snow     (:), &
         & vol_heat_cap_sl  (:,1), &

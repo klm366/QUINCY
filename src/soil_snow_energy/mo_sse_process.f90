@@ -772,31 +772,8 @@ CONTAINS
     !------------------------------------------------------------------
     !  local Variables
 
-    INTEGER  :: jl, jk, itop_new !, itop_prev
-    REAL(wp) :: zmid(nidx,nsnow+2)
-    REAL(wp) :: z1(nidx)
-    REAL(wp) :: zd1(nidx,nsnow+1)
-    REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
+    INTEGER  :: jl, jk
 
-    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2)
-
-    ! ! Reset old values accounting for changes in number of snow layers
-    ! ! Note: this is not needed, as the temperatures for all layers are initialized in
-    ! !       the next section
-    ! !
-    ! !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    ! !$ACC LOOP GANG VECTOR PRIVATE(itop_new)
-    ! DO jl=1,nidx
-    !   itop_new = itop(jl)
-    !   !$ACC LOOP SEQ
-    !   DO jk = 1, itop_new - 1
-    !     t_snow (jl,jk) = t_unfilt(jl)
-    !   END DO
-    !   !$ACC END LOOP
-    ! END DO
-    ! !$ACC END LOOP
-    ! !$ACC END PARALLEL
-    !
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO jl=1,nidx
       DO jk=1,nsnow
@@ -863,9 +840,8 @@ CONTAINS
   SUBROUTINE calc_snow_abcoeff(           &
     & nidx, nsnow,                        &
     & dz_soil,                            &
-    & delta_time, lstart,                 &
-    & dz, itop_old, itop,                 &
-    & t_unfilt,                           &
+    & delta_time,                         &
+    & dz, itop,                           &
     & vol_heat_cap, heat_cond,            &
     & vol_heat_cap_soil, heat_cond_soil,  &
     & t_soil_sl,                          &
@@ -935,11 +911,9 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nidx                       !! length of the vector
     INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
     REAL(wp), INTENT(in)    :: delta_time                 !! Time step
-    LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
     REAL(wp), INTENT(in)    :: dz(:,:)                    !! (dynamic) snow layer thickness [m]
     REAL(wp), INTENT(in)    :: dz_soil(2)                 !! Thickness of two uppermost soil layers [m]
-    INTEGER,  INTENT(in)    :: itop(:), itop_old(:)       !! Top snow layer for previous and new time step
-    REAL(wp), INTENT(in)    :: t_unfilt(:)                !! surface temperature at top of snow [K]
+    INTEGER,  INTENT(in)    :: itop(:)                    !! Top snow layer for previous and new time step
     REAL(wp), INTENT(in)    :: vol_heat_cap(:)            !! snow volumetric heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    :: heat_cond(:)               !! snow thermal conductivity [J/m/s/K]
     REAL(wp), INTENT(in)    :: vol_heat_cap_soil(:)       !! top soil layer volumetric heat capacity
@@ -962,13 +936,11 @@ CONTAINS
     REAL(wp) :: z1(nidx)
     REAL(wp) :: zd1(nidx,nsnow+1)
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
-    REAL(wp) :: t_soil_sl1(nidx)                  !< t_soil_sl(:,1)
 
-    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
+    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2)
 
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC(1)
     DO jl=1,nidx
-      t_soil_sl1(jl) = t_soil_sl(jl,1)
       grnd_hflx(jl) = 0._wp
       hcap_grnd(jl) = 0._wp
 
