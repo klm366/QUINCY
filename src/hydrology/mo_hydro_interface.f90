@@ -671,13 +671,15 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
       DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR
         DO  ic = 1, nc
           weq_soil(ic) = weq_soil(ic) + weq_soil_sl_tmp(ic,is)
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END PARALLEL
 
       !$ACC WAIT(1)
 
