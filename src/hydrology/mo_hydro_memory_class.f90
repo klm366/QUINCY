@@ -66,20 +66,19 @@ MODULE mo_hydro_memory_class
       & weq_balance_err         !< Land water balance error within a time step                          [m3/(time step)]
 
     TYPE(t_jsb_var_real2d) :: &
-      & infilt,               & !< infiltration
-      & runoff,               & !< surface runoff
-      & infilt_over,          & !< overflow of top soil layer
-      & drainage,             & !< total drainage
-      & drain_rock,           & !< bottom drainage
-      & drain_lat,            & !< subsurface lateral drainage
-      & discharge,            & !< discharge (local)
-      & discharge_ocean,      & !< discharge to the ocean
-      & internal_drain          !< internal drain
+      & infilt,               & !< Infiltration
+      & runoff,               & !< Surface runoff
+      & runoff_horton,        & !< Horton component of surface runoff (infiltration excess)
+      & runoff_dunne,         & !< Dunne component of surface runoff (saturation excess)
+      & drainage,             & !< Total subsurface drainage
+      & discharge,            & !< Discharge (local)
+      & discharge_ocean,      & !< Discharge to the ocean
+      & internal_drain          !< Internal drain
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
       & oro_stddev,           & !< Standard deviation of orography
-      & steepness               !< parameter defining the subgrid slope distribution [/]
+      & steepness               !< Parameter defining the subgrid slope distribution [/]
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -101,9 +100,10 @@ MODULE mo_hydro_memory_class
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
+      & vol_wres,             & !< Volumetric residual water content                                   [m/m]
       & pore_size_index,      & !< Soil pore size distribution index                                   []
       & bclapp,               & !< Exponent B in Clapp and Hornberger
-      & matrix_pot,           & !< Matrix potential [m]
+      & matric_pot,           & !< Soil matric potential [m]
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
@@ -126,17 +126,21 @@ MODULE mo_hydro_memory_class
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
       & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
       & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
+      & vol_wres_sl,          & !< Volumetric residual water content                                        [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
-      & matrix_pot_sl,        & !< Matrix potential                                                         [m]
+      & matric_pot_sl,        & !< Soil matric potential                                                    [m]
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
+      & drainage_sl,          & !< Subsurface drainage from soil layers                                     [kg m-2 s-1]
+      & wtr_transp_down,      & !< Lateral water transport into next-deeper soil layer                      [kg m-2 s-1]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
-      & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
+      & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice) [m]
+      & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice)            [m]
       & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
 
     ! Additional variables for PFT lct_type
@@ -329,9 +333,17 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'infilt_over', mem%infilt_over,                                &
+    CALL mem%Add_var( 'runoff_horton', mem%runoff_horton,                            &
       & hgrid, surface,                                                              &
-      & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
+      & t_cf('runoff_horton', 'kg m-2 s-1', 'Horton component of surface runoff'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'runoff_dunne', mem%runoff_dunne,                              &
+      & hgrid, surface,                                                              &
+      & t_cf('runoff_dunne', 'kg m-2 s-1', 'Dunne component of surface runoff'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -346,20 +358,14 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'drain_rock', mem%drain_rock,                                  &
-      & hgrid, surface,                                                              &
-      & t_cf('drain_rock', 'kg m-2 s-1', 'Bottom drainage'),                         &
+    CALL mem%Add_var( 'wtr_transp_down', mem%wtr_transp_down,                        &
+      & hgrid, soil_w,                                                               &
+      & t_cf('wtr_transp_down', 'kg m-2 s-1',                                        &
+      &      'Downwards transport of water into next deeper soil layer'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'drain_lat', mem%drain_lat,                                    &
-      & hgrid, surface,                                                              &
-      & t_cf('drain_lat', 'kg m-2 s-1', 'Subsurface lateral drainage'),              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
@@ -606,6 +612,22 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'vol_wres', mem%vol_wres,                              &
+        & hgrid, surface,                                                      &
+        & t_cf('vol_wres', 'm/m', 'Volumetric residual water content'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'vol_wres_sl', mem%vol_wres_sl,                        &
+        & hgrid, soil_w,                                                       &
+        & t_cf('vol_wres_sl', 'm/m', 'Volumetric residual water content'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp )
+
       CALL mem%Add_var( 'pore_size_index', mem%pore_size_index,                &
         & hgrid, surface,                                                      &
         & t_cf('pore_size_index', '', 'Soil pore size distribution index'),    &
@@ -638,17 +660,17 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'matrix_pot', mem%matrix_pot,                          &
+      CALL mem%Add_var( 'matric_pot', mem%matric_pot,                          &
         & hgrid, surface,                                                      &
-        & t_cf('matrix_pot', 'm', 'Soil saturated matrix potential'),          &
+        & t_cf('matric_pot', 'm', 'Soil saturated matric potential'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'matrix_pot_sl', mem%matrix_pot_sl,                    &
+      CALL mem%Add_var( 'matric_pot_sl', mem%matric_pot_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('matrix_pot_sl', 'm', 'Soil saturated matrix potential'),       &
+        & t_cf('matric_pot_sl', 'm', 'Soil saturated matric potential'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -708,7 +730,6 @@ CONTAINS
         & loutput=.TRUE.,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
 
       CALL mem%Add_var( 'evapo_skin', mem%evapo_skin,                          &
         & hgrid, surface,                                                      &
@@ -804,6 +825,14 @@ CONTAINS
         & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'drainage_sl', mem%drainage_sl,                                  &
+        & hgrid, soil_w,                                                                 &
+        & t_cf('drainage_sl', 'kg m-2 s-1', 'Subsurface drainage on soil layers'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE.,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'wtr_soil_sat_sl', mem%wtr_soil_sat_sl,                          &
         & hgrid, soil_w,                                                                 &
         & t_cf('wtr_soil_sat_sl', 'm', 'Water content in soil layers at saturation'),    &
@@ -824,6 +853,15 @@ CONTAINS
         & hgrid, soil_w,                                                                 &
         & t_cf('wtr_soil_pwp_sl', 'm',                                                   &
         &      'Water content in soil layers at permanent wilting point'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & loutput=.TRUE.,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_soil_res_sl', mem%wtr_soil_res_sl,                          &
+        & hgrid, soil_w,                                                                 &
+        & t_cf('wtr_soil_res_sl', 'm',                                                   &
+        &      'Residual water content in soil layers'),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
@@ -1003,6 +1041,7 @@ CONTAINS
         & t_cf('water_stress', '-', 'Water stress factor'),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
