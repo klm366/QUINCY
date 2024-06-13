@@ -109,8 +109,8 @@ CONTAINS
 
   FUNCTION get_relative_humidity_air(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
 
-    USE mo_physical_constants_iface, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
-    USE mo_physical_constants_iface, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
+    USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
+    USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
 
     INTEGER, INTENT(in)  :: nc
     REAL(wp), INTENT(in) :: &

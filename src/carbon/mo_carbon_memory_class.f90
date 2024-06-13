@@ -268,6 +268,7 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
+
     IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model => Get_model(model_id)
@@ -280,7 +281,7 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
 
-! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
+    ! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
     CALL mem%Add_var('n_pseudo_temp', mem%N_pseudo_temp,                                             &
       & hgrid, surface,                                                                              &
       & t_cf('N_pseudo_temp', 'K', 'Normalization for computing pseudo-15-day mean air temperature'),    &

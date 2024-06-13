@@ -28,10 +28,10 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
-  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1
+  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
 
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -41,12 +41,13 @@ MODULE mo_jsb4_forcing
     & nf90_get_att, NF90_MAX_NAME, NF90_NOERR
 
   USE mo_jsb_class,              ONLY: get_model
+  USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
-    &       forcing_options
+    &       forcing_options, forcing_options_quincy
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -100,12 +101,18 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
+  ! ... and deposition for QUINCY
+  CHARACTER(len=*), PARAMETER :: nhxdep_varname = 'NHx_deposition'
+  CHARACTER(len=*), PARAMETER :: noydep_varname = 'NOy_deposition'
+  CHARACTER(len=*), PARAMETER :: pdep_varname = 'pdep'
 
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
+  CHARACTER(len=*), PARAMETER :: unit_kg_m2_s = 'kg/m2/s'
+  CHARACTER(len=*), PARAMETER :: exp_unit_deposition = unit_kg_m2_s
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
@@ -130,7 +137,7 @@ MODULE mo_jsb4_forcing
 
   ! ======================================================================================================= !
   !>
-  !> Forcing related namelist options
+  !> Forcing-related namelist options
   !>
   TYPE forcing_options_type
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
@@ -150,7 +157,25 @@ MODULE mo_jsb4_forcing
 
   ! ======================================================================================================= !
   !>
-  !> Information on the forcing variables
+  !> this TYPE is NOT used with QUINCY in ICON-Land
+  !> implemented here for compatibility with QS (the quincy standalone model)
+  !>
+  !  QUINCY model
+  TYPE t_q_forcing_options
+    ! namelist
+    ! ..
+    ! calculated
+    ! ..
+    ! read from forcing files
+    INTEGER  :: forcing_year = 0
+    INTEGER  :: forcing_doy  = 0
+    REAL(wp) :: forcing_hour = 0.0_wp
+  END TYPE t_q_forcing_options
+  TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
+
+  ! ======================================================================================================= !
+  !>
+  !> information for single forcing variable and the file it is read from
   !>
   TYPE input_variable_type
     CHARACTER(NF90_MAX_NAME) :: variable_name=""       !! Name of the variable (name in netcdf-data file)
@@ -184,6 +209,10 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
+     ! ... required for Quincy
+     TYPE(input_variable_type) :: nhx_dep       !! NHx deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: noy_dep       !! NOy deposition (dry+wet) [kg/m2/s]
+     TYPE(input_variable_type) :: p_dep         !! P deposition [kg/m2/s]
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
 
@@ -197,16 +226,21 @@ CONTAINS
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !>
   SUBROUTINE get_standalone_driver(                                                        &
-    & model_id, startblk, endblk, startidx, endidx,                                        &  ! in
+    & model_id,                                                                            &  ! in
+    & model_scheme,                                                                        &
+    & startblk, endblk, startidx, endidx,                                                  &
     & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
     & cos_zenith_angle,                                                                    &  ! in
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf                         &
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & p_deposition                                                                         &
     & )
 
     INTEGER,  INTENT(IN)  :: model_id
+    INTEGER,  INTENT(IN)  :: model_scheme
     INTEGER,  INTENT(IN)  :: startblk
     INTEGER,  INTENT(IN)  :: endblk
     INTEGER,  INTENT(IN)  :: startidx(:)
@@ -219,7 +253,6 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
-
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
@@ -233,10 +266,14 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
-    INTEGER               :: nproma, iblk, nblks, ics, ice, ic
+    INTEGER               :: nproma, iblk, nblks, ics, ice, ic, it
     INTEGER               :: day_of_year
     REAL(wp), ALLOCATABLE :: t_air_C(:,:), &
       &                      tmax_data(:,:), &
@@ -245,50 +282,61 @@ CONTAINS
       &                      sat_spec_humidity(:,:), &
       &                      rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
-
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:)
     REAL(wp), ALLOCATABLE :: help2(:,:)
+    REAL(wp), ALLOCATABLE :: tmp(:,:)
+    REAL(wp) :: argMin, argMax
+    LOGICAL  :: use_quincy
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver'
     ! ----------------------------------------------------------------------------------------------------- !
 
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
+    use_quincy = (model_scheme == MODEL_QUINCY)
 
     nproma = SIZE(sinlat,1)
     nblks  = SIZE(sinlat,2)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ALLOCATE(sat_spec_humidity(nproma, nblks))
     ALLOCATE(help1(nproma, nblks))
     ALLOCATE(help2(nproma, nblks))
     ALLOCATE(temporary_data1(nproma, nblks))
-    ALLOCATE(t_air_C(nproma, nblks))
-    ALLOCATE(rel_humidity(nproma, nblks))
-    ALLOCATE(rad_uv_down(nproma, nblks))
-    IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
-      ALLOCATE(tmin_data(nproma, nblks))
-      ALLOCATE(tmax_data(nproma, nblks))
-    ENDIF
+    !$ACC ENTER DATA CREATE(help1, help2, temporary_data1)
+
     ! ----------------------------------------------------------------------------------------------------- !
 
-!$OMP PARALLEL
     ! Initialization needed for grid cells beyond icz
-    CO2_air(:,:)           = 0._wp
-    t_air(:,:)             = 0._wp
-    q_air(:,:)             = 0._wp
-    rain(:,:)              = 0._wp
-    snow(:,:)              = 0._wp
-    wind_air(:,:)          = 0._wp
-    wind_10m(:,:)          = 0._wp
-    lw_srf_down(:,:)       = 0._wp
-    swvis_srf_down(:,:)    = 0._wp
-    swnir_srf_down(:,:)    = 0._wp
-    swpar_srf_down(:,:)    = 0._wp
-    fract_par_diffuse(:,:) = 0._wp
-    press_srf(:,:)         = 0._wp
-    sat_spec_humidity(:,:) = 0._wp
-!$OMP END PARALLEL
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG VECTOR COLLAPSE(2)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        CO2_air(ic, iblk)           = 0._wp
+        t_air(ic, iblk)             = 0._wp
+        q_air(ic, iblk)             = 0._wp
+        rain(ic, iblk)              = 0._wp
+        snow(ic, iblk)              = 0._wp
+        wind_air(ic, iblk)          = 0._wp
+        wind_10m(ic, iblk)          = 0._wp
+        lw_srf_down(ic, iblk)       = 0._wp
+        swvis_srf_down(ic, iblk)    = 0._wp
+        swnir_srf_down(ic, iblk)    = 0._wp
+        swpar_srf_down(ic, iblk)    = 0._wp
+        fract_par_diffuse(ic, iblk) = 0._wp
+        press_srf(ic, iblk)         = 0._wp
+        IF (use_quincy) THEN
+          nhx_deposition(ic, iblk)     = 0._wp
+          noy_deposition(ic, iblk)     = 0._wp
+          nhx_n15_deposition(ic, iblk) = 0._wp
+          noy_n15_deposition(ic, iblk) = 0._wp
+          p_deposition(ic, iblk)       = 0._wp
+        END IF
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL
+!$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 Temperature
@@ -296,42 +344,126 @@ CONTAINS
     !>   Depending on the forcing frequency different variables are used: Tmin and Tmax need daily forcing,
     !>   while air_temp needs timestep-wise forcing.
     !>
+
+    ALLOCATE(t_air_C(nproma, nblks))
+    !$ACC ENTER DATA CREATE(t_air_C)
+
     IF(forcing_options(model_id)%air_temperature_as_timestep) THEN
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing option %air_temperature_as_timestep not ported to GPU, yet. Stop.')
+#endif
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp, t_air_C)
+      !$ACC UPDATE DEVICE(t_air_C) ASYNC(1)
     ELSE
+      ALLOCATE(tmin_data(nproma, nblks))
+      ALLOCATE(tmax_data(nproma, nblks))
+      !$ACC ENTER DATA CREATE(tmin_data, tmax_data)
+
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp_min, tmin_data)
+      !$ACC UPDATE DEVICE(tmin_data) ASYNC(1)
+
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp_max, tmax_data)
-      ! estimate temperature at time step from daily temperature maximum and temperature minimum
+      !$ACC UPDATE DEVICE(tmax_data) ASYNC(1)
+
+        ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(startblk, endblk, startidx, endidx, &
         & lon, sinlat, coslat, tmin_data, tmax_data, next_datetime, t_air_C)
     ENDIF
+
     ! convert degC to Kelvin
-    t_air(:,:) = t_air_C(:,:) + tmelt
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        t_air(ic, iblk) = t_air_C(ic, iblk) + tmelt
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Precipitation
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       &                            forcing_input(model_id)%precipitation, temporary_data1)
+    !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
+
     ! convert if required
-    IF (forcing_options(model_id)%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
+    IF(forcing_options(model_id)%precip_in_mm_per_day) THEN
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing option %precip_in_mm_per_day not ported to GPU, yet. Stop.')
+#endif
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
+          temporary_data1(ic, iblk) = temporary_data1(ic, iblk) * conv_prec_day
+        ENDDO
+      ENDDO
+      !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+    END IF
+
     ! compute rain and snow
-    IF (forcing_options(model_id)%air_temperature_as_timestep) THEN
-      IF (forcing_input(model_id)%precipitation%frequency == DAILY_) THEN
+    IF(forcing_options(model_id)%air_temperature_as_timestep) THEN
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing option %air_temperature_as_timestep not ported to GPU, yet. Stop.')
+#endif
+      IF(forcing_input(model_id)%precipitation%frequency == DAILY_) THEN
         ! In case of daily precipitation the minimum and maximum read for air_temp are used
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:),   &
-          &  0.5_wp*(MAXVAL(forcing_input(model_id)%air_temp%data_read(:,:,:),DIM=3) &
-          &        + MINVAL(forcing_input(model_id)%air_temp%data_read(:,:,:),DIM=3)))
+!$OMP PARALLEL DO PRIVATE(iblk, ic, it, argMin, argMax)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP GANG VECTOR COLLAPSE(2) PRIVATE(it, argMin, argMax)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+              argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
+              argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
+
+              DO it = 1, SIZE(forcing_input(model_id)%air_temp%data_read,3)
+                  IF(argMin > forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
+                    argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
+                  ENDIF
+                  IF(argMax < forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
+                    argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
+                  ENDIF
+              ENDDO
+
+              CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
+                &                             0.5_wp*(argMin + argMax))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL
+!$OMP END PARALLEL DO
+
       ELSE
         ! else currentvalue
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), t_air_C(:,:))
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
+            & t_air_C(ic, iblk))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
       ENDIF
     ELSE
-      CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
-        & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
+
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
+          CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
+            &                            0.5_wp*(tmax_data(ic, iblk) + tmin_data(ic, iblk)))
+        ENDDO
+      ENDDO
+      !$ACC END PARALLEL LOOP
+
     ENDIF
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -341,28 +473,57 @@ CONTAINS
     DO iblk = startblk, endblk
       ics = startidx(iblk)
       ice = endidx  (iblk)
-      press_srf(ics:ice,iblk) = bottom_pressure(elevation(ics:ice,iblk), t_air_C(ics:ice,iblk))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = ics, ice
+        press_srf(ic,iblk) = bottom_pressure(elevation(ic,iblk), t_air_C(ic,iblk))
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDDO
 !$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.0 Compute specific humidity
     !>
+    ALLOCATE(sat_spec_humidity(nproma, nblks), tmp(nproma, nblks))
+    !$ACC ENTER DATA CREATE(sat_spec_humidity, tmp)
+
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        sat_spec_humidity(ic, iblk) = 0._wp
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
     SELECT CASE(forcing_options(model_id)%type_of_qair_forcing)
     CASE(NONE_)
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing option %type_of_qair_forcing==NONE_ not ported to GPU, yet. Stop.')
+#endif
       ! ratio of actual to potential evapotranspiration from the previous day
       IF (forcing_options(model_id)%air_temperature_as_timestep) THEN
-        temporary_data1 = vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, &
-          & evapo_act2pot_proc(:,:), MINVAL(forcing_input(model_id)%air_temp%data_read(:,:,:), DIM=3), t_air_C(:,:))
+        !$ACC KERNELS DEFAULT(PRESENT)
+        tmp(:,:) = MINVAL(forcing_input(model_id)%air_temp%data_read(:,:,:), DIM=3)
+        !$ACC END KERNELS
+        CALL vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_act2pot_proc(:,:), &
+                                         tmp(:,:), t_air_C(:,:), temporary_data1(:,:))
       ELSE
-        temporary_data1 = vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, &
-          & evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
+        CALL vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_act2pot_proc(:,:),  &
+          &                              tmin_data(:,:), t_air_C(:,:), temporary_data1(:,:))
       ENDIF
-      q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
-    ! @TODO add docu
+      CALL fun_specific_humidity_2d(temporary_data1(:,:), press_srf(:,:), q_air(:,:))
+
     CASE(RH_)
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing option %type_of_qair_forcing==RH_ not ported to GPU, yet. Stop.')
+#endif
+      ALLOCATE(rel_humidity(nproma, nblks))
+      !$ACC ENTER DATA CREATE(rel_humidity)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         &                            forcing_input(model_id)%rel_humidity, rel_humidity)
+      !$ACC UPDATE DEVICE(rel_humidity) ASYNC(1)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
@@ -372,11 +533,13 @@ CONTAINS
       ENDIF
       ! Convert percentage data to fractional data:
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk=1,nblks
         DO ic=1,nproma
           rel_humidity(ic,iblk) = rel_humidity(ic,iblk)/100._wp
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
       ! Get saturation spec. humidity from air temperature
       DO iblk = startblk, endblk
@@ -388,11 +551,13 @@ CONTAINS
       IF (     forcing_input(model_id)%rel_humidity%frequency == TIMESTEP_ &
         & .OR. forcing_input(model_id)%rel_humidity%frequency == SUBDAILY_) THEN
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO iblk=1,nblks
             DO ic=1,nproma
               q_air(ic,iblk) = rel_humidity(ic,iblk) * sat_spec_humidity(ic,iblk) !TODO: Why *?
             END DO
           END DO
+          !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
       ELSE
         IF (forcing_options(model_id)%air_temperature_as_timestep) THEN
@@ -415,17 +580,26 @@ CONTAINS
         ENDIF
         ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk=1,nblks
           DO ic=1,nproma
             q_air(ic,iblk) = MIN(q_air(ic,iblk), sat_spec_humidity(ic,iblk))
           END DO
         END DO
+        !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
       ENDIF
+      !$ACC WAIT(1)
+      !$ACC EXIT DATA DELETE(rel_humidity)
+      DEALLOCATE(rel_humidity)
+
     ! @TODO add docu
+
     CASE(QAIR_)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%qair, q_air(:,:))
+      !$ACC UPDATE DEVICE(q_air) ASYNC(1)
+
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = startblk, endblk
         ics = startidx(iblk)
@@ -433,20 +607,31 @@ CONTAINS
         CALL sat_specific_humidity(t_air(ics:ice,iblk), press_srf(ics:ice,iblk), sat_spec_humidity(ics:ice,iblk))
       ENDDO
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk=1,nblks
         DO ic=1,nproma
           q_air(ic,iblk) = MIN(q_air(ic,iblk),sat_spec_humidity(ic,iblk))
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
     END SELECT
+
+    !$ACC WAIT(1)
+    !$ACC EXIT DATA DELETE(sat_spec_humidity, tmp)
+    DEALLOCATE(sat_spec_humidity, tmp)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 5.0 Compute shortwave radiation
     !>
     day_of_year=day_in_year(next_datetime)
+
+    ALLOCATE(rad_uv_down(nproma, nblks))
+    !$ACC ENTER DATA CREATE(rad_uv_down)
+
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%shortwave, temporary_data1)
+    !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
 
 !$OMP PARALLEL
     CALL shortwave_from_direct_shortwave( &
@@ -468,19 +653,29 @@ CONTAINS
 !$OMP END PARALLEL
 
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO iblk=1,nblks
       DO ic=1,nproma
         swvis_srf_down(ic,iblk) = rad_uv_down(ic,iblk) + swpar_srf_down(ic,iblk)
       END DO
     END DO
+    !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
+
+    !$ACC WAIT(1)
+    !$ACC EXIT DATA DELETE(rad_uv_down)
+    DEALLOCATE(rad_uv_down)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 6.0 Compute longwave radiation
     !>
     IF (forcing_input(model_id)%longwave%frequency == TIMESTEP_ .OR. forcing_input(model_id)%longwave%frequency == SUBDAILY_) THEN
+#ifdef _OPENACC
+      CALL finish(routine, 'Forcing input %longwave%frequency==TIMESTEP_ or SUBDAILY_  not ported to GPU, yet. Stop.')
+#endif
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%longwave, lw_srf_down)
+      !$ACC UPDATE DEVICE(lw_srf_down) ASYNC(1)
     ELSE
       ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
@@ -488,17 +683,30 @@ CONTAINS
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         &                            forcing_input(model_id)%longwave, temporary_data1)
+      !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
 
       IF (forcing_options(model_id)%air_temperature_as_timestep) THEN
+#ifdef _OPENACC
+        CALL finish(routine, 'Forcing option %air_temperature_as_timestep for longwave radiation not ported to GPU, yet. Stop.')
+#endif
 !$OMP PARALLEL
+        !$ACC KERNELS DEFAULT(PRESENT)
         lw_srf_down(:,:) = longwave_from_daily_longwave(temporary_data1(:,:), &
           & MINVAL(forcing_input(model_id)%air_temp%data_read(:,:,:),DIM=3), &
           & MAXVAL(forcing_input(model_id)%air_temp%data_read(:,:,:),DIM=3), t_air_C(:,:))
+        !$ACC END KERNELS
 !$OMP END PARALLEL
       ELSE
-!$OMP PARALLEL
-        lw_srf_down(:,:) = longwave_from_daily_longwave(temporary_data1(:,:), tmin_data(:,:), tmax_data(:,:), t_air_C(:,:))
-!$OMP END PARALLEL
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            lw_srf_down(ic, iblk) = longwave_from_daily_longwave(temporary_data1(ic, iblk), tmin_data(ic, iblk), &
+              &                                                  tmax_data(ic, iblk), t_air_C(ic, iblk))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
       ENDIF
     ENDIF
 
@@ -507,29 +715,97 @@ CONTAINS
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%wind_speed, wind_10m)
-    wind_air = wind_10m
+    !$ACC UPDATE DEVICE(wind_10m) ASYNC(1)
+
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        wind_air(ic, iblk) = wind_10m(ic, iblk)
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 8.0 CO2 concentration
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%CO2_concentr, CO2_air)
+    !$ACC UPDATE DEVICE(CO2_air) ASYNC(1)
+
     ! and convert to correct unit
-    CO2_air = CO2_air * forcing_options(model_id)%conv_CO2_2_MassRatio
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) COPYIN(forcing_options(model_id)) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        CO2_air(ic, iblk) = CO2_air(ic, iblk) * forcing_options(model_id)%conv_CO2_2_MassRatio
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 deallocate local variables
+    !> 9.0 N & P deposition
     !>
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%nhx_dep, nhx_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%noy_dep, noy_deposition)
+      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+        & forcing_input(model_id)%p_dep, p_deposition)
+      !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition)
+
+      ! Convert from kg/m2/s -> mumol/m2/s
+      ! -- This unit should have been tested above if specified correctly using expectedUnit
+      IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
+          & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
+          & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
+        WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
+          & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
+          & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
+          & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
+        CALL finish(TRIM(routine), message_text)
+      ENDIF
+
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) COPYIN(forcing_options(model_id)) ASYNC(1)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
+          ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+          nhx_deposition(ic, iblk) = nhx_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
+          noy_deposition(ic, iblk) = noy_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
+          p_deposition  (ic, iblk) = p_deposition  (ic, iblk) * 1000._wp / molar_mass_P / 1.e-6_wp
+
+          ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+          nhx_n15_deposition(ic, iblk) = nhx_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          noy_n15_deposition(ic, iblk) = noy_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+        ENDDO
+      ENDDO
+      !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
+    END SELECT
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 10.0 deallocate local variables
+    !>
+    !$ACC WAIT(1)
+    !$ACC EXIT DATA DELETE(t_air_C)
+    DEALLOCATE(t_air_C)
+
     IF(.NOT. forcing_options(model_id)%air_temperature_as_timestep) THEN
+      !$ACC EXIT DATA DELETE(tmin_data, tmax_data)
       DEALLOCATE(tmin_data)
       DEALLOCATE(tmax_data)
     ENDIF
-    DEALLOCATE(rad_uv_down)
-    DEALLOCATE(sat_spec_humidity)
-    DEALLOCATE(t_air_C)
+
+    !$ACC EXIT DATA DELETE(temporary_data1, help1, help2)
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
-    DEALLOCATE(rel_humidity)
+
   END SUBROUTINE get_standalone_driver
 
   ! ======================================================================================================= !
@@ -625,6 +901,13 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    CHARACTER(NF90_MAX_NAME) :: forcing_dep_file_prefix        !! Prefix for files with NHx, NOy and P deposition data
+    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
+    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
+    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
+    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
+    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -638,13 +921,14 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit
+      & forcing_qair_unit, forcing_dep_file_prefix, forcing_dep_frequ, forcing_nhx_dep_const,                                 &
+      & forcing_noy_dep_const, forcing_p_dep_const, forcing_dep_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
     !------------------------------------------------------------------------------------
-
+    model => Get_model(model_id)
     delta_time    = dtime
     time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
@@ -707,6 +991,19 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+
+      ! N and P deposition required for QUINCY
+      forcing_dep_file_prefix = 'deposition_'
+      forcing_dep_frequ       = 'DAILY' ! 'CONST'
+      ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
+      !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
+      forcing_nhx_dep_const   = 6.3419e-12_wp / 2._wp
+      forcing_noy_dep_const   = 6.3419e-12_wp / 2._wp
+      ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
+      !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
+      !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
+      forcing_p_dep_const     = 6.3419e-12 / (14.0_wp / molar_mass_N * molar_mass_P)
+      forcing_dep_unit        = exp_unit_deposition
 
       ! ----- read the namelist
 
@@ -857,6 +1154,13 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_dep_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_nhx_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_noy_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_p_dep_const, p_io, mpi_comm)
+      CALL p_bcast(forcing_dep_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -898,6 +1202,16 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
+    ! --- deposition variables required for quincy
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL init_forcing_input_variable(nhxdep_varname, forcing_dep_frequ, forcing_nhx_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_nhx_dep_const, forcing_input(model_id)%nhx_dep)
+      CALL init_forcing_input_variable(noydep_varname, forcing_dep_frequ, forcing_noy_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_noy_dep_const, forcing_input(model_id)%noy_dep)
+      CALL init_forcing_input_variable(pdep_varname, forcing_dep_frequ, forcing_p_dep_const, &
+        & forcing_dep_file_prefix, forcing_dep_unit, forcing_p_dep_const, forcing_input(model_id)%p_dep)
+    END SELECT
 
   END SUBROUTINE init_forcing
 
@@ -1035,7 +1349,7 @@ CONTAINS
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
       RETURN
-    ENDIF
+    ENDIF ! forcing_input_variable%variable_name == CO2_varname .AND. frequency == GHG_SCENARIO_
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
@@ -1372,6 +1686,12 @@ CONTAINS
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
 
+      IF (forcing_input(jg)%nhx_dep%input_file%is_open) CALL forcing_input(jg)%nhx_dep%input_file%Close()
+
+      IF (forcing_input(jg)%noy_dep%input_file%is_open) CALL forcing_input(jg)%noy_dep%input_file%Close()
+
+      IF (forcing_input(jg)%p_dep%input_file%is_open) CALL forcing_input(jg)%p_dep%input_file%Close()
+
     END DO
 
     DEALLOCATE(forcing_input, forcing_options)
@@ -1429,6 +1749,10 @@ CONTAINS
     INTEGER    :: i, j, jj
     INTEGER    :: offset(1)
 
+#ifdef _OPENACC
+    CALL finish('spec_humidity_from_rel_humidity', 'Not ported to GPU, yet. Stop.')
+#endif
+
     CALL inquire_declination(declination)
 
     nstep = (86400.0_wp/delta_time)
@@ -1439,6 +1763,7 @@ CONTAINS
     IF(.NOT.(ALLOCATED(inv_qsat))) ALLOCATE(inv_qsat(time_steps_per_day))
     IF(.NOT.(ALLOCATED(qair_test))) ALLOCATE(qair_test(time_steps_per_day))
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(tmp, pressure, qsat, inv_qsat, qair_test)
     DO i = 1,ice
       spds = sinlat(i)*SIN(declination)  ! sine contribution to solar zenith angle
       cpds = coslat(i)*COS(declination)  ! cosine contribution to solar zenith angle
@@ -1487,13 +1812,15 @@ CONTAINS
         ELSE
           tmp(j) = dtmp                                        ! temperature is set to mean temperture at all time steps
         END IF
+        tmp(j) = tmp(j) + tmelt
+
+        ! from function bottom pressure; in jsb3: p0sl_bg = p_sealevel; grav = Gravity; rd = GasConstantDryAir
+        pressure(j) = &
+          & p0sl_bg * ( 1._wp - elevation(i)*gamma /(tmp(j) + elevation(i)*gamma))**(grav/rd/gamma)
+
+        CALL sat_specific_humidity_scalar(tmp(j), pressure(j), qsat(j)) ! present saturated qair
+
       ENDDO
-
-      ! from function bottom pressure; in jsb3: p0sl_bg = p_sealevel; grav = Gravity; rd = GasConstantDryAir
-      pressure(:) = &
-        & p0sl_bg * ( 1._wp - elevation(i)*gamma /(tmelt+tmp(:) + elevation(i)*gamma))**(grav/rd/gamma)
-
-      CALL sat_specific_humidity(tmp(:) + tmelt, pressure(:), qsat(:)) ! present saturated qair
 
       ! implied RH from minimum saturated specific humidity
       rh_test=SUM(MINVAL(qsat(:))/qsat(:))/nstep
@@ -1544,12 +1871,14 @@ CONTAINS
         ENDIF
       ENDIF
     ENDDO
+    !$ACC END PARALLEL LOOP
 
     IF((ALLOCATED(tmp))) DEALLOCATE(tmp)
     IF((ALLOCATED(pressure))) DEALLOCATE(pressure)
     IF((ALLOCATED(qsat))) DEALLOCATE(qsat)
     IF((ALLOCATED(inv_qsat))) DEALLOCATE(inv_qsat)
     IF((ALLOCATED(qair_test))) DEALLOCATE(qair_test)
+
   END SUBROUTINE spec_humidity_from_rel_humidity
 
   ! ======================================================================================================= !
@@ -1575,17 +1904,49 @@ CONTAINS
 
     nc = SIZE(temp)
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
+#ifndef _OPENACC
       IF (temp(ic) < 50._wp .OR. temp(ic) > 400._wp) THEN
         WRITE (message_text,*) &
           & 'Temperature out of bound: ', temp(ic), 'K. One thing to check: consistency of land-sea mask and forcing.'
         CALL finish(TRIM(routine), TRIM(message_text))
       ELSE
+#endif
         qsat(ic) = qsat_water(temp(ic), pressure(ic), use_convect_tables=.TRUE.)
+#ifndef _OPENACC
       ENDIF
+#endif
     ENDDO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE sat_specific_humidity
+
+  SUBROUTINE sat_specific_humidity_scalar(temp, pressure, qsat)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_phy_schemes, ONLY: qsat_water
+
+    ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
+    ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
+    ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
+
+    REAL(wp), INTENT(IN) :: temp      ! Air temperature at level [K]
+    REAL(wp), INTENT(IN) :: pressure  ! Pressure at level [Pa]
+    REAL(wp), INTENT(OUT):: qsat
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity_scalar'
+
+    IF (temp < 50._wp .OR. temp > 400._wp) THEN
+!       WRITE (message_text,*) &
+!          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
+!        CALL finish(TRIM(routine), TRIM(message_text))
+    ELSE
+      qsat = qsat_water(temp, pressure, use_convect_tables=.TRUE.)
+    ENDIF
+
+  END SUBROUTINE sat_specific_humidity_scalar
 
   ! ======================================================================================================= !
   !>
@@ -1613,13 +1974,37 @@ CONTAINS
   ! (6) q = eps -------------
   !             p-(1-eps)*p_v
   !
-  PURE elemental FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
+  PURE ELEMENTAL FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
     REAL(wp),INTENT(in) :: vapour_pressure        !< [N/m^2]
     REAL(wp),INTENT(in) :: air_pressure           !< air pressure at bottom [N/m^2]
     REAL(wp)            :: fun_specific_humidity  !< (from [0,1])
 
     fun_specific_humidity = rdv * vapour_pressure / (air_pressure - (1._wp - rdv) * vapour_pressure)
   END FUNCTION fun_specific_humidity
+
+  SUBROUTINE fun_specific_humidity_2d(vapour_pressure, air_pressure, fun_specific_humidity)
+    REAL(wp), INTENT(IN)  :: vapour_pressure(:,:) !! [N/m^2]
+    REAL(wp), INTENT(IN)  :: air_pressure(:,:) !! air pressure at bottom [N/m^2]
+    REAL(wp), INTENT(OUT) :: fun_specific_humidity(:,:) !! (from [0,1])
+    INTEGER               :: nproma, nblks, ic, iblk
+
+#ifdef _OPENACC
+    CALL finish('fun_specific_humidity_2d', 'Not ported to GPU, yet. Stop.')
+#endif
+
+    nproma = SIZE(fun_specific_humidity,1)
+    nblks  = SIZE(fun_specific_humidity,2)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        fun_specific_humidity(ic,iblk) = rdv * vapour_pressure(ic,iblk) / &
+        & (air_pressure(ic,iblk) - (1._wp - rdv) * vapour_pressure(ic,iblk))
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE fun_specific_humidity_2d
 
   ! ======================================================================================================= !
   !>
@@ -1655,7 +2040,7 @@ CONTAINS
   ! this module. For desert studies it might be good to reduce h0 even further. As the specific humidity does not have a
   ! significant diurnal cycle, h1 is set to 0.
   !
-  FUNCTION vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair)
+  SUBROUTINE vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair, vpress)
 
     ! USE mo_phy_schemes, ONLY: sat_pres_water
     USE mo_phy_schemes, ONLY: tlucua, jptlucu1, jptlucu2
@@ -1664,8 +2049,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
     REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
     REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
-
-    REAL(wp) :: vapour_pressure_from_evapor(SIZE(Tmin,1), SIZE(Tmin,2)) !! the vapour pressure
+    REAL(wp), INTENT(OUT) :: vpress(:,:)
 
     REAL(wp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
     REAL(wp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
@@ -1681,9 +2065,12 @@ CONTAINS
     DO ib = startblk, endblk
       ics = startidx(ib)
       ice = endidx  (ib)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
 
         !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
+#ifndef _OPENACC
         IF (Tmin(ic,ib) + tmelt < 50._wp .OR. Tmin(ic,ib) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
             & 'min temperature out of range: ', Tmin(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
@@ -1694,6 +2081,7 @@ CONTAINS
             & 'air temperature out of bounds: ', Tair(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
           CALL finish(TRIM(routine), TRIM(message_text))
         ENDIF
+#endif
 
         !jsb3: rdv = eps
         evapo_sat_min = tlucua(INT(1000._wp * (Tmin(ic,ib) + tmelt)))/rdv ! saturation pressure at minimum temperature
@@ -1701,11 +2089,13 @@ CONTAINS
         ! evapo_sat_min = sat_pres_water(Tmin(i,j) + tmelt) ! saturation pressure at minimum temperature
         ! evapo_sat     = sat_pres_water(Tair(i,j) + tmelt) ! saturation pressure at actual temperature
         e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
-        vapour_pressure_from_evapor(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
+        vpress(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 
       ENDDO
+      !$ACC END PARALLEL
     ENDDO
-  END FUNCTION vapour_pressure_from_evapor
+
+  END SUBROUTINE  vapour_pressure_from_evapor
 
   ! ======================================================================================================= !
   !>
@@ -1781,7 +2171,7 @@ CONTAINS
       ics = startidx(ib)
       ice = endidx  (ib)
       DO ic = ics, ice
-        IF (ABS(REAL(array(ic,ib)) - REAL(missval)) <= EPSILON(1.0_wp)) array(ic,ib) = constant
+        IF (ABS(array(ic,ib) - missval) <= EPSILON(1.0_wp)) array(ic,ib) = constant
       END DO
     END DO
 !$OMP END PARALLEL DO
@@ -1857,7 +2247,13 @@ CONTAINS
     REAL(wp)   :: arg
     INTEGER    :: ic, ib, ics, ice
 
-    tmp(:,:) = 0._wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO ib = 1,SIZE(tmp,2)
+      DO ic = 1, SIZE(tmp, 1)
+        tmp(ic,ib) = 0._wp
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
 
     CALL inquire_declination(declination)
 
@@ -1868,6 +2264,8 @@ CONTAINS
     DO ib = startblk, endblk
       ics = startidx(ib)
       ice = endidx(ib)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
         fract_UTC_offset = lon(ic,ib)/360._wp   ! difference between local time and UTC as fraction of a day
         fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
@@ -1936,6 +2334,7 @@ CONTAINS
           tmp(ic,ib) = dtmp                                        ! temperature is set to mean temperture at all time steps
         ENDIF
       ENDDO
+      !$ACC END PARALLEL
     ENDDO
 
     RETURN
@@ -1976,13 +2375,17 @@ CONTAINS
   !     (6)      p = p0 * (1 - z*------------)^k
   !                              T(z)+z*gamma
   !
-  ELEMENTAL FUNCTION bottom_pressure(elevation,air_temperature)
+  FUNCTION bottom_pressure(elevation,air_temperature)
+
+  !$ACC ROUTINE SEQ
+
     REAL(wp), INTENT(IN)  :: elevation
     REAL(wp), INTENT(IN)  :: air_temperature
     REAL(wp)              :: bottom_pressure
 
     bottom_pressure = &
       & p0sl_bg * (1._wp - elevation * gamma / (tmelt + air_temperature + elevation * gamma)) ** (grav / rd / gamma)
+
   END FUNCTION bottom_pressure
 
   ! ======================================================================================================= !
@@ -2002,6 +2405,9 @@ CONTAINS
   ! (2)   P_rain = P-P_sn.
   !
   ELEMENTAL SUBROUTINE snow_and_rain_from_precip(rain,snow,precipitation,air_temp_daily)
+
+    !$ACC ROUTINE SEQ
+
     REAL(wp),INTENT(IN)  :: precipitation   !< total precipitation (rain+snow) [kg/m^2/s]
     REAL(wp),INTENT(IN)  :: air_temp_daily  !< daily mean air_temperature at surface [Celsius]
     REAL(wp),INTENT(OUT) :: rain            !< rain [kg/m^2/s]
@@ -2016,6 +2422,7 @@ CONTAINS
     ENDIF
     ! set the rain part according to Eq. (2):
     rain = precipitation - snow
+
   END SUBROUTINE snow_and_rain_from_precip
 
   ! ======================================================================================================= !
@@ -2099,7 +2506,7 @@ CONTAINS
   ! J. Climate 5 (1992) 56-65.
   ! [4] G.W. Paltridge and C.M.R. Platt, "Radiative Processes in Meteorology and Climatology" (Elsevier, Amsterdam, 1976).
   !
-  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave( &
+  SUBROUTINE shortwave_from_direct_shortwave( &
     & model_id, &
     & day_of_year, &
     & cos_zenith, &
@@ -2116,22 +2523,24 @@ CONTAINS
 
     INTEGER,  INTENT(in)  :: model_id           !< model ID
     INTEGER,  INTENT(in)  :: day_of_year        !< day in year (from [1,365])
-    REAL(wp), INTENT(in)  :: cos_zenith         !< cosine of zenith angle
-    REAL(wp), INTENT(in)  :: cos_lat            !< cosine of latitude
-    REAL(wp), INTENT(in)  :: sin_lat            !< sine of latitude
-    REAL(wp), INTENT(in)  :: air_pressure       !< air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp), INTENT(in)  :: rad_sw_in          !< "Rtot": either timestep or daily average total solar shortwave radiation :
-                                                ! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-    REAL(wp), INTENT(out) :: rad_UV             !< "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
-                                                ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp), INTENT(out) :: rad_PAR            !< "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                                ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp), INTENT(out) :: rad_NIR            !< "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                                ! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp), INTENT(out) :: fract_PAR_diffuse  !< "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                                ! .. (values in [0,1])
-    REAL(wp), INTENT(out) :: rad_sw             !< ..
-    REAL(wp), INTENT(out) :: rad_sw_pot         !< ..
+    REAL(wp), INTENT(in), DIMENSION(:,:) :: &
+      & cos_zenith,        & !< cosine of zenith angle
+      & cos_lat,           & !< cosine of latitude
+      & sin_lat,           & !< sine of latitude
+      & air_pressure,      & !< air pressure at bottom (depending on local elevation) [N/m^2]
+      & rad_sw_in            !< "Rtot": either timestep or daily average total solar shortwave radiation :
+                             ! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
+    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+      & rad_UV,            & !< "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
+                             ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
+      & rad_PAR,           & !< "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
+                             ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
+      & rad_NIR,           & !< "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
+                             ! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
+      & fract_PAR_diffuse, & !< "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
+                             ! .. (values in [0,1])
+      & rad_sw,            & !< ..
+      & rad_sw_pot           !< ..
 
     REAL(wp) :: day_angle     !! day of year expressed as angle in radians
     REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
@@ -2140,10 +2549,21 @@ CONTAINS
                               !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
     REAL(wp) :: F_invers      !! factor 1/F to obtain total shortwave from visible radiation (see Eq. (9))
     REAL(wp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
-    REAL(wp) :: rad_sw_in_corr
-    REAL(wp) :: delta,v,u,hh,sinehh,K
+    REAL(wp) :: delta,K
 
     REAL(wp), PARAMETER  ::  fract_UV = 0.1_wp ! UV fraction of (UV + PAR)
+
+    INTEGER :: i, j, nc, nblks
+
+    REAL(wp), ALLOCATABLE :: u(:,:), v(:,:), hh(:,:), sinehh(:,:), rad_sw_in_corr(:,:)
+
+    nc = SIZE(cos_zenith,1)
+    nblks = SIZE(cos_zenith,2)
+
+    ALLOCATE(u(nc, nblks), v(nc, nblks))
+    ALLOCATE(hh(nc, nblks), sinehh(nc, nblks))
+    ALLOCATE(rad_sw_in_corr(nc, nblks))
+    !$ACC ENTER DATA CREATE(u, v, hh, sinehh, rad_sw_in_corr)
 
     day_angle = 2._wp*pi*(day_of_year+10._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
 
@@ -2156,57 +2576,81 @@ CONTAINS
       & .AND. forcing_input(model_id)%shortwave%frequency /= SUBDAILY_) THEN
       ! today's sum of top of the atmosphere radiation
       delta=-23.4_wp*pi/180._wp*COS(day_angle)
-      u=sin_lat*SIN(delta)
-      v=cos_lat*COS(delta)
-      IF (u.GE.v) THEN
-         hh=pi
-      ELSEIF (u.LE.(0._wp-v)) THEN
-         hh=0.0_wp
-      ELSE
-         hh=ACOS(-u/v)
-      ENDIF
-      sinehh=SIN(hh)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR COLLAPSE(2)
+      DO j=1,nblks
+        DO i=1,nc
+          u(i,j) = sin_lat(i,j) * SIN(delta)
+          v(i,j) = cos_lat(i,j) * COS(delta)
+          IF (u(i,j).GE.v(i,j)) THEN
+            hh(i,j) = pi
+          ELSE IF (u(i,j).LE.(0._wp-v(i,j))) THEN
+            hh(i,j) = 0.0_wp
+          ELSE
+            hh(i,j) = ACOS(-u(i,j) / v(i,j))
+          END IF
+          sinehh(i,j) = SIN(hh(i,j))
 
-      !estimate of noon radiation giving rise to the recorded radiation sum
-      rad_sw_in_corr = 0._wp
-      IF(u*hh+v*sinehh.GT.1e-5_wp)THEN
-         rad_sw_in_corr = rad_sw_in / (2._wp*(u*hh+v*sinehh) * K) * 86400._wp
-      ENDIF
-      rad_sw = rad_sw_in_corr * cos_zenith
+          !estimate of noon radiation giving rise to the recorded radiation sum
+          rad_sw_in_corr(i,j) = 0._wp
+          IF((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp)THEN
+            rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._wp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._wp
+          END IF
+          rad_sw(i,j) = rad_sw_in_corr(i,j) * cos_zenith(i,j)
+        END DO
+      END DO
+      !$ACC END PARALLEL
 
     ELSE
       ! subdaily or time step forcing, use radiation directly
-      rad_sw = rad_sw_in
-    ENDIF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO j=1,nblks
+        DO i=1,nc
+          rad_sw(i,j) = rad_sw_in(i,j)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
-    IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
-      Rpar_top   = solar_const*cos_zenith*r_sun_earth_2       ! Eq. (2) from above
-      hlp3_r = EXP(-0.185_wp*(air_pressure/p0sl_bg)/cos_zenith) ! in jsb3: p0sl_bg = p_sealevel
-      hlp4_r = 0.4_wp+0.6_wp*hlp3_r
-      rad_sw_pot = Rpar_top * hlp4_r
-      fsw = MAX(MIN(rad_sw/rad_sw_pot,1._wp),0._wp)
-      hlp_r=1._wp-fsw
-      hlp2_r=hlp_r*hlp_r
-      F_invers=1._wp + (1.185_wp-0.437_wp*hlp_r-0.494_wp*hlp2_r)* &
-        & EXP(MIN(2.534_wp,(0.0305_wp-0.208_wp*hlp_r+0.495_wp*hlp2_r)/cos_zenith)) ! Eq. (9) from above
-      rad_UV = rad_sw * fract_UV / F_invers
-      rad_PAR = rad_sw * (1._wp - fract_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
-      rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
-      IF(fsw <= 0.2_wp) THEN
-         fract_PAR_diffuse = 1._wp                                                 ! Eq. (12)-(15) from above
-      ELSEIF(fsw >= 0.9_wp) THEN
-         fract_PAR_diffuse = 0.08_wp                                               ! Eq. (12)-(15) from above
-      ELSE
-         fract_PAR_diffuse = 1._wp - &
-           & (1._wp- ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
-      ENDIF
-    ELSE ! zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015
-      rad_UV = 0._wp
-      rad_PAR = rad_sw * 0.5_wp
-      rad_NIR = rad_sw * 0.5_wp
-      fract_PAR_diffuse = 1._wp ! (could also be another value in this case)
-      rad_sw_pot  = rad_sw
-    ENDIF
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG VECTOR COLLAPSE(2)
+    DO j=1,nblks
+      DO i=1,nc
+        IF(cos_zenith(i,j) > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
+          Rpar_top   = solar_const*cos_zenith(i,j)*r_sun_earth_2       ! Eq. (2) from above
+          hlp3_r = EXP(-0.185_wp * (air_pressure(i,j) / p0sl_bg) / cos_zenith(i,j)) ! in jsb3: p0sl_bg = p_sealevel
+          hlp4_r = 0.4_wp + 0.6_wp * hlp3_r
+          rad_sw_pot(i,j) = Rpar_top * hlp4_r
+          fsw = MAX(MIN(rad_sw(i,j) / rad_sw_pot(i,j), 1._wp), 0._wp)
+          hlp_r = 1._wp - fsw
+          hlp2_r = hlp_r * hlp_r
+          F_invers=1._wp + (1.185_wp - 0.437_wp * hlp_r - 0.494_wp * hlp2_r) * &
+                 & EXP(MIN(2.534_wp, (0.0305_wp - 0.208_wp * hlp_r + 0.495_wp * hlp2_r) / cos_zenith(i,j))) ! Eq. (9) from above
+          rad_UV(i,j) = rad_sw(i,j) * fract_UV / F_invers
+          rad_PAR(i,j) = rad_sw(i,j) * (1._wp - fract_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
+          rad_NIR(i,j) = rad_sw(i,j) - rad_PAR(i,j) - rad_UV(i,j) ! This is "Rnir"; Eq. (10) from above
+          IF(fsw <= 0.2_wp) THEN
+            fract_PAR_diffuse(i,j) = 1._wp                                                 ! Eq. (12)-(15) from above
+          ELSE IF(fsw >= 0.9_wp) THEN
+            fract_PAR_diffuse(i,j) = 0.08_wp                                               ! Eq. (12)-(15) from above
+          ELSE
+            fract_PAR_diffuse(i,j) = 1._wp - &
+                                  & (1._wp- ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
+          END IF
+        ELSE ! zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015
+          rad_UV(i,j) = 0._wp
+          rad_PAR(i,j) = rad_sw(i,j) * 0.5_wp
+          rad_NIR(i,j) = rad_sw(i,j) * 0.5_wp
+          fract_PAR_diffuse(i,j) = 1._wp ! (could also be another value in this case)
+          rad_sw_pot(i,j)  = rad_sw(i,j)
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
+    !$ACC EXIT DATA DELETE(u, v, hh, sinehh, rad_sw_in_corr)
+    DEALLOCATE(u, v, hh, sinehh, rad_sw_in_corr)
 
   END SUBROUTINE shortwave_from_direct_shortwave
 
@@ -2226,6 +2670,9 @@ CONTAINS
   ! [2] W. Brutsaert, "Evaporation into the Atmosphere", (Reidel, Dordrecht, 1982), pp. 299.
   !
   ELEMENTAL FUNCTION longwave_from_daily_longwave(longwave_down_daily, Tmin, Tmax, air_temp)
+
+    !$ACC ROUTINE SEQ
+
     REAL(wp)            :: longwave_from_daily_longwave !! hourly longwave downward radiation [W/m^2]
     REAL(wp),INTENT(in) :: longwave_down_daily          !! daily average downward longwave radiation [W/m^2]
     REAL(wp),INTENT(in) :: Tmin                         !! daily mimimum temperature [Celsius]

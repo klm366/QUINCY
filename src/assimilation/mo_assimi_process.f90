@@ -90,7 +90,7 @@ CONTAINS
   END SUBROUTINE calc_assimilation_scaling_factors
 
 
-  !> ! Coomputes canopy conductance per canopy layer for water-unlimited case
+  !> ! Computes canopy conductance per canopy layer for water-unlimited case
   REAL(wp) FUNCTION calc_assimilation_waterunlimited( &
     & C4Flag,                                            & ! in
     & CarboxRate,                                        & ! in
@@ -407,7 +407,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  DECLARATIONS
     USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
-    USE mo_physical_constants, ONLY: tmelt, R_gas => argas       ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS

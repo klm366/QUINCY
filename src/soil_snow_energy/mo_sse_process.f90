@@ -119,7 +119,7 @@ CONTAINS
       & porosity_mineral, & !< Volumentric porosity of mineral soil part
       & hcond_dry_min,    & !< Dry thermal conductivity soil (including mineral soil and pores)
       & hcond_dry,        & !< Dry thermal conductivity of soil (including mineral and organic soil and pores)
-      & sat_scal,         & !< Scaling factor to account for empty pore space
+      & sat_fact,         & !< Scaling factor to account for empty pore space
       & saturation,       & !< Degree of saturation
       & kersten,          & !< Kersten number
       & hcond_soil,       & !< Thermal conductivity of soil solids (mineral and organic)
@@ -196,9 +196,9 @@ CONTAINS
         ! The scaling is changed compared to earlier versions. The current implementation interpretes the fractions
         ! of the individual components such that fract_water + fract_ice equals porosity, which is also supported by
         ! Nikoosokhan et al (2016), equation 4
-        sat_scal    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
-        fract_water = (water / layer_depth) * sat_scal ! Water fraction rel. to completely saturated soil
-        fract_ice   = (  ice / layer_depth) * sat_scal ! Ice fraction rel. to completely saturated soil
+        sat_fact    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
+        fract_water = (water / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
+        fract_ice   = (  ice / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
         hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice

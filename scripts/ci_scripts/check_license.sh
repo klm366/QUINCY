@@ -56,7 +56,7 @@ icon_ignored_patterns='
 job_num=8
 
 set -eu
-#set -o pipefail
+set -o pipefail
 
 quote_value ()
 {

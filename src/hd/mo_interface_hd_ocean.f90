@@ -201,7 +201,7 @@ CONTAINS
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     !$ACC DATA CREATE(buffer)
 !$OMP PARALLEL
-    CALL init(buffer(:,:))
+    CALL init(buffer(:,:), lacc=.TRUE.)
 !$OMP END PARALLEL
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)

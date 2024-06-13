@@ -751,7 +751,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
+      !$ACC EXIT DATA DELETE(vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
       DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)

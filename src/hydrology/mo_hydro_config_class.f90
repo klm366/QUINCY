@@ -53,9 +53,12 @@ MODULE mo_hydro_config_class
       & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
                                 !! 'upstream' (default) or 'arithmetic' mean
       & pond_dynamics,        & !< Choice of pond dynamics scheme (i.e. depth-area scaling)
-                                !! tanh (default), quadratic
-      & hydro_scale             !< either use 'catchment' scale (default) parametrizations for soil in- and outflows
-                                !! or 'point' scale process implementations (HydroTiles or HighRes/sitelevel simulations)
+                                !! 'tanh' (default), 'quadratic'
+      & hydro_scale             !< 'semi_distributed': use the ARNO scheme assuming sub-grid scale variations in infiltration
+                                !! and subsurface drainage (default)
+                                !! 'uniform': assume uniform soil moisture distribution
+                                !! (e.g. for applications like HydroTiles, HighRes or sitelevel)
+
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -67,13 +70,14 @@ CONTAINS
 
   SUBROUTINE Init_hydro_config(config)
 
+    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, Upstream_, Arithmetic_, &
-      &                              Quad_, Tanh_, Catchment_, Point_
+      &                              Quad_, Tanh_, Semi_Distributed_, Uniform_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -81,7 +85,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
+    CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
       &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
@@ -120,7 +124,12 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
-    active                 = .TRUE.
+    SELECT CASE (config%model_config%model_scheme)
+    CASE (MODEL_QUINCY)
+      active                 = .FALSE.
+    CASE (MODEL_JSBACH)
+      active                 = .TRUE.
+    END SELECT
     bc_filename            = 'bc_land_hydro.nc'
     ic_filename            = 'ic_land_hydro.nc'
     bc_sso_filename        = 'bc_land_sso.nc'
@@ -139,7 +148,7 @@ CONTAINS
     pond_dynamics          = "tanh"
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
-    hydro_scale            = "Catchment"
+    hydro_scale            = "semi_distributed"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -213,7 +222,7 @@ CONTAINS
       CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
     CASE("campbell")
       config%soilhydmodel = Campbell_
-      CALL message(TRIM(routine), 'Soil hydrology uses the Clapp & Hornberger model')
+      CALL message(TRIM(routine), 'Soil hydrology uses the Campbell model')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology model '//TRIM(soilhydmodel)//' not implemented')
     END SELECT
@@ -241,12 +250,12 @@ CONTAINS
     END SELECT
 
     SELECT CASE(TRIM(tolower(hydro_scale)))
-    CASE("catchment")
-      config%hydro_scale = Catchment_
-      CALL message(TRIM(routine), 'Using catchment scale parametrization (ARNO scheme) for soil hydrological fluxes')
-    CASE("point")
-      config%hydro_scale = Point_
-      CALL message(TRIM(routine), 'Using point scale process implementation for hydrological fluxes (still experimental)')
+    CASE("semi_distributed")
+      config%hydro_scale = Semi_Distributed_
+      CALL message(TRIM(routine), 'Using semi-distributed scale parametrization (ARNO scheme) for soil hydrological fluxes')
+    CASE("uniform")
+      config%hydro_scale = Uniform_
+      CALL message(TRIM(routine), 'Using uniform scale process implementation for hydrological fluxes (still experimental)')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT

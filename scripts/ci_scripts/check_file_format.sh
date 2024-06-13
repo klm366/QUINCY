@@ -39,7 +39,7 @@ icon_directories="'src' 'scripts'"
 job_num=8
 
 set -eu
-#set -o pipefail
+set -o pipefail
 
 list_files()
 {
@@ -55,13 +55,13 @@ list_files()
     elif test -f "${input}"; then
       echo "${input}"
     elif test x"$issue_warn" = xyes; then
-      echo "WARNING: input argument '${input}' is neither a directory not a file" >&2
+      echo "WARNING: input argument '${input}' is neither a directory nor a file" >&2
     fi
   done
 }
 
 if test $# -eq 0; then
-  icon_dir=$(unset CDPATH; cd "$(dirname "$0")/.."; pwd)
+  icon_dir=$(unset CDPATH; cd "$(dirname "$0")/../.."; pwd)
   eval "set dummy $(
     eval "set dummy ${icon_directories}; shift"
     for dir in "$@"; do

@@ -39,6 +39,9 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
+#ifndef __NO_QUINCY__
+  USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
+#endif
 
 #ifdef _OPENACC
   USE openacc
@@ -108,6 +111,9 @@ MODULE mo_jsb_tile_class
     INTEGER                               :: nr_of_cqts = 0                !< number of conserved quantity types in use on the tile
     TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< list of conserved quantities sort by type
     TYPE(t_jsb_lcc_proc_p),   ALLOCATABLE :: lcc_processes(:)              !< list of lcc structures indexed by proc id
+#ifndef __NO_QUINCY__
+    TYPE(t_lnd_bgcm_store),       POINTER :: bgcm_store          => NULL() !< the bgcm store collecting pools and their elements on this tile
+#endif
     TYPE(t_jsb_memory_p),         POINTER :: mem(:)                        !< Memory for all processes on the tile
     !
     CLASS(t_jsb_tile_abstract),   POINTER :: self_tile           => NULL() !< pointer to the tile to enable assigning it as target
@@ -147,6 +153,10 @@ MODULE mo_jsb_tile_class
     !
     PROCEDURE(Init_interface),           DEFERRED :: Init
     PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+#ifndef __NO_QUINCY__
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Count_and_classify_bgc_materials
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_bgc_materials
+#endif
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
@@ -963,8 +973,6 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
-
     IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
@@ -1132,8 +1140,6 @@ CONTAINS
     END IF
 
     !$ACC END PARALLEL
-
-    !$ACC WAIT(1)
 
     IF (l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
