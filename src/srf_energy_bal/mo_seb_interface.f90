@@ -320,8 +320,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & heat_cap
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    INTEGER                    :: nsnow !,  nsoil
+    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    INTEGER                    :: nsnow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
@@ -331,6 +331,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsnow = options%nsnow_e
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -347,11 +348,6 @@ CONTAINS
 
     soil_e => Get_vgrid('soil_depth_energy')
     dz1 = soil_e%dz(1)
-    !nsoil = soil_e%n_levels
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      snow_e => Get_vgrid('snow_depth_energy')
-      nsnow = snow_e%n_levels
-    END IF
 
     IF (tile%contains_lake) THEN
       ! No correction for lake tile

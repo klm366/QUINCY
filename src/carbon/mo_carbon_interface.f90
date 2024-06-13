@@ -131,24 +131,12 @@ CONTAINS
   !!
   SUBROUTINE Register_carbon_tasks(this, model_id)
 
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
-
     ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    ! local
-    TYPE(t_jsb_model), POINTER :: model
-
-    ! get var / objects
-    model   => Get_model(model_id)
-
-
-    IF (.NOT. model%config%use_quincy) THEN
-      CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
-      CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
-    END IF
+    CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
 
   END SUBROUTINE Register_carbon_tasks
 
@@ -694,7 +682,7 @@ CONTAINS
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
     ! write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
-    sla(:) = REAL(dsl4jsb_Lctlib_param(specificLeafArea_C))
+    sla(:) = dsl4jsb_Lctlib_param(specificLeafArea_C)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

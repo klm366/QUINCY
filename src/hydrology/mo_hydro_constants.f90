@@ -20,19 +20,19 @@ MODULE mo_hydro_constants
   PUBLIC
 
   INTEGER, PARAMETER ::                    &
-    ! Identifiers used for the soil hydrology model
-    & VanGenuchten_    = 1,                &
-    & BrooksCorey_     = 2,                &
-    & Campbell_        = 3,                &
+    ! Identifiers used for the pedotransfer functions of a specific soil hydrology model
+    & VanGenuchten_     = 1,                & !< Identifier for VanGenuchten soil hydrology model
+    & BrooksCorey_      = 2,                & !< Identifier for Brooks and Corey soil hydrology model
+    & Campbell_         = 3,                & !< Identifier for Campbell soil hydrology model
     ! Identifiers used for the interpolation scheme
-    & Upstream_        = 1,                &
-    & Arithmetic_      = 2,                &
+    & Upstream_         = 1,                & !< Identifier to use K from upper soil layer and MAX(D) of upper or actual layer
+    & Arithmetic_       = 2,                & !< Identifier to average K and D between actual and upper soil layer
     ! Identifiers used for the pond dynamics scheme
-    & Quad_            = 1,                &
-    & Tanh_            = 2,                &
+    & Quad_             = 1,                & !< Identifier for quadratic scaling function between pond depth and area
+    & Tanh_             = 2,                & !< Identifier for tanh scaling function between pond depth and area
     ! Identifiers used for hydrological scale parametrizations
-    & Catchment_       = 1,                &
-    & Point_           = 2
+    & Semi_Distributed_ = 1,                & !< Identifier to use ARNO scheme for soil hydrology
+    & Uniform_          = 2                   !< Identifier to assume uniform grid cell characteristics
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction
@@ -54,14 +54,14 @@ MODULE mo_hydro_constants
 !    & minStomaConductance = 0.0_wp,        & ! Minimum stomatal conductance [mol H2O /(m^2 s) ??]
 
     ! Parameters required for ARNO Scheme
-    & oro_var_min = 100._wp,               &
-    & oro_var_max = 1000._wp,              &
-    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & ! factor for slow drainage (~ 10 hours)
-    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & ! factor for fast drainage (~ 4 days)
-    & drain_exp   = 1.5_wp, &
+    & oro_var_min = 100._wp,               & !< ARNO Scheme minimum orographic standard deviation threshold
+    & oro_var_max = 1000._wp,              & !< ARNO Scheme maximum orographic standard deviation threshold
+    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & !< minimum (slow) subsurface drainage
+    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum (fast) subsurface drainage
+    & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
     ! Parameters used for pond computations
-    & oro_crit = 100._wp,                   & !< Reference topo standard deviation for pond scaling factor [m]
+    & oro_crit = 100._wp,                  & !< Reference topo standard deviation for pond scaling factor [m]
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<

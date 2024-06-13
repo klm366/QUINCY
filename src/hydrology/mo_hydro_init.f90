@@ -150,7 +150,6 @@ CONTAINS
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
 
-    ! TODO This is not correct if hydro runs on veg tile!
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
@@ -408,15 +407,14 @@ CONTAINS
           hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
         END IF
 
-        ! soil-matric potential
+        ! Soil matric potential
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='moisture_pot',              &
           & fill_array = hydro_init_vars%matric_pot)
-        ! @todo Currently, the matric potential is given with a positiv sign in the bc data while
-        !       it should be negativ from a soil physics perspective and is expected as such from
-        !       the soil hydrology routine. As matric potential should be corrected in the bc data
-        !       at some point in the future, we check here for negative or positive values and
-        !       convert as necessary.
+        ! @todo There is still old bc data around where the matric potential is given with a positiv sign while
+        !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
+        !       routines. Until this bc data is not used anymore, the following check is required to ensure the
+        !       sign of the soil matric potential is (converted) correct.
 #ifdef __ICON__
         ! Exclude values outside of the domain (not available in the echam infrastructure)
         WHERE(.NOT. is_in_domain(:,:))
@@ -450,7 +448,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='pore_size_index',           &
           & fill_array = hydro_init_vars%pore_size_index)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0.05_wp)
 
       ELSE   ! l_soil_texture
 
@@ -566,13 +564,17 @@ CONTAINS
       ptr_2D => input_file%Read_2d(   &
         & variable_name='root_depth', &
         & fill_array = hydro_init_vars%root_depth)
-        ! Make sure there is root depth equivalent to 0.2 m weq in all cells
-        !   that contain field capacity data but no root depth
-        hydro_init_vars%root_depth = MERGE(ptr_2D, &
-          & MERGE(0.2_wp / hydro_init_vars%vol_field_cap, 0._wp, hydro_init_vars%vol_field_cap > 0._wp), &
-          & ptr_2D >= 0._wp)
-        ! Constrain root depth because in the bc file it is sometimes larger then soil depth
-        hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
+      hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ! Make sure there is root depth equivalent to 0.2 m weq in all cells
+      !   that contain field capacity data but no root depth
+      WHERE (hydro_init_vars%vol_field_cap(:,:) > 1.0e-10_wp)
+        hydro_init_vars%root_depth(:,:) = MAX(hydro_init_vars%root_depth(:,:), &
+          & 0.2_wp / hydro_init_vars%vol_field_cap(:,:))
+      ELSEWHERE
+        hydro_init_vars%root_depth(:,:) = 0._wp
+      ENDWHERE
+      ! Constrain root depth because in the bc file it may be larger then soil depth
+      hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
 
       CALL input_file%Close()
 
@@ -834,7 +836,7 @@ CONTAINS
       ! Note: weq_rootzone_max corresponds to water content at field capacity.
       dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = &
         & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth
-      ! Constain rootzone capacity if upper limit is given to soil water capacity
+      ! Constrain rootzone capacity if upper limit is given to soil water capacity
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
@@ -970,9 +972,7 @@ CONTAINS
       ! update soil properties with organic layer fractions
       CALL init_soil_properties(tile)
 
-      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
-      ! water content should actually be zero. Therefore, make sure that soil water content is not larger than the maximum
-      ! soil water capacity.
+      ! Make sure that soil water content is not larger than the maximum soil water capacity.
       ! Note: the volumetric porosity represents the maximum water capacity of the specific soil layer. Reduce
       ! soil water and ice if this limit is exceeded.
       IF (ANY(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)     + dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl) > &

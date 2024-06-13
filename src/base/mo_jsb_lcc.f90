@@ -13,11 +13,10 @@
 !>
 !>#### Contains methods required to deal with actively or passively relocated conserved quantities upon lcc
 !>
-
-!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
-
 !> NOTE: This is currently only implemented to deal with leaves and down to two layers,
 !>       if something more generic is required this needs to be re-engineered
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_jsb_lcc
 #ifndef __NO_JSBACH__

@@ -130,12 +130,12 @@ CONTAINS
 
 ! input
     LOGICAL,  INTENT(in)  :: is_dynamic        ! mask indicating whether a PFT is subject to vegetation dynamics
-    REAL(WP), INTENT(in)  :: lct_tcmin         ! PFT-specific minimum coldest-month temperature limit [C]
-    REAL(WP), INTENT(in)  :: lct_tcmax         ! PFT-specific maximum coldest-month temperature limit [C]
-    REAL(WP), INTENT(in)  :: lct_twmax         ! PFT-specific maximum warmest-month temperature limit [C]
-    REAL(WP), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
+    REAL(wp), INTENT(in)  :: lct_tcmin         ! PFT-specific minimum coldest-month temperature limit [C]
+    REAL(wp), INTENT(in)  :: lct_tcmax         ! PFT-specific maximum coldest-month temperature limit [C]
+    REAL(wp), INTENT(in)  :: lct_twmax         ! PFT-specific maximum warmest-month temperature limit [C]
+    REAL(wp), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
                                                ! minus coldest month temperature [C]
-    REAL(WP), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
+    REAL(wp), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
     REAL(wp), INTENT(in)  :: min_mmtemp20      ! Minimum monthly mean temp. (20yr climatology) [K]
     REAL(wp), INTENT(in)  :: max_mmtemp20      ! Maximum monthly mean temp. (20yr climatology) [K]
     REAL(wp), INTENT(in)  :: gdd_prev_year     ! GDD of previous year
@@ -463,8 +463,8 @@ CONTAINS
     CALL scale_cover_fract(nidx, ntiles, is_dynamic(:,:), cover_fract(:,:))
 
     !-- Stop simulation, if sum of cover fractions is not equal to 1 or a cover fraction is smaller than fract_small
-    IF (ANY(SUM(cover_fract(:,:),DIM=2) > 1._wp + REAL(ntiles) * EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract(:,:),DIM=2) < 1._wp - REAL(ntiles) * EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract(:,:),DIM=2) > 1._wp + REAL(ntiles,wp) * EPSILON(1._wp)) .OR. &
+        ANY(SUM(cover_fract(:,:),DIM=2) < 1._wp - REAL(ntiles,wp) * EPSILON(1._wp))) THEN
        WRITE (message_text,*) 'sum of cover_fract /= 1: ', &
             MINVAL(SUM(cover_fract(:,:),DIM=2)), MAXVAL(SUM(cover_fract(:,:),DIM=2)), &
             MAXLOC(SUM(cover_fract(:,:),DIM=2))
@@ -550,10 +550,10 @@ CONTAINS
                 sum_act_fpc(i) = sum_act_fpc(i) + act_fpc(i,itile) * (1._wp + bare_fpc(i) / sum_grass_fpc(i))
              ELSE
                 sum_green_bio(i) = sum_green_bio(i) +                                              &
-                 MAX(0._wp, (bare_fpc(i) / REAL(n_grass_pft(i))) * (1._wp -                        &
+                 MAX(0._wp, (bare_fpc(i) / REAL(n_grass_pft(i),wp)) * (1._wp -                        &
                  exp(-desert_extend * ((max_green_bio(i,itile) * sla(i,itile)) ** desert_margin) / &
                  (3._wp ** (desert_margin - 1._wp)))))
-                sum_act_fpc(i) = sum_act_fpc(i) + (bare_fpc(i) / REAL(n_grass_pft(i)))
+                sum_act_fpc(i) = sum_act_fpc(i) + (bare_fpc(i) / REAL(n_grass_pft(i),wp))
              END IF
           END IF
        END DO
@@ -789,7 +789,7 @@ CONTAINS
        END DO
     END DO
 
-    sum_fpc(:) = sum_fpc(:) + REAL(nsparce(:)) * fract_small
+    sum_fpc(:) = sum_fpc(:) + REAL(nsparce(:),wp) * fract_small
 
     ! scaling of bare_fpc
     WHERE (sum_fpc(:) <= 1._wp - EPSILON(1._wp))
@@ -922,8 +922,8 @@ CONTAINS
 
     CALL scale_cover_fract (nidx, ntiles, is_dynamic(:,:), cover_fract_inst(:,:))
 
-    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._wp + REAL(ntiles) * EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._wp - REAL(ntiles) * EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._wp + REAL(ntiles,wp) * EPSILON(1._wp)) .OR. &
+        ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._wp - REAL(ntiles,wp) * EPSILON(1._wp))) THEN
        WRITE (message_text,*) 'sum of cover_fract_inst /= 1: ', &
             MINVAL(SUM(cover_fract_inst(:,:),DIM=2)), MAXVAL(SUM(cover_fract_inst(:,:),DIM=2)), &
             MAXLOC(SUM(cover_fract_inst(:,:),DIM=2))

@@ -79,10 +79,10 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),     INTENT(in)    :: prefix
-    CHARACTER(len=*),     INTENT(in)    :: suffix
-    INTEGER,              INTENT(in)    :: lct_ids(:)
-    INTEGER,              INTENT(in)    :: model_id
+    CHARACTER(len=*),    INTENT(in)            :: prefix
+    CHARACTER(len=*),    INTENT(in)            :: suffix
+    INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: model_id
 
     dsl4jsb_Def_config(SSE_)
 
@@ -266,7 +266,7 @@ CONTAINS
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
-    END SUBROUTINE Init_sse_memory
+  END SUBROUTINE Init_sse_memory
 
 #endif
 END MODULE mo_sse_memory_class
