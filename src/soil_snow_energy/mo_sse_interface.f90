@@ -159,7 +159,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_melt_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
-    dsl4jsb_Real3D_onChunk :: matrix_pot_sl
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: heat_cond
@@ -245,7 +245,7 @@ CONTAINS
     IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
@@ -570,7 +570,7 @@ CONTAINS
         & thaw_depth                          (:  ), &
         ! optional, in
         & ws_max_sl                           (:,:), &
-        & matrix_pot_sl                       (:,:), &
+        & matric_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
         ! optional, inout
         & wtr_soil_sl                         (:,:), &
@@ -722,8 +722,7 @@ CONTAINS
       & heat_cond_sl,         &
       & wtr_soil_sl,          &
       & ice_soil_sl,          &
-      & vol_porosity_sl,      &
-      & vol_field_cap_sl
+      & vol_porosity_sl
 
     ! Locally allocated vectors
     !
@@ -821,7 +820,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -937,7 +935,6 @@ CONTAINS
             &                                wtr_soil_sl(ic,is)            , &
             &                                ice_soil_sl(ic,is)            , &
             &                                vol_porosity_sl(ic,is)        , &
-            &                                vol_field_cap_sl(ic,is)       , &
             &                                fract_org_sl(ic,is)           , &
             &                                vol_porosity_org_tmp(ic,is)   , &
             &                                hcond_org_tmp(ic,is)          , &
