@@ -403,10 +403,7 @@ CONTAINS
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
         IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
-          IF (lbugfix) THEN
-            ! Assume equal snow cover for consistent Richtmyer Morton coefficients
-            snow_fract(ic) = 1._wp
-          ELSE
+          IF (.NOT. lbugfix) THEN
             snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
           END IF
         ELSE
@@ -659,11 +656,8 @@ CONTAINS
         & nsnow,                  &
         & soil_e%dz(1:2),         &
         & dtime,                  &
-        & lstart,                 &
         & snow_depth_sl    (:,:), &
-        & itop_old           (:), &
         & itop               (:), &
-        & t_unfilt_corrected (:), &
         & vol_heat_cap_snow  (:), &
         & heat_cond_snow     (:), &
         & vol_heat_cap_sl  (:,1), &
@@ -723,12 +717,9 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 #endif
     DO ic = 1,nc
-      IF (snow_depth_sl(ic,nsnow) > 0._wp .AND. .NOT. lbugfix) THEN
+      IF (snow_depth_sl(ic,nsnow) > 0._wp) THEN
         grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._wp - snow_fract(ic)) * grnd_hflx_soil(ic)
         hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._wp - snow_fract(ic)) * hcap_grnd_soil(ic)
-      ELSE IF (snow_depth_sl(ic,nsnow) > 0._wp .AND. lbugfix) THEN
-        grnd_hflx(ic) = grnd_hflx_snow(ic)
-        hcap_grnd(ic) = hcap_grnd_snow(ic)
       ELSE
         grnd_hflx(ic) = grnd_hflx_soil(ic)
         hcap_grnd(ic) = hcap_grnd_soil(ic)
