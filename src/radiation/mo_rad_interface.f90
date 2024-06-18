@@ -891,7 +891,7 @@ CONTAINS
             & wtr_pond(ic),         & ! in
             & ice_pond(ic),         & ! in
             & alb_vis_pond(ic),     & ! inout
-            & alb_nir_pond(ic)      & ! out
+            & alb_nir_pond(ic)      & ! inout
             & )
         END IF
       END DO

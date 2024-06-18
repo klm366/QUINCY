@@ -28,7 +28,8 @@ MODULE mo_hydro_config_class
   PUBLIC :: t_hydro_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
-    CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
+    CHARACTER(len=filename_max) :: bc_sso_filename   !< For elevation and oro_stddev
+    CHARACTER(len=filename_max) :: ic_moist_filename !< For `l_read_initial_moist=.TRUE.`
     REAL(wp)               :: &
       & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
                                 !  maximum snow depth on leaves  [m water equivalent]
@@ -43,6 +44,8 @@ MODULE mo_hydro_config_class
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
+      & l_read_initial_moist, & !< Force reading initial soil moisture for layers from `ic_moist_filename`
+                                !  even if `init_from_ifs=.TRUE.`
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
       & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Use organic component of soil layers
@@ -90,8 +93,8 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
-    LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
-      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
+    LOGICAL                     :: l_read_initial_moist, sanitize_restart, enforce_water_budget, l_organic, &
+      &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -104,6 +107,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & scheme_stom_cond,           &
+      & l_read_initial_moist,       &
       & sanitize_restart,           &
       & enforce_water_budget,       &
       & l_organic,                  &
@@ -145,6 +149,7 @@ CONTAINS
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     scheme_stom_cond       = 'echam5'
+    l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
@@ -186,6 +191,8 @@ CONTAINS
     END IF
 
     config%scheme_stom_cond       = scheme_stom_cond
+
+    config%l_read_initial_moist   = l_read_initial_moist
 
     config%sanitize_restart       = sanitize_restart
     IF (config%sanitize_restart) THEN

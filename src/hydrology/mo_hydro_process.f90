@@ -737,16 +737,14 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         wtr_transp_down(ic,is) = wtr_transp_down(ic,is) * rhoh2o / dtime
         drainage_sl(ic,is)     = drainage_sl(ic,is)     * rhoh2o / dtime
       END DO
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     !$ACC WAIT(1)
     !$ACC END DATA
@@ -964,18 +962,18 @@ CONTAINS
     REAL(wp) :: weq_wres_sl(nc,nsoil)        ! residual water content - not reduced relative to soil ice fraction [m]
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
-    REAL(wp) :: wtr_flux_top(nc)             ! water flux entering a soil layer from above [m]
     REAL(wp) :: wtr_residual_sl(nc,nsoil)    ! immobile soil water (supercooled or below residual water content) [m]
     REAL(wp) :: drain_slow_sl(nc,nsoil)      ! slow drainage component (below field capacity) [m]
     REAL(wp) :: drain_fast_sl(nc,nsoil)      ! fast drainage component (above field capacity) [m]
     REAL(wp) :: storage_change_sl(nc,nsoil)  ! soil storage change term used in vertical water transport (m)
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
+    REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
 
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
-    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, wtr_flux_top, storage_change_sl) &
+    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
     !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl)                 &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
@@ -1290,12 +1288,17 @@ CONTAINS
     ! Diagnose vertical water transport
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
-    DO ic = 1, nc
-      wtr_flux_top(ic) = infilt(ic) + evapo_soil_sl1(ic)
-      !$ACC LOOP GANG VECTOR
-      DO is = 1, last_soil_layer(ic)
-        wtr_transp_down(ic,is) = wtr_soil_sl_t0(ic,is) - wtr_soil_sl(ic,is) + wtr_flux_top(ic) + transpiration_sl(ic,is)
-        wtr_flux_top(ic)       = wtr_transp_down(ic,is)
+    DO is = 1, nsoil
+      !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_top)
+      DO ic = 1, nc
+        IF (is == 1) THEN
+          wtr_flux_top = infilt(ic) + evapo_soil_sl1(ic)
+        ELSE IF (is <= last_soil_layer(ic)) THEN
+          wtr_flux_top = wtr_transp_down(ic,is-1)
+        END IF
+        IF (is <= last_soil_layer(ic)) THEN
+          wtr_transp_down(ic,is) = wtr_soil_sl_t0(ic,is) - wtr_soil_sl(ic,is) + wtr_flux_top + transpiration_sl(ic,is)
+        END IF
       END DO
     END DO
     !$ACC END PARALLEL
