@@ -189,6 +189,10 @@ CONTAINS
       & ws_max_sl(:,:),                &
       & t_soil_withsnow_sl(:,:),       &
       & t_soil_snowfree_sl(:,:),       &
+      & wtr_soil_withsnow_sl(:,:),     &
+      & wtr_soil_snowfree_sl(:,:),     &
+      & ice_soil_withsnow_sl(:,:),     &
+      & ice_soil_snowfree_sl(:,:),     &
       & wtr_freeze_withsnow_sl(:,:),   &
       & wtr_freeze_snowfree_sl(:,:),   &
       & ice_melt_withsnow_sl(:,:),     &
@@ -321,8 +325,8 @@ CONTAINS
         & weq_snow_soil(:)                          ,  &
         & heat_cond(:)                              ,  &
         & vol_heat_cap(:)                           ,  &
-        & t_soil_acoef                          (:,:), &
-        & t_soil_bcoef                          (:,:), &
+        & t_soil_snowfree_acoef                 (:,:), &
+        & t_soil_snowfree_bcoef                 (:,:), &
         & t_soil_sl                             (:,:), &
         & hcap_grnd                             (:),   &
         & grnd_hflx                             (:),   &
@@ -547,8 +551,8 @@ CONTAINS
         & heat_cond_sl                        (:,:), &
         ! inout
         & t_soil_sl                           (:,:), &
-        & t_soil_acoef                        (:,:), &
-        & t_soil_bcoef                        (:,:), &
+        & t_soil_snowfree_acoef               (:,:), &
+        & t_soil_snowfree_bcoef               (:,:), &
         ! out
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  ), &
@@ -556,10 +560,15 @@ CONTAINS
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
+      ALLOCATE(wtr_soil_withsnow_sl(nc,nsoil),   wtr_soil_snowfree_sl(nc,nsoil))
+      ALLOCATE(ice_soil_withsnow_sl(nc,nsoil),   ice_soil_snowfree_sl(nc,nsoil))
       ALLOCATE(wtr_freeze_withsnow_sl(nc,nsoil), wtr_freeze_snowfree_sl(nc,nsoil))
       ALLOCATE(ice_melt_withsnow_sl  (nc,nsoil), ice_melt_snowfree_sl  (nc,nsoil))
       ALLOCATE(wtr_scool_withsnow_sl (nc,nsoil), wtr_scool_snowfree_sl (nc,nsoil))
-      !$ACC ENTER DATA CREATE(ws_max_sl, wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl) &
+      !$ACC ENTER DATA CREATE(ws_max_sl, ) &
+      !$ACC   CREATE(wtr_soil_withsnow_sl, wtr_soil_snowfree_sl) &
+      !$ACC   CREATE(ice_soil_withsnow_sl, ice_soil_snowfree_sl) &
+      !$ACC   CREATE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl) &
       !$ACC   CREATE(ice_melt_withsnow_sl, ice_melt_snowfree_sl) &
       !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
 #ifdef _CRAYFTN
@@ -571,6 +580,11 @@ CONTAINS
       DO is = 1,nsoil
         DO ic = 1, nc
           ws_max_sl(ic,is) = soil_depth_sl(ic,is) * vol_porosity_sl(ic,is)
+          ! Initialize water and ice content for both soil columns, currently no differences are kept
+          wtr_soil_withsnow_sl(ic,is) = wtr_soil_sl(ic,is)
+          wtr_soil_snowfree_sl(ic,is) = wtr_soil_sl(ic,is)
+          ice_soil_withsnow_sl(ic,is) = ice_soil_sl(ic,is)
+          ice_soil_snowfree_sl(ic,is) = ice_soil_sl(ic,is)
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -635,7 +649,7 @@ CONTAINS
         & thaw_depth                          (:  ), &
         ! optional, in
         & ws_max_sl                           (:,:), &
-        & matrix_pot_sl                       (:,:), &
+        & matric_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
         ! optional, inout
         & wtr_soil_snowfree_sl                (:,:), &
@@ -652,26 +666,26 @@ CONTAINS
 
       CALL calc_snow_abcoeff( &
         ! in
-        & nc,                     &
-        & nsnow,                  &
-        & soil_e%dz(1:2),         &
-        & dtime,                  &
-        & snow_depth_sl    (:,:), &
-        & itop               (:), &
-        & vol_heat_cap_snow  (:), &
-        & heat_cond_snow     (:), &
-        & vol_heat_cap_sl  (:,1), &
-        & heat_cond_sl     (:,1), &
-        & t_soil_sl        (:,:), &
-        & t_soil_acoef     (:,:), &
-        & t_soil_bcoef     (:,:), &
+        & nc,                         &
+        & nsnow,                      &
+        & soil_e%dz(1:2),             &
+        & dtime,                      &
+        & snow_depth_sl        (:,:), &
+        & itop                   (:), &
+        & vol_heat_cap_snow      (:), &
+        & heat_cond_snow         (:), &
+        & vol_heat_cap_sl      (:,1), &
+        & heat_cond_sl         (:,1), &
+        & t_soil_withsnow_sl   (:,:), &
+        & t_soil_withsnow_acoef(:,:), &
+        & t_soil_withsnow_bcoef(:,:), &
         ! inout
-        & t_snow           (:,:), &
-        & t_snow_acoef     (:,:), &
-        & t_snow_bcoef     (:,:), &
+        & t_snow               (:,:), &
+        & t_snow_acoef         (:,:), &
+        & t_snow_bcoef         (:,:), &
         ! out
-        & hcap_grnd_snow     (:), &
-        & grnd_hflx_snow     (:)  &
+        & hcap_grnd_snow         (:), &
+        & grnd_hflx_snow         (:)  &
         & )
 
 #ifdef _CRAYFTN
@@ -688,6 +702,10 @@ CONTAINS
           ! and differences between soil column tile mean soil temperatures
           t_soil_sl(ic,is)             = snow_fract(ic) * t_soil_withsnow_sl(ic,is) &
             &                          + (1._wp - snow_fract(ic)) * t_soil_snowfree_sl(ic,is)
+          wtr_soil_sl(ic,is)           = snow_fract(ic) * wtr_soil_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * wtr_soil_snowfree_sl(ic,is)
+          ice_soil_sl(ic,is)           = snow_fract(ic) * ice_soil_withsnow_sl(ic,is) &
+            &                          + (1._wp - snow_fract(ic)) * ice_soil_snowfree_sl(ic,is)
           wtr_freeze_sl(ic,is)         = snow_fract(ic) * wtr_freeze_withsnow_sl(ic,is) &
             &                          + (1._wp - snow_fract(ic)) * wtr_freeze_snowfree_sl(ic,is)
           ice_melt_sl(ic,is)           = snow_fract(ic) * ice_melt_withsnow_sl(ic,is) &
@@ -702,12 +720,18 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-      !$ACC EXIT DATA DELETE(t_soil_withsnow_sl, t_soil_snowfree_sl, wtr_freeze_withsnow_sl) &
-      !$ACC   DELETE(wtr_freeze_snowfree_sl, ice_melt_withsnow_sl, ice_melt_snowfree_sl)     &
+      !$ACC EXIT DATA DELETE(t_soil_withsnow_sl, t_soil_snowfree_sl) &
+      !$ACC   DELETE(wtr_soil_withsnow_sl, wtr_soil_snowfree_sl)     &
+      !$ACC   DELETE(ice_soil_withsnow_sl, ice_soil_snowfree_sl)     &
+      !$ACC   DELETE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl) &
+      !$ACC   DELETE(ice_melt_withsnow_sl, ice_melt_snowfree_sl)     &
       !$ACC   DELETE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
-      DEALLOCATE(t_soil_withsnow_sl, t_soil_snowfree_sl, wtr_freeze_withsnow_sl)
-      DEALLOCATE(wtr_freeze_snowfree_sl, ice_melt_withsnow_sl, ice_melt_snowfree_sl)
-      DEALLOCATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
+      DEALLOCATE(t_soil_withsnow_sl,     t_soil_snowfree_sl)
+      DEALLOCATE(wtr_soil_withsnow_sl,   wtr_soil_snowfree_sl)
+      DEALLOCATE(ice_soil_withsnow_sl,   ice_soil_snowfree_sl)
+      DEALLOCATE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl)
+      DEALLOCATE(ice_melt_withsnow_sl,   ice_melt_snowfree_sl)
+      DEALLOCATE(wtr_scool_withsnow_sl,  wtr_scool_snowfree_sl)
     END IF
 
 #ifdef _CRAYFTN
@@ -765,9 +789,13 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_acoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_bcoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_snowfree_acoef, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_snowfree_bcoef, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_withsnow_acoef, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_withsnow_bcoef, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   dt_soil_snowfree_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   dt_soil_withsnow_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,        weighted_by_fract)

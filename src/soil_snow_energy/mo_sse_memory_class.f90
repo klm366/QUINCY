@@ -33,7 +33,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 25
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
