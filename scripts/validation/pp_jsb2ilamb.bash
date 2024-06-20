@@ -1,19 +1,18 @@
 #!/bin/bash
-#SBATCH --account=bm1236
-#SBATCH --job-name=iconland4ilamb
+#SBATCH --account=
+#SBATCH --job-name=pp_jsb2ilamb
 #SBATCH --partition=shared
 #SBATCH --exclusive
 #SBATCH --time=20:00:00
-#SBATCH --output=./iconland4ilamb.%j.log
-#SBATCH --error=./iconland4ilamb.%j.log
+#SBATCH --output=./pp_jsb2ilamb.%j.log
+#SBATCH --error=./pp_jsb2ilamb.%j.log
 set -e
 # -----------------------------------------------------------------------------------------------------
-# This program converts ICON-LAND output from one experiment such that it can be evaluated
-# using iLamb
+# This program converts ICON-LAND (JSBACH4) output from one experiment such that it can be evaluated
+# using iLamb (see https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2018MS001354)
 # -----------------------------------------------------------------------------------------------------
-#
 
-VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrsos,nee,reco,swe,tas,twsa'
+VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,nee,reco,swe,tas,twsa'
 TRGGRID='r192x96'
 MOL2G_C=12.01
 GM2_2_MGHA=0.01
@@ -87,16 +86,17 @@ for VAR in $(echo ${VARLIST//,/ }); do
         hfss    ) echo "hfss    = seb_sensible_hflx_box * -1;" >> $TASKLIST ;;
         tas     ) echo "tas     = seb_t_box;"                  >> $TASKLIST ;;
         # *** Hydrology Cycle
-        evspsbl ) echo "evspsbl = hydro_evapotrans_box * -1;"  >> $TASKLIST ;;
+        evspsbl ) echo "evspsbl = hydro_evapotrans_box * -1;"             >> $TASKLIST ;;
+        mrro    ) echo "mrro    = hydro_runoff_box + hydro_drainage_box;" >> $TASKLIST ;;
         mrsos   ) echo "mrsos   = ((sellevel(hydro_wtr_soil_sl_box,0.0325) + sellevel(hydro_ice_soil_sl_box,0.0325)) + 0.1378 * (sellevel(hydro_wtr_soil_sl_box,0.192) + sellevel(hydro_ice_soil_sl_box,0.192))) * 1000;"       >> $TASKLIST ;;
-        swe     ) echo "swe     = hydro_weq_snow_box;"         >> $TASKLIST ;;
+        swe     ) echo "swe     = hydro_weq_snow_box;"                    >> $TASKLIST ;;
         twsa    ) echo "twsa    = (vertsum(hydro_wtr_soil_sl_box) + vertsum(hydro_ice_soil_sl_box) + hydro_weq_snow_box) * 1000;" >> $TASKLIST ;;
         # *** Ecosystem and Carbon Cycle
         biomass ) echo "biomass = carbon_c_sum_veg_ta_box * ${MOL2G_C} * ${GM2_2_MGHA};" >> $TASKLIST ;;
         gpp     ) echo "gpp     = carbon_gpp_ydaymean_ta_box * ${MOL2G_C} * 86400;"      >> $TASKLIST ;;
         lai     ) echo "lai     = pheno_lai_box;"                                        >> $TASKLIST ;;
-        nee     ) echo "nee     = ((assimi_dark_respiration_box + carbon_soil_respiration_ta_box) * (-1) - carbon_gpp_ydaymean_ta_box) * ${MOL2G_C} * 86400;"  >> $TASKLIST ;;
-        reco    ) echo "reco    = (assimi_dark_respiration_box + carbon_soil_respiration_ta_box) * ${MOL2G_C} * -86400;" >> $TASKLIST ;;
+        nee     ) echo "nee     = carbon_co2_l2a_npp_ta_box * 1000 * 86400;"             >> $TASKLIST ;;
+        reco    ) echo "reco    = carbon_co2_l2a_resp_ta_box * 1000 * 86400;"            >> $TASKLIST ;;
         # *** Capture missing variables
         *       ) echo "Postprocessing for variable ${VAR} not yet implemented in $0" && exit 1 ;;
     esac
@@ -141,6 +141,11 @@ cat > $PARTAB << EOF
   name = lai
   long_name = "Leaf area index"
   units = "1"
+/
+&parameter
+  name = mrro
+  long_name = "Total runoff"
+  units = "kg m-2 s-1"
 /
 &parameter
   name = mrsos
