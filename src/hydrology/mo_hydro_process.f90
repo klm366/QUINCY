@@ -1851,8 +1851,8 @@ CONTAINS
         &                                  )
       END IF
       ! Combine the different wet surface fractions assuming that skin and pond locations
-      ! would always coincide.
-      fract_wet(ic) = MAX(fract_skin(ic), fract_pond(ic))
+      ! are evenly distributed within the tile
+      fract_wet(ic) = fract_pond(ic) + fract_skin(ic) * (1._wp - fract_pond(ic)) 
 
     END DO
     !$ACC END PARALLEL LOOP
@@ -1968,8 +1968,8 @@ CONTAINS
       END IF
 
       ! Combine the different wet surface fractions assuming that skin and pond locations
-      ! would always coincide.
-      fract_wet(ic) = MAX(fract_skin(ic), fract_pond(ic))
+      ! are evenly distributed within the tile
+      fract_wet(ic) = fract_pond(ic) + fract_skin(ic) * (1._wp - fract_pond(ic)) 
 
     END DO
     !$ACC END PARALLEL LOOP
