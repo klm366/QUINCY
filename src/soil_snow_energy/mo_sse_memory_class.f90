@@ -33,7 +33,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 25
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -60,7 +60,9 @@ MODULE mo_sse_memory_class
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
-      & thaw_depth              !< Thawing depth [m]
+      & thaw_depth,           & !< Thawing depth [m]
+      & thaw_depth_max,       & !< Maximum thaw depth [m]
+      & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
@@ -264,7 +266,26 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_max', 'm', 'Maximum thaw depth'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=MEDIUM, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=MEDIUM, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
 
   END SUBROUTINE Init_sse_memory
 

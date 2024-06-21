@@ -60,6 +60,10 @@ MODULE mo_hydro_constants
     & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum (fast) subsurface drainage
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
+    ! Parameters required for Uniform_ scale hydrology
+    & ret_macro_srf = 36000._wp ,          &  !< retention time for surface runoff on macro scale (10 hours)
+    & ret_macro_blg = 432000._wp,          &  !< retention time for sub-surface runoff on macro scale (5 days) similar to drain_max
+
     ! Parameters used for pond computations
     & oro_crit = 100._wp,                  & !< Reference topo standard deviation for pond scaling factor [m]
 
@@ -90,7 +94,9 @@ MODULE mo_hydro_constants
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
-    & beta_perc               = 0.139_wp         !< Parameter from percolation theory
+    & beta_perc               = 0.139_wp,      & !< Parameter from percolation theory
+    ! Parameters for bedrock
+    & k_brock                 = 1.E-6_wp         !< Hydrologic conductivity (fractured) bedrock
 
 #endif
 END MODULE mo_hydro_constants

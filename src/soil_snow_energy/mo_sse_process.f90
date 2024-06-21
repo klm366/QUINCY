@@ -199,6 +199,9 @@ CONTAINS
         sat_fact    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
         fract_water = (water / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
         fract_ice   = (  ice / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
+
+        fract_water = MIN(1._wp, fract_water)
+        fract_ice   = MIN(fract_ice, 1._wp - fract_water)
         hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice
@@ -345,6 +348,7 @@ CONTAINS
   ! @param [in] l_freeze
   ! @param [in] l_supercool
   ! @param      t_unfilt      The t srf unfilt
+  ! @param [in] dsoil         soil depth on layers
   ! @param      vol_heat_cap  The volume heat capability
   ! @param      heat_cond     The heat condition
   ! @param [in]      ws_max
@@ -367,7 +371,7 @@ CONTAINS
     & nidx, nsoil, dz, mids,              &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
-    & t_unfilt,                           &
+    & t_unfilt, dsoil,                    &
     & vol_heat_cap, heat_cond,            &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
@@ -447,6 +451,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_unfilt(:)              !! surface temperature at top of soil [K]
+    REAL(wp), INTENT(in)    ::  dsoil(:,:)               !! soil depth until bedrock [m]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
 
@@ -472,7 +477,7 @@ CONTAINS
     INTEGER  :: jl, jk
     REAL(wp) :: z1(nidx,nsoil)
     REAL(wp) :: zd1(nsoil-1)
-    REAL(wp) :: zdz1(nidx,nsoil-1), zdz2(nidx,nsoil)
+    REAL(wp) :: zdz1(nidx,nsoil-1), zdz2(nidx,nsoil), zbot(nsoil)
     REAL(wp) :: heat_cap(nidx,nsoil)
 
     !-----------------------------------------------------------------------------------------------
@@ -480,9 +485,11 @@ CONTAINS
 
     !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
 
+    zbot(1)=dz(1)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO jk = 1,nsoil-1
        zd1(jk) = 1._wp / (mids(jk+1) - mids(jk))
+       zbot(jk+1) = zbot(jk)+dz(jk+1)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -598,22 +605,49 @@ CONTAINS
       ! Thawing depth
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
+      ! Calculation for full layers (zbot), rather than layer centers (mids) is more consistant with
+      ! the actual energy balance.
+      ! However, thaw depths are quite large, so it may become necessary to switch back to the assumption
+      ! that temepratures are valid for the center rather than the whole layer.
       DO jl=1,nidx
-        thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil_sl(jl,1) <= tmelt) THEN ! Top soil layer is frozen
+        IF (PRESENT(ws)) THEN          ! Not under glacier
+          thaw_depth(jl) = zbot(nsoil)   ! Initialize with maximum thaw depth
+          IF (t_soil_sl(jl,1) < tmelt) THEN ! Top soil layer is frozen
+            thaw_depth(jl) = 0._wp
+          ELSE IF (t_soil_sl(jl,1) == tmelt) THEN ! Top soil layer is thawing
+            ! in case water is present we diagnose thaw depth using ration of liquid / total water
+            IF (ice(jl,1) > 0._wp) THEN
+              thaw_depth(jl) = dsoil(jl,1) * ws(jl,1) / (ws(jl,1) + ice(jl,1))
+            ELSE
+              thaw_depth(jl) = dz(1)
+            END IF
+          END IF
+          !$ACC LOOP SEQ
+          DO jk=2,nsoil
+            IF (thaw_depth(jl) == zbot(nsoil)) THEN
+              ! Alternativly one could also go through the ground and see where there are still positive temperatures
+              !IF (       t_soil_sl(jl,jk-1) > tmelt &
+              !  &  .AND. t_soil_sl(jl,jk  ) > tmelt &
+              !  & ) THEN
+              !    ! in case water is present this would increase the energy required to bring temperatures above the melting point
+              !    thaw_depth(jl) = zbot(jk)
+              IF  (t_soil_sl(jl,jk-1) > tmelt .AND. t_soil_sl(jl,jk) == tmelt) THEN ! Lower layer is at zero degrees
+                IF (ice(jl,jk) > 0._wp) THEN
+                ! in case water is present we diagnose thaw depth using ration of liquid / total water
+                  thaw_depth(jl) = zbot(jk-1) + dsoil(jl,jk) * ws(jl,jk) / (ws(jl,jk) + ice(jl,jk))
+                ELSE
+                  thaw_depth(jl) = zbot(jk)
+                END IF
+              ELSE IF (t_soil_sl(jl,jk-1) > tmelt .AND. t_soil_sl(jl,jk  ) < tmelt) THEN
+                  ! in case water is present this would increase the energy required to bring temperatures above the melting point
+                  thaw_depth(jl) = zbot(jk-1) + dsoil(jl,jk) * (t_soil_sl(jl,jk-1) - tmelt) &
+                    & / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk) + ice(jl,jk) * alf * rhoi / heat_cap(jl,jk))
+              END IF
+            END IF
+          END DO
+        ELSE
           thaw_depth(jl) = 0._wp
         END IF
-        !$ACC LOOP SEQ
-        DO jk=2,nsoil
-          IF  (       thaw_depth(jl)  == mids(nsoil) & ! still the inital value
-            &   .AND. t_soil_sl(jl,jk-1) >  tmelt &
-            &   .AND. t_soil_sl(jl,jk  ) <= tmelt &
-            & ) THEN
-            thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
-              & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk))
-          END IF
-        END DO
-        !$ACC END LOOP
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
