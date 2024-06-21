@@ -474,17 +474,19 @@ CONTAINS
 #else
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 #endif
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR
-        DO ic = 1, nc
-          t_soil_withsnow_sl(ic,is) = t_soil_sl(ic,is) + dt_soil_snowfree_sl(ic,is)
-          t_soil_snowfree_sl(ic,is) = t_soil_sl(ic,is) + dt_soil_withsnow_sl(ic,is)
+      IF (lstart) THEN
+        !$ACC LOOP SEQ
+        DO is = 1, nsoil
+          !$ACC LOOP GANG VECTOR
+          DO ic = 1, nc
+            t_soil_withsnow_sl(ic,is) = t_soil_sl(ic,is)
+            t_soil_snowfree_sl(ic,is) = t_soil_sl(ic,is)
+          END DO
+          !$ACC END LOOP
         END DO
         !$ACC END LOOP
-      END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+        !$ACC END PARALLEL
+      END IF
 
       CALL calc_snow_temperature( &
         ! in
