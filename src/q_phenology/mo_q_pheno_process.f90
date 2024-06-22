@@ -61,6 +61,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    REAL(wp)                          :: dtime                  !< timestep length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_q_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -91,6 +92,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_PHENO_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN !< run task only if the present tile is a pft
@@ -129,6 +131,7 @@ CONTAINS
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !>
     CALL calc_phenology(                     &
+      & dtime                              , &
       & lctlib%phenology_type              , &  ! lctlib
       & lctlib%beta_soil_flush             , &
       & lctlib%cn_leaf                     , &
@@ -158,6 +161,7 @@ CONTAINS
   !> calculate phenology
   !>
   ELEMENTAL SUBROUTINE calc_phenology(  &
+    & dtime                           , &
     & phenology_type                  , &
     & beta_soil_flush                 , &
     & cn_leaf                         , &
@@ -182,12 +186,13 @@ CONTAINS
     & nd_dormance                     , &
     & gdd )
     ! ----------------------------------------------------------------------------------------------------- !
-    USE mo_jsb_math_constants,      ONLY: dtime, one_day
+    USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp),     INTENT(in)    :: dtime                            !< timestep length
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
     REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
     REAL(wp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter

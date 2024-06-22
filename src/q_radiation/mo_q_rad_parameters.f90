@@ -40,6 +40,10 @@ MODULE mo_q_rad_parameters
     & def_alb_vis_snow = def_parameters, &  !< default VIS albedo for snow
     & def_alb_nir_snow = def_parameters     !< default NIR albedo for snow
 
+  REAL(wp), SAVE :: &
+    & albedo_vis_initial = def_parameters, &  !< initial value for albedo in the visible range (jsbach: AlbedoVisInitial)
+    & albedo_nir_initial = def_parameters     !< initial value for albedo in the near infrared (jsbach: AlbedoNirInitial)
+
   ! conversion factors
   REAL(wp), SAVE :: &
     & rad2ppfd = def_parameters             !< micro-mol /J
@@ -77,6 +81,8 @@ CONTAINS
     def_alb_nir_soil          = 0.30_wp       !< default from Bonan 2008
     def_alb_vis_snow          = 0.6_wp        !< Literature research: from 0.2(old snow) to 0.9(new snow) | @TODO: could vary with snow age
     def_alb_nir_snow          = 0.6_wp        !< Literature research: from 0.2(old snow) to 0.9(new snow) | @TODO: could vary with snow age
+    albedo_vis_initial        = 0.1_wp        !< value from JSBACH
+    albedo_nir_initial        = 0.3_wp        !< value from JSBACH
     ! conversion factors
     rad2ppfd                  = 4.6_wp        !< Monteith & Unsworth 1995
     ! red to far red ratio calculations

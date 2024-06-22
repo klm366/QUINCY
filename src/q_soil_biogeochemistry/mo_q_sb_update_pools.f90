@@ -61,7 +61,7 @@ CONTAINS
     USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
-    USE mo_jsb_math_constants,     ONLY: dtime, eps8
+    USE mo_jsb_math_constants,     ONLY: eps8
     USE mo_jsb_physical_constants, ONLY: lambda_C14
     USE mo_sb_constants
     USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
@@ -102,6 +102,7 @@ CONTAINS
                                              rtm_sorption_act, rmm_sorption_act, &
                                              rtm_desorption_act, rmm_desorption_act, &
                                              partition_coef
+    REAL(wp)                              :: dtime                          !< timestep length
     INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
@@ -136,8 +137,8 @@ CONTAINS
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: net_biosphere_production_l2aveghlp
-    dsl4jsb_Real2D_onChunk :: biological_n_fixation_l2aveghlp
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk :: biological_n_fixation
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! SPQ_ 2D
@@ -323,6 +324,7 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
+    dtime     = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
@@ -391,8 +393,8 @@ CONTAINS
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                           ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_l2aveghlp)   ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation_l2aveghlp)      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)                     ! in
     ! SPQ_ 2D
@@ -863,7 +865,7 @@ CONTAINS
       hlp1(:,1) = hlp1(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
 
-      CALL calc_langmuir_kinetics(hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
+      CALL calc_langmuir_kinetics(dtime, hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
                                                    km_adsorpt_nh4_act(:,:), qmax_nh4_mineral_act(:,:), &
                                                    partition_coef(:,:))
 
@@ -892,7 +894,7 @@ CONTAINS
     !> 10.3 update mineral P pools if not prescibed
     !!
     IF(.NOT. dsl4jsb_Config(SB_)%flag_sb_prescribe_po4) THEN
-      CALL calc_p_inorg_dynamics(nc, nsoil_sb, &
+      CALL calc_p_inorg_dynamics(nc, nsoil_sb, dtime, &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                        dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
@@ -1083,10 +1085,10 @@ CONTAINS
     !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
-    net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
+    net_biosphere_production(:) = net_biosphere_production(:) &
       &                                     - SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM = 2)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp &
+    biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !------------------------------------------------------------------------------------------------------ !
@@ -1124,6 +1126,7 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_sb, &
+                                   dtime, &
                                    sb_model_scheme, &
                                    sb_adsorp_scheme, &
                                    flag_sb_double_langmuir, &
@@ -1155,12 +1158,13 @@ CONTAINS
                                    fast_exchange_po4)
 
     USE mo_sb_constants
-    USE mo_jsb_math_constants,  ONLY: eps4, eps8, dtime
+    USE mo_jsb_math_constants,  ONLY: eps4, eps8
 
     IMPLICIT NONE
 
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
                                                                        nsoil_sb
+    REAL(wp),                                         INTENT(in)    :: dtime                         !< timestep length
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
@@ -1237,7 +1241,7 @@ CONTAINS
                    transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
       hlp2(:,:) = (slow_exchange_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
 
-      CALL calc_langmuir_kinetics(hlp1(:,:), &
+      CALL calc_langmuir_kinetics(dtime, hlp1(:,:), &
                                   po4_solute(:,:),po4_assoc_fast(:,:), &
                                   km_adsorpt_po4_act(:,:), qmax_po4_mineral_act(:,:), &
                                   partition_coef(:,:))
@@ -1259,12 +1263,12 @@ CONTAINS
       DO ichunk = 1, nc
         DO isoil = 1, nsoil_sb
           IF (flag_arr(ichunk,isoil)) THEN
-            CALL calc_langmuir_kinetics(hlp1(ichunk,isoil), &
+            CALL calc_langmuir_kinetics(dtime, hlp1(ichunk,isoil), &
                                         po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), &
                                         km_fast_po4_act(ichunk,isoil), qmax_fast_po4_act(ichunk,isoil), &
                                         partition_coef(ichunk,isoil))
           ELSE
-            CALL calc_langmuir_kinetics(hlp1(ichunk,isoil), &
+            CALL calc_langmuir_kinetics(dtime, hlp1(ichunk,isoil), &
                                         po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), &
                                         km_adsorpt_po4_act(ichunk,isoil), qmax_po4_mineral_act(ichunk,isoil), &
                                         partition_coef(ichunk,isoil), &
@@ -1294,15 +1298,16 @@ CONTAINS
   !> Subroutine to calculate Langmuir kinetics (modified from Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_langmuir_kinetics(solute_flux, solute, assoc_fast, &
+  ELEMENTAL SUBROUTINE calc_langmuir_kinetics(dtime, solute_flux, solute, assoc_fast, &
                                               km, qmax, solute_partition_coef, &
                                               assoc_slow, km_fast, qmax_fast, km_slow, qmax_slow, &
                                               slow_partition_coef, slow_exchange)
     USE mo_sb_constants
-    USE mo_jsb_math_constants,  ONLY: eps4, eps8, dtime
+    USE mo_jsb_math_constants,  ONLY: eps4, eps8
 
     IMPLICIT NONE
     ! 0.1 inout
+    REAL(wp)          , INTENT(in)    :: dtime                  !< timestep length
     REAL(wp)          , INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
     REAL(wp)          , INTENT(in)    :: solute                 !< solute pool (mol/m3)
     REAL(wp)          , INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)

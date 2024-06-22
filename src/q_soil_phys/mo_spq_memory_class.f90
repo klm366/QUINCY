@@ -46,9 +46,18 @@ MODULE mo_spq_memory_class
     TYPE(t_jsb_var_real2d)          :: &
                                     soil_depth      , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
                                     root_depth      , & !< actual rooting depth [m]
+                                    t_srf_new       , & !< current surface temperature [K]
                                     t_srf_old       , & !< previous surface temperature [K]
+                                    temp_srf_eff_4  , & !< effective surface temperature ** 4.0 [K**4.0] (in jsbach: t_eff4)
                                     zril_old        , & !< previous timestep's Reynold's number
-                                    elevation           !< currently 0.0 [m]
+                                    elevation       , & !< currently 0.0 [m]
+                                    qsat_star       , & !< saturation specific humidity at surface [kg kg-1 ?]
+                                    s_star              !< surface dry static energy               [m2 s-2 ?]
+
+    TYPE(t_jsb_var_real2d)          :: &
+      & evapotranspiration, &             !< evapotranspiration [kg m-2 s-1]
+      & z0h, &                            !< surface roughness length for heat
+      & z0m                               !< surface roughness length for momentum
 
     TYPE(t_jsb_var_real2d)          :: &
       &   num_sl_above_bedrock                          !< number of soil layers above bedrock, i.e., with a width larger eps8
@@ -64,11 +73,12 @@ MODULE mo_spq_memory_class
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
                                     interception,     & !< surface interception evaporation                                         [kg m-2 s-1]
-                                    pet,              & !< potential evaporation                                                    [kg m-2 s-1]
+                                    evapopot,         & !< potential evaporation                                                    [kg m-2 s-1]
                                     evaporation,      & !< surface evaporation                                                      [kg m-2 s-1]
                                     evaporation_snow, & !< snow surface evaporation                                                 [kg m-2 s-1] unit correct ?
                                     srf_runoff,       & !< surface runoff                                                           [kg m-2 s-1]
                                     drainage,         & !< drainage                                                                 [kg m-2 s-1]
+                                    gw_runoff,        & !< lateral runoff                                                           [kg m-2 s-1]
                                     drainage_fraction   !< water mass fraction lost from the soil column by drainage                [1 s-1]
 
     TYPE(t_jsb_var_real2d)          :: &
@@ -227,6 +237,17 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('t_srf_new', mem%t_srf_new, &
+        & hgrid, surface, &
+        & t_cf('t_srf_new', 'K', 'current surface temperature'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 273.15_wp)
+
       CALL mem%Add_var('t_srf_old', mem%t_srf_old, &
         & hgrid, surface, &
         & t_cf('t_srf_old', 'K', 'previous surface temperature'), &
@@ -236,7 +257,18 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 273.15_wp)
+
+      CALL mem%Add_var('temp_srf_eff_4', mem%temp_srf_eff_4, &
+        & hgrid, surface, &
+        & t_cf('temp_srf_eff_4', 'K**4.0', 'effective surface temperature ** 4.0'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 273.15_wp ** 4.0_wp)
 
       CALL mem%Add_var('zril_old', mem%zril_old, &
         & hgrid, surface, &
@@ -258,7 +290,62 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart=.FALSE., &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT)
+
+      CALL mem%Add_var('qsat_star', mem%qsat_star, &
+        & hgrid, surface, &
+        & t_cf('qsat_star', 'kg kg-1 ?', 'saturation specific humidity at surface'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=0.0075_wp)
+
+      CALL mem%Add_var('s_star', mem%s_star, &
+        & hgrid, surface, &
+        & t_cf('s_star', 'm2 s-2 ?', 'surface dry static energy'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=2.9E5_wp)
+
+      CALL mem%Add_var('evapotranspiration', mem%evapotranspiration, &
+        & hgrid, surface, &
+        & t_cf('evapotranspiration', 'kg m-2 s-1 ?', 'evapotranspiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=0.0_wp)
+
+      CALL mem%Add_var('z0h', mem%z0h, &
+        & hgrid, surface, &
+        & t_cf('z0h', '[]', 'surface roughness length for heat'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=1.0_wp)
+
+      CALL mem%Add_var('z0m', mem%z0m, &
+        & hgrid, surface, &
+        & t_cf('z0m', '[]', 'surface roughness length for momentum'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=1.0_wp)
 
       CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
         & hgrid, surface, &
@@ -337,9 +424,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('pet', mem%pet, &
+      CALL mem%Add_var('evapopot', mem%evapopot, &
         & hgrid, surface, &
-        & t_cf('pet', 'kg m-2 s-1', 'potential evaporation'), &
+        & t_cf('evapopot', 'kg m-2 s-1', 'potential evaporation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -392,6 +479,17 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('gw_runoff', mem%gw_runoff, &
+        & hgrid, surface, &
+        & t_cf('gw_runoff', 'kg m-2 s-1', 'sum of lateral runoff across all soil layers'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('drainage_fraction', mem%drainage_fraction, &
         & hgrid, surface, &
         & t_cf('drainage_fraction', '1 s-1', 'water mass fraction lost from the soil column by drainage'), &
@@ -409,10 +507,10 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.5_wp)
 
       CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
         & hgrid, surface, &
@@ -420,10 +518,10 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.5_wp)
 
       CALL mem%Add_var('w_skin', mem%w_skin, &
         & hgrid, surface, &
@@ -478,7 +576,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 273.15_wp)
 
       CALL mem%Add_var('frac_w_lat_loss_sl', mem%frac_w_lat_loss_sl, &
         & hgrid, vgrid_soil_sb, &
@@ -720,7 +818,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 273.15_wp)
 
       CALL mem%Add_var('w_soil_freeze_flux', mem%w_soil_freeze_flux, &
         & hgrid, vgrid_soil_sb, &
@@ -750,8 +848,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 

@@ -41,6 +41,7 @@ CONTAINS
   SUBROUTINE calc_canopy_layers( &
     & nc, &
     & ncanopy, &
+    & dtime, &
     & dz, &
     & lbounds, &
     & ubounds, &
@@ -91,6 +92,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                INTENT(in)              :: nc                    !< dimensions
     INTEGER,                                INTENT(in)              :: ncanopy               !< number of canopy layers
+    REAL(wp),                               INTENT(in)              :: dtime                 !< timestep length
     REAL(wp), DIMENSION(ncanopy),           INTENT(in)              :: dz                    !< canopy layer thickness
     REAL(wp), DIMENSION(ncanopy),           INTENT(in)              :: lbounds               !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
     REAL(wp), DIMENSION(ncanopy),           INTENT(in)              :: ubounds               !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
@@ -214,7 +216,7 @@ CONTAINS
 
         ! make sure all LAI is represented by letting last layer go to the end of the canopy
         WHERE(icanopy==ncanopy .AND. ubounds(ncanopy) < lai(:) )
-          lai_cl(:,ncanopy) = lai(:)
+          lai_cl(:,ncanopy) = lai(:) - lbounds(ncanopy)
         ENDWHERE
 
         ! LAI mid-point of canopy layer
@@ -380,7 +382,8 @@ CONTAINS
 
         IF(optimise_n_fractions) THEN
           DO icanopy = 1,ncanopy
-            CALL optimise_canopy_n_fractions(  lctlib_gmin                , & ! lctlib
+            CALL optimise_canopy_n_fractions(  dtime                      , &
+                                               lctlib_gmin                , & ! lctlib
                                                lctlib_g0                  , &
                                                lctlib_g1                  , &
                                                lctlib_t_jmax_omega        , &
@@ -423,6 +426,7 @@ CONTAINS
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE optimise_canopy_n_fractions( &
+                                    dtime                      , &
                                     gmin                      , &   ! lctlib
                                     g0                        , &
                                     g1                        , &
@@ -451,13 +455,14 @@ CONTAINS
                                     fn_et_cl                  , &
                                     fn_pepc_cl)
 
-    USE mo_jsb_math_constants,  ONLY: dtime, one_day, eps8
+    USE mo_jsb_math_constants,  ONLY: one_day, eps8
     USE mo_veg_constants,       ONLY: delta_n_fraction
 
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+    REAL(wp),                 INTENT(in)    :: dtime                  !< timestep length
     REAL(wp),                 INTENT(in)    :: gmin            , &    !< land-cover-type library parameter
                                                g0              , &    !< land-cover-type library parameter
                                                g1              , &    !< land-cover-type library parameter
@@ -826,6 +831,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment( nc                      , &
                                                   ncanopy                 , &
+                                                  dtime                   , &
                                                   dz                      , &
                                                   lbounds                 , &
                                                   ubounds                 , &
@@ -883,6 +889,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in) :: nc                            !< dimensions
     INTEGER,                                INTENT(in) :: ncanopy                       !< number of canopy layers
+    REAL(wp),                               INTENT(in) :: dtime                         !< timestep length
     REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: dz                      , &   !< canopy layer thickness
                                                           lbounds                 , &   !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                           ubounds                       !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
@@ -1001,6 +1008,7 @@ CONTAINS
     CALL calc_canopy_layers( &
                             nc                      = nc                          , & ! in
                             ncanopy                 = ncanopy                     , &
+                            dtime                   = dtime                       , &
                             dz                      = dz(:)                       , &
                             lbounds                 = lbounds(:)                  , &
                             ubounds                 = ubounds(:)                  , &
@@ -1116,6 +1124,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(  nc                            , & ! in
                                         ncanopy                       , &
+                                        dtime                         , &
                                         dz                            , &
                                         lbounds                       , &
                                         ubounds                       , &
@@ -1164,7 +1173,7 @@ CONTAINS
                                         labile_nitrogen               , & ! in
                                         leaf_cn_direction             )   ! inout
 
-    USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
+    USE mo_jsb_math_constants,            ONLY: one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
     USE mo_lnd_time_averages,             ONLY: mavg_period_tgrowth
     USE mo_q_pheno_constants,             ONLY: ievergreen, iraingreen, isummergreen, iperennial
@@ -1174,6 +1183,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in)    :: nc                             !< dimensions
     INTEGER,                                INTENT(in)    :: ncanopy                        !< number of canopy layers
+    REAL(wp),                               INTENT(in)    :: dtime                          !< timestep length
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: dz                         , & !< canopy layer thickness
                                                              lbounds                    , & !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                              ubounds                        !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
@@ -1292,6 +1302,7 @@ CONTAINS
                 CALL calc_canopy_layers( &
                           nc                      = nc                                  , & ! in
                           ncanopy                 = ncanopy                             , &
+                          dtime                   = dtime                               , &
                           dz                      = dz(:)                               , &
                           lbounds                 = lbounds(:)                          , &
                           ubounds                 = ubounds(:)                          , &

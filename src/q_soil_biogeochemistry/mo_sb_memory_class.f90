@@ -355,17 +355,16 @@ MODULE mo_sb_memory_class
   !> Type definition for sb_bgc_material_components
   !>
   TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_components
-    ! bgcm of TYPE t_sb_bgcm_with_elements included:
-    ! dom                  !< elements of dissolved organic matter
-    ! dom_assoc            !< elements of minerally associated disolved organic matter
-    ! soluable_litter      !< elements of metabolic litter (sugars, cellulose etc.)
-    ! polymeric_litter     !< elements of structural litter (lignified litter)
-    ! woody_litter         !< elements of physically protected wood litter
-    ! fungi                !< elements of saprophytic fungal biomass
-    ! mycorrhiza           !< elements of mycorrhizal fungal biomass
-    ! microbial            !< elements of microbial biomass (bacteria!)
-    ! residue              !< elements of necromass of fungi, microbial and mycorrhiza
-    ! residue_assoc        !< elements of minerally associated microbial necromass
+    TYPE(t_sb_bgcm_with_elements), POINTER :: dom              !< elements of dissolved organic matter
+    TYPE(t_sb_bgcm_with_elements), POINTER :: dom_assoc        !< elements of minerally associated dissolved organic matter
+    TYPE(t_sb_bgcm_with_elements), POINTER :: soluable_litter  !< elements of metabolic litter (sugars, cellulose etc.)
+    TYPE(t_sb_bgcm_with_elements), POINTER :: polymeric_litter !< elements of structural litter (lignified litter)
+    TYPE(t_sb_bgcm_with_elements), POINTER :: woody_litter     !< elements of physically protected wood litter
+    TYPE(t_sb_bgcm_with_elements), POINTER :: fungi            !< elements of saprophytic fungal biomass
+    TYPE(t_sb_bgcm_with_elements), POINTER :: mycorrhiza       !< elements of mycorrhizal fungal biomass
+    TYPE(t_sb_bgcm_with_elements), POINTER :: microbial        !< elements of microbial biomass (bacteria!)
+    TYPE(t_sb_bgcm_with_elements), POINTER :: residue          !< elements of necromass of fungi, microbial and mycorrhiza
+    TYPE(t_sb_bgcm_with_elements), POINTER :: residue_assoc    !< elements of minerally associated microbial necromass
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_with_components_get_element_name_by_id
     PROCEDURE :: Init                       => sb_bgcm_with_components_init
@@ -423,8 +422,6 @@ CONTAINS
     CHARACTER(len=30)                        :: unit_sb_pool                !< unit of element var
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
-    TYPE(t_sb_bgcm_with_components), POINTER :: sb_bgcm_components          !< bgc_material components
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_bgcm_elements            !< bgc_material elements
     INTEGER                                  :: table                       !< ...
     CHARACTER(len=*), PARAMETER              :: routine = TRIM(modname)//':Init_sb_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -476,50 +473,34 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_pool
-      sb_bgcm_components => Create_sb_bgc_material_components( &
-        & name = 'soil_biogeochemistry_bgcm_pool', shortname = 'sb_bgcm_pool', unit = unit_sb_pool, &
-        & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))        ! create the bgcm object (l_elements = .TRUE. by default)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_components, SB_BGCM_POOL_ID) ! add bgcm object to pool_list(:)
-      mem%sb_bgcm_main%sbbpool => sb_bgcm_components                      ! link to bgcm object in pool_list(:)
+      mem%sb_bgcm_main%sbbpool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+        & SB_BGCM_POOL_ID, name = 'soil_biogeochemistry_bgcm_pool', shortname = 'sb_bgcm_pool', &
+        & unit = unit_sb_pool, elements_index_map = elem_idx_map(:))
       ! sb_formation
-      sb_bgcm_components => Create_sb_bgc_material_components( &
-        & name = 'soil_biogeochemistry_bgcm_formation', shortname = 'sb_bgcm_formation', unit = unit_sb_flux, &
-        & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))              ! create the bgcm object (l_elements = .TRUE. by default)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_components, SB_BGCM_FORMATION_ID)  ! add bgcm object to pool_list(:)
-      mem%sb_bgcm_main%sbbformation => sb_bgcm_components                       ! link to bgcm object in pool_list(:)
+      mem%sb_bgcm_main%sbbformation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
+        & SB_BGCM_FORMATION_ID, name = 'soil_biogeochemistry_bgcm_formation', shortname = 'sb_bgcm_formation', &
+        & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_loss
-      sb_bgcm_components => Create_sb_bgc_material_components( &
-        & name = 'soil_biogeochemistry_bgcm_loss', shortname = 'sb_bgcm_loss', unit = unit_sb_flux, &
-        & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))        ! create the bgcm object (l_elements = .TRUE. by default)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_components, SB_BGCM_LOSS_ID) ! add bgcm object to pool_list(:)
-      mem%sb_bgcm_main%sbbloss => sb_bgcm_components                      ! link to bgcm object in pool_list(:)
+      mem%sb_bgcm_main%sbbloss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+        & SB_BGCM_LOSS_ID, name = 'soil_biogeochemistry_bgcm_loss', shortname = 'sb_bgcm_loss', &
+        & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_transport
-      sb_bgcm_components => Create_sb_bgc_material_components( &
-        & name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', unit = unit_sb_flux, &
-        & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))              ! create the bgcm object (l_elements = .TRUE. by default)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_components, SB_BGCM_TRANSPORT_ID)  ! add bgcm object to pool_list(:)
-      mem%sb_bgcm_main%sbbtransport => sb_bgcm_components                       ! link to bgcm object in pool_list(:)
+      mem%sb_bgcm_main%sbbtransport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+        & SB_BGCM_TRANSPORT_ID, name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', &
+        & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
 
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material elements structures
       !>
       ! "shortname" is used for model output names
       ! sb_delta_pools
-      ALLOCATE(sb_bgcm_elements)
-      CALL sb_bgcm_elements%Init(name = 'soil_biogeochemistry_bgcm_delta_pools', shortname = 'sb_bgcm_delta_pools', &
-        &                        elements_index_map = elem_idx_map(:), &
-        &                        l_elements = .TRUE., element_unit = unit_sb_pool)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_elements, SB_BGCM_DELTA_POOLS_ID)
-      mem%sb_bgcm_main%sbbdelta_pools => sb_bgcm_elements
-      NULLIFY(sb_bgcm_elements)
+      mem%sb_bgcm_main%sbbdelta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
+        & name = 'soil_biogeochemistry_bgcm_delta_pools', shortname = 'sb_bgcm_delta_pools',            &
+        & elements_index_map = elem_idx_map(:), unit = unit_sb_pool, bgcm_id = SB_BGCM_DELTA_POOLS_ID)
       ! sb_myco_export
-      ALLOCATE(sb_bgcm_elements)
-      CALL sb_bgcm_elements%Init(name = 'soil_biogeochemistry_bgcm_myco_export', shortname = 'sb_bgcm_myc_exp', &
-        &                        elements_index_map = elem_idx_map(:), &
-        &                        l_elements = .TRUE., element_unit = unit_sb_flux)
-      CALL mem%sb_bgcm_main%Add_pool(sb_bgcm_elements, SB_BGCM_MYCO_EXPORT_ID)
-      mem%sb_bgcm_main%sbbmyco_export => sb_bgcm_elements
-      NULLIFY(sb_bgcm_elements)
+      mem%sb_bgcm_main%sbbmyco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
+        & name = 'soil_biogeochemistry_bgcm_myco_export', shortname = 'sb_bgcm_myc_exp',            &
+        & elements_index_map = elem_idx_map(:), unit = unit_sb_flux, bgcm_id = SB_BGCM_MYCO_EXPORT_ID)
 
       ! create list of CHARACTERs with names sb_bgcm_main to the "lowest childs" of bgcm structures
       CALL mem%bgc_material%Set_paths()
@@ -3027,114 +3008,85 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> create and init an object of the SB_ components bgcm "t_sb_bgcm_with_components"
-  !> used for SB_ memory init
-  !>   init and add all its objects of the "t_jsb_pool" with "pool_object%Init()"
-  !>   "object => Create_sb_bgc_material_components()"
+  !> create, init and append a sb bgcm with components
   !>
-  FUNCTION Create_sb_bgc_material_components(name, shortname, unit, lct_ids, elements_index_map, pool_prefix, pool_suffix) &
-    &      RESULT(sb_bgcm_components)
-    CHARACTER(LEN=*),                   INTENT(in)  :: name
-    CHARACTER(LEN=*),                   INTENT(in)  :: shortname
-    CHARACTER(LEN=*),                   INTENT(in)  :: unit
-    INTEGER,                            INTENT(in)  :: lct_ids(:)
-    INTEGER,                            INTENT(in)  :: elements_index_map(:)  ! elements ID -> IND
-    CHARACTER(LEN=*), OPTIONAL,         INTENT(in)  :: pool_prefix
-    CHARACTER(LEN=*), OPTIONAL,         INTENT(in)  :: pool_suffix
+  FUNCTION Add_sb_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+      & RESULT(sb_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_sb_bgcm_with_components), POINTER     :: sb_bgcm_components
-    TYPE(t_sb_bgcm_with_elements),   POINTER     :: sb_bgcm_elements
-    CHARACTER(LEN=:),                ALLOCATABLE :: prefix_loc
-    CHARACTER(LEN=:),                ALLOCATABLE :: suffix_loc
+    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
+    INTEGER,                    INTENT(in)    :: bgcm_id               !< id of this sb bgcm with components
+    CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with components
+    CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with components
+    CHARACTER(LEN=*),           INTENT(in)    :: unit                  !< unit of this sb bgcm with components
+    INTEGER,                    INTENT(in)    :: elements_index_map(:) !< elements ID -> IND
     ! ----------------------------------------------------------------------------------------------------- !
-    prefix_loc = ''
-    suffix_loc = ''
-    CALL assign_if_present_allocatable(prefix_loc, pool_prefix)
-    CALL assign_if_present_allocatable(suffix_loc, pool_suffix)
-    IF (prefix_loc /= '') prefix_loc = prefix_loc // '_'
-    IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
-
+    TYPE(t_sb_bgcm_with_components), POINTER  :: sb_bgcm_with_components !< the sb bgcm with components
+    ! ----------------------------------------------------------------------------------------------------- !
     ! bgcm_components init
-    ALLOCATE(sb_bgcm_components)
-    CALL sb_bgcm_components%Init(name, shortname, elements_index_map(:), l_elements = .FALSE., element_unit = unit)
+    ALLOCATE(sb_bgcm_with_components)
+    CALL sb_bgcm_with_components%Init(name, shortname, elements_index_map(:), l_elements = .FALSE., element_unit = unit)
 
     ! bgcm_elements allocate & init & add to bgcm_components
     !   "shortname" is used for model output
     !   "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
-    !! @TODO: maybe extract as a routine given two strings and returning the pointer
-    !!    routine should start with IF(ASSOCIATED) NULLIFY(sb_bgcm_elements)
-    !!    i.e. only left: function call with strings and subsequent assignment
+
     ! dom
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'dom_bgcm'//suffix_loc, shortname = 'dom', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%dom => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'dom_bgcm', shortname = 'dom', elements_index_map = elements_index_map(:), unit = unit)
     ! dom_assoc
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'dom_assoc_bgcm'//suffix_loc, shortname = 'dom_assoc', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%dom_assoc => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'dom_assoc_bgcm', shortname = 'dom_assoc', elements_index_map = elements_index_map(:), unit = unit)
     ! soluable_litter
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'soluable_litter_bgcm'//suffix_loc, shortname = 'sol_litter', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%soluable_litter => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'soluable_litter_bgcm', shortname = 'sol_litter', elements_index_map = elements_index_map(:), unit = unit)
     ! polymeric_litter
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'polymeric_litter_bgcm'//suffix_loc, shortname = 'pol_litter', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%polymeric_litter => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'polymeric_litter_bgcm', shortname = 'pol_litter', elements_index_map = elements_index_map(:), unit = unit)
     ! woody_litter
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'woody_litter_bgcm'//suffix_loc, shortname = 'woo_litter', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%woody_litter => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'woody_litter_bgcm', shortname = 'woo_litter', elements_index_map = elements_index_map(:), unit = unit)
     ! fungi
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'fungi_bgcm'//suffix_loc, shortname = 'fungi', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%fungi => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'fungi_bgcm', shortname = 'fungi', elements_index_map = elements_index_map(:), unit = unit)
     ! mycorrhiza
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'mycorrhiza_bgcm'//suffix_loc, shortname = 'mycorrhiza', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%mycorrhiza => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'mycorrhiza_bgcm', shortname = 'mycorrhiza', elements_index_map = elements_index_map(:), unit = unit)
     ! microbial
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'microbial_bgcm'//suffix_loc, shortname = 'microbial', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%microbial => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'microbial_bgcm', shortname = 'microbial', elements_index_map = elements_index_map(:), unit = unit)
     ! residue
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'residue_bgcm'//suffix_loc, shortname = 'residue', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
+    sb_bgcm_with_components%residue => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'residue_bgcm', shortname = 'residue', elements_index_map = elements_index_map(:), unit = unit)
     ! residue_assoc
-    ALLOCATE(sb_bgcm_elements)
-    CALL sb_bgcm_elements%Init(name = prefix_loc//'residue_assoc_bgcm'//suffix_loc, shortname = 'residue_assoc', &
-      &                        elements_index_map = elements_index_map(:), &
-      &                        l_elements = .TRUE., element_unit = unit)
-    CALL sb_bgcm_components%Add_pool(sb_bgcm_elements)
-    NULLIFY(sb_bgcm_elements)
-  END FUNCTION Create_sb_bgc_material_components
+    sb_bgcm_with_components%residue_assoc => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
+      & name = 'residue_assoc_bgcm', shortname = 'residue_assoc', elements_index_map = elements_index_map(:), unit = unit)
+
+    ! Add the bookkeepoing for this sb bgcm with components
+    CALL pool%Add_pool(sb_bgcm_with_components, bgcm_id)
+  END FUNCTION Add_sb_bgc_material_with_components
+
+  ! ======================================================================================================= !
+  !>
+  !> create, init and append a sb bgcm with elements
+  !>
+  FUNCTION Add_sb_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+      & RESULT(sb_bgcm_with_elements)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
+    CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with elements
+    CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with elements
+    INTEGER,                    INTENT(in)    :: elements_index_map(:) !< mapping elements ID -> IND
+    CHARACTER(LEN=*),           INTENT(in)    :: unit                  !< unit of this sb bgcm with elements
+    INTEGER,          OPTIONAL, INTENT(in)    :: bgcm_id               !< optional: id of this bgcm with elements
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_sb_bgcm_with_elements), POINTER   :: sb_bgcm_with_elements !< the new sb bgcm with elements
+    ! ----------------------------------------------------------------------------------------------------- !
+    ALLOCATE(sb_bgcm_with_elements)
+
+    CALL sb_bgcm_with_elements%Init(name = name, shortname = shortname,  &
+      & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
+    CALL pool%Add_pool(sb_bgcm_with_elements, bgcm_id)
+  END FUNCTION Add_sb_bgc_material_with_elements
 
 #endif
 END MODULE mo_sb_memory_class
