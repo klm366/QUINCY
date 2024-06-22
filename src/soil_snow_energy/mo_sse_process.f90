@@ -351,6 +351,7 @@ CONTAINS
   ! @param [in] dsoil         soil depth on layers
   ! @param      vol_heat_cap  The volume heat capability
   ! @param      heat_cond     The heat condition
+  ! @param      lat_hflx      The heat exchange with adjacent tiles
   ! @param [in]      ws_max
   ! @param [in]      matric_pot
   ! @param [in]      bclapp
@@ -373,6 +374,7 @@ CONTAINS
     & l_freeze, l_supercool,              &
     & t_unfilt, dsoil,                    &
     & vol_heat_cap, heat_cond,            &
+    & lat_hflx,                           &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
@@ -454,6 +456,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  dsoil(:,:)               !! soil depth until bedrock [m]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    REAL(wp), INTENT(in)    ::  lat_hflx(:,:)            !! Lateral heat flux [J m-3 s-1]
 
     REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
@@ -540,6 +543,20 @@ CONTAINS
         !$ACC LOOP GANG VECTOR
         DO jl=1,nidx
           t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil_sl(jl,jk)
+        END DO
+        !$ACC END LOOP
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
+
+      ! Adding lateral heat fluxes
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO jk = 1, nsoil
+        !$ACC LOOP GANG VECTOR
+        DO jl=1,nidx
+          t_soil_sl(jl,jk) = t_soil_sl(jl,jk) &
+                         & + lat_hflx(jl,jk) / heat_cap(jl,jk) * delta_time
         END DO
         !$ACC END LOOP
       END DO

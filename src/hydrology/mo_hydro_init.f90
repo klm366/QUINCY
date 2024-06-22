@@ -28,8 +28,9 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
-  dsl4jsb_Use_processes HYDRO_, PHENO_
+  dsl4jsb_Use_processes HYDRO_, PHENO_, LEX_
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(LEX_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
 
@@ -118,7 +119,10 @@ MODULE mo_hydro_init
       & fr_silt_deep     (:,:) => NULL(), &
       & fr_clay_deep     (:,:) => NULL(), &
       & ifs_smi_sl     (:,:,:) => NULL(), &
-      & ifs_weq_snow     (:,:) => NULL()
+      & ifs_weq_snow     (:,:) => NULL(), &
+      & char_area        (:,:) => NULL(), &
+      & char_h_srf       (:,:) => NULL(), &
+      & char_slope       (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -138,18 +142,29 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
 
+    dsl4jsb_Def_config(LEX_)
+
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    dsl4jsb_Get_config(LEX_)
+
+    IF (dsl4jsb_Config(LEX_)%active) THEN
       CALL hydro_read_init_vars(tile)
-    END IF
-
-    CALL hydro_init_bc(tile)
-    CALL hydro_init_ic(tile)
-
-    IF (tile%Is_last_process_tile(HYDRO_)) THEN
+      CALL hydro_init_bc(tile)
+      CALL hydro_init_ic(tile)
       CALL hydro_finalize_init_vars()
+    ELSE
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL hydro_read_init_vars(tile)
+      END IF
+
+      CALL hydro_init_bc(tile)
+      CALL hydro_init_ic(tile)
+      IF (tile%Is_last_process_tile(HYDRO_)) THEN
+        CALL hydro_finalize_init_vars()
+      END IF
     END IF
+
 
   END SUBROUTINE hydro_init
 
@@ -170,7 +185,13 @@ CONTAINS
       & hydro_init_vars%fract_org_sl    ,       &
       & hydro_init_vars%fract_pond_max  ,       &
       & hydro_init_vars%depth_pond_max  ,       &
-      & hydro_init_vars%weq_snow_soil)
+      & hydro_init_vars%weq_snow_soil           &
+      & )
+
+
+    IF (ASSOCIATED(hydro_init_vars%char_area))    DEALLOCATE(hydro_init_vars%char_area)
+    IF (ASSOCIATED(hydro_init_vars%char_h_srf))   DEALLOCATE(hydro_init_vars%char_h_srf)
+    IF (ASSOCIATED(hydro_init_vars%char_slope))   DEALLOCATE(hydro_init_vars%char_slope)
 
     IF (ASSOCIATED(hydro_init_vars%elevation))    DEALLOCATE(hydro_init_vars%elevation)
     IF (ASSOCIATED(hydro_init_vars%fr_sand))      DEALLOCATE(hydro_init_vars%fr_sand)
@@ -187,9 +208,12 @@ CONTAINS
 
   SUBROUTINE hydro_read_init_vars(tile)
 
+    USE mo_util,               ONLY: int2string
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(LEX_)
 
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
@@ -206,15 +230,33 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
+    ! Variable names of varibales to be read in depend on LEX_ active and 
+    ! variables being present on conectile-level
+    character(len=:), allocatable :: str_conti
+    character(len=:), allocatable ::                                    &
+      &  soil_depth_name, soil_porosity_name, hyd_cond_sat_name,        &
+      &  soil_field_cap_name, wilting_point_name, residual_water_name,  &
+      &  moisture_pot_name, bclapp_name, pore_size_index_name,          &
+      &  pond_fract_name, pond_depth_name,                              &
+      &  fract_org_sl_name, root_depth_name,                            &
+      &  fr_sand_name, fr_silt_name, fr_clay_name,                      &
+      &  fr_sand_deep_name, fr_silt_deep_name, fr_clay_deep_name                    
+
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Reading/setting hydrology init vars')
+    CALL message(routine, 'Reading/setting hydrology init vars for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
+
+    IF (tile%Is_process_active(LEX_)) THEN
+      ! Get lateral exchange config
+      dsl4jsb_Get_config(LEX_)
+    END IF
 
     grid   => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -260,6 +302,18 @@ CONTAINS
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
     hydro_init_vars%fract_org_sl(:,:,:) = missval
 
+    ! Setting initial vaiarables for connected tiles
+    IF (tile%Is_process_active(LEX_)) THEN
+      ALLOCATE(hydro_init_vars%char_area(nproma, nblks))
+      hydro_init_vars%char_area(:,:) = missval
+
+      ALLOCATE(hydro_init_vars%char_h_srf(nproma, nblks))
+      hydro_init_vars%char_h_srf(:,:) = missval
+
+      ALLOCATE(hydro_init_vars%char_slope(nproma, nblks))
+      hydro_init_vars%char_slope(:,:) = missval
+    END IF
+
     IF (jsbach_runs_standalone()) THEN
        ALLOCATE(hydro_init_vars%elevation(nproma,nblks))
        hydro_init_vars%elevation(:,:) = missval
@@ -294,7 +348,36 @@ CONTAINS
 
     !----------
 
+    !setting tile id, as str
+    IF (tile%Is_process_active(LEX_)) THEN 
+      str_conti = TRIM(int2string(tile%lcts(1)%lex_id))
+    END IF
+
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
+
+    ! Determine variable names to be used for reading in
+    pond_fract_name    = 'fract_pond_max'
+    pond_depth_name    = 'depth_pond_max'
+
+    IF (tile%Is_process_active(LEX_)) THEN
+
+      IF (input_file%Has_var('fract_pond_max_conti'//str_conti)  .OR. &
+        & dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
+        pond_fract_name = 'fract_pond_max_conti'//str_conti
+      ELSE
+        CALL message(routine, 'Running lateral exchange without fract_pond_max_conti'//str_conti// &
+        & '. Using fract_pond_max instead')
+      END IF
+
+      IF (input_file%Has_var('depth_pond_max_conti'//str_conti) .OR. &
+        & dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
+        pond_depth_name = 'depth_pond_max_conti'//str_conti
+      ELSE
+        CALL message(routine, 'Running lateral exchange without depth_pond_max_conti'//str_conti// &
+        & '. Using depth_pond_max instead')
+      END IF
+
+    END IF
 
     ! Orography ...
     IF (jsbach_runs_standalone()) THEN
@@ -310,20 +393,63 @@ CONTAINS
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     ! Read in maximum fraction and depth of local surface depressions
-    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
-        ! Use depression area fraction as maximum pond fraction
-        ptr_2D => input_file%Read_2d(                                 &
-          & variable_name='surf_depr_fract',                           &
-          & fill_array=hydro_init_vars%fract_pond_max)
+    ! Read characteristic area, surface height and slope of connected tiles
+    IF (tile%Is_process_active(LEX_)) THEN
+      IF (input_file%Has_var('char_area_conti'//str_conti)) THEN
+        ptr_2D => input_file%Read_2d(                  &
+        & variable_name='char_area_conti'//str_conti,  &
+        & fill_array=hydro_init_vars%char_area(:,:))
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-        ! Use depression depth as maximum pond depth (Attention: Values are negative!)
-        ptr_2D => input_file%Read_2d(                                 &
-          & variable_name='surf_depr_depth',                           &
-          & fill_array=hydro_init_vars%depth_pond_max)
+      ELSE
+        CALL message(routine, 'Running lateral exchange without char_area_conti'//str_conti// &
+        & '. Setting value to 10000')
+        hydro_init_vars%char_area(:,:) = 10000._wp
+      END IF 
+      IF (input_file%Has_var('char_h_srf_conti'//str_conti)) THEN
+        ptr_2D => input_file%Read_2d(                  &
+        & variable_name='char_h_srf_conti'//str_conti, &
+        & fill_array=hydro_init_vars%char_h_srf(:,:))
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) <= 0._wp)
       ELSE
-        CALL finish(TRIM(routine), '*** Error: surf_depr_fract and/or surf_depr_depth not found in bc_sso file. '// &
+        CALL message(routine, 'Running lateral exchange without char_h_srf_conti'//str_conti// &
+        & '. Setting value to 0')
+        hydro_init_vars%char_h_srf(:,:) = 0._wp
+      END IF         
+      IF (input_file%Has_var('char_slope_conti'//str_conti)) THEN
+        ptr_2D => input_file%Read_2d(                  &
+        & variable_name='char_slope_conti'//str_conti, &
+        & fill_array=hydro_init_vars%char_slope(:,:))
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      ELSE
+        IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
+          CALL message(routine, 'Running lateral exchange without char_slope_conti'//str_conti// &
+            & '. Assuming a zero slope for depressions and steepness for non-depressions')
+        ELSE
+          CALL message(routine, 'Running lateral exchange without char_slope_conti'//str_conti// &
+            & '. Using steepness instead')
+        END IF
+        hydro_init_vars%char_slope(:,:) = -9999._wp
+      END IF
+    END IF
+ 
+    ! Read in pond depth and mimum maxuímum pond fraction in other cases
+    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+      IF (input_file%Has_var(pond_fract_name) .AND. input_file%Has_var(pond_depth_name)) THEN
+        ptr_2D => input_file%Read_2d(                               &
+          & variable_name=pond_fract_name,                          &
+          & fill_array=hydro_init_vars%fract_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        ptr_2D => input_file%Read_2d(                               &
+          & variable_name=pond_depth_name,                          &
+          & fill_array=hydro_init_vars%depth_pond_max)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      ELSE IF (tile%Is_process_active(LEX_)) THEN
+        hydro_init_vars%fract_pond_max(:,:) = -9999.9_wp
+        hydro_init_vars%depth_pond_max(:,:) = -9999.9_wp
+        CALL message(routine, 'fract_pond_max and/or depth_pond_max not found in bc_sso file. '// &
+          & 'Tiles with h_surf < 0.0 can be fully inundated (fract_pond_max = 1 and depth_pond_max = - h_surf)')
+      ELSE
+        CALL finish(TRIM(routine), '*** Error: fract_pond_max and/or depth_pond_max not found in bc_sso file. '// &
           & 'Pond scheme cannot run without these fields')
       END IF
     END IF
@@ -334,11 +460,167 @@ CONTAINS
 
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
 
+      ! Determine variable names to be used for reading in
+
+      soil_depth_name       = 'soil_depth'
+      soil_porosity_name    = 'soil_porosity'
+      hyd_cond_sat_name     = 'hyd_cond_sat'
+      soil_field_cap_name   = 'soil_field_cap'
+      wilting_point_name    = 'wilting_point'
+      residual_water_name   = 'residual_water'
+      moisture_pot_name     = 'moisture_pot'
+      bclapp_name           = 'bclapp'
+      pore_size_index_name  = 'pore_size_index'
+      fract_org_sl_name     = 'fract_org_sl'
+      root_depth_name       = 'root_depth'
+
+      IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+        fr_sand_name        = 'FR_SAND'
+        fr_silt_name        = 'FR_SILT'
+        fr_clay_name        = 'FR_CLAY'
+        fr_sand_deep_name   = 'SUB_FR_SAND'
+        fr_silt_deep_name   = 'SUB_FR_SILT'
+        fr_clay_deep_name   = 'SUB_FR_CLAY'
+      END IF
+
+      IF (tile%Is_process_active(LEX_)) THEN
+
+        IF (input_file%Has_var('soil_depth_conti'//str_conti)) THEN
+          soil_depth_name = 'soil_depth_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without soil_depth_conti'//str_conti// &
+          & '. Using soil_depth instead')
+        END IF
+
+        IF (input_file%Has_var('soil_porosity_conti'//str_conti)) THEN
+          soil_porosity_name = 'soil_porosity_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without soil_porosity_conti'//str_conti// &
+          & '. Using soil_porosity instead')
+        END IF
+
+        IF (input_file%Has_var('hyd_cond_sat_conti'//str_conti)) THEN
+          hyd_cond_sat_name = 'hyd_cond_sat_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without hyd_cond_sat_conti'//str_conti// &
+          & '. Using hyd_cond_sat instead')
+        END IF
+
+        IF (input_file%Has_var('soil_field_cap_conti'//str_conti)) THEN
+          soil_field_cap_name = 'soil_field_cap_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without soil_field_cap_conti'//str_conti// &
+          & '. Using soil_field_cap instead')
+        END IF
+
+        IF (input_file%Has_var('wilting_point_conti'//str_conti)) THEN
+          wilting_point_name = 'wilting_point_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without wilting_point_conti'//str_conti// &
+          & '. Using wilting_point instead')
+        END IF
+
+        IF (input_file%Has_var('residual_water_conti'//str_conti)) THEN
+          residual_water_name = 'residual_water_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without residual_water_conti'//str_conti// &
+          & '. Using residual_water instead')
+        END IF
+
+        IF (input_file%Has_var('moisture_pot_conti'//str_conti)) THEN
+          moisture_pot_name = 'moisture_pot_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without moisture_pot_conti'//str_conti// &
+          & '. Using residual_water instead')
+        END IF
+
+        IF (input_file%Has_var('bclapp_conti'//str_conti)) THEN
+          bclapp_name = 'bclapp_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without bclapp_conti'//str_conti// &
+          & '. Using bclapp instead')
+        END IF
+
+        IF (input_file%Has_var('pore_size_index_conti'//str_conti)) THEN
+          pore_size_index_name = 'pore_size_index_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without pore_size_index_conti'//str_conti// &
+          & '. Using pore_size_index instead')
+        END IF
+
+        IF (input_file%Has_var('fract_org_sl_conti'//str_conti)) THEN
+          fract_org_sl_name = 'fract_org_sl_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without fract_org_sl_conti'//str_conti// &
+          & '. Using fract_org_sl instead')
+        END IF
+
+        IF (input_file%Has_var('root_depth_conti'//str_conti)) THEN
+          root_depth_name = 'root_depth_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without root_depth_conti'//str_conti// &
+          & '. Using root_depth instead')
+        END IF
+
+        IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+          IF (input_file%Has_var('FR_SAND_conti'//str_conti)) THEN
+            fr_sand_name = 'FR_SAND_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without fr_sand_conti'//str_conti// &
+            & '. Using fr_sand instead')
+          END IF
+
+          IF (input_file%Has_var('FR_SILT_conti'//str_conti)) THEN
+            fr_silt_name = 'FR_SILT_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without fr_silt_conti'//str_conti// &
+            & '. Using fr_silt instead')
+          END IF
+
+          IF (input_file%Has_var('FR_CLAY_conti'//str_conti)) THEN
+            fr_clay_name = 'FR_CLAY_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without fr_clay_conti'//str_conti// &
+            & '. Using fr_clay instead')
+          END IF
+
+          IF (input_file%Has_var('SUB_FR_SAND_conti'//str_conti)) THEN
+            fr_sand_deep_name = 'SUB_FR_SAND_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without deep_fr_sand_conti'//str_conti// &
+            & '. Using deep_fr_sand instead')
+          END IF
+
+          IF (input_file%Has_var('SUB_FR_SILT_conti'//str_conti)) THEN
+            fr_silt_deep_name = 'SUB_FR_SILT_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without deep_fr_silt_conti'//str_conti// &
+            & '. Using deep_fr_silt instead')
+          END IF
+
+          IF (input_file%Has_var('SUB_FR_CLAY_conti'//str_conti)) THEN
+            fr_clay_deep_name = 'SUB_FR_CLAY_conti'//str_conti
+          ELSE
+            CALL message(routine, 'Running lateral exchange without deep_fr_clay_conti'//str_conti// &
+            & '. Using deep_fr_clay instead')
+          END IF
+        END IF
+      END IF
+
       ! Total soil depth until bedrock
-      ptr_2D => input_file%Read_2d(   &
-        & variable_name='soil_depth', &
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name=soil_depth_name, &
         & fill_array = hydro_init_vars%soil_depth)
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
+
+      !! Subgrid-scale topography for connected tiles
+      !! limiting depression depth and maximum pond depth to 75% of the soil depth
+      !IF (tile%Is_process_active(LEX_)) THEN
+      !  hydro_init_vars%char_h_srf(:,:) = MAX(hydro_init_vars%char_h_srf(:,:), &
+      !                                  &    -hydro_init_vars%soil_depth*0.75_wp)
+      !  hydro_init_vars%depth_pond_max(:,:) = MIN(hydro_init_vars%depth_pond_max(:,:), &
+      !                                  &     hydro_init_vars%soil_depth*0.75_wp)
+      !END IF
 
       !> reads maps if not using the soil texture for calculating the soil properties
       !>
@@ -346,31 +628,31 @@ CONTAINS
         ! Volumetric soil porosity
         ptr_2D => input_file%Read_2d(                  &
           & fill_array = hydro_init_vars%vol_porosity, &
-          & variable_name='soil_porosity')
+          & variable_name=soil_porosity_name)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Saturated hydraulic conductivity
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='hyd_cond_sat',              &
+          & variable_name=hyd_cond_sat_name,           &
           & fill_array = hydro_init_vars%hyd_cond_sat)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric field capacity [m/m]
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='soil_field_cap',            &
+          & variable_name=soil_field_cap_name,         &
           & fill_array = hydro_init_vars%vol_field_cap)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric permanent wilting point
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='wilting_point',             &
+          & variable_name=wilting_point_name,          &
           & fill_array=hydro_init_vars%vol_p_wilt)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric residual water content (if missing deduce from porosity)
-        IF (input_file%Has_var('residual_water')) THEN
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='residual_water',             &
+        IF (input_file%Has_var(residual_water_name)) THEN
+          ptr_2D => input_file%Read_2d(                &
+            & variable_name=residual_water_name,       &
             & fill_array=hydro_init_vars%vol_wres)
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
@@ -379,9 +661,9 @@ CONTAINS
           hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
         END IF
 
-        ! Soil matric potential
+        ! soil-matric potential
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='moisture_pot',              &
+          & variable_name=moisture_pot_name,           &
           & fill_array = hydro_init_vars%matric_pot)
         ! @todo There is still old bc data around where the matric potential is given with a positiv sign while
         !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
@@ -412,15 +694,15 @@ CONTAINS
 
         ! Exponent B in Clapp and Hornberger
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='bclapp',                    &
+          & variable_name=bclapp_name,                 &
           & fill_array = hydro_init_vars%bclapp)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 6._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Pore size distribution index
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='pore_size_index',           &
+          & variable_name=pore_size_index_name,        &
           & fill_array = hydro_init_vars%pore_size_index)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0.05_wp)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
       ELSE   ! l_soil_texture
 
@@ -428,37 +710,37 @@ CONTAINS
 
         ! fraction of sand upper soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='FR_SAND',                   &
+          & variable_name=fr_sand_name,                &
           & fill_array=hydro_init_vars%fr_sand)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of silt upper soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='FR_SILT',                   &
+          & variable_name=fr_silt_name,                &
           & fill_array=hydro_init_vars%fr_silt)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of clay upper soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='FR_CLAY',                   &
+          & variable_name=fr_clay_name,                &
           & fill_array=hydro_init_vars%fr_clay)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of sand deep soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='SUB_FR_SAND',               &
+          & variable_name=fr_sand_deep_name,           &
           & fill_array=hydro_init_vars%fr_sand_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of silt deep soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='SUB_FR_SILT',               &
+          & variable_name=fr_silt_deep_name,           &
           & fill_array=hydro_init_vars%fr_silt_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! fraction of clay deep soil
         ptr_2D => input_file%Read_2d(                  &
-          & variable_name='SUB_FR_CLAY',               &
+          & variable_name=fr_clay_deep_name,           &
           & fill_array=hydro_init_vars%fr_clay_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
@@ -525,8 +807,8 @@ CONTAINS
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         DO isoil=1,nsoil
           ptr_3D => input_file%Read_2d_extdim( &
-            & variable_name='fract_org_sl',     &
-            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+          & variable_name=fract_org_sl_name,     &
+          & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
           hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
       END IF
@@ -534,7 +816,7 @@ CONTAINS
       ! Root depth [m]
       ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
       ptr_2D => input_file%Read_2d(   &
-        & variable_name='root_depth', &
+        & variable_name=root_depth_name, &
         & fill_array = hydro_init_vars%root_depth)
       hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
       ! Make sure there is root depth equivalent to 0.2 m weq in all cells
@@ -616,6 +898,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(LEX_)
+
     dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER        :: model
@@ -637,6 +921,7 @@ CONTAINS
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(LEX_)
 
     ! Get hydrology memory of the tile
     dsl4jsb_Get_memory(HYDRO_)
@@ -664,13 +949,56 @@ CONTAINS
         & )
     END DO
 
+    ! Topographic features relevant for lateral exchange between connected tiles
+    IF (tile%Is_process_active(LEX_)) THEN
+      dsl4jsb_var2D_onDomain(HYDRO_,area)             = hydro_init_vars%char_area(:,:)
+      dsl4jsb_var2D_onDomain(HYDRO_,h_surf)           = hydro_init_vars%char_h_srf(:,:)
+      dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)      = hydro_init_vars%char_slope(:,:)
+      ! Assigning macro-slope in case no tile-specific input was provided (init var is -9999.9)
+      IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
+        ! Assuming zero slope on depression tiles (h_surf < 0.0) ... 
+        WHERE ((dsl4jsb_var2D_onDomain(HYDRO_,macro_slope) < 0.0_wp) .AND. &
+          &    (dsl4jsb_var2D_onDomain(HYDRO_,h_surf)      < 0.0_wp))
+          dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = 0.0_wp    
+        ! ... and steepness elsehwere      
+        ELSE WHERE (dsl4jsb_var2D_onDomain(HYDRO_,macro_slope) < 0.0_wp)
+          dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = dsl4jsb_var2D_onDomain(HYDRO_,steepness)
+        END WHERE
+      ELSE
+        ! Using Steepness
+        WHERE (dsl4jsb_var2D_onDomain(HYDRO_,macro_slope) < 0.0_wp )
+          dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = dsl4jsb_var2D_onDomain(HYDRO_,steepness)
+        END WHERE
+      END IF
+    ELSE
+        dsl4jsb_var2D_onDomain(HYDRO_,area)           = 10000._wp
+        dsl4jsb_var2D_onDomain(HYDRO_,h_surf)         = 0.0_wp
+        dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)    = dsl4jsb_var2D_onDomain(HYDRO_,steepness)     
+    END IF
+
+    ! Maximum depth and extent of surface water ponds
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      ! Maximum depth and extent of surface water ponds
       IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        ! Note, surface depression depth is given as negative value in the data, but represent
-        !   a storage on top of the soil --> needs to be converted to positive values!
-        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
+        IF (tile%Is_process_active(LEX_)) THEN
+          ! If data was read in either tile specific or based on avg value ...
+          WHERE (hydro_init_vars%fract_pond_max(:,:) > 0.0_wp)
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:)
+          ! ... else init var was set to -9999.9
+          ELSEWHERE (dsl4jsb_var2D_onDomain(HYDRO_,h_surf) < 0.0_wp)
+            ! Maximum pond fraction is set to 1 for depressions and 0 for non-depressions.
+            !   Note, surface elevation is given as negative value for depressions, but represent
+            !   a storage on top of the soil --> needs to be converted to positive values!
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = dsl4jsb_var2D_onDomain(HYDRO_,h_surf)  * (-1._wp)
+          ELSEWHERE
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
+          END WHERE
+        ELSE
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:)
+        END IF
       ELSE
         ! Note, that ponds are implicitely disabled by setting the maximum allowed pond fraction
         !   and depth to zero. Thus, we can avoid a large number of l_ponds conditions for surface
@@ -767,6 +1095,9 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, h_surf)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_sloe)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 

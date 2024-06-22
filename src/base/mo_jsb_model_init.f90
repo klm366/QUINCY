@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
+    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, LEX_,  &
     &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   dsl4jsb_Use_config(PHENO_)
@@ -26,6 +26,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(LEX_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -192,6 +193,7 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_lex_init,            ONLY: lex_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
     USE mo_q_rad_init,          ONLY: q_rad_init
@@ -346,6 +348,8 @@ CONTAINS
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+      CALL model%Queue_task(LEX_,    "reset_lex_fluxes")
+      CALL model%Queue_task(LEX_,    "lex")
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
@@ -636,6 +640,34 @@ CONTAINS
         END IF
       END SELECT
 #endif
+
+      CALL model%Goto_next_tile(tile)
+      ! ---------------------------------------------------------------------------------------------- !
+    END DO
+    ! ---------------------------------------------------------------------------------------------- !
+    !>
+    !>     2.4 Iterate over tiles again 
+    !>         Initialize lateral exchange processes on each tile. 
+    !>         Tile fractions and Hydro needs to be initialized on all tiles
+    !>
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        IF (tile%Is_process_active(LEX_)) THEN
+          CALL lex_init(tile)
+        END IF
+      END SELECT
 
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !

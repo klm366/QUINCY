@@ -23,17 +23,18 @@ MODULE mo_sse_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes SSE_
+  dsl4jsb_Use_processes SSE_, LEX_
 
   ! Use process configurations
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(LEX_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 25
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -51,6 +52,7 @@ MODULE mo_sse_memory_class
       & t_soil_sl,            & !< Temperature of soil layers [K]
       & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
       & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
+      & nrg_lex_net_sl,       & !< Diffusive heat exchange with adjacent tile [J m-2 s-1]
       & snow_depth_sl,        & !< Depth of snow layers [m]
       & t_snow,               & !< Temperature of snow layers [K]
       & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
@@ -87,11 +89,14 @@ CONTAINS
     INTEGER,             INTENT(in)            :: model_id
 
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(LEX_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
     INTEGER :: table
+
+    LOGICAL  :: l_lex
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
 
@@ -100,6 +105,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_Config(SSE_)
+    dsl4jsb_Get_Config(LEX_)
 
     table = tables(1)
 
@@ -110,6 +116,8 @@ CONTAINS
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
+
+    l_lex = dsl4jsb_Config(LEX_)%active
 
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -191,6 +199,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
+
+    CALL mem%Add_var('nrg_lex_net_sl', mem%nrg_lex_net_sl,                                   &
+      & hgrid, soil_e,                                                                       &
+      & t_cf('nrg_lex_net_sl', 'J m-2 s-1', 'Diffusive heat exchange with adjacent tile'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+      & prefix, suffix,                                                                      &
+      & loutput=l_lex, output_level=MEDIUM,                                                  &
+      & lrestart=.FALSE., initval_r=0.0_wp)
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       CALL mem%Add_var( 'snow_depth_sl', mem%snow_depth_sl,                    &
@@ -274,7 +290,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level=MEDIUM, &
+      & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
@@ -283,7 +299,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level=MEDIUM, &
+      & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
 

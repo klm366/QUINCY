@@ -28,8 +28,9 @@ MODULE mo_sse_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, LEX_
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(LEX_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
@@ -85,17 +86,32 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    dsl4jsb_Def_config(LEX_)
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(LEX_)
+
+    IF (dsl4jsb_Config(LEX_)%active) THEN
       CALL sse_read_init_vars(tile)
-    END IF
-
-    CALL sse_init_bc(tile)
-    CALL sse_init_ic(tile)
-
-    IF (tile%Is_last_process_tile(SSE_)) THEN
+      CALL sse_init_bc(tile)
+      CALL sse_init_ic(tile)
       CALL sse_finalize_init_vars()
+    ELSE
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL sse_read_init_vars(tile)
+      END IF
+
+      CALL sse_init_bc(tile)
+      CALL sse_init_ic(tile)
+
+      IF (tile%Is_last_process_tile(SSE_)) THEN
+        CALL sse_finalize_init_vars()
+      END IF
     END IF
 
   END SUBROUTINE sse_init
@@ -139,6 +155,14 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
+    ! Variable names of varibales to be read in depend on LEX_ active and 
+    ! variables being present on conectile-level
+    character(len=:), allocatable :: str_conti
+    character(len=:), allocatable :: fao_name,                     &
+      &  heat_capacity_name, heat_conductivity_name,               &
+      &  fr_sand_name, fr_silt_name, fr_clay_name,                 &
+      &  fr_sand_deep_name, fr_silt_deep_name, fr_clay_deep_name     
+
     model => get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -148,6 +172,13 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
+
+
+    !setting tile id, as str
+    IF (tile%Is_process_active(LEX_)) THEN 
+      str_conti = TRIM(int2string(tile%lcts(1)%lex_id))
+    END IF
+
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
@@ -186,35 +217,128 @@ CONTAINS
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
+
+    ! Determine variable names to be used for reading in
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+      fao_name       = 'fao'
+    END IF
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+      heat_capacity_name = 'heat_capacity'
+    END IF
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+      heat_conductivity_name = 'heat_conductivity'
+    END IF
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      fr_sand_name          = 'FR_SAND'
+      fr_silt_name          = 'FR_SILT'
+      fr_clay_name          = 'FR_CLAY'
+      fr_sand_deep_name     = 'SUB_FR_SAND'
+      fr_silt_deep_name     = 'SUB_FR_SILT'
+      fr_clay_deep_name     = 'SUB_FR_CLAY'
+    END IF
+
+    IF (tile%Is_process_active(LEX_)) THEN
+
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+        IF (input_file%Has_var('fao_conti'//str_conti)) THEN
+          fao_name = 'fao_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without fao_conti'//str_conti// &
+          & '. Using fao instead')
+        END IF
+      END IF
+
+      IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+        IF (input_file%Has_var('heat_capacity_conti'//str_conti)) THEN
+          heat_capacity_name = 'heat_capacity_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without heat_capacity_conti'//str_conti// &
+          & '. Using heat_capacity instead')
+        END IF
+      END IF
+      IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+        IF (input_file%Has_var('heat_conductivity_conti'//str_conti)) THEN
+          heat_conductivity_name = 'heat_conductivity_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without heat_conductivity_conti'//str_conti// &
+          & '. Using heat_conductivity instead')
+        END IF
+      END IF
+      
+      IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+        IF (input_file%Has_var('FR_SAND_conti'//str_conti)) THEN
+          fr_sand_name = 'FR_SAND_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without fr_sand_conti'//str_conti// &
+          & '. Using fr_sand instead')
+        END IF
+
+        IF (input_file%Has_var('FR_SILT_conti'//str_conti)) THEN
+          fr_silt_name = 'FR_SILT_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without fr_silt_conti'//str_conti// &
+          & '. Using fr_silt instead')
+        END IF
+
+        IF (input_file%Has_var('FR_CLAY_conti'//str_conti)) THEN
+          fr_clay_name = 'FR_CLAY_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without fr_clay_conti'//str_conti// &
+          & '. Using fr_clay instead')
+        END IF
+
+        IF (input_file%Has_var('SUB_FR_SAND_conti'//str_conti)) THEN
+          fr_sand_deep_name = 'SUB_FR_SAND_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without deep_fr_sand_conti'//str_conti// &
+          & '. Using deep_fr_sand instead')
+        END IF
+
+        IF (input_file%Has_var('SUB_FR_SILT_conti'//str_conti)) THEN
+          fr_silt_deep_name = 'SUB_FR_SILT_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without deep_fr_silt_conti'//str_conti// &
+          & '. Using deep_fr_silt instead')
+        END IF
+
+        IF (input_file%Has_var('SUB_FR_CLAY_conti'//str_conti)) THEN
+          fr_clay_deep_name = 'SUB_FR_CLAY_conti'//str_conti
+        ELSE
+          CALL message(routine, 'Running lateral exchange without deep_fr_clay_conti'//str_conti// &
+          & '. Using deep_fr_clay instead')
+        END IF
+      END IF
+    END IF
+
     ! soil texture information
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_SAND',              &
-        & fill_array = sse_init_vars%fr_sand)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_SILT',              &
-        & fill_array = sse_init_vars%fr_silt)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_CLAY',              &
+        & variable_name=fr_clay_name,              &
         & fill_array = sse_init_vars%fr_clay)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_SAND',              &
+        & variable_name=fr_clay_name,              &
+        & fill_array = sse_init_vars%fr_clay)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name=fr_clay_name,              &
+        & fill_array = sse_init_vars%fr_clay)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name=fr_sand_deep_name,              &
         & fill_array = sse_init_vars%fr_sand_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_SILT',              &
+        & variable_name=fr_silt_deep_name,              &
         & fill_array = sse_init_vars%fr_silt_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_CLAY',              &
+        & variable_name=fr_clay_deep_name,              &
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
@@ -234,7 +358,7 @@ CONTAINS
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! FAO
-        ptr_2D => input_file%Read_2d(variable_name='fao')
+        ptr_2D => input_file%Read_2d(variable_name=fao_name)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
                                      MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
@@ -243,7 +367,7 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
         ! Volumetric heat capacity of dry soil [J/(m^3*K)]
         ptr_2D => input_file%Read_2d(         &
-          & variable_name='heat_capacity',            &
+          & variable_name=heat_capacity_name,            &
           & fill_array = sse_init_vars%vol_heat_cap)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
       END IF
@@ -251,7 +375,7 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! Heat conductivity of mineral soil
         ptr_2D => input_file%Read_2d(         &
-          & variable_name='heat_conductivity',         &
+          & variable_name=heat_conductivity_name,         &
           & fill_array = sse_init_vars%heat_cond)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
       END IF

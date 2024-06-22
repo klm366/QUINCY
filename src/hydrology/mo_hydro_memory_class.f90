@@ -26,20 +26,21 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_, LEX_
 
   ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(LEX_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 111
+  INTEGER, PARAMETER :: max_no_of_vars = 120
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -78,7 +79,10 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
       & oro_stddev,           & !< Standard deviation of orography
-      & steepness               !< Parameter defining the subgrid slope distribution [/]
+      & steepness,            & !< parameter defining the subgrid slope distribution [/]
+      & area,                 & !< characteristic area of tile [m2]               
+      & h_surf,               & !< characteristic surface elevation of tile [m]
+      & macro_slope             !< macro scale slope of tile [/]
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -110,6 +114,7 @@ MODULE mo_hydro_memory_class
       & fract_wet,            & !< Wet (skin and pond reservoir) fraction of tile (soil and canopy)         []
       & fract_skin,           & !< Wet skin reservoir fraction of tile (soil and canopy)                    []
       & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)                        [m]
+      & new_snow_soil,        & !< Snow accumulation on soil at non-glacier/non-lake land points            [m water equivalent]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
@@ -122,7 +127,9 @@ MODULE mo_hydro_memory_class
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
       & wtr_latflow_res_srf,  & !< Water content of latflow res. srf.                                       [m]       
-      & wtr_latflow_srf         !< Outflow from latflow res. srf                                            [m timestep-1]
+      & wtr_latflow_srf,      & !< Outflow from latflow res. srf                                            [m timestep-1]
+      & water_to_soil_lex,    & !< Infiltratable water from connected tile                                  [m] 
+      & wtr_lex_net_srf         !< Lateral exchange with connected tiles on the surface                     [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -145,7 +152,8 @@ MODULE mo_hydro_memory_class
       & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice             [m]
       & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
       & wtr_latflow_res_sl,   & !< Water content of latflow res. on soil layers                             [m]       
-      & wtr_latflow_sl          !< Outflow from latflow res. on soil layers                                 [m timestep-1]  
+      & wtr_latflow_sl,       & !< Outflow from latflow res. on soil layers                                 [m timestep-1]  
+      & wtr_lex_net_sl          !< Lateral exchange with connected tiles on soil layers                     [kg m-2 s-1]
     ! Additional variables for PFT lct_type
 
     ! Parameters
@@ -224,6 +232,7 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(LEX_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
@@ -235,6 +244,7 @@ CONTAINS
     REAL(wp) :: ini_snow_dens
     LOGICAL  :: l_ponds
     LOGICAL  :: l_uniform
+    LOGICAL  :: l_lex
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
 
@@ -250,6 +260,7 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(LEX_)
 
     IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
       ini_snow_dens = dens_snow_min
@@ -263,6 +274,7 @@ CONTAINS
     ELSE
       l_uniform = .FALSE.
     END IF
+    l_lex = dsl4jsb_Config(LEX_)%active
 
     ! Common variables
 
@@ -461,6 +473,33 @@ CONTAINS
         & lrestart=.FALSE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
+
+    CALL mem%Add_var( 'area', mem%area,                                              &
+      & hgrid, surface,                                                              &
+      & t_cf('area', 'm2', 'characteristic area of tile'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'h_surf', mem%h_surf,                                          &
+      & hgrid, surface,                                                              &
+      & t_cf('h_surf', 'm', 'characteristic surface elevation of tile'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('macro_slope', '/', 'macro scale slope of tile'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -716,6 +755,14 @@ CONTAINS
         & output_level=BASIC,                                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'new_snow_soil', mem%new_snow_soil,                         &
+        & hgrid, surface,                                                           &
+        & t_cf('new_snow_soil', 'm (water equivalent)',                             &
+        &      'Snow budget change on soil within the time step'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'snow_accum', mem%snow_accum,                               &
         & hgrid, surface,                                                           &
         & t_cf('snow_accum', 'm (water equivalent)',                                &
@@ -892,7 +939,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
         & loutput=l_uniform, output_level=BASIC,                                              &
-        & lrestart=l_uniform, lrestart_cont=.TRUE.       ,                                    &
+        & lrestart=l_uniform, lrestart_cont=.TRUE.,                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_sl', mem%wtr_latflow_sl,                                   &
@@ -900,7 +947,15 @@ CONTAINS
         & t_cf('wtr_latflow_sl', 'm timestep-1', 'Outflow from latflow res. on soil layers'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
-        & loutput=l_uniform, output_level=BASIC,                                    &
+        & loutput=l_uniform, output_level=BASIC,                                                &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_lex_net_sl', mem%wtr_lex_net_sl,                                           &
+         & hgrid, soil_w,                                                                               &
+        & t_cf('wtr_lex_net_sl', 'kg m-2 s-1', 'Lateral exchange with connected tiles on soil layers'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+        & prefix, suffix,                                                                               &
+        & loutput=l_lex, output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
@@ -909,7 +964,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & loutput=l_uniform, output_level=BASIC,                                    &
-        & lrestart=l_uniform, lrestart_cont=.TRUE.       ,                          &
+        & lrestart=l_uniform, lrestart_cont=.TRUE.,                                 &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_srf', mem%wtr_latflow_srf,                     &
@@ -918,6 +973,22 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & loutput=l_uniform, output_level=BASIC,                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'water_to_soil_lex', mem%water_to_soil_lex,                   &
+        & hgrid, surface,                                                             &
+        & t_cf('water_to_soil_lex', 'm', 'Infiltratable water from connected tiles'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
+        & prefix, suffix,                                                             &
+        & loutput=l_lex, output_level=BASIC,                                          &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_lex_net_srf', mem%wtr_lex_net_srf,                                         &
+        & hgrid, surface,                                                                               &
+        & t_cf('wtr_lex_net_srf', 'kg m-2 s-1', 'Lateral exchange with connected tiles on the surface'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+        & prefix, suffix,                                                                               &
+        & loutput=l_lex, output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -934,7 +1005,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput=l_ponds, output_level=BASIC,                                         &
-        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.,                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -943,7 +1014,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput=l_ponds, output_level=BASIC,                                         &
-        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.,                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
@@ -952,7 +1023,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput=l_ponds, output_level=BASIC,                                         &
-        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.,                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -961,7 +1032,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput=l_ponds, output_level=BASIC,                                         &
-        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.,                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &

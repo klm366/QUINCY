@@ -143,6 +143,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_bcoef
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
     dsl4jsb_Real3D_onChunk :: heat_cond_sl
+    dsl4jsb_Real3D_onChunk :: nrg_lex_net_sl
     dsl4jsb_Real3D_onChunk :: t_snow
     dsl4jsb_Real3D_onChunk :: t_snow_acoef
     dsl4jsb_Real3D_onChunk :: t_snow_bcoef
@@ -233,6 +234,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, nrg_lex_net_sl)    ! in
+
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, hcap_grnd)         ! out
@@ -533,6 +536,7 @@ CONTAINS
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
+        & nrg_lex_net_sl                      (:,:), &
         ! inout
         & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &
@@ -572,6 +576,7 @@ CONTAINS
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
+        & nrg_lex_net_sl                      (:,:), &
         ! inout
         & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &

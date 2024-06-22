@@ -33,6 +33,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
+  USE mo_lex_memory_class,     ONLY: t_lex_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -59,6 +60,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
   USE mo_pheno_config_class,   ONLY: t_pheno_config
+  USE mo_lex_interface,        ONLY: Register_lex_tasks
+  USE mo_lex_config_class,     ONLY: t_lex_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
@@ -98,7 +101,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, LEX_, &
     & Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   IMPLICIT NONE
@@ -107,7 +110,7 @@ MODULE mo_jsb_process_factory_core
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 43
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'
 
@@ -192,6 +195,9 @@ CONTAINS
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_nlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_nlcc_config::return_ptr%config)
+    CASE (LEX_)
+      CALL Register_lex_tasks(return_ptr, model_id)
+      ALLOCATE(t_lex_config::return_ptr%config)
 #ifndef __NO_QUINCY__
     CASE (Q_RAD_)
       CALL Register_q_rad_tasks(return_ptr, model_id)
@@ -242,6 +248,7 @@ CONTAINS
     USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
+    USE mo_lex_memory_class,     ONLY: max_no_of_lex_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -284,6 +291,9 @@ CONTAINS
     CASE (RAD_)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars
+    CASE (LEX_)
+      ALLOCATE(t_lex_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_lex_vars
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       ALLOCATE(t_hd_memory::return_ptr)

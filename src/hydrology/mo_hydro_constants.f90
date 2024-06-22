@@ -60,8 +60,10 @@ MODULE mo_hydro_constants
     & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum (fast) subsurface drainage
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
-    ! Parameters required for Uniform_ scale hydrology
+    ! Parameters required for unifrom scale and lateral exchange between tiles
+    & ret_micro_srf = 3600._wp,            &  !< retention time for surface runoff on micro scale (1 hour)
     & ret_macro_srf = 36000._wp ,          &  !< retention time for surface runoff on macro scale (10 hours)
+    & ret_micro_blg = 3600._wp,            &  !< retention time for sub-surface runoff on micro scale (1 hour)
     & ret_macro_blg = 432000._wp,          &  !< retention time for sub-surface runoff on macro scale (5 days) similar to drain_max
 
     ! Parameters used for pond computations
