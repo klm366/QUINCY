@@ -27,6 +27,7 @@ MODULE mo_top_interface
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_top_util,               ONLY: t_interp_var
 
   dsl4jsb_Use_processes TOP_
   dsl4jsb_Use_config(TOP_)
@@ -107,6 +108,7 @@ CONTAINS
       &                       timesteps_per_day, get_date_components, get_year_length, get_month_length
     USE mo_top_process, ONLY: update_topmodel_runmean, update_peat_runmean, update_water_table, update_inun_frac, &
       &                       update_aet, update_water_balance_peatland, get_climatological_inun
+    USE mo_top_util,    ONLY: interpol_new, interpol_update
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -169,7 +171,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: peat_water_table
     dsl4jsb_Real2D_onChunk :: peat_water_volume
     dsl4jsb_Real2D_onChunk :: peat_water_flux
-    dsl4jsb_Real3D_onChunk :: frac_inun_clim
+    dsl4jsb_Real3D_onChunk :: frac_inun_presc
+    dsl4jsb_Real3D_onChunk :: wt_inun_presc
 
     ! Pointers to non-variables
     !
@@ -184,13 +187,14 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: ptr_tile
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
+    TYPE(t_interp_var), POINTER :: interp
     REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
     REAL(wp) :: water_table_t, frac_liquid_top_t
     LOGICAL,  POINTER :: PE_mask(:)
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
-    INTEGER  :: year, month, summer_state, ylen, mlen
-    REAL(wp) :: dtime, sw, si, swmx, simx, wtmx
+    INTEGER  :: year, month, day, summer_state, ylen, mlen, nstep, step, stepm, stepp
+    REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_topmodel'
 
@@ -258,6 +262,9 @@ CONTAINS
     lnew_year  = is_newyear (options%current_datetime,dtime)
     lnew_month = is_newmonth(options%current_datetime,dtime)
     lnew_day   = is_newday  (options%current_datetime,dtime)
+    CALL get_date_components(options%current_datetime,YEAR=year,MONTH=month,DAY=day)
+    ylen = get_year_length(year)
+    mlen = get_month_length(year,month)
 
     ! These peat routines need to be updated every timestep
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
@@ -282,7 +289,7 @@ CONTAINS
         CALL update_aet(tmelt,t_air(ic),rad_srf_net(ic),aet(ic))
       ENDDO
 
-      ! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
+      ! StW: Access to frac_liquid_top is questionable if inun_mode > 0 - likely seg-fault
       !$acc parallel loop gang vector
       DO ic = 1, nc
         CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
@@ -297,14 +304,6 @@ CONTAINS
       ENDDO
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
-
-        ylen = 365 ! Only need to be correct if lnew_year
-        mlen = 30  ! Only need to be correct if lnew_month
-        IF (lnew_month) THEN
-          mlen = get_month_length(year,month)
-          IF (lnew_year) ylen = get_year_length(year)
-        ENDIF
-
         !$acc loop gang vector
         DO ic = 1, nc
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
@@ -316,8 +315,8 @@ CONTAINS
             &                      aet (ic),               aet_sum_day(ic),   aet_mean_day (ic),    aet_relax(ic), &
             &                      poaet_mean_day(ic), poaet_sum_year (ic), poaet_mean_year(ic),     poaet_lt(ic))
         ENDDO
+        !$acc end parallel
       ENDIF
-      !$acc end parallel
 
     ENDIF
 
@@ -331,14 +330,67 @@ CONTAINS
     ALLOCATE(PE_mask         (nc))
     !$acc data pcreate(t_soil, wtr_soil, ice_soil, PE_mask)
 
-    IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
-      IF (is_newmonth(options%current_datetime,dtime)) THEN
-        CALL get_date_components(options%current_datetime,MONTH=month)
-        frac_inun_clim => dsl4jsb_memory(TOP_)%frac_inun_clim(ics:ice,iblk,:)
-
-        !$acc parallel loop gang vector
+    ! Update prescribed values of frac_inun and wt_inun if used
+    IF (dsl4jsb_Config(TOP_)%inun_mode > 0) THEN
+      ! Cannot use the usual dsl4jsb_get_var3d_onchunk since order of dimensions is different
+      frac_inun_presc => dsl4jsb_memory(TOP_)%frac_inun_presc(ics:ice,iblk,:)
+      !$acc enter data attach (frac_inun_presc)
+      !$acc update device (frac_inun_presc)
+      step  = dsl4jsb_memory(TOP_)%step(iblk)
+      IF (lnew_month) THEN
+        step  = dsl4jsb_memory(TOP_)%step(iblk)
+        stepm = step - 1
+        stepp = step + 1
+        nstep = SIZE(frac_inun_presc,2)
+        SELECT CASE (IAND(dsl4jsb_config(TOP_)%inun_mode,3))
+          CASE (1) ! Climatology
+            IF (stepm ==     0) stepm = nstep
+            IF (stepp >  nstep) stepp = 1
+          CASE (2) ! Transient - keep end values
+            IF (stepm ==     0) stepm = 1
+            IF (stepp >  nstep) stepp = nstep
+        END SELECT
+        interp => dsl4jsb_memory(TOP_)%interp_frac_inun(iblk)%p
+        IF (.NOT. ASSOCIATED(interpol_new(1._wp,mlen,frac_inun_presc(:,stepm), &
+                                                     frac_inun_presc(:,step),  &
+                                                     frac_inun_presc(:,stepp), &
+                             (/0._wp,1._wp/),0.1_wp,interp))) THEN
+          CALL finish(routine,'Error initializing interpolation')
+        ENDIF
+        IF (ASSOCIATED(dsl4jsb_memory(TOP_)%wt_inun_presc)) THEN
+          wt_inun_presc   => dsl4jsb_memory(TOP_)%wt_inun_presc(ics:ice,iblk,:)
+          !$acc enter data attach (wt_inun_presc)
+          !$acc update device (wt_inun_presc)
+          IF (.NOT. ASSOCIATED(interpol_new(1._wp,mlen,wt_inun_presc(:,stepm), &
+                                                       wt_inun_presc(:,step),  &
+                                                       wt_inun_presc(:,stepp), &
+                               intrp=dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p))) THEN
+            CALL finish(routine,'Error initializing interpolation')
+          ENDIF
+        ENDIF
+!        !$acc parallel loop gang vector
+!        DO ic = 1, nc
+!          CALL get_climatological_inun(frac_inun_presc(ic,step),frac_inun(ic),wt_inun(ic))
+!        ENDDO
+      ENDIF
+      ! Update interpolation
+      interp => dsl4jsb_memory(TOP_)%interp_frac_inun(iblk)%p
+      CALL interpol_update(interp)
+      DO ic = 1, nc
+        frac_inun(ic) = interp%curr(ic)
+      ENDDO
+      IF (ASSOCIATED(dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p)) THEN
+        CALL interpol_update(dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p)
         DO ic = 1, nc
-          CALL get_climatological_inun(frac_inun_clim(ic,month),frac_inun(ic),wt_inun(ic))
+          wt_inun(ic) = dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p%curr(ic)
+        ENDDO
+      ELSE
+        DO ic = 1, nc
+          IF (frac_inun(ic) > 0._wp) THEN
+            wt_inun(ic) = 0.25_wp
+          ELSE
+            wt_inun(ic) = 0._wp
+          ENDIF
         ENDDO
       ENDIF
       IF (lstart) THEN
@@ -347,9 +399,19 @@ CONTAINS
           frac_inun_pre(ic) = frac_inun(ic)
         ENDDO
       ENDIF
+
+      ! Use data from next month for next step if end of month is reached
+      IF (day==mlen) THEN ! Last day of month
+        ! Use the read values cyclicly if needed (climatology)
+        IF (dsl4jsb_memory(TOP_)%step(iblk)==SIZE(frac_inun_presc)) THEN
+          dsl4jsb_memory(TOP_)%step(iblk) = 1
+        ELSE
+          dsl4jsb_memory(TOP_)%step(iblk) = dsl4jsb_memory(TOP_)%step(iblk) + 1
+        ENDIF
+      ENDIF
     ELSE
 
-      ! Variables only available if not inun_prescribed
+      ! Variables only available if inun_mode = 0
       dsl4jsb_Get_var2D_onChunk(TOP_, water_table)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top_uncorr)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_uncorr)
@@ -465,7 +527,6 @@ CONTAINS
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
       summer_state = -1
-      CALL get_date_components(options%current_datetime,YEAR=year,MONTH=month)
       IF (lnew_month) THEN
         ! Get the previous month and evt. year
         month = MOD(month-1,12)
@@ -483,7 +544,7 @@ CONTAINS
         ENDIF
       ENDIF
 
-      IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
+      IF (dsl4jsb_Config(TOP_)%inun_mode == 0) THEN
         !$acc parallel loop gang vector
         DO ic = 1, nc
           CALL update_topmodel_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                         &

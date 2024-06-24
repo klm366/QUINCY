@@ -21,6 +21,7 @@ MODULE mo_top_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_top_util,               ONLY: t_interp_var_p
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes TOP_
@@ -72,14 +73,21 @@ MODULE mo_top_memory_class
       & peat_water_table,     &                ! peatland water table height [m]
       & frac_permanent_wetland                 ! fraction of tile with permanent wetland []
 
-    REAL(wp), POINTER ::                 &
-      & cti_mean      (:,:)   => NULL(), &
-      & cti_mu        (:,:)   => NULL(), &
-      & cti_phi       (:,:)   => NULL(), &
-      & cti_chi       (:,:)   => NULL(), &
-      & cti_basin     (:,:)   => NULL(), &
-      & cti_openwater (:,:)   => NULL(), &
-      & frac_inun_clim(:,:,:) => NULL()
+    REAL(wp), POINTER ::                  &
+      & cti_mean       (:,:)   => NULL(), &
+      & cti_mu         (:,:)   => NULL(), &
+      & cti_phi        (:,:)   => NULL(), &
+      & cti_chi        (:,:)   => NULL(), &
+      & cti_basin      (:,:)   => NULL(), &
+      & cti_openwater  (:,:)   => NULL(), &
+      & frac_inun_presc(:,:,:) => NULL(), &
+      & wt_inun_presc  (:,:,:) => NULL()
+
+    TYPE (t_interp_var_p), POINTER ::         &
+      & interp_frac_inun(:)        => NULL(), &
+      & interp_wt_inun(:)          => NULL()
+
+    INTEGER, POINTER :: step(:)                ! Curent step for interpolating prescribed inundation
 
   CONTAINS
     PROCEDURE :: Init => Init_topmodel_memory
@@ -112,7 +120,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: surface, soil_w              ! Vertical grids
-    INTEGER                     :: table
+    INTEGER                     :: table, i
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_topmodel_memory'
     INTEGER :: default_output_level = BASIC
     ! ----------------------------------------------------------------------------------------------------- !
@@ -130,7 +138,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! jsbach4 memory
     !
-    IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
+    NULLIFY(mem%frac_inun_presc)
+    NULLIFY(mem%wt_inun_presc)
+    IF (dsl4jsb_Config(TOP_)%inun_mode == 0) THEN
       ALLOCATE(mem%cti_mean     (hgrid%nproma, hgrid%nblks))
       ALLOCATE(mem%cti_basin    (hgrid%nproma, hgrid%nblks))
       ALLOCATE(mem%cti_openwater(hgrid%nproma, hgrid%nblks))
@@ -140,9 +150,21 @@ CONTAINS
       !$acc enter data pcreate(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
       !$acc enter data attach(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
     ELSE
-      ALLOCATE(mem%frac_inun_clim(hgrid%nproma, hgrid%nblks, 12))
-      !$acc enter data pcreate(mem%frac_inun_clim)
-      !$acc enter data attach(mem%frac_inun_clim)
+      ALLOCATE(mem%step(hgrid%nblks))
+      ALLOCATE(mem%interp_frac_inun(hgrid%nblks))
+      ALLOCATE(mem%interp_wt_inun  (hgrid%nblks))
+      !$acc enter data pcreate(mem%step,mem%interp_frac_inun,mem%interp_wt_inun)
+      !$acc enter data attach(mem%step,mem%interp_frac_inun,mem%interp_wt_inun)
+      DO i=1,hgrid%nblks
+        NULLIFY(mem%interp_frac_inun(i)%p)
+        NULLIFY(mem%interp_wt_inun(i)%p)
+      ENDDO
+
+      ! Allocated in mo_topmod_init%topmodel_init_bc since time dimension may vary
+!      ALLOCATE(mem%frac_inun_presc(hgrid%nproma, hgrid%nblks, 12))
+!      ALLOCATE(mem%wt_inun_presc  (hgrid%nproma, hgrid%nblks, 12))
+!      !$acc enter data pcreate(mem%frac_inun_presc,mem%wt_inun_presc)
+!      !$acc enter data attach(mem%frac_inun_presc,mem%wt_inun_presc)
     ENDIF
 
     CALL mem%Add_var( 'water_table', mem%water_table,                        &

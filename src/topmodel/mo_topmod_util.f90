@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
+!! Added interpolation functionality,           2024-06-06
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -16,17 +17,242 @@ MODULE mo_top_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,          ONLY: wp
-!  USE mo_exception,     ONLY: finish
-!  USE mo_util,          ONLY: real2string
+  USE mo_exception,     ONLY: finish, message
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: gamm_p, gamm_inv_p, gamm_q, gamm_ln
   PUBLIC :: time_relaxation
+  PUBLIC :: interpol_reset, interpol_done, interpol_new, interpol_update, wp, t_interp_var, t_interp_var_p
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_top_util'
 
+  TYPE t_interp_var
+    REAL(wp), POINTER :: curr(:)                 ! Current value of the interpolation
+    REAL(wp), POINTER :: a(:), b(:), c(:)        ! Coefficents for quadratic polynomias
+    REAL(wp), POINTER :: excess(:)               ! Current excess area
+    REAL(wp), POINTER :: excess_max(:)           ! Maximum of excess area
+    REAL(wp), POINTER :: add(:)                  ! Area to add to current interpolation
+    INTEGER,  POINTER :: flg(:)                  ! Bitwise flags for points to update "add" as well as modified endpoints:
+                                                 !   1 : add should be updated
+                                                 !   2 : first endpoint has been modified
+                                                 !   4 : second endpoint has been modified
+    REAL(wp)          :: valid_range(2)          ! Lower and upper boundaries for output
+    REAL(wp)          :: frac_use_full           ! Fraction of valid_range for which the base value should be used
+    REAL(wp)          :: dt                      ! Time between interpolation time steps
+    INTEGER           :: nintrp                  ! Number of total interpolation time steps
+    INTEGER           :: xcurr                   ! Number of current interpolation time step
+    LOGICAL           :: ext_var                 ! Is var field allocated externally?
+  END TYPE t_interp_var
+
+  TYPE t_interp_var_p
+    TYPE(t_interp_var), POINTER :: p => NULL()
+  END TYPE t_interp_var_p
+
 CONTAINS
+
+  !!
+  ! @brief Constructs or resets an interpolation structure
+  !
+  !!
+  !$acc routine seq
+  FUNCTION interpol_reset(n,intrp,var)
+    TYPE(t_interp_var),           POINTER :: interpol_reset
+    INTEGER,                   INTENT(in) :: n
+    TYPE(t_interp_var), OPTIONAL, POINTER :: intrp
+    REAL(wp),           OPTIONAL, POINTER :: var(:)
+
+    TYPE(t_interp_var), POINTER :: res
+    REAL(wp) :: tmp
+    INTEGER :: i
+
+    NULLIFY(res)
+    IF (PRESENT(intrp)) THEN
+      res => intrp
+    ENDIF
+    IF (.NOT. ASSOCIATED(res)) THEN
+      ALLOCATE(res)
+      NULLIFY(res%curr,res%a,res%b,res%c,res%excess,res%excess_max,res%add,res%flg)
+    ENDIF
+    res%valid_range   = (/-HUGE(tmp),HUGE(tmp)/)
+    res%frac_use_full = -1._wp
+    res%dt            = 0._wp
+    res%nintrp        = 0
+    res%xcurr         = 0
+    res%ext_var = .FALSE.
+    IF (.NOT. ASSOCIATED(res%curr)) THEN
+      IF (PRESENT(var)) THEN
+        res%curr => var
+        res%ext_var = .TRUE.
+      ELSE
+        ALLOCATE(res%curr(n))
+      ENDIF
+    ENDIF
+    IF (.NOT. ASSOCIATED(res%a))          ALLOCATE(res%a(n))
+    IF (.NOT. ASSOCIATED(res%b))          ALLOCATE(res%b(n))
+    IF (.NOT. ASSOCIATED(res%c))          ALLOCATE(res%c(n))
+    IF (.NOT. ASSOCIATED(res%excess))     ALLOCATE(res%excess(n))
+    IF (.NOT. ASSOCIATED(res%excess_max)) ALLOCATE(res%excess_max(n))
+    IF (.NOT. ASSOCIATED(res%add))        ALLOCATE(res%add(n))
+    IF (.NOT. ASSOCIATED(res%flg)) THEN
+      ALLOCATE(res%flg(n))
+      DO i=1,n
+        res%flg(i) = 0
+      ENDDO
+    ELSE
+      DO i=1,n
+        res%flg(i) = ISHFT(IAND(res%flg(i),4),-1) ! Preserve status of previous endpoint as status of current startpoint
+      ENDDO
+    ENDIF
+    DO i=1,n
+      res%excess    (i) = 0._wp
+      res%excess_max(i) = 0._wp
+      res%add       (i) = 0._wp
+    ENDDO
+
+    interpol_reset => res
+
+  END FUNCTION interpol_reset
+
+  !!
+  ! @brief Deep destruction of an interpolation structure
+  !
+  !!
+  !$acc routine seq
+  SUBROUTINE interpol_done(intrp)
+    TYPE(t_interp_var), POINTER :: intrp
+
+    TYPE(t_interp_var), POINTER :: done
+
+    done => intrp
+    IF ((.NOT. done%ext_var) .AND. ASSOCIATED(done%curr)) DEALLOCATE(done%curr)
+    IF (ASSOCIATED(done%a))          DEALLOCATE(done%a)
+    IF (ASSOCIATED(done%b))          DEALLOCATE(done%b)
+    IF (ASSOCIATED(done%c))          DEALLOCATE(done%c)
+    IF (ASSOCIATED(done%excess))     DEALLOCATE(done%excess)
+    IF (ASSOCIATED(done%excess_max)) DEALLOCATE(done%excess_max)
+    IF (ASSOCIATED(done%add))        DEALLOCATE(done%add)
+    IF (ASSOCIATED(done%flg))        DEALLOCATE(done%flg)
+
+    DEALLOCATE(done)
+
+  END SUBROUTINE interpol_done
+
+  !!
+  ! @brief Initializes a new interpolation
+  !
+  !!
+  !$acc routine seq
+  FUNCTION interpol_new(dt,nintrp,y1,y2,y3,valid_range,frac_use_full,intrp,var)
+    TYPE(t_interp_var),              POINTER :: interpol_new
+    REAL(wp),                     INTENT(in) :: dt
+    INTEGER,                      INTENT(in) :: nintrp
+    REAL(wp),                     INTENT(in) :: y1(:), y2(:), y3(:)
+    REAL(wp),           OPTIONAL, INTENT(in) :: valid_range(2)
+    REAL(wp),           OPTIONAL, INTENT(in) :: frac_use_full
+    TYPE(t_interp_var), OPTIONAL,    POINTER :: intrp
+    REAL(wp),           OPTIONAL,    POINTER :: var(:)
+
+    TYPE(t_interp_var), POINTER :: res
+    REAL(wp) :: ys, ye, dx, dy, span
+    INTEGER :: i, n, flgs
+
+    ! flgs: Bitwise
+    !   1 : y1 < lower threshold
+    !   2 : y1 > upper threshold
+    !   4 : y2 < lower threshold
+    !   8 : y2 > upper threshold
+    !  16 : y3 < lower threshold
+    !  32 : y3 > upper threshold
+
+    n = SIZE(y1)
+    res => interpol_reset(n,intrp,var)
+    IF (PRESENT(valid_range))   res%valid_range(:) = valid_range(:)
+    IF (PRESENT(frac_use_full)) res%frac_use_full  = frac_use_full
+    res%dt     = dt
+    res%nintrp = nintrp
+
+    span = res%valid_range(2) - res%valid_range(1)
+
+    DO i=1,n
+      ys = (y1(i)+y2(i))/2.0_wp
+      ye = (y2(i)+y3(i))/2.0_wp
+
+      flgs = 0
+      IF (frac_use_full >= 0._wp) THEN
+        IF (((y1(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs, 1)
+        IF (((y2(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs, 4)
+        IF (((y3(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs,16)
+        IF (((res%valid_range(2)-y1(i))/span) <= frac_use_full) flgs = IOR(flgs, 2)
+        IF (((res%valid_range(2)-y2(i))/span) <= frac_use_full) flgs = IOR(flgs, 8)
+        IF (((res%valid_range(2)-y3(i))/span) <= frac_use_full) flgs = IOR(flgs,32)
+
+        res%flg(i) = IOR(res%flg(i),ISHFT(flgs,4))
+
+        IF ((IAND(res%flg(i),2)/=0) .OR. (MINVAL(ABS((/4,8,10/)-IAND(flgs,15)))==0)) THEN
+          ys = y2(i)
+          res%flg(i) = IOR(res%flg(i),2)
+        ENDIF
+        IF (MINVAL(ABS((/4,8,16,32,40/)-IAND(flgs,60)))==0) THEN
+          ye = y3(i)
+          res%flg(i) = IOR(res%flg(i),4)
+        ENDIF
+      ENDIF
+        
+      dy = ye - ys
+      dx = REAL(nintrp,wp)
+
+      res%b(i) = 6._wp * (y2(i) - ys - dy/3._wp) / dx
+      res%a(i) = (dy - res%b(i) * dx) / (dx * dx)
+      res%c(i) = ys
+
+    ENDDO
+
+    interpol_new => res
+
+  END FUNCTION interpol_new
+
+  !!
+  ! @brief Go to next step of an interpolation
+  !
+  !!
+  !$acc routine seq
+  SUBROUTINE interpol_update(intrp)
+    TYPE(t_interp_var), POINTER :: intrp
+
+    REAL(wp) :: x, y, tmp, su
+    INTEGER :: i, n, nleft
+
+    IF (intrp%xcurr >= intrp%nintrp) RETURN
+
+    intrp%xcurr = intrp%xcurr + 1
+    x = REAL(intrp%xcurr,wp)*intrp%dt
+    nleft = intrp%nintrp - intrp%xcurr
+    n = SIZE(intrp%a)
+    su = 0._wp
+    DO i=1,n
+      y = intrp%a(i)*x*x + intrp%b(i)*x + intrp%c(i) ! + intrp%add(i)
+      su = su + y
+      intrp%excess(i) = intrp%excess(i) - intrp%add(i) * intrp%dt
+      tmp = y - intrp%valid_range(1)
+      IF (tmp < 0._wp) THEN
+        intrp%excess(i) = intrp%excess(i) + tmp * intrp%dt
+        y = intrp%valid_range(1)
+      ENDIF
+      tmp = y - intrp%valid_range(2)
+      IF (tmp > 0._wp) THEN
+        intrp%excess(i) = intrp%excess(i) + tmp * intrp%dt
+        y = intrp%valid_range(2)
+      ENDIF
+      IF ((ABS(intrp%excess(i)) == intrp%excess_max(i)) .AND. (intrp%excess_max(i) > 0)) intrp%flg(i) = IOR(intrp%flg(i),1)
+      IF (intrp%excess_max(i) < ABS(intrp%excess(i))) &
+          intrp%excess_max(i) = ABS(intrp%excess(i))
+      IF (IAND(intrp%flg(i),1)/=0) intrp%add(i) = intrp%excess(i)/intrp%dt/REAL(nleft,wp)*2._wp
+      intrp%curr(i) = y
+    ENDDO
+
+  END SUBROUTINE interpol_update
+
 
   !!
   ! @brief Update a moving average (e-fold relaxation) with a new value
