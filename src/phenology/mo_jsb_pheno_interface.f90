@@ -14,7 +14,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_jsb_pheno_interface
+MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
@@ -75,7 +75,7 @@ MODULE mo_jsb_pheno_interface
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pheno_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
 CONTAINS
 
@@ -179,7 +179,7 @@ CONTAINS
     USE mo_carbon_interface,        ONLY: rescale_carbon_upon_reference_area_change, &
       &                                   calculate_current_c_ta_state_sum, check_carbon_conservation, &
       &                                   recalc_carbon_per_tile_vars
-    USE mo_jsb_pheno_process,       ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
+    USE mo_pheno_process,           ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
       &                                   calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                   track_max_green_pool, derive_maxlai_according_to_allometric_relationships,   &
       &                                   calc_GDD
@@ -759,7 +759,7 @@ CONTAINS
   !>
   SUBROUTINE update_fpc(tile, options)
 
-    USE mo_jsb_pheno_process, ONLY: get_foliage_projected_cover
+    USE mo_pheno_process,     ONLY: get_foliage_projected_cover
     USE mo_jsb_time,          ONLY: get_time_interpolation_weights
 
     ! Arguments
@@ -1035,4 +1035,4 @@ CONTAINS
   END SUBROUTINE global_phenology_diagnostics
 
 #endif
-END MODULE mo_jsb_pheno_interface
+END MODULE mo_pheno_interface

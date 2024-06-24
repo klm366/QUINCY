@@ -27,7 +27,10 @@ MODULE mo_hydro_constants
     & VanGenuchten_    = 3,                &
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
-    & Arithmetic_      = 2
+    & Arithmetic_      = 2,                &
+    ! Identifiers used for the pond dynamics scheme
+    & Quad_            = 1,                &
+    & Tanh_            = 2
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction
@@ -51,6 +54,9 @@ MODULE mo_hydro_constants
     ! Parameters describing orographic steepness in infiltration computation
     & oro_var_min = 100._wp,               &
     & oro_var_max = 1000._wp,              &
+
+    ! Parameters used for pond computations
+    & oro_crit = 100._wp,                   & !< Reference topo std for pond scaling factor [m]
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<
@@ -78,8 +84,6 @@ MODULE mo_hydro_constants
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc               = 0.139_wp         !< Parameter from percolation theory
-
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 #endif
 END MODULE mo_hydro_constants

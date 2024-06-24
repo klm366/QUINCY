@@ -1,15 +1,15 @@
 !> Summary: QUINCY soil-physics process memory
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -47,7 +47,11 @@ MODULE mo_spq_memory_class
                                     soil_depth      , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
                                     root_depth      , & !< actual rooting depth [m]
                                     t_srf_old       , & !< previous surface temperature [K]
-                                    zril_old            !< previous timestep's Reynold's number
+                                    zril_old        , & !< previous timestep's Reynold's number
+                                    elevation           !< currently 0.0 [m]
+
+    TYPE(t_jsb_var_real2d)          :: &
+      &   num_sl_above_bedrock                          !< number of soil layers above bedrock, i.e., with a width larger eps8
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
@@ -169,7 +173,7 @@ CONTAINS
   SUBROUTINE Init_spq_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC , MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -184,16 +188,16 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_e                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_spq               ! Vertical grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(model_id)
-    table         =  tables(1)
-    hgrid         => Get_grid(model%grid_id)
-    surface       => Get_vgrid('surface')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
+    model          => Get_model(model_id)
+    table          =  tables(1)
+    hgrid          => Get_grid(model%grid_id)
+    surface        => Get_vgrid('surface')
+    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_snow_spq => Get_vgrid('snow_layer_spq')
 
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -244,7 +248,29 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
+      CALL mem%Add_var('elevation', mem%elevation, &
+        & hgrid, surface, &
+        & t_cf('elevation', 'm', 'Mean orography'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart=.FALSE., &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
+        & hgrid, surface, &
+        & t_cf('num_sl_above_bedrock', '[unitless]', 'number of soil layers above bedrock'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=0.0_wp)
+
       CALL mem%Add_var('soil_depth_sl', mem%soil_depth_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('soil_depth_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &
@@ -884,7 +910,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('snow_present_snl', mem%snow_present_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('snow_present_snl','-', 'check if there is snow'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
@@ -895,7 +921,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('t_snow_snl', mem%t_snow_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('t_snow_snl','m', 'temperature snow layer'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
@@ -906,7 +932,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('w_snow_snl', mem%w_snow_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('w_snow_snl','m', 'water content snow layer'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
@@ -917,7 +943,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('snow_lay_thickness_snl', mem%snow_lay_thickness_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('snow_lay_thickness_snl','m', 'snow layer thickness'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
@@ -928,7 +954,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('w_snow_max_snl', mem%w_snow_max_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('w_snow_max_snl','m', 'maximum water content snow layer'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
@@ -939,7 +965,7 @@ CONTAINS
           &  initval_r = 0.0_wp) ! initvalue
           
       CALL mem%Add_var('w_liquid_snl', mem%w_liquid_snl, &
-          &  hgrid, vgrid_snow_e, &
+          &  hgrid, vgrid_snow_spq, &
           &  t_cf('w_liquid_snl','m', 'w_liquid_snl'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &

@@ -1,21 +1,21 @@
-!> Summary: JSBACH & QUINCY assimilation parameters
+!> Summary: QUINCY assimilation parameters
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
 !>#### declare and init assimilation parameters
 !>
-MODULE mo_assimi_parameters
+MODULE mo_q_assimi_parameters
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -24,50 +24,6 @@ MODULE mo_assimi_parameters
   IMPLICIT NONE
   PUBLIC
 
-  ! ======================================================================================================= !
-  !> 1.0 general ASSIMI_ parameters
-  !>
-  ! ..
-
-
-  ! ======================================================================================================= !
-  !> 2.0 JSBACH specific parameters
-  !>
-  REAL(wp), SAVE :: &
-   ! C3 PLANTS:
-   ! FARQHUAR, G.D., S. VON CAEMMERER AND J.A. BERRY, 1980.
-   ! A BIOCHEMICAL MODEL OF PHOTOYNTHESIS IN LEAVES OF C3 SPECIES.
-   ! PLANTA 149, 78-90.
-   & ALPHA = def_parameters,  & ! EFFICIENCY OF OF PHOTON CAPTURE
-   & OX    = def_parameters,  & ! OXYGEN CONCENTRATION [MOL(O2) / MOL(AIR)]
-   & KC0   = def_parameters,  & ! MICHAELIS-MENTEN CONSTANT FOR CO2 AT 25C [MOL(CO2) / MOL(AIR)]
-   & KO0   = def_parameters,  & ! MICHAELIS-MENTEN CONSTANT FOR O2 AT 25C [MOL(O2) / MOL(AIR)]
-   & EC    = def_parameters,  & ! ACTIVATION ENERGY FOR KC [J / MOL]
-   & EO    = def_parameters,  & ! ACTIVATION ENERGY FOR KO [J / MOL]
-   & EV    = def_parameters,  & ! ACTIVATION ENERGY FOR VCMAX [J / MOL]
-   & ER    = def_parameters,  & ! ACTIVATION ENERGY FOR DARK RESPIRATION [J / MOL]
-   & EK    = def_parameters,  & ! = Q10=2 (Collatz et al. 1992)
-   & FRDC3 = def_parameters,  & ! RATIO OF DARK RESPIRATION TO "PVM" AT 25C for C3
-   ! C4 PLANTS:
-   ! COLLATZ, G.J., M. RIBAS-CARBO AND J.A. BERRY, 1992.
-   ! COUPLED PHOTOSYNTHESIS-STOMATAL CONDUCTANCE MODEL FOR LEAVES
-   ! OF C4 PLANTS. AUST. J. PLANT PHYSIOL. 19, 519-538.
-   & FRDC4 = def_parameters,  & ! RATIO OF DARK RESPIRATION TO "PVM" AT 25C for C4
-   & ALC4  = def_parameters,  & ! EFFECTIVE QUANTUM EFFICIENCY
-   & THETA = def_parameters,  & ! CURVATURE PARAMETER
-   & minOfMaxCarboxrate = def_parameters, & ! Minimum of maximum carboxylation rate [10^(-6) mol/(m^2 s)].
-   ! C3 & C4
-   & minStomaConductance = def_parameters, & ! Minimum stomatal conductance [mol H2O /(m^2 s) ??]
-   ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air:
-   & FCI1C3        = def_parameters, &     ! For C3 plants
-   & FCI1C4        = def_parameters, &     ! For C4 plants
-   ! Factors needed to calculate NPP_pot_rate:
-   & f_aut_leaf    = def_parameters, &     ! leaf fraction of plant-total (autotrophic) respiration
-   & cCost         = def_parameters        ! relative costs (measured in carbon) to produce 1 unit of carbon
-
-  ! ======================================================================================================= !
-  !> 3.0 QUINCY specific parameters
-  !>
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
   REAL(wp), SAVE :: &
     ! Values from Niinemets 1997 (SC 01/16)
@@ -146,55 +102,17 @@ MODULE mo_assimi_parameters
     & k_photochemistry_rate                           = def_parameters      !< rate coefficient for photochemistry    
 
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_parameters'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_assimi_parameters'
 
 CONTAINS
 
-  ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models()
-
   ! ======================================================================================================= !
-  !> initialize JSBACH specific parameters for the process: phenology
+  !> initialize parameters for the process: assimilation
   !>
-  SUBROUTINE init_assimi_parameters_jsbach
-    CHARACTER(len=*), PARAMETER :: routine = modname//':init_assimi_parameters_jsbach'
-
-    !> TODO
-    !> for now all JSBACH parameters are considered constants
-    !> when changing declaration from "REAL(wp), PARAMETER" to "REAL(wp), SAVE" simulation results change
-
-    ! C3 Plants:
-    ALPHA         = 0.28_wp
-    OX            = 0.21_wp
-    KC0           = 460.E-6_wp
-    KO0           = 330.E-3_wp
-    EC            = 59356._wp
-    EO            = 35948._wp
-    EV            = 58520._wp
-    ER            = 45000._wp
-    EK            = 50967._wp
-    FRDC3         = 0.011_wp
-    ! C4 Plants:
-    FRDC4               = 0.031_wp
-    ALC4                = 0.04_wp
-    THETA               = 0.83_wp
-    minOfMaxCarboxrate  = 1.0E-12_wp
-    ! C3 & C4
-    minStomaConductance = 0.0_wp
-    ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air:
-    FCI1C3        = 0.87_wp
-    FCI1C4        = 0.67_wp
-    ! Factors needed to calculate NPP_pot_rate:
-    f_aut_leaf    = 0.40_wp
-    cCost         = 1.25_wp
-  END SUBROUTINE init_assimi_parameters_jsbach
-
-  ! ======================================================================================================= !
-  !> initialize QUINCY specific parameters for the process: phenology
-  !>
-  SUBROUTINE init_assimi_parameters_quincy
+  SUBROUTINE init_q_assimi_parameters
     USE mo_jsb_physical_constants,  ONLY: molar_mass_N    !< molar mass of nitrogen
     ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':init_assimi_parameters_quincy'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_assimi_parameters'
 
     ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
     jmax2n        = 17.6_wp / 4.0_wp                      !< .. reference
@@ -252,7 +170,7 @@ CONTAINS
     thermal_dissipation_enrg_constitutive_param_2   = 0.0773_wp   !< van der Tol 2014
     k_photochemistry_rate                           = 4.0_wp      !< van der Tol 2014
 
-  END SUBROUTINE init_assimi_parameters_quincy
+  END SUBROUTINE init_q_assimi_parameters
 
 #endif
-END MODULE mo_assimi_parameters
+END MODULE mo_q_assimi_parameters

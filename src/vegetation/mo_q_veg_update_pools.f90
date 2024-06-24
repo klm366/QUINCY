@@ -1,15 +1,15 @@
 !> Summary: QUINCY update vegetation pools
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -47,30 +47,30 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
-    USE mo_rad_parameters,                  ONLY: rfr_ratio_toc 
+    USE mo_q_rad_parameters,                ONLY: rfr_ratio_toc 
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
-    USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
-    USE mo_assimi_constants,                ONLY: ic3phot, ic4phot
+    USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_q_pheno_constants,               ONLY: ievergreen
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(Q_ASSIMI_)    
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)        
-    dsl4jsb_Use_memory(ASSIMI_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(RAD_)
+    dsl4jsb_Use_memory(Q_RAD_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -79,7 +79,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy           !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy_q_assimi  !< Vertical grid
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
     INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
@@ -98,16 +98,16 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(Q_RAD_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! ASSIMI_ 2D
+    ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
@@ -122,9 +122,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    ! RAD_ 2D
+    ! Q_RAD_ 2D
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
-    ! RAD_ 3D
+    ! Q_RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_ 2D
@@ -219,23 +219,23 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
-    ncanopy       =  vgrid_canopy%n_levels
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    model                 => Get_model(tile%owner_model_id)
+    lctlib                => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')    
+    ncanopy               =  vgrid_canopy_q_assimi%n_levels
+    nsoil_sb              =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(Q_RAD_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -249,14 +249,14 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! ASSIMI_ 2D
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)      ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)         ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)         ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)    ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C14)    ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air_tfrac_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa_tphen_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps_tfrac_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tfrac_mavg)   ! in
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
@@ -264,11 +264,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                  ! in
-    ! RAD_ 2D
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! in
-    ! RAD_ 3D
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
+    ! Q_RAD_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! in
+    ! Q_RAD_ 3D
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout
@@ -357,7 +357,7 @@ CONTAINS
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
-    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+    SELECT CASE(TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
         lctlib_g1 = lctlib%g1_medlyn
       CASE ("ballberry")
@@ -583,9 +583,9 @@ CONTAINS
     !>
     CALL calc_canopy_layers( nc                                                       , & ! in
                              ncanopy                                                  , &
-                             vgrid_canopy%dz(:)                                       , &
-                             vgrid_canopy%lbounds(:)                                  , &
-                             vgrid_canopy%ubounds(:)                                  , &
+                             vgrid_canopy_q_assimi%dz(:)                              , &
+                             vgrid_canopy_q_assimi%lbounds(:)                         , &
+                             vgrid_canopy_q_assimi%ubounds(:)                         , &
                              lctlib%ps_pathway                                        , &
                              lctlib%k0_fn_struc                                       , &
                              lctlib%fn_oth_min                                        , &
@@ -595,8 +595,8 @@ CONTAINS
                              lctlib%g0                                                , &
                              lctlib_g1                                                , &
                              lctlib%t_jmax_omega                                      , &
-                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction           , &
-                             TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme)  , & !   ASSIMI_ config (medlyn/ballberry)
+                             dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction         , &
+                             TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme), & !   Q_ASSIMI_ config (medlyn/ballberry)
                              veg_pool_mt(ix_leaf, ixN, :)                             , &
                              lai(:)                                                   , &
                              ppfd_sunlit_tfrac_mavg_cl(:,:)                           , &
@@ -664,8 +664,9 @@ CONTAINS
     !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
     !>
     ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
+    ! (n_processing_respiration = n_fixation_respiration + n_transform_respiration)
     net_biosphere_production_l2aveghlp(:) = net_biosphere_production_l2aveghlp(:) &
-      & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_transform_respiration(:)
+      & + gross_assimilation(:) - maint_respiration(:) - growth_respiration(:) - n_processing_respiration(:)
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation_l2aveghlp(:)    = biological_n_fixation_l2aveghlp(:) + n_fixation(:)
 

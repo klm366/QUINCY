@@ -1,15 +1,15 @@
 !> Summary: QUINCY helper routines for vegetation
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -156,11 +156,11 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     !------------------------------------------------------------------------------------------------------ !
-    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, Q_PHENO_, SPQ_
+    dsl4jsb_Use_processes A2L_, Q_ASSIMI_, VEG_, Q_PHENO_, SPQ_
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(ASSIMI_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
@@ -168,29 +168,29 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store           !< the bgcm store of this tile
-    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
-    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
-    LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
-    REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
-    LOGICAL,  DIMENSION(options%nc)         :: l_hlp                !< helper
-    REAl(wp)                                :: mavg_period_hlp      !< helper
-    INTEGER                                 :: ic                   !< looping over chunk
-    INTEGER                                 :: icanopy              !< looping
-    INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
-    INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    REAL(wp)                                :: dtime                !< timestep
+    TYPE(t_jsb_model),      POINTER         :: model                  !< instance of the model
+    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store             !< the bgcm store of this tile
+    TYPE(t_lctlib_element), POINTER         :: lctlib                 !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy_q_assimi  !< Vertical grid
+    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
+    LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
+    REAl(wp), DIMENSION(options%nc)         :: hlp                    !< helper
+    LOGICAL,  DIMENSION(options%nc)         :: l_hlp                  !< helper
+    REAl(wp)                                :: mavg_period_hlp        !< helper
+    INTEGER                                 :: ic                     !< looping over chunk
+    INTEGER                                 :: icanopy                !< looping
+    INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
+    INTEGER                                 :: iblk, ics, ice, nc     !< dimensions
+    REAL(wp)                                :: dtime                  !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
@@ -203,7 +203,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
-    ! ASSIMI_
+    ! Q_ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
@@ -329,18 +329,18 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN !< only if the present tile is a pft
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-    ncanopy       =  vgrid_canopy%n_levels
+    model                 => Get_model(tile%owner_model_id)
+    lctlib                => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    ncanopy               =  vgrid_canopy_q_assimi%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
@@ -359,10 +359,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
     dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)
-    ! ASSIMI_
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
+    ! Q_ASSIMI_
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation_boc)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     ! VEG_ 2D
@@ -772,7 +772,7 @@ CONTAINS
     !>    t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !>    this IF statement has a direct impact on mo_q_veg_respiration:temperature_response_respiration
     !>
-    IF (dsl4jsb_Config(ASSIMI_)%flag_t_resp_acclimation) THEN
+    IF (dsl4jsb_Config(Q_ASSIMI_)%flag_t_resp_acclimation) THEN
       t_air_tacclim_mavg(:)       = calc_time_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
       t_soil_root_tacclim_mavg(:) = calc_time_mavg(t_soil_root_tacclim_mavg(:), t_soil_root(:), mavg_period_tacclim)
     END IF

@@ -105,7 +105,7 @@ CONTAINS
     USE mo_jsb_lcc,            ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc
 
     USE mo_carbon_interface,    ONLY: merge_carbon_vars_upon_ageing
-    USE mo_jsb_pheno_interface, ONLY: merge_pheno_variables_upon_ageing
+    USE mo_pheno_interface,     ONLY: merge_pheno_variables_upon_ageing
     USE mo_fage_process,        ONLY: recalc_fract_per_age_upon_ageing, synchronise_fracts
 
     dsl4jsb_Use_config(FAGE_)

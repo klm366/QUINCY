@@ -19,10 +19,9 @@ MODULE mo_jsb_model_init
 
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_,  &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, &
-    &                   SB_, SPQ_, TOP_, CH4_, MEGAN_,                                             &
-    &                   Q_PHENO_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, &
+    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_, TOP_, CH4_, MEGAN_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
@@ -191,8 +190,9 @@ CONTAINS
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_q_rad_init,          ONLY: q_rad_init
     USE mo_atm2land_init,       ONLY: atm2land_init
-    USE mo_assimi_init,         ONLY: assimi_init
+    USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_veg_init,            ONLY: veg_init
@@ -400,7 +400,7 @@ CONTAINS
     !
     ! CASE (MODEL_JSBACH_QUINCY)
     !   ! set flux variables to zero
-    !   CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
+    !   CALL model%Queue_task(ASSIMI_, "reset_q_assimi_fluxes")       !! quincy
     !   CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
     !   CALL model%Queue_task(SB_,     "reset_sb_fluxes")             !! quincy
     !   ! science
@@ -483,7 +483,7 @@ CONTAINS
       ENDIF
 
       !-- set flux variables to zero
-      CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")       ! ALL
+      CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
       CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
       CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
       IF(model%config%qmodel_id == QLAND) THEN
@@ -495,9 +495,9 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
       CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
-      CALL model%Queue_task(RAD_, "radiation_quincy")             ! ALL
+      CALL model%Queue_task(Q_RAD_, "q_radiation")                ! ALL
       CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
-      CALL model%Queue_task(ASSIMI_, "canopy_fluxes")             ! ALL
+      CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
@@ -515,8 +515,8 @@ CONTAINS
       ENDIF
 
       !-- averaging variables in time
-      CALL model%Queue_task(RAD_, "tavrg_radiation_quincy")       ! ALL
-      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")        ! ALL
+      CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
+      CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
       CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
 
@@ -591,6 +591,10 @@ CONTAINS
         CALL rad_init(tile)
       END IF
 
+      IF (tile%Is_process_active(Q_RAD_)) THEN
+        CALL q_rad_init(tile)
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(SEB_)) THEN
@@ -638,10 +642,11 @@ CONTAINS
         CALL atm2land_init(tile)
       END IF
 
-      IF (tile%Is_process_active(ASSIMI_)) THEN
-        CALL assimi_init(tile)
-        ! CALL assimi_init_bc(tile)
-        ! CALL assimi_init_ic(tile)
+      ! IF (tile%Is_process_active(ASSIMI_)) THEN
+      !   CALL assimi_init(tile)
+      ! END IF
+      IF (tile%Is_process_active(Q_ASSIMI_)) THEN
+        CALL q_assimi_init(tile)
       END IF
 
       SELECT CASE (model%config%model_scheme)

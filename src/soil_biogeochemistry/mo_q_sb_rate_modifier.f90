@@ -1,15 +1,15 @@
 !> Summary: QUINCY biophysical rate modifiers
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -59,6 +59,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model              !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib             !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc !< dimensions
+    INTEGER                           :: is, ic             !< dimensions looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
@@ -87,7 +88,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_gasdiffusion
     dsl4jsb_Real3D_onChunk :: rmm_asymb_bnf
     dsl4jsb_Real3D_onChunk :: anaerobic_volume_fraction_sl 
-    ! SPQ_
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -133,7 +136,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_gasdiffusion)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_asymb_bnf)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       anaerobic_volume_fraction_sl)! out 
-    ! ---------------------------
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_,     num_sl_above_bedrock)        ! in
+    ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_,     t_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_fc_sl)                ! in
@@ -142,52 +147,57 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_,     soil_depth_sl)               ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !>1.0 soil organic rate calc modifiers
-    !>
+    DO ic = 1,nc
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        !>1.0 soil organic rate calc modifiers
+        !>
+        
+        !>  1.1 simple model
+        !>
+        rtm_decomposition(ic, is)    = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), &
+          &                                                          ea_decomposition, &
+          &                                                          ed_decomposition, &
+          &                                                          t_ref_decomposition)
+        rmm_decomposition(ic, is)    = MAX(1._wp - w_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
+        !>  1.2 JSM
+        !>
+        rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_depolymerisation) 
+        rtm_mic_uptake(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_mic_uptake)
+        rtm_sorption(ic, is)         = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_sorption) 
+        rtm_desorption(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_desorption) 
+        rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_hsc) 
+         
+        rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_depolymerisation) 
+        rmm_mic_uptake(ic, is)       = calc_oxygen_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_mic_uptake)
+        rmm_sorption(ic, is)         = calc_convert_bulk_to_liquid(w_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption)
+        rmm_desorption(ic, is)       = calc_convert_bulk_to_liquid(w_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption) 
+        rmm_hsc(ic, is)              = calc_substrate_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_hsc) 
+
+        !>2.0 nitrification-denitrification model
+        !>
+        rtm_nitrification(ic, is)             = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_nitrification, & 
+          &                                     ed_nitrification, t_opt_nitrification) 
+        rtm_denitrification(ic, is)           = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_denitrification) 
+        rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion) 
+        rmm_nitrification(ic, is)             = calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is)) 
+        rmm_gasdiffusion(ic, is)              = 1.0_wp - calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is)) 
+        anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(w_soil_sl(ic, is), w_soil_sat_sl(ic, is), &
+          &                                     lambda_anvf, k_anvf) 
     
-    !>  1.1 simple model
-    !>
-    rtm_decomposition    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), &
-      &                                                          ea_decomposition, &
-      &                                                          ed_decomposition, &
-      &                                                          t_ref_decomposition)
-    rmm_decomposition    = MAX(1._wp - w_soil_pot_sl / kmr_decomposition, 0.0_wp)
-    !>  1.2 JSM
-    !>
-    rtm_depolymerisation(:,:) = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
-    rtm_mic_uptake(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_mic_uptake)
-    rtm_sorption(:,:)         = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_sorption) 
-    rtm_desorption(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_desorption) 
-    rtm_hsc(:,:)              = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_hsc) 
-     
-    rmm_depolymerisation(:,:) = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_depolymerisation) 
-    rmm_mic_uptake(:,:)       = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_mic_uptake)
-    rmm_sorption(:,:)         = calc_convert_bulk_to_liquid(w_soil_sl(:,:),soil_depth_sl(:,:),kmr_sorption)
-    rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:),soil_depth_sl(:,:),kmr_sorption) 
-    rmm_hsc(:,:)              = calc_substrate_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_hsc) 
+        !>  2.1 N fixation model
+        !>   Using the symbiotic T-function as no other data available
+        !>
+        rtm_asymb_bnf(ic, is) = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_symb_bnf, &
+          &                     ed_symb_bnf, t_opt_symb_bnf) 
+        rmm_asymb_bnf(ic, is) = MAX(1._wp - w_soil_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_wp)
 
-    !>2.0 nitrification-denitrification model
-    !>
-    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_nitrification, & 
-      &                                                               ed_nitrification, t_opt_nitrification) 
-    rtm_denitrification(:,:)  = calc_temperature_rate_modifier(t_soil_sl(:,:), ea_denitrification) 
-    rtm_gasdiffusion(:,:)     = calc_temperature_rate_modifier(t_soil_sl(:,:), ea_gasdiffusion) 
-    rmm_nitrification(:,:)    = calc_moisture_modifier(w_soil_sl(:,:), w_soil_fc_sl(:,:)) 
-    rmm_gasdiffusion(:,:)     = 1.0_wp - calc_moisture_modifier(w_soil_sl(:,:), w_soil_fc_sl(:,:)) 
-    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:), w_soil_sat_sl(:,:), lambda_anvf, k_anvf) 
-
-    !>  2.1 N fixation model
-    !>   Using the symbiotic T-function as no other data available
-    !>
-    rtm_asymb_bnf(:,:) = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_symb_bnf, &
-      &                                                        ed_symb_bnf, t_opt_symb_bnf) 
-    rmm_asymb_bnf(:,:) = MAX(1._wp - w_soil_pot_sl / kmr_asymb_bnf, 0.0_wp)
-
-    !>3.0 root model
-    !>
-    rtm_plant_uptake = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:), ea_decomposition, &
-      &                                                      ed_decomposition, t_ref_decomposition)
-    rmm_plant_uptake = MAX(1._wp - w_soil_pot_sl / lctlib%phi_leaf_min, 0.0_wp)
+        !>3.0 root model
+        !>
+        rtm_plant_uptake(ic, is) = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_decomposition, &
+          &                        ed_decomposition, t_ref_decomposition)
+        rmm_plant_uptake(ic, is) = MAX(1._wp - w_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
+      ENDDO
+    ENDDO
   END SUBROUTINE update_sb_rate_modifier
 
 
@@ -209,7 +219,7 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
+  FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
 
     USE mo_jsb_physical_constants, ONLY: r_gas
     USE mo_jsb_math_constants,     ONLY: eps8
@@ -254,7 +264,7 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
+  FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
 
     USE mo_jsb_physical_constants, ONLY: r_gas
     USE mo_jsb_math_constants,     ONLY: eps8
@@ -296,7 +306,7 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
+  FUNCTION calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
     USE mo_sb_constants,        ONLY: k1_afps 
     USE mo_jsb_math_constants,  ONLY: eps8
@@ -340,7 +350,7 @@ CONTAINS
   !!
   !! Output: conversion modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl, soil_depth_sl, param) RESULT(factor)
+  FUNCTION calc_convert_bulk_to_liquid(w_soil_sl, soil_depth_sl, param) RESULT(factor)
 
     USE mo_jsb_math_constants,  ONLY: eps8
 
@@ -382,7 +392,7 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
+  FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
     USE mo_sb_constants,        ONLY: k2_afps
     USE mo_jsb_math_constants,  ONLY: eps8

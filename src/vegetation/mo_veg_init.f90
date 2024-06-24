@@ -1,15 +1,15 @@
 !> Summary: QUINCY vegetation variables init
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -50,8 +50,8 @@ CONTAINS
     USE mo_jsb_process_class,               ONLY: VEG_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_grid
-    USE mo_assimi_parameters,               ONLY: CiCa_default_C3, CiCa_default_C4
-    USE mo_assimi_constants,                ONLY: ic3phot, ic4phot
+    USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N

@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_jsb_assimi_interface
+MODULE mo_assimi_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -39,11 +39,11 @@ MODULE mo_jsb_assimi_interface
   dsl4jsb_Use_config(ASSIMI_)
 
   ! Use of process memories (t_assimi_memory)
+  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -51,86 +51,66 @@ MODULE mo_jsb_assimi_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC ::  Register_assimi_tasks_jsbach
+  PUBLIC ::  Register_assimi_tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_interface'
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation_scaling_factors task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_assimilation_scaling_factors
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation_scaling_factors    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation_scaling_factors !< Aggregates computed task variables
   END TYPE   tsk_assimilation_scaling_factors
+
   !> Constructor interface for assimilation_scaling_factors task
-  !>
   INTERFACE   tsk_assimilation_scaling_factors
     PROCEDURE Create_task_assimilation_scaling_factors         !< Constructor function for task
   END INTERFACE   tsk_assimilation_scaling_factors
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_unstressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_unstressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_unstressed
+
   !> Constructor interface for canopy_cond_unstressed task
-  !>
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_unstressed
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_stressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_stressed
+
   !> Constructor interface for canopy_cond_stressed task
-  !>
   INTERFACE tsk_canopy_cond_stressed
     PROCEDURE Create_task_canopy_cond_stressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_stressed
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_assimilation
     PROCEDURE Create_task_assimilation     !< Constructor function for task
   END INTERFACE tsk_assimilation
 
-  ! ======================================================================================================= !
   !> Type definition for NPP buffer task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_npp_buffer
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_npp_buffer    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_npp_buffer !< Aggregates computed task variables
   END TYPE tsk_npp_buffer
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_npp_buffer
     PROCEDURE Create_task_npp_buffer     !< Constructor function for task
   END INTERFACE tsk_npp_buffer
@@ -227,7 +207,7 @@ CONTAINS
   !
   ! @param[in,out] this      Instance of assimi process class
   ! @param[in]     model_id  Model id
-  SUBROUTINE Register_assimi_tasks_jsbach(this, model_id)
+  SUBROUTINE Register_assimi_tasks(this, model_id)
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
 
@@ -240,11 +220,11 @@ CONTAINS
     CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
     CALL this%Register_task(tsk_assimilation(model_id))
     CALL this%Register_task(tsk_npp_buffer(model_id))
-  END SUBROUTINE Register_assimi_tasks_jsbach
+  END SUBROUTINE Register_assimi_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to calculate the height scaling factors of plant enzyms for assimilation
+  !> Implementation to calculate the height scaling factors of plant enzyms for assimilation
   !! Task "assimi" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -256,9 +236,9 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-    USE mo_orbit_solar,         ONLY: inquire_declination
-    USE mo_jsb_grid,            ONLY: Get_grid
-    USE mo_jsb_assimi_process,  ONLY: calc_assimilation_scaling_factors
+    USE mo_orbit_solar,    ONLY: inquire_declination
+    USE mo_jsb_grid,       ONLY: Get_grid
+    USE mo_assimi_process, ONLY: calc_assimilation_scaling_factors
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -381,7 +361,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of task canopy_cond_unstressed
+  !> Implementation of task canopy_cond_unstressed
   !! Task "canopy_cond_unstressed" calculates the carbon assimilation of plants and canopy conductance without water stress.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -389,7 +369,7 @@ CONTAINS
   !!
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
 
-    USE mo_jsb_assimi_process,  ONLY: calc_assimilation_waterunlimited
+    USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -673,7 +653,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of assimilation for water-limited conditions
+  !> Implementation of assimilation for water-limited conditions
   !! Task "assimilation" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -681,7 +661,7 @@ CONTAINS
   !!
   SUBROUTINE update_assimilation(tile, options)
 
-    USE mo_jsb_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
+    USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -909,7 +889,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of NPP buffer
+  !> Implementation of NPP buffer
   !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the NLCC process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -917,7 +897,7 @@ CONTAINS
   !!
   SUBROUTINE update_npp_buffer(tile, options)
 
-    USE mo_jsb_assimi_process,  ONLY: calc_NPPbuf
+    USE mo_assimi_process,      ONLY: calc_NPPbuf
     USE mo_jsb_time,            ONLY: is_newyear
 
     ! Arguments
@@ -1061,4 +1041,4 @@ CONTAINS
   END SUBROUTINE aggregate_npp_buffer
 
 #endif
-END MODULE mo_jsb_assimi_interface
+END MODULE mo_assimi_interface

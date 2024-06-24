@@ -49,9 +49,9 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
-    USE mo_rad_parameters,      ONLY: init_rad_parameters_quincy, init_rad_parameters_jsbach
+    USE mo_q_rad_parameters,    ONLY: init_q_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
-    USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
+    USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
@@ -59,7 +59,8 @@ CONTAINS
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, NLCC_, CH4_
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, NLCC_, CH4_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -152,8 +153,8 @@ CONTAINS
          SELECT CASE (model_scheme)
          CASE (MODEL_QUINCY)
            CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
-           CALL init_rad_parameters_quincy
-           CALL init_assimi_parameters_quincy
+           CALL init_q_rad_parameters
+           CALL init_q_assimi_parameters
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_sb_constants
@@ -162,8 +163,6 @@ CONTAINS
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
            CALL init_pheno_parameters
-           CALL init_assimi_parameters_jsbach
-           CALL init_rad_parameters_jsbach
          END SELECT
        END IF
 
@@ -201,10 +200,10 @@ CONTAINS
       ! configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
-      dsl4jsb_Get_config(RAD_)
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
+        dsl4jsb_Get_config(RAD_)
         dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
@@ -233,8 +232,15 @@ CONTAINS
       END IF
 
       SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        ! There are several jsbach processes for whom active is set to TRUE as default, however, these are not required for IQ:
+        model%processes(SSE_)%p%config%active = .FALSE.
+        model%processes(SEB_)%p%config%active = .FALSE.
+        model%processes(RAD_)%p%config%active = .FALSE.
+        model%processes(TURB_)%p%config%active = .FALSE.
+        model%processes(ASSIMI_)%p%config%active = .FALSE.
+        model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
-
         IF (model%config%l_compat401) THEN
           CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
           CALL message('    ', '... using soil heat capacity from mineral soil map')

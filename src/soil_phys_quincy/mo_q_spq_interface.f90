@@ -1,15 +1,15 @@
 !> Summary: QUINCY soil-physics process interface
 !>
-!>#### ICON-Land
+!> ICON-Land
 !>
-!> ------------------------------------------------------------------------
-!> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
-!> Contact information: <https://icon-model.org>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> See AUTHORS.TXT for a list of authors  
-!> See LICENSES/ for license information  
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
-!> ------------------------------------------------------------------------
+!> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
@@ -25,7 +25,7 @@ MODULE mo_q_spq_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, A2L_, SPQ_, RAD_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process, A2L_, SPQ_, Q_RAD_
 
   ! "Integrate" routines  
   USE mo_spq_util,                    ONLY: reset_spq_fluxes
@@ -33,7 +33,7 @@ MODULE mo_q_spq_interface
   USE mo_q_spq_update_physics,        ONLY: update_spq_physics
 
   dsl4jsb_Use_memory(SPQ_)
-  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(Q_RAD_)
   dsl4jsb_Use_memory(A2L_)
 
   IMPLICIT NONE
@@ -237,7 +237,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SPQ_)
     ! dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(Q_RAD_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -254,7 +254,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SPQ_)
     ! dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(Q_RAD_)
 
     ! dsl4jsb_Aggregate_onChunk(A2L_, pch                   , weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(A2L_, drag_srf              , weighted_by_fract)
@@ -262,7 +262,7 @@ CONTAINS
     ! dsl4jsb_Aggregate_onChunk(L2A_, fact_q_air            , weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(L2A_, fact_qsat_srf         , weighted_by_fract)
     ! ---------------------------
-    dsl4jsb_Aggregate_onChunk(RAD_, net_radiation           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_RAD_, net_radiation           , weighted_by_fract)
     ! ---------------------------
     ! 2D
     dsl4jsb_Aggregate_onChunk(SPQ_, fact_q_air              , weighted_by_fract)

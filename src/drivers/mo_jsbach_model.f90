@@ -762,9 +762,10 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
     USE mo_q_atm2land_process,        ONLY: update_local_time_and_daytime_counter
 
-    dsl4jsb_Use_processes A2L_, HYDRO_
+    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
@@ -788,6 +789,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
 
     ! quincy
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
@@ -868,7 +870,6 @@ CONTAINS
     IF (use_external_forcing) THEN
 
       dsl4jsb_Get_memory(A2L_)
-      dsl4jsb_Get_memory(HYDRO_)
 
       lon => grid%lon
       lat => grid%lat
@@ -879,14 +880,22 @@ CONTAINS
       ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      ! -> would only be required if no Qair forcing is given and qair needs to be calculated from temperature!
       ALLOCATE(evapo_act2pot(nproma, nblks))
-      IF (is_time_experiment_start(datetime_old)) THEN
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(HYDRO_)
+        IF (is_time_experiment_start(datetime_old)) THEN
+          evapo_act2pot(:,:) = 1._wp
+        ELSE
+          evapo_act2pot(:,:) =    MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapotrans), -EPSILON(1._wp)) &
+            &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
+        END IF
+      CASE (MODEL_QUINCY)
+        ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
+        !       which so far never is the case), this would need to be calculated
         evapo_act2pot(:,:) = 1._wp
-      ELSE
-        evapo_act2pot(:,:) =    MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapotrans), -EPSILON(1._wp)) &
-          &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
-      END IF
-
+      END SELECT
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
       ! --------------------------------------------------------------------------------------------------- !
@@ -920,12 +929,13 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
           & )
       CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(SPQ_)
         CALL get_standalone_driver( &
           ! in
           & model_id,                                                                  &
           & model%config%model_scheme,                                                 &
           & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                 &
           & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out

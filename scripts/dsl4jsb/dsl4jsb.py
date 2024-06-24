@@ -22,7 +22,6 @@ import hashlib
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
-# re_function2 = re.compile(r'\$(.*?): *(.*?) *\$', re.IGNORECASE)
 # Search pattern to find hash value of original file in processed file
 re_hash = re.compile(r'with md5 hash:\s*(\S*)\s*', re.IGNORECASE)
 
@@ -35,12 +34,6 @@ macros = {
     'use_processes': [re.compile(
         r'dsl4jsb_Use_processes (.*)', re.IGNORECASE),
         r'USE mo_jsb_process_class, ONLY: \1'],
-    'use_pools':
-        [re.compile(r'dsl4jsb_Use_pools *\((.*)_ *\) (.*)', re.IGNORECASE),
-         r'USE mo_\1_memory_class, ONLY: \2'],
-    'use_elements':
-        [re.compile(r'dsl4jsb_Use_elements *\((.*)_ *\) (.*)', re.IGNORECASE),
-         r'USE mo_\1_memory_class, ONLY: \2'],
     'use_memory':
         [re.compile(r'dsl4jsb_Use_memory *\((.*)_ *\)', re.IGNORECASE),
          r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
@@ -206,67 +199,6 @@ def get_input_files(root):
 def tolower(match):
     return match.group(1).lower() + '_'
 
-def replace_dollar_function(match):
-    global __current_file
-    if match.group(1):
-        match1 = match.group(1)
-        if match1.find(':') >= 0:
-            match1 = match1[:-1]
-    else:
-        if (__current_file.find('_interface.f90') > 0 or __current_file.find('_init.f90') > 0
-            or __current_file.find('_veg.f90') > 0
-            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0):
-            match1 = __current_file.split('_')[1] # Get the process name after mo_
-        elif __current_file == 'test.f90':
-            match1 = 'carbon@sub'
-        else:
-            match1 = None
-    subset = None
-    if match1.find('@') >= 0:
-        process, subset = match1.split('@')
-    # elif match1 == 'loop':
-    #     subset = 'loop'
-    else:
-        process = match1
-        if re.search('_interface(_.*)*\.f90', __current_file) \
-            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0:
-            subset = 'sub'
-        elif re.search('_init(_.*)*\.f90', __current_file):
-            subset = 'dom'
-        elif re.search('_process(_.*)*\.f90', __current_file) or __current_file.find('_veg.f90') > 0:
-            # subset = 'loop'
-            subset = 'sub'
-            process = 'local'
-        elif __current_file == 'test.f90':
-            subset = 'sub'
-            process = 'local'
-        else:
-            print('subset unspecified and no default')
-            sys.exit()
-    variable = match.group(2)
-    if variable.find('(') > 0:
-        var, index, dummy = re.split('(\(.*\))', variable)
-    else:
-        var = variable
-        index = None
-    if subset == 'dom':
-        if process == 'local':
-            result = var + '%ptr'
-        else:
-            result = process + '__mem%' + var + '%ptr'
-    elif subset == 'sub':
-        if process == 'local':
-            result = var + '%ptrm1'
-        else:
-            result = process + '__mem%' + var + '%ptrm1'
-    # elif subset == 'loop':
-    #     return variable + '%ptrm1(ic)'
-    else:
-        print('Unknown specifier in subset specifier')
-        sys.exit()
-    if index:
-        result = result + index
-    return result
 
 def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more=False, cwd=None):
     # Compute hash value of input file
@@ -322,25 +254,6 @@ def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more
                         except:
                             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: $' + match.group(1).lower())
                             sys.exit()
-                # matches = re.finditer(re_function2, line)
-                # if matches:
-                #     for match in matches:
-                #         try:
-                #             pat = re.compile(r'\$(.*?): *(.*?) *\$', re.IGNORECASE)
-                #             line = pat.sub(replace_dollar_function, line)
-                #             line = re.sub(r'([A-Z]*?)_', tolower, line)
-                #         except:
-                #             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: $' + match.group(1) )
-                #             sys.exit()
-                # pat = re.compile(r'\$(.*?:)? *(.*?) *\$', re.IGNORECASE)
-                pat = re.compile(r'\$([^(]*?:)? *(.*?) *\$', re.IGNORECASE)
-                line = pat.sub(replace_dollar_function, line)
-                #line = re.sub(r'([A-Z]*?)_', tolower, line)
-                if len(re.sub(r"!.*$",'',line)) > 132:
-                    print(line)
-                    print(re.sub(r"!.*$",'',line))
-                    print('Line too long after replacing macro')
-                    sys.exit()
                 if outputfile == '':
                     if (sys.version_info > (3, 0)):
                         outfile.write(line)
