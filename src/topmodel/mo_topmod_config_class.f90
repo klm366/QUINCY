@@ -46,7 +46,12 @@ MODULE mo_top_config_class
     LOGICAL           :: use_cti_flood          ! use cti_min_flooding to limit inundated fraction
     REAL(wp)          :: peat_runoff_exp        ! exponent in peat runoff equation
     REAL(wp)          :: peat_runoff_fac        ! factor in peat runoff equation
-    LOGICAL           :: inun_prescribed        ! prescribe inundation
+    INTEGER           :: inun_mode              ! prescribe inundation status:
+                                                !   0 : interactive inundation
+                                                !   1 : climatological prescribed inundation
+                                                !   2 : transient prescribed inundation
+                                                !  +4 : fractions and or watertable is available on tile level
+                                                !  +8 : Start interpolation using field 2 (internal use only)
     LOGICAL           :: lpeat                  ! do peat calculations
     LOGICAL           :: ltime_means            ! determine time means
     REAL(wp)          :: lat_const_wetland_type ! Latitude separating types of calculations for permanent wetland
@@ -55,6 +60,7 @@ MODULE mo_top_config_class
     INTEGER           :: years_long_term        ! #years to include in long term means
     REAL(wp)          :: soil_depth_min         ! Minimum soil depth to deterimine water table and inundation [m]
     REAL(wp)          :: scale_inun             ! Scale inundated fraction with this number []
+    INTEGER           :: step_offset            ! File offset for inundated fraction from files (internal use only)
   CONTAINS
     PROCEDURE :: Init => Init_topmodel_config
   END TYPE t_top_config
@@ -90,7 +96,7 @@ CONTAINS
     LOGICAL                     :: use_cti_flood
     REAL(wp)                    :: peat_runoff_exp
     REAL(wp)                    :: peat_runoff_fac
-    LOGICAL                     :: inun_prescribed
+    INTEGER                     :: inun_mode
     LOGICAL                     :: lpeat
     LOGICAL                     :: ltime_means
     REAL(wp)                    :: lat_const_wetland_type
@@ -110,7 +116,7 @@ CONTAINS
       & use_cti_basin, use_openwater,                &
       & use_wt_max, use_cti_max, use_cti_flood,      &
       & peat_runoff_exp, peat_runoff_fac,            &
-      & inun_prescribed, lpeat, ltime_means,         &
+      & inun_mode, lpeat, ltime_means,               &
       & lat_const_wetland_type, years_long_term,     &
       & month_summer_start, month_summer_end,        &
       & soil_depth_min, scale_inun,                  &
@@ -145,7 +151,7 @@ CONTAINS
     use_cti_flood          = .TRUE.
     peat_runoff_exp        =  20.0_wp
     peat_runoff_fac        =   1.e-2_wp
-    inun_prescribed        = .FALSE.
+    inun_mode              =   0
     lpeat                  = .FALSE.
     ltime_means            = .FALSE.
     lat_const_wetland_type =  40._wp
@@ -182,7 +188,7 @@ CONTAINS
     config%use_cti_flood          = use_cti_flood
     config%peat_runoff_exp        = peat_runoff_exp
     config%peat_runoff_fac        = peat_runoff_fac
-    config%inun_prescribed        = inun_prescribed
+    config%inun_mode              = inun_mode
     config%init_runmean           = init_runmean
     config%lpeat                  = lpeat
     config%ltime_means            = ltime_means
@@ -193,6 +199,7 @@ CONTAINS
     config%scale_inun             = scale_inun
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
+    config%step_offset            = 0
 
     ! Tests and messsages
     IF (active) THEN
@@ -208,14 +215,24 @@ CONTAINS
         CALL message(routine,'use_wt_max and use_cti_max are mutually exclusive -> disabling use_wt_max')
         use_wt_max = .FALSE.
       END IF
-      IF (lpeat .AND. inun_prescribed) THEN
+      IF (lpeat .AND. inun_mode > 0) THEN
         CALL message(routine,'lpeat and prescribed inundation are mutually exclusive -> disabling lpeat')
         lpeat = .FALSE.
       END IF
       CALL message(routine,'Peatland water table submodel: lpeat '//logical2string(lpeat))
-      IF (inun_prescribed) CALL message(routine,'Using prescribed inundation fraction. Many other parameters ignored')
+      SELECT CASE (IAND(inun_mode,3))
+        CASE (0)
+          CALL message(routine,'Inundation calculated interactively (inun_mode = 0)')
+        CASE (1)
+          CALL message(routine,'Using prescribed inundation climatology (inun_mode = 1). Many other parameters ignored')
+        CASE (2)
+          CALL message(routine,'Using prescribed transient inundation (inun_mode = 2). Many other parameters ignored')
+      END SELECT
+      IF (inun_mode >= 5) THEN
+        CALL message(routine,'Inundation information available on tile level (inun_mode >=5)')
+      ENDIF
       IF (dbg_process) THEN
-        IF (.NOT. inun_prescribed) THEN
+        IF (inun_mode == 0) THEN
           CALL message(routine,'Detailed topmodel settings: ')
           CALL message(routine,'  CTI data from         : '//ic_filename)
           CALL message(routine,'  cti_min               : '//real2string(cti_min))
