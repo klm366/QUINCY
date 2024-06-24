@@ -45,7 +45,6 @@ MODULE mo_jsb_process_factory
   USE mo_top_memory_class,     ONLY: t_top_memory
   USE mo_ch4_memory_class,     ONLY: t_ch4_memory
   USE mo_megan_memory_class,   ONLY: t_megan_memory
-  USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_q_rad_interface,      ONLY: Register_rad_tasks_quincy
   USE mo_jsb_rad_interface,    ONLY: Register_rad_tasks_jsbach
   USE mo_rad_config_class,     ONLY: t_rad_config
