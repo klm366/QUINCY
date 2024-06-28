@@ -19,3 +19,4 @@ doc/latex
 *.xmodstamp
 .dirstamp
 run/*.config
+*.bak
