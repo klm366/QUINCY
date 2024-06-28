@@ -768,7 +768,7 @@ CONTAINS
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
-    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day
+    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day, get_year, is_newyear
     USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_class,                 ONLY: get_model
     USE mo_jsb_grid,                  ONLY: Get_grid
@@ -782,7 +782,7 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
 #ifndef __NO_QUINCY__
-    USE mo_iq_atm2land_process,        ONLY: update_local_time_and_daytime_counter
+    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
     dsl4jsb_Use_memory(SPQ_)
 #else
@@ -824,6 +824,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
+
 #endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
@@ -835,9 +838,14 @@ CONTAINS
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
     INTEGER :: nc, ics, ice, ic
-    INTEGER :: global_seconds_day
+    INTEGER :: global_seconds_day, current_year
 
     LOGICAL :: save_i_am_accel_node
+
+    ! IQ spin-up accelerator model configurations
+    INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
+    INTEGER :: accelerator_frequency      !< bookkeeping configurations for the iq spin-up accelerator: frequency of executions
+    INTEGER :: accelerator_start_year     !< bookkeeping configurations for the iq spin-up accelerator: start year of executions
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1071,6 +1079,28 @@ CONTAINS
         global_seconds_day = get_secs_of_day(datetime_new)
         CALL update_local_time_and_daytime_counter( &
           &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+
+        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          IF(is_newyear(datetime_new, dtime)) THEN
+            current_year = get_year(datetime_new)
+            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
+            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execution_counter)
+            accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
+            accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
+            accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
+            !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+            !$ACC PRIVATE(dtime, accelerator_max_executions, accelerator_frequency, accelerator_start_year) &
+            !$ACC PRESENT(lon(:,:), swpar_srf_down(:,:), daytime_counter(:,:), local_time_day_seconds(:,:))
+            DO iblk = 1, nblks
+              DO ic = 1, nproma
+                CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
+                  & accelerator_max_executions, accelerator_frequency, accelerator_start_year, &
+                  & slow_sb_pool_accelerator_execution_counter(ic, iblk), slow_sb_pool_accelerator_execute(ic, iblk))
+              ENDDO
+            ENDDO
+            !$ACC END PARALLEL LOOP
+          END IF
+        END IF
       END SELECT
 #endif
 

@@ -41,6 +41,7 @@ MODULE mo_lnd_time_averages
     REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
     REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
     REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
+    REAL(wp),SAVE :: mavg_period_tresidual         = 365.0_wp * 30.0_wp   !< memory time-scale for SOM spinup accelarator (SB_)
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
     REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
     REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
