@@ -81,20 +81,21 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  SUBROUTINE calc_surface_hydrology_land (                            &
-    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,             &
-    & l_infil_subzero, l_latflow_to_streamflow,                       &
-    & snow_depth_max, steepness, flowlag,                             &
-    & t_soil_sl1, t_unfilt, wind_10m, t_air,                          &
-    & skinres_canopy_max, skinres_max,                                &
-    & weq_pond_max, fract_snow, fract_skin, fract_pond, fract_pond_max, &
-    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,     &
-    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,     &
-    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,           &
-    & snow_soil_dens, wtr_pond, ice_pond, wtr_latflow_res_srf,        &
-    & q_snocpymlt, snow_accum, snowmelt_soil, pond_freeze, pond_melt, &
-    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,            &
-    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,         &
+  SUBROUTINE calc_surface_hydrology_land (                          &
+    & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
+    & l_infil_subzero, l_latflow_to_streamflow,                     &
+    & snow_depth_max, steepness, flowlag,                           &
+    & t_soil_sl1, t_unfilt, wind_10m, t_air,                        &
+    & skinres_canopy_max, skinres_max,                              &
+    & weq_pond_max, fract_snow, fract_skin, fract_pond, fract_pond_max, hcap_grnd,  &
+    & evapotrans, evapopot, transpiration, rain, snow, lex_srf_excess,  &
+    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
+    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
+    & snow_soil_dens, wtr_pond, ice_pond,                           &
+    & wtr_latflow_res_srf, q_snocpymlt, new_snow_soil,              &
+    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
+    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
+    & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
     & runoff, runoff_horton, wtr_latflow_srf)
 
     USE mo_jsb_math_constants,     ONLY: pi
@@ -108,7 +109,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), flowlag(:),                                           &
-      & t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
+      & t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),                  &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
       & fract_snow(:), fract_skin(:), fract_pond(:), fract_pond_max(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &

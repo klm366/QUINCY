@@ -44,8 +44,8 @@ MODULE mo_lex_memory_class
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
       & slope_eff,            &  !< effective slope (micro- and macro-scale) [/]
-      & lag_fact_srf,         &  !< effective lag for lateral surface fluxes [s-1]
-      & lag_fact_blg,         &  !< effective lag for lateral sub-surface fluxes [s-1]
+      & fact_lag_srf,         &  !< effective lag for lateral surface fluxes [s-1]
+      & fact_lag_blg,         &  !< effective lag for lateral sub-surface fluxes [s-1]
       & wtr_runoff_in,        &  !< surface runoff received from adjacent tiles [kg m-2 s-1]
       & wtr_infil_in,         &  !< infiltration from adjacent tiles [kg m-2 s-1]  
       & weq_snowblow_in,      &  !< snowblow from adjacent tiles [kg m-2 s-1]  
@@ -57,9 +57,9 @@ MODULE mo_lex_memory_class
       & h_offset_ct,          &  !< difference in surface elevation between adjacent tiles [m]
       & length_scale_ct,      &  !< char. length scale of srf. heterogeneity [m]
       & length_iface_ct,      &  !< char. interface length between adjacent tiles [m m-2]
-      & microcon_slope_ct,    &  !< micro-scale connection fraction with surface offset [/]
-      & microcon_dffsn_ct,    &  !< micro-scale connection fraction [/]
-      & macrocon_used_ct,     &  !< macro-scale connection fraction [/]
+      & microcon_grvt_ct,     &  !< micro-scale connection fraction with surface offset [/]
+      & microcon_dfsn_ct,     &  !< micro-scale connection fraction [/]
+      & macrocon_grvt_ct,     &  !< macro-scale connection fraction [/]
       & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
       & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]  
       & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/] 
@@ -135,17 +135,17 @@ CONTAINS
         & loutput=l_lex, output_level=FULL,                                           &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'lag_fact_srf', mem%lag_fact_srf,                               &
+    CALL mem%Add_var( 'fact_lag_srf', mem%fact_lag_srf,                               &
         & hgrid, surface,                                                             &
-        & t_cf('lag_fact_srf', 's-1', 'effective lag for lateral surface fluxes'),    &
+        & t_cf('fact_lag_srf', 's-1', 'effective lag for lateral surface fluxes'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
         & loutput=l_lex, output_level=FULL,                                           &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'lag_fact_blg', mem%lag_fact_blg,                               &
+    CALL mem%Add_var( 'fact_lag_blg', mem%fact_lag_blg,                               &
         & hgrid, surface,                                                             &
-        & t_cf('lag_fact_blg', '/', 'effective lag for lateral sub-surface fluxes'),  &
+        & t_cf('fact_lag_blg', '/', 'effective lag for lateral sub-surface fluxes'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
         & loutput=l_lex, output_level=FULL,                                           &
@@ -223,25 +223,25 @@ CONTAINS
         & loutput=l_lex, output_level=FULL,                                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_slope_ct', mem%microcon_slope_ct,                                &
+    CALL mem%Add_var( 'microcon_grvt_ct', mem%microcon_grvt_ct,                                  &
         & hgrid, tiles,                                                                          &
-        & t_cf('microcon_slope_ct', '/', 'micro-scale connection fraction with surface offset'), &
+        & t_cf('microcon_grvt_ct', '/', 'micro-scale connection fraction with surface offset'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
         & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_dffsn_ct', mem%microcon_dffsn_ct,             &
+    CALL mem%Add_var( 'microcon_dfsn_ct', mem%microcon_dfsn_ct,               &
         & hgrid, tiles,                                                       &
-        & t_cf('microcon_dffsn_ct', '/', 'micro-scale connection fraction'),  &
+        & t_cf('microcon_dfsn_ct', '/', 'micro-scale connection fraction'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'macrocon_used_ct', mem%macrocon_used_ct,               &
+    CALL mem%Add_var( 'macrocon_grvt_ct', mem%macrocon_grvt_ct,               &
         & hgrid, tiles,                                                       &
-        & t_cf('macrocon_used_ct', '/', 'macro-scale connection fraction'),   &
+        & t_cf('macrocon_grvt_ct', '/', 'macro-scale connection fraction'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &

@@ -299,8 +299,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LEX_, nrg_diffusion_in_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, nrg_diffusion_out_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, slope_eff,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, lag_fact_srf,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, lag_fact_blg,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_srf,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_blg,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, h_offset_ct,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, length_scale_ct,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, length_iface_ct,      weighted_by_fract)
@@ -416,8 +416,8 @@ CONTAINS
       & drainage             
 
     dsl4jsb_Real3D_onChunk ::    &
-      &  microcon_slope_ct,      &
-      &  microcon_dffsn_ct,      &
+      &  microcon_grvt_ct,       &
+      &  microcon_dfsn_ct,       &
       &  fract_latflow_srf_ct,   &
       &  fract_latflow_blg_ct,   &
       &  wtr_latflow_sl,         &
@@ -546,8 +546,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_slope_ct)      ! in
-    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_dffsn_ct)      ! in
+    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_grvt_ct)       ! in
+    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_dfsn_ct)       ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   fract_latflow_srf_ct)   ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   fract_latflow_blg_ct)   ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   h_offset_ct)            ! in
@@ -796,7 +796,7 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1,nc
             IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
-              & (microcon_slope_ct(ic,lex_ids) > 0._wp)) THEN
+              & (microcon_grvt_ct(ic,lex_ids) > 0._wp)) THEN
               ! Lateral ingress from pond to connected tile 
               CALL calc_lat_pond_soil_flux(nsoil, dtime,    &
               &  h_offset_ct(ic,lex_ids),                   &
@@ -822,7 +822,7 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1,nc
             IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr .AND. &
-              & (microcon_dffsn_ct(ic,lex_ids) > 0._wp)) THEN
+              & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
               ! Diffusion between connected tiles (water).
               CALL calc_diffusion_water(nsoil, dtime,       &
               &  h_offset_ct(ic,lex_ids),                   &
@@ -860,7 +860,7 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1,nc
             IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg .AND. &
-              & (microcon_dffsn_ct(ic,lex_ids) > 0._wp)) THEN
+              & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
               ! Diffusion between connected tiles (energy).
               ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
               ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
@@ -927,7 +927,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1,nc
           IF (dsl4jsb_Config(LEX_)%l_snow_trns .AND. &
-            & (microcon_dffsn_ct(ic,lex_ids) > 0._wp)) THEN
+            & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
             ! Snowblow between connected tiles 
             CALL calc_snow_redistribution(      &
               & dsl4jsb_Config(SSE_)%l_dynsnow, &
@@ -1048,11 +1048,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_drainage_out_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_diffusion_out_sl,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(LEX_, microcon_slope_ct,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, microcon_dffsn_ct,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, microcon_grvt_ct,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, microcon_dfsn_ct,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, macrocon_grvt_ct,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, slope_eff,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, lag_fact_srf,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, lag_fact_blg,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_srf,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_blg,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, h_offset_ct,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, length_scale_ct,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, length_iface_ct,       weighted_by_fract)

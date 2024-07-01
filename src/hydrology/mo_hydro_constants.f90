@@ -61,9 +61,11 @@ MODULE mo_hydro_constants
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
     ! Parameters required for unifrom scale and lateral exchange between tiles
+    & vel_lat_srf   = 10._wp/ 3600._wp,    &  !< Potential velocity of lateral at the surface [m s-1] (-> 10 m h-1; 10 * x_blg value)
+    & vel_lat_blg   = 1._wp / 3600._wp,    &  !< Potential velocity of lateral flow through connected flow pathways [m s-1] (-> 1 m h-1; roughly based on ksat of sand)
     & ret_micro_srf = 3600._wp,            &  !< retention time for surface runoff on micro scale (1 hour)
-    & ret_macro_srf = 36000._wp ,          &  !< retention time for surface runoff on macro scale (10 hours)
     & ret_micro_blg = 3600._wp,            &  !< retention time for sub-surface runoff on micro scale (1 hour)
+    & ret_macro_srf = 36000._wp ,          &  !< retention time for surface runoff on macro scale (10 hours)
     & ret_macro_blg = 432000._wp,          &  !< retention time for sub-surface runoff on macro scale (5 days) similar to drain_max
 
     ! Parameters used for pond computations

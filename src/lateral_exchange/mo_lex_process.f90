@@ -27,7 +27,7 @@ MODULE mo_lex_process
           & calc_lat_pond_soil_flux, calc_diffusion_water,   &
           & calc_diffusion_energy, calc_snow_redistribution, &
           & remove_exess_water,                              &
-          & get_geometry, get_flow_lags
+          & get_geometry, get_flow_lags, check_flow_matrix
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lex_process'
 
@@ -676,7 +676,7 @@ CONTAINS
           d_t                  = t_lvt_rgrd - t_dpr_rgrd
           heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
 
-          ! Limiting heat flux to avoid instablilities for ong time steps
+          ! Limiting heat flux to avoid instablilities for long time steps
           ! Determine flux required to equilibriate Temps within timestep
           ! Equilibrium temperature
           t_eq = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
@@ -997,10 +997,15 @@ CONTAINS
   ELEMENTAL PURE &
 #endif
   SUBROUTINE get_geometry(                      &
-    & micro_connect, macro_connect,             &
+    & microcon_slp_tile,                        &
+    & microcon_dfsn_tile,                       &
+    & microcon_dfsn_sibl,                       &
+    & macro_connect,                            &
     & fract, fract_sibl,                        &
-    & h_surf, h_surf_sibl,                      &
+    & fract_nclsd, fract_nclsd_sibl,            &
     & area, area_sibl,                          &
+    & area_nclsd, area_nclsd_sibl,              &
+    & h_surf, h_surf_sibl,                      &
     & h_offset,                                 &
     & length_scale,                             &
     & length_iface,                             &
@@ -1009,27 +1014,35 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: pi
 
-    REAL(wp), INTENT(in)    :: micro_connect,   &  !< Micro-scale connectivity between tile and sibling [/]
-      &                        macro_connect       !< Macro-scale connectivity between tile and sibling [/]
+    REAL(wp), INTENT(in)    :: microcon_slp_tile,   &  !< Micro-scale connectivity between tile and sibling  along slope[/]
+      &                        microcon_dfsn_tile,  &  !< Micro-scale connectivity between tile and sibling (if tile is encompased by sibl) [/]
+      &                        microcon_dfsn_sibl,  &  !< Micro-scale connectivity between sibling and tile (if sibl is encompased by tile) [/]
+      &                        macro_connect           !< Macro-scale connectivity between tile and sibling [/]
 
-    REAL(wp), INTENT(in)    :: fract,           &  !< Cover fraction of tile [/]
-      &                        fract_sibl,      &  !< Cover fraction of sibling [/]
-      &                        h_surf,          &  !< Surface elevation of tile [/]
-      &                        h_surf_sibl,     &  !< Surface elevation of sibling [/]
-      &                        area,            &  !< Characteristic area of tile [m2]
-      &                        area_sibl           !< Characteristic area of sibling [m2]
+    REAL(wp), INTENT(in)    :: fract,               &  !< Cover fraction of tile [/]
+      &                        fract_sibl,          &  !< Cover fraction of sibling [/]
+      &                        fract_nclsd,         &  !< Cover fraction enclosed by tile [/]
+      &                        fract_nclsd_sibl,    &  !< Cover fraction enclosed by sibling [/]
+      &                        area,                &  !< Characteristic area of tile [m2]
+      &                        area_sibl,           &  !< Characteristic area of sibling [m2]
+      &                        area_nclsd,          &  !< Characteristic area enclosed by tile [m2]
+      &                        area_nclsd_sibl,     &  !< Characteristic area enclosed by sibling [m2]
+      &                        h_surf,              &  !< Surface elevation of tile [/]
+      &                        h_surf_sibl             !< Surface elevation of sibling [/]
 
 
-    REAL(wp), INTENT(out)   :: h_offset,        &  !< Differece in surface elevation between tile and siblig [m]
-      &                        length_scale,    &  !< Characteristic length scale of gradient between two adjacent tiles [m]
-      &                        length_iface,    &  !< Length of interface between tile and sibling [m m-2]
-      &                        micro_slope         !< Micro-scale slope between tile and sibling [/]
+    REAL(wp), INTENT(out)   :: h_offset,            &  !< Differece in surface elevation between tile and siblig [m]
+      &                        length_scale,        &  !< Characteristic length scale of gradient between two adjacent tiles [m]
+      &                        length_iface,        &  !< Length of interface between tile and sibling [m m-2]
+      &                        micro_slope             !< Micro-scale slope between tile and sibling [/]
 
-    REAL(wp)                :: fract_rel,       &  !< Relative fraction of tile [/]
-      &                        fract_rel_sibl,  &  !< Relative fraction of sibling [/]
-      &                        rad_in,          &  !< Radius of inner circle [m]
-      &                        rad_out             !< Radius outer circle [m]
-
+    REAL(wp)                :: fract_rel,           &  !< Relative fraction of tile [/]
+      &                        fract_rel_sibl,      &  !< Relative fraction of sibling [/]
+      &                        rad_in,              &  !< Radius of inner circle [m]
+      &                        rad_out,             &  !< Radius outer circle [m]
+      &                        area_cmbnd,          &  !< Combined area of nested tiles [m2]
+      &                        fract_rel_cmbnd,     &  !< Relative fraction of nested tiles [/]
+      &                        area_fact               !< Conversion factor to get from area of inner to that of outer tile
 
     !$ACC ROUTINE SEQ
 
@@ -1055,42 +1068,91 @@ CONTAINS
     ! The latter is assumed to be equal to half the distance between circumference of C1 and C2 added to the radius of C1.
     ! The area of C2 is determined so that a segment with a central angle (X/360) equal to the connected fraction contains an area
     ! equal to that of the larger tile and the area of a segment of C1 with the same central angle. 
-    IF ((micro_connect == 0._wp) .OR.                                 &
-      & (fract_rel     == 0._wp) .OR. (fract_rel_sibl == 0._wp) .OR.  &
-      & (area          == 0._wp) .OR. (area_sibl      == 0._wp) ) THEN
+    IF ((microcon_dfsn_tile == 0._wp .AND. microcon_dfsn_sibl == 0._wp) .OR.  &
+      &  fract_rel          == 0._wp .OR.  fract_rel_sibl == 0._wp      .OR.  &
+      &  area               == 0._wp .OR.  area_sibl      == 0._wp) THEN
       length_scale = 0._wp
       length_iface = 0._wp
-    ELSE IF (area < area_sibl) THEN
 
-      ! Interface length is given [as m per m2] relative to the area containing both tiles
-      ! i.e. scaled with fract_rel / area   
-      length_iface = ((4._wp * pi * area) ** 0.5_wp) & 
-        &          * micro_connect * fract_rel / area 
+    ! Areas of outer tiles are not used directly, but approximated by: 
+    ! outer_area    = inner_area * ( 1. / fract_rel_inner - 1.)
+    ! combined_area = inner_area *   1. / fract_rel_inner
+    ! this is done to be (at least) consistent with the cover fractions and 
+    ! the assumption of having basic geometry of nested circles.
+    !
+    ! Interface length is given [as m per m2] relative to the area containing both tiles
+    ! i.e. scaled with fract_rel / area or fract_rel_sibl / area_sibl
+    !
+    ELSE IF (microcon_dfsn_tile > microcon_dfsn_sibl) THEN ! Tile is encompassed by sibling
+      IF (area_nclsd > 0._wp .AND. fract_nclsd > 1.0e-10_wp) THEN ! Tile encloses another tile
 
-      rad_in  = (area / pi)**0.5_wp
+        area_cmbnd      = area_nclsd &
+          &             * (fract_nclsd + fract) / fract_nclsd     
+        fract_rel_cmbnd = (fract_nclsd + fract) &
+          &             / (fract_nclsd + fract + fract_sibl)
 
-      ! area_sibl is not used directly but approximated by: area * ( 1. / fract_rel - 1.) 
-      rad_out = (area *(1._wp + (1._wp / fract_rel - 1._wp) / micro_connect) / pi)**0.5_wp      
+        area_fact = 1._wp / fract_rel_cmbnd - 1._wp
+
+        length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) &
+          &          * microcon_dfsn_tile * fract_rel / area
+
+        rad_in  = (area_nclsd    / pi)**0.5_wp
+
+        rad_out = (area_cmbnd * (1._wp + area_fact / microcon_dfsn_tile) / pi)**0.5_wp
+
+        length_scale = (rad_in + rad_out) / 2._wp
+
+      ELSE  ! Tile does not enclose other tile
+
+        area_fact = 1._wp / fract_rel - 1._wp
+
+        length_iface = ((4._wp * pi * area) ** 0.5_wp) & 
+          &          * microcon_dfsn_tile * fract_rel / area 
+
+        rad_in  = (area / pi)**0.5_wp
+
+        rad_out = (area *(1._wp + area_fact / microcon_dfsn_tile) / pi)**0.5_wp
                
-      length_scale = rad_in + (rad_out - rad_in) / 2._wp         
-    ELSE
+        length_scale = rad_in + (rad_out - rad_in) / 2._wp
+      END IF        
+    ELSE  ! Sibling is encompassed by tile
+      IF (area_nclsd_sibl > 0._wp .AND. fract_nclsd_sibl > 1.0e-10_wp) THEN  ! Sibling encloses another tile
 
-      ! Interface length is given [as m per m2] relative to the area containing both tiles
-      ! i.e. scaled with fract_rel_sibl / area_sibl   
-      length_iface = ((4._wp * pi * area_sibl) ** 0.5_wp) & 
-        &          * micro_connect * fract_rel_sibl / area_sibl 
+        area_cmbnd      = area_nclsd_sibl &
+          &             * (fract_nclsd_sibl + fract_sibl) / fract_nclsd_sibl
 
-      rad_in  = (area_sibl / pi)**0.5_wp
+        fract_rel_cmbnd = (fract_nclsd_sibl + fract_sibl) &
+          &             / (fract_nclsd_sibl + fract + fract_sibl)
 
-      ! area is not used directly but approximated by: area_sibl * ( 1. / fract_rel_sibl - 1.) 
-      rad_out = (area_sibl *(1._wp + (1._wp / fract_rel_sibl - 1._wp) / micro_connect) &
-        &     / pi)**0.5_wp
+        area_fact = 1._wp / fract_rel_cmbnd - 1._wp
 
-      length_scale = rad_in + (rad_out - rad_in) / 2._wp         
+        length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) & 
+          &          * microcon_dfsn_sibl * fract_rel_sibl / area_sibl 
+
+        rad_in  = (area_nclsd_sibl / pi)**0.5_wp
+
+        rad_out = (area_cmbnd *(1._wp + area_fact / microcon_dfsn_sibl) / pi)**0.5_wp
+
+        length_scale = (rad_in + rad_out) / 2._wp
+
+      ELSE   ! Sibling does not enclose other tile
+
+        area_fact = 1._wp / fract_rel_sibl - 1._wp
+ 
+        length_iface = ((4._wp * pi * area_sibl) ** 0.5_wp) & 
+          &          * microcon_dfsn_sibl * fract_rel_sibl / area_sibl 
+
+        rad_in  = (area_sibl / pi)**0.5_wp
+
+        rad_out = (area_sibl *(1._wp + area_fact / microcon_dfsn_sibl) / pi)**0.5_wp
+
+        length_scale = rad_in + (rad_out - rad_in) / 2._wp
+
+      END IF         
     END IF
 
     ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale    
-    IF (length_scale > 0._wp) THEN
+    IF (microcon_slp_tile > 0._wp .AND. length_scale > 0._wp) THEN
       micro_slope = MIN(0.5_wp, h_offset / length_scale)
     ELSE
       micro_slope = 0._wp
@@ -1105,86 +1167,162 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL PURE &
 #endif
-  SUBROUTINE get_flow_lags(                     &
-    & lex_idt, lex_ids,                         &
-    & ret_micro_srf, ret_micro_blg,             &
-    & ret_macro_srf, ret_macro_blg,             &
-    & micro_connect, macro_connect,             &
-    & fract, fract_sibl,                        &
-    & fract_microcon, fract_macrocon,           &
-    & lag_micro_srf, lag_micro_blg,             & 
-    & lag_macro_srf, lag_macro_blg              &
+  SUBROUTINE get_flow_lags(                          &
+    & lex_idt, lex_ids,                              &
+    & velocity_srf, velocity_blg,                    &
+    & ret_micro_uncon_srf, ret_micro_uncon_blg,      &
+    & ret_macro_srf, ret_macro_blg,                  &
+    & length_scale,                                  &
+    & micro_connect, macro_connect,                  &
+    & fract, fract_sibl,                             &
+    & fract_microcon, fract_macrocon,                &
+    & fact_lag_micro_srf, fact_lag_micro_blg,        &
+    & fact_lag_macro_srf, fact_lag_macro_blg         &
     )
 
     USE mo_jsb_math_constants,     ONLY: pi
 
-    INTEGER,  INTENT(in)    :: lex_idt,         &  !< lex id of tile
-      &                        lex_ids             !< lex id of sibling
+    INTEGER,  INTENT(in)    :: lex_idt,              &  !< lex id of tile
+      &                        lex_ids                  !< lex id of sibling
 
-    REAL(wp), INTENT(in)    ::                  &
-      &                        ret_micro_srf,   &  !< Retention time for micro-scale fluxes at the surfcace [s]
-      &                        ret_micro_blg,   &  !< Retention time for micro-scale fluxes below the surfcace [s]
-      &                        ret_macro_srf,   &  !< Retention time for macro-scale fluxes at the surfcace [s]
-      &                        ret_macro_blg       !< Retention time for macro-scale fluxes below the surfcace [s]
+    REAL(wp), INTENT(in)    ::                       &
+      &                        velocity_srf,         &  !< Potential velocity of lateral flow through connected flow pathways [m s-1]
+      &                        velocity_blg,         &  !< Potential velocity of lateral flow at the surface [m s-1]
+      &                        ret_micro_uncon_srf,  &  !< Retention time for micro-scale fluxes at the surfcace, when no connections exist[s]
+      &                        ret_micro_uncon_blg,  &  !< Retention time for micro-scale fluxes below the surfcace, when no connections exist [s]
+      &                        ret_macro_srf,        &  !< Retention time for macro-scale fluxes at the surfcace [s]
+      &                        ret_macro_blg            !< Retention time for macro-scale fluxes below the surfcace [s]
 
-    REAL(wp), INTENT(in)    :: micro_connect,   &  !< Micro-scale connectivity between tile and sibling [/]
-      &                        macro_connect,   &  !< Macro-scale connectivity between tile and sibling [/]
-      &                        fract,           &  !< cover fraction of tile [/]
-      &                        fract_sibl,      &  !< cover fraction of sibling [/]
-      &                        fract_microcon,  &  !< (Weighted) Sum of micro-scale connection fractions on tile [/]
-      &                        fract_macrocon      !< (Weighted) Sum of macro-scale connection fractions on tile [/]
+    REAL(wp), INTENT(in)    :: length_scale,         &  !< Assumed distance between centers of micro-scale connected tiles [m]
+      &                        micro_connect,        &  !< Micro-scale connectivity between tile and sibling [/]
+      &                        macro_connect,        &  !< Macro-scale connectivity between tile and sibling [/]
+      &                        fract,                &  !< cover fraction of tile [/]
+      &                        fract_sibl,           &  !< cover fraction of sibling [/]
+      &                        fract_microcon,       &  !< (Weighted) Sum of micro-scale connection fractions on tile [/]
+      &                        fract_macrocon           !< (Weighted) Sum of macro-scale connection fractions on tile [/]
 
 
-    REAL(wp), INTENT(out)   :: lag_micro_srf,   &  !< lag factor for micro-scale surface fluxes between tile and sibling [s-1]  
-                               lag_micro_blg,   &  !< lag factor for micro-scale below-ground fluxes between tile and sibling [s-1] 
-                               lag_macro_srf,   &  !< lag factor for macro-scale surface fluxes between tile and sibling [s-1]
-                               lag_macro_blg       !< lag factor for macro-scale below-ground fluxes between tile and sibling [s-1] 
+    REAL(wp), INTENT(out)   :: fact_lag_micro_srf,   &  !< lag factor for micro-scale surface fluxes between tile and sibling [s-1]  
+                               fact_lag_micro_blg,   &  !< lag factor for micro-scale below-ground fluxes between tile and sibling [s-1] 
+                               fact_lag_macro_srf,   &  !< lag factor for macro-scale surface fluxes between tile and sibling [s-1]
+                               fact_lag_macro_blg       !< lag factor for macro-scale below-ground fluxes between tile and sibling [s-1] 
+
+   ! Local variables
+   !
+   REAL(wp)                 ::                       &
+      &                        ret_micro_srf,        &  !< Retention time for micro-scale fluxes at the surfcace [s]
+      &                        ret_micro_blg            !< Retention time for micro-scale fluxes below the surfcace [s]
 
     !$ACC ROUTINE SEQ
 
-    ! Micro scale lags are determined by the retention factor weighted by the micro-connectivity between tile and sibling, 
-    ! and the cover fraction of sibling relative to the fraction of tile and the sum of micro-scale connection fractions on tile 
-    IF (fract_microcon > 0._wp) THEN
-      lag_micro_srf = 1._wp / ret_micro_srf * micro_connect &
-        &           * fract_sibl / (fract+fract_microcon)
-      lag_micro_blg = 1._wp / ret_micro_blg * micro_connect &
-         &          * fract_sibl / (fract+fract_microcon) 
+    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling, 
+    ! and the cover fraction of sibling relative to the total connected farction of tile
+
+    ret_micro_srf = MAX(length_scale / velocity_srf, 3600._wp)
+    ret_micro_blg = MAX(length_scale / velocity_blg, 3600._wp)
+
+    IF (micro_connect > 0._wp) THEN
+      fact_lag_micro_srf = 1._wp / ret_micro_srf &
+        &                * micro_connect * fract_sibl / fract_microcon
+      fact_lag_micro_blg = 1._wp / ret_micro_blg &
+        &                * micro_connect * fract_sibl / fract_microcon
     ELSE
-      lag_micro_srf = 0.0_wp
-      lag_micro_blg = 0.0_wp   
+      fact_lag_micro_srf = 0.0_wp
+      fact_lag_micro_blg = 0.0_wp   
     END IF      
 
-    ! Macro scale lags are determined by the retention factor weighted by the macro-connectivity between tile and sibling, 
-    ! and the cover fraction of sibling relative to the fraction of tile and the sum of macro-scale connection fractions on tile
-    ! minus the fraction of tile that is assumed to be connected on the micro-scale 
-    IF ((fract_macrocon > 0._wp) .AND. (fract + fract_microcon > 0._wp)) THEN
+    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling, 
+    ! and the cover fraction of sibling relative to the total connected farction of tile.
+    ! Additionally, the lag foctor is decreased accoring to the micro-scale connectivity, assuming that the fractions of the tile 
+    ! that have a micro-scale connectivity do not additionally feature macro-scale connections. 
+    IF ((macro_connect > 0._wp) .AND. (fract > 0._wp)) THEN
 
-      lag_macro_srf = 1._wp / ret_macro_srf * macro_connect &
-        &           * fract_sibl / (fract_macrocon          &
-        &           * (1._wp - fract_microcon / (fract + fract_microcon)))
+      fact_lag_macro_srf = 1._wp / ret_macro_srf                       &
+        &                * macro_connect * fract_sibl / fract_macrocon &
+        &                * MAX(0._wp, (fract - fract_microcon) / fract)
 
 
-      lag_macro_blg = 1._wp / ret_macro_blg  * macro_connect &
-        &           * fract_sibl / (fract_macrocon           &
-        &           * (1._wp - fract_microcon / (fract + fract_microcon)))
+      fact_lag_macro_blg = 1._wp / ret_macro_blg                       &
+        &                * macro_connect * fract_sibl / fract_macrocon &
+        &                * MAX(0._wp, (fract - fract_microcon) / fract)
 
 
     ELSE
-      lag_macro_srf = 0.0_wp
-      lag_macro_blg = 0.0_wp   
+      fact_lag_macro_srf = 0.0_wp
+      fact_lag_macro_blg = 0.0_wp   
     END IF  
 
-    ! For outflow on tiles that have no downstream tile lags are calculated based on the time-scales of the macro-scale retention times.
+    ! For outflow on tiles that have no downstream tile, lag factors are calculated based on the time-scales of the macro-scale retention times.
     ! The respective fluxes are given to surface runoff and drainage.
     IF ((lex_idt == lex_ids)       .AND. &
       & (fract_microcon == 0.0_wp) .AND. (fract_macrocon == 0.0_wp)) THEN
-      lag_micro_srf = 1._wp / ret_micro_srf
-      lag_micro_blg = 1._wp / ret_micro_blg
-      lag_macro_srf = 0._wp
-      lag_macro_blg = 0._wp     
+      fact_lag_micro_srf = 1._wp / ret_micro_uncon_srf
+      fact_lag_micro_blg = 1._wp / ret_micro_uncon_blg
+      fact_lag_macro_srf = 0._wp
+      fact_lag_macro_blg = 0._wp     
     END IF
 
   END SUBROUTINE get_flow_lags
+
+  !  
+  ! ===============================================================================================================================
+  !>
+  !! Check wether matrix contains closed loop
+  !!
+  SUBROUTINE check_flow_matrix(               &    
+    & nconti,                                 &
+    & matrix,                                 &
+    & has_loop                                &
+    )
+     
+    INTEGER,  INTENT(in)    :: nconti              !< number of connected tiles
+
+    REAL(wp), INTENT(inout) :: matrix(:,:)         !< Flow matrix
+
+    LOGICAL,  INTENT(out)   :: has_loop            !< .TRUE. if matrix contains closed loop
+
+
+    INTEGER                 :: it, is, cntr,  &    !< Counter variables for loop over soil layers
+      &                        src_id, trgt_id     !< Id of current source and target tile
+
+    has_loop = .FALSE.
+
+    DO it = 1, nconti
+      DO is = 1, nconti
+        IF (matrix(is,it) > 0._wp) THEN ! sibling connects to tile
+          IF (SUM(matrix(:,is)) > 0._wp) THEN ! sibling has tiles connected to it
+            trgt_id=is ! sibling is currenttarget          
+            src_id=MAXLOC(matrix(:,is), 1)  ! getting the largest incomming connection
+            cntr=0  ! Starting counter for closed loop check
+            DO WHILE (cntr < nconti)
+              IF (SUM(matrix(:,src_id)) == 0._wp) THEN ! (incomming) connected tile is end of flow net branch
+                matrix(src_id,trgt_id)=0._wp ! Setting the current source -> target to 0, to not get on the branch again 
+                IF (sum(matrix(:,is)) > 0._wp) THEN ! Check if connected sibling still has incomming connections
+                  trgt_id=is ! Set target back to siblig
+                  src_id=MAXLOC(matrix(:,is), 1) ! and find new source 
+                  cntr=0 ! Goind down new branch so counter is reset 
+                ELSE
+                  matrix(is,it) = 0._wp ! set sibling -> tile conection to 0 (sibling branch has no closed loop)
+                  cntr=nconti-1 ! nothing more to be checked 
+                END IF
+              ELSE
+                trgt_id=src_id
+                src_id=MAXLOC(matrix(:,src_id), 1)
+              END IF
+              cntr=cntr+1
+              IF ((cntr == nconti) .AND. (SUM(matrix(:,src_id)) /= 0._wp)) THEN
+                has_loop = .TRUE.
+              END IF
+            END DO
+          ELSE
+            matrix(is,it) = 0._wp
+          END IF 
+        END IF 
+      END DO
+    END DO
+
+
+  END SUBROUTINE check_flow_matrix
 
 
 #endif
