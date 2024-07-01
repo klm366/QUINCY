@@ -69,7 +69,8 @@ CONTAINS
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: steplen
-    REAL(wp)                              :: alpha              !< implicitness factor
+    REAL(wp)                              :: dtime          !< timestep length
+    REAL(wp)                              :: alpha          !< implicitness factor
     LOGICAL                               :: is_standalone  !< model runs standalone?
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_spq_physics'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -98,8 +99,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: drag_srf
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk                :: fact_q_air
+    dsl4jsb_Real2D_onChunk                :: qsat_star
+    dsl4jsb_Real2D_onChunk                :: s_star
+    dsl4jsb_Real2D_onChunk                :: evapotranspiration
     dsl4jsb_Real2D_onChunk                :: fact_qsat_srf
+    dsl4jsb_Real2D_onChunk                :: t_srf_new
     dsl4jsb_Real2D_onChunk                :: t_srf_old
+    dsl4jsb_Real2D_onChunk                :: temp_srf_eff_4
     dsl4jsb_Real2D_onChunk                :: zril_old
     dsl4jsb_Real2D_onChunk                :: root_depth
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pwp
@@ -111,11 +117,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pot
     dsl4jsb_Real2D_onChunk                :: interception
-    dsl4jsb_Real2D_onChunk                :: pet
+    dsl4jsb_Real2D_onChunk                :: evapopot
     dsl4jsb_Real2D_onChunk                :: evaporation
     dsl4jsb_Real2D_onChunk                :: evaporation_snow
     dsl4jsb_Real2D_onChunk                :: srf_runoff
     dsl4jsb_Real2D_onChunk                :: drainage
+    dsl4jsb_Real2D_onChunk                :: gw_runoff
     dsl4jsb_Real2D_onChunk                :: drainage_fraction
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx_old
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx
@@ -171,6 +178,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
@@ -208,8 +216,13 @@ CONTAINS
     ! ---------------------------
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_q_air)           ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, qsat_star)            ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, s_star)               ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, evapotranspiration)   ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_qsat_srf)        ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, t_srf_new)            ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, t_srf_old)            ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, temp_srf_eff_4)       ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, zril_old)             ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, root_depth)           ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pwp)      ! in
@@ -220,12 +233,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_skin)               ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root)          ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)          ! out
-    dsl4jsb_Get_var2D_onChunk(SPQ_, pet)                  ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, evapopot)             ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, interception)         ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, evaporation)          ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, evaporation_snow)     ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, srf_runoff)           ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, drainage)             ! inout
+    dsl4jsb_Get_var2D_onChunk(SPQ_, gw_runoff)            ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, drainage_fraction)    ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, ground_heat_flx_old)  ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, ground_heat_flx)      ! inout
@@ -284,6 +298,7 @@ CONTAINS
       CALL calc_snow_accumulation(nc, &                                   ! in
                                   nsoil_sb, &                             ! in
                                   nsnow, &                                ! in
+                                  dtime, &                                ! in
                                   snow(:), &                              ! in
                                   snow_height(:), &                       ! inout
                                   snow_present_snl(:,:), &                ! inout
@@ -301,38 +316,42 @@ CONTAINS
 
     !> 3.0 Calculate surface energy budget
     !!
-    CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, &
+    CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                      steplen, &
                                      alpha, &
                                      is_standalone, &
-                                     sw_srf_net(:),lw_srf_down(:), &
-                                     t_air(:),t_acoef(:),t_bcoef(:), &
-                                     q_air(:),q_acoef(:),q_bcoef(:), &
-                                     press_srf(:),wind_10m(:), &
-                                     height(:),lai(:),w_skin(:),canopy_cond(:),rel_hum(:),&
-                                     soil_depth_sl(:,:),heat_capa_sl(:,:), bulk_dens_sl(:,:), &
-                                     fact_q_air(:), fact_qsat_srf(:), &                                               ! inout
-                                     ga(:),drag_srf(:),pch(:), &                                                      ! inout
-                                     ground_heat_flx_old(:),zril_old(:),t_srf_old(:), &                               ! inout
-                                     pet(:),evaporation(:),evaporation_snow,interception(:),transpiration(:), &       ! inout
-                                     sensible_heat_flx(:),latent_heat_flx(:),ground_heat_flx(:), net_radiation(:), &  ! inout
-                                     snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux (:), &                ! inout
-                                     snow_melt_to_soil(:), &                                                          ! inout
-                                     therm_cond_sl(:,:),t_soil_sl(:,:),w_soil_sl(:,:), &                              ! inout
-                                     w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), &                                         ! inout
-                                     w_ice_sl(:,:), &                                                                 ! inout
-                                     w_soil_freeze_flux(:,:), &                                                       ! inout
-                                     w_soil_melt_flux(:,:), &                                                         ! inout
-                                     t_snow_snl(:,:), &                                                               ! inout
-                                     w_snow_snl(:,:), &                                                               ! inout
-                                     snow_present_snl, &                                                              ! inout
+                                     sw_srf_net(:), lw_srf_down(:), &
+                                     t_air(:), t_acoef(:), t_bcoef(:), &
+                                     q_air(:), q_acoef(:), q_bcoef(:), &
+                                     press_srf(:), wind_10m(:), &
+                                     height(:), lai(:), w_skin(:), canopy_cond(:), rel_hum(:),&
+                                     soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), &
+                                     fact_q_air(:), fact_qsat_srf(:), &                                                ! inout
+                                     qsat_star(:), s_star(:), &                                                        ! inout
+                                     evapotranspiration(:), &                                                          ! inout
+                                     ga(:), drag_srf(:), pch(:), &                                                     ! inout
+                                     ground_heat_flx_old(:), zril_old(:), &                                            ! inout
+                                     t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), &                                  ! inout
+                                     evapopot(:), evaporation(:), evaporation_snow, &                                  ! inout
+                                     interception(:), transpiration(:), &                                              ! inout
+                                     sensible_heat_flx(:), latent_heat_flx(:), ground_heat_flx(:), net_radiation(:), & ! inout
+                                     snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux (:), &                 ! inout
+                                     snow_melt_to_soil(:), &                                                           ! inout
+                                     therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), &                             ! inout
+                                     w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), &                                          ! inout
+                                     w_ice_sl(:,:), &                                                                  ! inout
+                                     w_soil_freeze_flux(:,:), &                                                        ! inout
+                                     w_soil_melt_flux(:,:), &                                                          ! inout
+                                     t_snow_snl(:,:), &                                                                ! inout
+                                     w_snow_snl(:,:), &                                                                ! inout
+                                     snow_present_snl, &                                                               ! inout
                                      snow_lay_thickness_snl(:,:))                                                     ! inout
 
     !> 4.0 Calculate soil hydrology processes
     !!
-    CALL calc_soil_hydrology(nc, nsoil_sb, &
+    CALL calc_soil_hydrology(nc, nsoil_sb, dtime, &
                              num_sl_above_bedrock, &
-                             soil_lay_depth_ubound_sl(:,:), &                                         ! (upper bound > lower bound !)
+                             soil_lay_depth_ubound_sl(:,:), &                                      ! (upper bound > lower bound !)
                              dsl4jsb_Config(VEG_)%flag_dynamic_roots, &
                              lctlib%phi_leaf_min, &
                              rain(:),snow(:),interception(:),evaporation(:),evaporation_snow(:),transpiration(:), &
@@ -341,9 +360,9 @@ CONTAINS
                              soil_depth_sl(:,:),w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), &
                              saxtonA(:,:),saxtonB(:,:),saxtonC(:,:),kdiff_sat_sl(:,:),root_fraction_sl(:,:),&
                              w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), &                                  ! in
-                             w_skin(:),w_soil_root(:),w_soil_root_theta(:),w_soil_root_pot(:), &                ! inout
-                             srf_runoff(:), drainage(:),drainage_fraction(:), &                                 ! inout
-                             w_soil_sl(:,:),w_soil_pot_sl(:,:),drainage_sl(:,:),percolation_sl(:,:), &          ! inout
+                             w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), &             ! inout
+                             srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), &                  ! inout
+                             w_soil_sl(:,:), w_soil_pot_sl(:,:), drainage_sl(:,:), percolation_sl(:,:), &       ! inout
                              gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:), &                                ! inout
                              frac_w_lat_loss_sl(:,:))                                                           ! out
 
@@ -361,13 +380,14 @@ CONTAINS
   SUBROUTINE calc_snow_accumulation(nc, &
                                     nsoil_sb, &
                                     nsnow, &
+                                    dtime, &
                                     snow, &
                                     snow_height, &
                                     snow_present_snl, &
                                     w_snow_snl, &
                                     snow_lay_thickness_snl)
 
-    USE mo_jsb_math_constants,        ONLY: dtime, eps8
+    USE mo_jsb_math_constants,        ONLY: eps8
     USE mo_spq_constants,             ONLY: w_density, snow_dens, albedo_snow, snow_height_min, w_snow_max
 
     IMPLICIT NONE
@@ -376,6 +396,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimension chunk
                                                                        nsoil_sb, &            !< dimension vertical soil layers
                                                                        nsnow                  !< dimension vertical snow layers
+    REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: snow                   !< Snowfall           [kg m-2 s-1]
     ! 0.2 Inout
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: snow_height            !< height (thickness) of all snow layers           [m]
@@ -441,21 +462,25 @@ CONTAINS
   !!
   !! Calculates surface energy fluxes and deep soil temperatures
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, nsnow, &
+  SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                          steplen, &
                                          alpha, &
                                          is_standalone, &
-                                         sw_srf_net,lw_srf_down, &
-                                         t_air,t_acoef,t_bcoef, &
-                                         q_air,q_acoef,q_bcoef, &
-                                         press_srf,wind_10m, &
-                                         height,lai,w_skin,canopy_cond,rel_hum,&
-                                         soil_depth_sl,heat_capa_sl, bulk_dens_sl, &
+                                         sw_srf_net, lw_srf_down, &
+                                         t_air, t_acoef, t_bcoef, &
+                                         q_air, q_acoef, q_bcoef, &
+                                         press_srf, wind_10m, &
+                                         height, lai, w_skin, canopy_cond,rel_hum, &
+                                         soil_depth_sl, heat_capa_sl, bulk_dens_sl, &
                                          fact_q_air, fact_qsat_srf, &                                                 ! inout
-                                         ga,drag_srf,pch, &                                                           ! inout
-                                         ground_heat_flx_old,zril_old,t_srf_old, &                                    ! inout
-                                         pet,evaporation,evaporation_snow,interception,transpiration, &               ! inout
-                                         sensible_heat_flx,latent_heat_flx,ground_heat_flx, net_radiation, &          ! inout
+                                         qsat_star, s_star, &                                                         ! inout
+                                         evapotranspiration, &                                                        ! inout
+                                         ga,drag_srf, pch, &                                                          ! inout
+                                         ground_heat_flx_old, zril_old, &                                             ! inout
+                                         t_srf_new, t_srf_old, temp_srf_eff_4, &                                      ! inout
+                                         evapopot, evaporation, evaporation_snow, &                                   ! inout
+                                         interception, transpiration, &                                               ! inout
+                                         sensible_heat_flx, latent_heat_flx, ground_heat_flx, net_radiation, &        ! inout
                                          snow_height, snow_soil_heat_flux, snow_srf_heat_flux, &                      ! inout
                                          snow_melt_to_soil, &                                                         ! inout
                                          therm_cond_sl,t_soil_sl,w_soil_sl, &                                         ! inout
@@ -467,7 +492,7 @@ CONTAINS
                                          snow_present_snl, &                                                          ! inout
                                          snow_lay_thickness_snl)                                                      ! inout
 
-    USE mo_jsb_math_constants,        ONLY: dtime, eps8
+    USE mo_jsb_math_constants,        ONLY: eps8
     USE mo_atmland_constants,         ONLY: min_wind, max_wind
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_spq_constants,             ONLY: w_skin_max, soil_therm_cond, soil_frozen_therm_cond, latent_heat_fusion, &
@@ -484,6 +509,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb, &
                                                                        nsnow
+    REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
     REAL(wp),                                         INTENT(in)    :: alpha                  !< implicitness factor
     LOGICAL,                                          INTENT(in)    :: is_standalone          !< standalone run?
@@ -507,13 +533,18 @@ CONTAINS
                                                                        bulk_dens_sl           !< bulk density of the soil layer [kg/m3]
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: fact_q_air, &          !<
                                                                        fact_qsat_srf, &       !<
+                                                                       qsat_star, &           !<
+                                                                       s_star, &              !<
+                                                                       evapotranspiration, &  !<
                                                                        ga, &                  !< aerodynamic conductance [m/s]
                                                                        drag_srf, &            !< surface drag coefficient (JSBACH-style!)
                                                                        pch, &                 !< heat exchange parameter (JSBACH-style!)
                                                                        ground_heat_flx_old, & !< ground heat flux from previous time step [W/m2]
                                                                        zril_old, &            !< previous timestep's Reynolds number
+                                                                       t_srf_new, &           !< current surface temperature
                                                                        t_srf_old, &           !< previous timestep's surface temperature
-                                                                       pet, &                 !< potential evaporation rate [kg / m2 /s]
+                                                                       temp_srf_eff_4, &      !< effective surface temperature ** 4.0
+                                                                       evapopot, &            !< potential evaporation rate [kg / m2 /s]
                                                                        evaporation, &         !< evaporation rate [kg / m2 /s]
                                                                        evaporation_snow, &
                                                                        interception, &        !< interception loss rate [kg / m2 /s]
@@ -545,7 +576,6 @@ CONTAINS
                                                          q_sat_srf    , &
                                                          heat_transfer_coefficient , &
                                                          wind_air     , &
-                                                         t_srf_new    , &                     !< local variable to transmit new surface temperature [K]
                                                          w_snow_total , &
                                                          hlp1         , &
                                                          hlp2
@@ -556,8 +586,8 @@ CONTAINS
                                                      latent_heat_thaw_flx, &          !< latent heat flux melting
                                                      hlp1_2d, &
                                                      hlp2_2d
-    REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv,s_star, q_sat_star
-    REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff,evapotranspiration
+    REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv
+    REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff
     REAL(wp), DIMENSION(nc)                       :: fract_snow,fract_water,fract_fpc,fact_qsat_trans_srf
     REAL(wp), DIMENSION(nc)                       :: evaporation_bare
     REAL(wp), DIMENSION(nc)                       :: srf_heat_capa,srf_depth,srf_dens,srf_heat_flx_old !< Local variables to define surface properties
@@ -592,7 +622,7 @@ CONTAINS
     !>   1.2 net radiation flux at the surface
     !>
     net_radiation(:) = sw_srf_net(:) + lw_srf_down(:) - stbo * zemiss_def * t_srf_old(:)**4._wp
-    pet(:)           = -1._wp * heat_transfer_coefficient(:) * (q_air(:) - q_sat_srf(:))
+    evapopot(:)      = -1._wp * heat_transfer_coefficient(:) * (q_air(:) - q_sat_srf(:))
 
     !>   1.3 calculate snow and water-saturated fraction of tile
     !>     following JSBACH4 hydrology
@@ -602,7 +632,7 @@ CONTAINS
                                   steplen, &
                                   w_skin_max * lai(:), &
                                   0.01_wp, & ! assume almost flat terrain
-                                  pet(:), &
+                                  evapopot(:), &
                                   w_skin, &
                                   w_snow_snl(:,1), &     ! jsb4: w_snow_soil
                                   0.0_wp, &     ! jsb4: w_snow_can
@@ -677,28 +707,28 @@ CONTAINS
                                       srf_heat_capa(:) * srf_dens(:) * srf_depth(:))
 
     ! time-filtering as in JSBACH3
-    s_star(:)     = 1._wp / alpha * hlp1(:) + (1._wp - 1._wp / alpha) * s_old(:)
-    t_srf_new(:)  = s_star(:) / t2s_conv(:)
-    q_sat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
+    s_star(:)    = 1._wp / alpha * hlp1(:) + (1._wp - 1._wp / alpha) * s_old(:)
+    t_srf_new(:) = s_star(:) / t2s_conv(:)
+    qsat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
 
     !> 3.0 calculate water fluxes
     !>   This is from JSBACH4 hydrology/mo_hydro_interface:update_evaporation
     !>
     DO ic = 1, nc
-      q_air_eff(ic)          = q_effective(0.0_wp, q_air(ic), 1.0_wp, 0.0_wp)
-      q_sat_srf_eff(ic)      = q_effective(q_sat_star(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic))
+      q_air_eff(ic)       = q_effective(0.0_wp, q_air(ic), 1.0_wp, 0.0_wp)
+      q_sat_srf_eff(ic)   = q_effective(qsat_star(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic))
     END DO
     evapotranspiration(:) = heat_transfer_coefficient(:) * (q_air_eff(:) - q_sat_srf_eff(:))
-    pet(:)                = heat_transfer_coefficient(:) * (q_air(:) - q_sat_star(:))
+    evapopot(:)           = heat_transfer_coefficient(:) * (q_air(:) - qsat_star(:))
 
     !> 3.1 convert to positive fluxes for water module
     !! needed for QUINCY, but not JSBACH4
-    transpiration(:)    = -1._wp * fact_qsat_trans_srf(:) * pet(:)
-    interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * pet(:)
-    evaporation_snow(:) = -1._wp * fract_snow(:) * pet(:)
+    transpiration(:)    = -1._wp * fact_qsat_trans_srf(:) * evapopot(:)
+    interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * evapopot(:)
+    evaporation_snow(:) = -1._wp * fract_snow(:) * evapopot(:)
     ! no dew into stomates or onto canopy
     DO ic = 1,nc
-      IF (pet(ic) > 0.0_wp) THEN
+      IF (evapopot(ic) > 0.0_wp) THEN
          transpiration(ic)    = 0.0_wp
          interception(ic)     = 0.0_wp
          evaporation_snow(ic) = 0.0_wp
@@ -718,7 +748,7 @@ CONTAINS
 
     ! Compute latent heat flux
     latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) + &
-                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow(:) * pet(:)
+                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow(:) * evapopot(:)
 
     !> 5.0 update surface temperature and remember previous value
     !>
@@ -730,6 +760,7 @@ CONTAINS
     CALL calc_snow_dynamics(nc, &                   !in
                              nsoil_sb,&             !in
                              nsnow,  &              !in
+                             dtime,  &              !in
                              t_air, &               !in
                              t_srf_old(:), &        !in
                              t_srf_new(:), &        !in
@@ -873,13 +904,18 @@ CONTAINS
             ELSE
               heat_excess(ic,isoil)      = hlp1_2d(ic,isoil) - latent_heat_fusion * w_density * w_ice_sl(ic,isoil)
               w_soil_melt_flux(ic,isoil) = w_ice_sl(ic,isoil)
-              t_soil_sl                  = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
+              t_soil_sl(ic,isoil)        = Tzero + heat_excess(ic,isoil) / (heat_capa_sl(ic,isoil) * bulk_dens_sl(ic,isoil) &
                 &                          * soil_depth_sl(ic,isoil))
             END IF
           END IF
         END IF   ! freezing/thawing
       END DO     ! soil layer
     END DO       ! nc
+
+    ! diagnose effective surface temperature ** 4.0 (needed for land2atm)
+    DO ic = 1,nc
+      temp_srf_eff_4(ic) = t_srf_old(ic) ** 3.0_wp * (4.0_wp * t_srf_new(ic) - 3.0_wp * t_srf_old(ic))
+    END DO
 
     ! remember old surface temperature for next timestep
     ! this depends whethere there is snow (in snow layer 1, i.e., the one at the soil surface) or not
@@ -901,7 +937,7 @@ CONTAINS
   !!
   !! Calculates srf_runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, &
+  SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, dtime, &
                                  num_sl_above_bedrock, &
                                  soil_layer_w_ubounds, &
                                  flag_dynamic_roots, &
@@ -912,13 +948,13 @@ CONTAINS
                                  soil_depth_sl,w_soil_sat_sl,w_soil_fc_sl,w_soil_pwp_sl, &
                                  saxtonA,saxtonB,saxtonC,kdiff_sat_sl,root_fraction_sl, &
                                  w_soil_freeze_flux, w_soil_melt_flux, &                    ! in
-                                 w_skin,w_soil_root,w_soil_root_theta,w_soil_root_pot, &    ! inout
-                                 srf_runoff, drainage,drainage_fraction, &                  ! inout
-                                 w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl, &      ! inout
+                                 w_skin, w_soil_root, w_soil_root_theta, w_soil_root_pot, & ! inout
+                                 srf_runoff, drainage, gw_runoff, drainage_fraction, &      ! inout
+                                 w_soil_sl, w_soil_pot_sl, drainage_sl, percolation_sl, &   ! inout
                                  gw_runoff_sl, t_soil_sl, w_ice_sl, &                       ! inout
                                  frac_w_lat_loss_sl)                                        ! out
 
-    USE mo_jsb_math_constants,          ONLY: dtime, eps8
+    USE mo_jsb_math_constants,          ONLY: eps8
     USE mo_jsb_physical_constants,      ONLY: grav, Tzero
     USE mo_q_assimi_process,            ONLY: calc_soil_moisture_stress
     USE mo_spq_constants,               ONLY: drain_frac, fdrain_srf_runoff, &
@@ -932,6 +968,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                   !< dimensions
                                                                        nsoil_sb                !<
+    REAL(wp),                                         INTENT(in)    :: dtime                   !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock    !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
     LOGICAL,                                          INTENT(in)    :: flag_dynamic_roots      !< VEG_ config: use dynmic root scheme if TRUE
@@ -964,6 +1001,7 @@ CONTAINS
                                                                        w_soil_root_pot, &      !< soil water potential in root zone [MPa]
                                                                        srf_runoff, &           !< surface runoff [kg / m2 / s]
                                                                        drainage, &             !< deep drainage [kg / m2 / s]
+                                                                       gw_runoff, &            !< sum of lateral runoff across all soil layers [kg / m2 /s]
                                                                        drainage_fraction       !< fraction of soil column lost to drainage [1/s]
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: w_soil_sl, &            !< soil moisture per layer [m]
                                                                        w_soil_pot_sl, &        !< soil water potential per layer [MPa]
@@ -1003,7 +1041,6 @@ CONTAINS
 
     !> 0.9 init local var
     !>
-    fdrain_srf_runoff_mod(:) = 0.0_wp
     hlp1                     = 0.0_wp
     hlp2                     = 0.0_wp
     hlp3                     = 0.0_wp
@@ -1071,6 +1108,8 @@ CONTAINS
         fdrain_srf_runoff_mod(ichunk) = 0.0_wp
       ELSE IF (fdrain_srf_runoff * srf_runoff(ichunk) >= hlp2(ichunk) - hlp1(ichunk)) THEN
         fdrain_srf_runoff_mod(ichunk) = MAX(0.0_wp, (hlp2(ichunk) - hlp1(ichunk)) / srf_runoff(ichunk))
+      ELSE
+        fdrain_srf_runoff_mod(ichunk) = fdrain_srf_runoff
       END IF
     END DO
     ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
@@ -1171,7 +1210,7 @@ CONTAINS
     ELSEWHERE
       drainage_sl(:,nsoil_sb) = MAX(drain_frac ** soil_depth_sl(:,nsoil_sb) * drainage_sl(:,nsoil_sb-1),0.0_wp)
     END WHERE
-    ! Update water content of deeptest layer
+    ! Update water content of deepest layer
     w_soil_sl(:,nsoil_sb)     = w_soil_sl(:,nsoil_sb) + &
                                 (drainage_sl(:,nsoil_sb-1) - drainage_sl(:,nsoil_sb) - &
                                 evaporation(:) * fevaporation(:,nsoil_sb) - &
@@ -1252,12 +1291,13 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !> 2.5. diagnose deep drainage
+    !> 2.5. diagnose deep drainage and the total lateral runoff
     !>
     !>   The threshold 0.75 is to prevent the entire layer from being washed out,
     !>   mainly for the top layers but applied in the whole soil profile, just in case
     !>
     drainage(:) = drainage_sl(:,nsoil_sb)
+    gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_sb), DIM=2)
     ! Layer one: water balance of surface layer
     WHERE(w_soil_sl(:,1) > eps8)
       percolation_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000_wp * dtime) / &
@@ -1593,6 +1633,7 @@ CONTAINS
     SUBROUTINE calc_snow_dynamics(nc, &
                               nsoil_sb,&
                               nsnow,  &
+                              dtime,  &
                               t_air, &
                               t_srf_old, &
                               t_srf_new, &
@@ -1611,7 +1652,7 @@ CONTAINS
                               snow_present_snl, &
                               snow_lay_thickness_snl)
 
-    USE mo_jsb_math_constants,        ONLY: dtime, eps8
+    USE mo_jsb_math_constants,        ONLY: eps8
     USE mo_spq_constants,             ONLY: latent_heat_fusion,w_density,w_snow_min, snow_dens, &
                                             snow_heat_capa,snow_therm_cond,w_snow_max
     USE mo_jsb_physical_constants,    ONLY: Tzero
@@ -1622,6 +1663,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb, &
                                                                        nsnow
+    REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: t_air,     &           !< air temperature
                                                                        t_srf_old, &           !< old surface temperature [K]
                                                                        t_srf_new, &           !< new surface temperature [K]

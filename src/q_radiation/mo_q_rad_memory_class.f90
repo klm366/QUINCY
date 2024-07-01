@@ -68,6 +68,10 @@ MODULE mo_q_rad_memory_class
                                 !<             JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
       & alb_nir_soil            !< Same as alb_vis_soil but for NIR.
 
+    ! lakes
+    TYPE(t_jsb_var_real2d) :: &
+      & albedo_lwtr             !< lake albedo [unitless]
+
     ! vegetation
     TYPE(t_jsb_var_real2d) :: &
       & alb_vis_can,          & !< Albedo of canopy (without snow cover) in VIS range. [unitless]
@@ -219,7 +223,7 @@ CONTAINS
       & output_level = BASIC, &
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.1_wp)
 
     CALL mem%Add_var('alb_nir', mem%alb_nir, &
       & hgrid, surface, &
@@ -230,7 +234,7 @@ CONTAINS
       & output_level = BASIC, &
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.3_wp)
 
     CALL mem%Add_var('alb_vis_snow', mem%alb_vis_snow, &
       & hgrid, surface, &
@@ -282,6 +286,18 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
     END IF ! soil
+
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
+      CALL mem%Add_var('albedo_lwtr', mem%albedo_lwtr, &
+        & hgrid, surface, &
+        & t_cf('albedo_lwtr', 'unitless', 'lake albedo'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END IF ! lakes
 
     ! Additional variables for vegetation
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
