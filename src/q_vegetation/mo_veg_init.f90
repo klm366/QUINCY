@@ -164,7 +164,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onDomain      :: lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -278,11 +278,6 @@ CONTAINS
     !>  1.1 Land & Plant & Soil
     !>
     CASE(QLAND, QPLANT, QSOIL)
-#ifdef __QUINCY_STANDALONE__
-#else
-      ! lai init should also work with 0.0_wp
-      lai(:,:)     = 1.0_wp
-#endif
       target_cn_leaf(:,:)      = lctlib%cn_leaf
       target_np_leaf(:,:)      = lctlib%np_leaf
       target_cn_fine_root(:,:) = target_cn_leaf(:,:) / root2leaf_cn
@@ -402,9 +397,13 @@ CONTAINS
         WRITE(message_text,'(2a)') 'not a valid veg_dynamics_scheme: ',TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)
         CALL finish(TRIM(routine), message_text)
       ENDSELECT
-    !>  1.2 Canopy & Test_Canopy & Test_Radiation
+    !>  1.2 Canopy
     !>
-    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+    CASE(QCANOPY)
+      height(:,:) = dsl4jsb_Lctlib_param(vegetation_height)
+    !>  1.3 Test_Canopy & Test_Radiation
+    !>
+    CASE(Q_TEST_CANOPY, Q_TEST_RADIATION)
       ref_lai   = 6.0_wp  !! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_wp for dry sites like ZA-Kru
       ref_nleaf = 2.0_wp
       lai(:,:)  = ref_lai
@@ -431,7 +430,7 @@ CONTAINS
       ENDIF
       leaf_nitrogen_cl(:,:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
       lai_cl(:,:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
-    !>  1.3 Default (error catching)
+    !>  1.4 Default (error catching)
     !>
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Invalid QUINCY model name. Use either land, plant, soil, canopy, test_canopy or test_radiation.')

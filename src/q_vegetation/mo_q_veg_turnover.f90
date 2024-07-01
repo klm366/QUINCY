@@ -24,7 +24,7 @@ MODULE mo_q_veg_turnover
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_impl_constants,  ONLY: test_false_true
-  USE mo_jsb_math_constants,  ONLY: dtime, one_day, one_year, eps8, eps4
+  USE mo_jsb_math_constants,  ONLY: one_day, one_year, eps8, eps4
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -60,6 +60,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
+    REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -94,6 +95,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
@@ -136,6 +138,7 @@ CONTAINS
     !>
     CALL calc_nutrient_recycling( &
       & nc                                    , & ! in
+      & dtime                                 , &
       & target_cn_fine_root(:)                , &
       & target_np_fine_root(:)                , &
       & target_cn_leaf(:)                     , &
@@ -153,6 +156,7 @@ CONTAINS
     !>
     CALL calc_turnover( &
       & nc                                    , & ! in
+      & dtime                                 , &
       & model%config%elements_index_map(:)    , &
       & model%config%is_element_used(:)       , &
       & lctlib%phenology_type                 , &
@@ -192,6 +196,7 @@ CONTAINS
   !>
   SUBROUTINE calc_nutrient_recycling( &
     & nc                                , &
+    & dtime                             , &
     & target_cn_fine_root               , &
     & target_np_fine_root               , &
     & target_cn_leaf                    , &
@@ -208,6 +213,7 @@ CONTAINS
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                          INTENT(in)    :: nc                         !< dimensions
+    REAL(wp),                         INTENT(in)    :: dtime                      !< timestep length
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root        !< target C:N of fine_roots
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_fine_root        !< target N:P of fine_roots
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_leaf             !< ..
@@ -307,6 +313,7 @@ CONTAINS
   !>
   SUBROUTINE calc_turnover( &
     & nc                          , &
+    & dtime                       , &
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_phenology_type       , &
@@ -337,6 +344,7 @@ CONTAINS
     USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
+    REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
