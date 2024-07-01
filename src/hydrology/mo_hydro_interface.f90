@@ -620,6 +620,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_skin)       ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_deficit)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond_max)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_pond_max)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   ice_pond)         ! inout
