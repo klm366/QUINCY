@@ -416,6 +416,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: slope_eff
     dsl4jsb_Real2D_onChunk :: lag_fact_srf
     dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: fract_pond_max
     dsl4jsb_Real2D_onChunk :: weq_pond_max
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
@@ -808,6 +809,7 @@ CONTAINS
         & fract_snow(:),                  & ! surface snow fraction []
         & fract_skin(:),                  & ! skin reservoir fraction []
         & fract_pond(:),                  & ! Actual pond fraction []
+        & fract_pond_max(:),              & ! Maximum pond fraction []
         & hcap_grnd(:),                   & ! heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & ! evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & ! potential evaporation (if there was enough water/ice) [kg m-2 s-1]
