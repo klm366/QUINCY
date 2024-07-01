@@ -195,9 +195,8 @@ CONTAINS
     USE mo_rad_init,            ONLY: rad_init
     USE mo_lex_init,            ONLY: lex_init
 #ifndef __NO_QUINCY__
-    USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
+    USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_rad_init,          ONLY: q_rad_init
-    USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_spq_init,            ONLY: spq_init
@@ -457,7 +456,9 @@ CONTAINS
       CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
-      CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
+      IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
+      ENDIF
 #endif
 
     END SELECT
@@ -586,17 +587,13 @@ CONTAINS
         IF (tile%Is_process_active(SPQ_)) THEN
           CALL spq_init(tile)
         END IF
-        IF (tile%Is_process_active(SB_)) THEN
-          CALL sb_init(tile)
-        END IF
+        IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
+          IF (tile%Is_process_active(SB_)) THEN
+            CALL sb_init(tile)
+          END IF
+        ENDIF
 #endif
       END SELECT
-
-#ifndef __NO_QUINCY__
-      IF (tile%Is_process_active(A2L_)) THEN
-        CALL atm2land_init(tile)
-      END IF
-#endif
 
       SELECT CASE (model%config%model_scheme)
       ! CASE (MODEL_JSBACH)
