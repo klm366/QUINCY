@@ -31,16 +31,16 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, CH4_
 
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(CH4_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
-  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -52,13 +52,13 @@ MODULE mo_pheno_interface
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_phenology !< Aggregates computed task variables
   END TYPE   tsk_phenology
+
   !> Constructor interface for update_phenology task
   !>
   INTERFACE   tsk_phenology
     PROCEDURE Create_task_phenology         !< Constructor function for task
   END INTERFACE   tsk_phenology
 
-  ! ======================================================================================================= !
   !> Type definition for foliage_projected_cover task
   !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
@@ -66,6 +66,7 @@ MODULE mo_pheno_interface
     PROCEDURE, NOPASS :: Integrate => update_fpc
     PROCEDURE, NOPASS :: Aggregate => aggregate_fpc
   END TYPE tsk_foliage_projected_cover
+
   !> Constructor interface for foliage_projected_cover task
   !>
   INTERFACE tsk_foliage_projected_cover
@@ -80,22 +81,26 @@ CONTAINS
   !> Constructor for phenology task
   !>
   FUNCTION Create_task_phenology(model_id) RESULT(return_ptr)
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_phenology::return_ptr)
     CALL return_ptr%Construct(name='phenology', process_id=PHENO_, owner_model_id=model_id)
+
   END FUNCTION Create_task_phenology
 
   ! ======================================================================================================= !
   !> Constructor for foliage_projected_cover task
   !>
   FUNCTION Create_task_foliage_projected_cover(model_id) RESULT(return_ptr)
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_foliage_projected_cover::return_ptr)
     CALL return_ptr%Construct(name='foliage_projected_cover', process_id=PHENO_, owner_model_id=model_id)
+
   END FUNCTION Create_task_foliage_projected_cover
 
   ! ======================================================================================================= !
@@ -140,7 +145,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
+
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
 
@@ -178,7 +183,7 @@ CONTAINS
     USE mo_carbon_interface,       ONLY: rescale_carbon_upon_reference_area_change, &
       &                                  calculate_current_c_ta_state_sum, check_carbon_conservation, &
       &                                  recalc_carbon_per_tile_vars
-    USE mo_pheno_process,          ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
+    USE mo_pheno_process,          ONLY: calc_summergreen_phenology, calc_evergreen_phenology, calc_gdd, &
       &                                  calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                  track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,         ONLY: get_year_day
@@ -295,13 +300,6 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) THEN
-      CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
-    ENDIF
-
-    !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
-    !$claw create(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw create(old_c_state_sum_ta, dummy_flux)
-    IF ( .NOT. tile%Has_process_memory(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
@@ -822,7 +820,6 @@ CONTAINS
     ! Local variables
 
     dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
@@ -843,6 +840,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
@@ -1092,97 +1090,8 @@ CONTAINS
 
     DEALLOCATE (scaling, in_domain)
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Calculations of diagnostic global land mean phenology output
-  !!
-  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE global_phenology_diagnostics(tile)
-
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
-
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
-    dsl4jsb_Def_memory(PHENO_)
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
-
-    ! Pointers to variables in memory
-
-    dsl4jsb_Real2D_onDomain :: lai_ta
-    dsl4jsb_Real2D_onDomain :: fract_fpc
-
-    REAL(wp), POINTER       :: lai_ta_gmean(:)
-    REAL(wp), POINTER       :: fract_fpc_gmean(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-    REAL(wp)               :: global_land_area
-
-
-    dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
-    dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in
-
-    lai_ta_gmean        => PHENO__mem%lai_ta_gmean%ptr(:)   ! out
-    fract_fpc_gmean  => PHENO__mem%fract_fpc_gmean%ptr(:)   ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
-
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-
-    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
-
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these
-    ! cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
-
-    ! Calculate global land means phenology variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (PHENO__mem%lai_ta_gmean%is_in_output)     &
-      &  lai_ta_gmean     = global_sum_array(lai_ta(:,:)    * scaling(:,:)) / global_land_area
-    IF (PHENO__mem%fract_fpc_gmean%is_in_output)  &
-      &  fract_fpc_gmean  = global_sum_array(fract_fpc(:,:) * scaling(:,:)) / global_land_area
-
-    DEALLOCATE (scaling, in_domain)
-
 #endif
   END SUBROUTINE global_phenology_diagnostics
 
 #endif
-  END SUBROUTINE global_phenology_diagnostics
-
+END MODULE mo_pheno_interface

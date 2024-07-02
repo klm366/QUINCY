@@ -15,17 +15,15 @@ MODULE mo_carbon_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,             ONLY: wp
-  USE mo_exception,        ONLY: finish
   USE mo_util,             ONLY: One_of
-  USE mo_jsb_utils_iface,  ONLY: assign_if_present_allocatable
 
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_class,        ONLY: Get_model
+  USE mo_jsb_lct_class,    ONLY: VEG_TYPE, LAND_TYPE
+  USE mo_jsb_cqt_class,    ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
+    &                                  BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE
-  USE mo_jsb_cqt_class,    ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                            BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_, CARBON_, CH4_
@@ -44,7 +42,6 @@ MODULE mo_carbon_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
-
     ! 1d reals:
     !REAL(wp) ::            &
     TYPE(t_jsb_var_real2d) ::     &
@@ -253,18 +250,6 @@ MODULE mo_carbon_memory_class
       soil_respiration_gsum
 
 
-    ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
-    TYPE(t_jsb_var_real1d) ::        &
-      c_sum_veg_gsum,                & ! Global sum of all vegetation carbon pools [PgC]
-      c_sum_litter_ag_gsum,          & ! Global sum of all above ground litter carbon pools [PgC]
-      c_sum_litter_bg_gsum,          & ! Global sum of all below ground litter carbon pools [PgC]
-      c_sum_humus_gsum,              & ! Global sum of all soil / humus carbon pools [PgC]
-      c_sum_natural_gsum,            & ! Global sum of all natural carbon pools [PgC]
-      NPP_act_yDayMean_gsum,         & ! Global actual NPP rate [PgC/yr]
-      GPP_yDayMean_gsum,             & ! Global GPP rate [PgC/yr]
-      soil_respiration_gsum
-
-
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
   END TYPE t_carbon_memory
@@ -297,8 +282,6 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
-
-    IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
@@ -1170,40 +1153,6 @@ CONTAINS
       & prefix, suffix,                                                           &
       & output_level=BASIC,                                                       &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var('c_decomp_humus_1_sum', mem%c_decomp_humus_1_sum, hgrid, surface,                                 &
-      & t_cf('c_decomp_humus_1_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon decomposed from YASSO humus (leaf)'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-      & prefix, suffix, loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp)
-    CALL mem%Add_var('c_decomp_humus_2_sum', mem%c_decomp_humus_2_sum, hgrid, surface,                                 &
-      & t_cf('c_decomp_humus_2_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon decomposed from YASSO humus (wood)'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-      & prefix, suffix, loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp)
-    CALL mem%Add_var('c_into_humus_1_sum', mem%c_into_humus_1_sum, hgrid, surface,                                     &
-      & t_cf('c_into_humus_1_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon flux to humus pool in YASSO (leaf)'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-      & prefix, suffix, loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp)
-    CALL mem%Add_var('c_into_humus_2_sum', mem%c_into_humus_2_sum, hgrid, surface,                                     &
-      & t_cf('c_into_humus_2_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon flux to humus pool in YASSO (wood)'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-      & prefix, suffix, loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('c_decomp_humus_1_sum_ta', mem%c_decomp_humus_1_sum_ta, hgrid, surface,                      &
-      & t_cf('c_decomp_humus_1_sum_ta', 'mol(C) m-2', 'annual sum of carbon decomposed from YASSO humus (leaf)'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix, loutput=.FALSE., lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
-    CALL mem%Add_var('c_decomp_humus_2_sum_ta', mem%c_decomp_humus_2_sum_ta, hgrid, surface,                      &
-      & t_cf('c_decomp_humus_2_sum_ta', 'mol(C) m-2', 'annual sum of carbon decomposed from YASSO humus (wood)'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix, loutput=.FALSE., lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
-    CALL mem%Add_var('c_into_humus_1_sum_ta', mem%c_into_humus_1_sum_ta, hgrid, surface,                          &
-      & t_cf('c_into_humus_1_sum_ta', 'mol(C) m-2', 'annual sum of carbon flux to humus pool in YASSO (leaf)'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix, loutput=.FALSE., lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
-    CALL mem%Add_var('c_into_humus_2_sum_ta', mem%c_into_humus_2_sum_ta, hgrid, surface,                          &
-      & t_cf('c_into_humus_2_sum_ta', 'mol(C) m-2', 'annual sum of carbon flux to humus pool in YASSO (wood)'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix, loutput=.FALSE., lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
 
     CALL mem%Add_var('c_decomp_humus_1_sum', mem%c_decomp_humus_1_sum, hgrid, surface,                                 &
       & t_cf('c_decomp_humus_1_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon decomposed from YASSO humus (leaf)'), &

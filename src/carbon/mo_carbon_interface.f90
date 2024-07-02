@@ -25,7 +25,7 @@ MODULE mo_carbon_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
@@ -143,6 +143,7 @@ CONTAINS
     CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
 
   END SUBROUTINE Register_carbon_tasks
+
   ! ================================================================================================================================
   !>
   !> Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
@@ -158,7 +159,6 @@ CONTAINS
     USE mo_carbon_process,         ONLY: calc_soil_c
     USE mo_carbon_process_methane, ONLY: calc_methane_soil_c
     USE mo_jsb_time,               ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start, is_time_restart
-    USE mo_jsb_subset,             ONLY: t_subset
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -166,10 +166,11 @@ CONTAINS
 
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_grid),  POINTER   :: grid
     LOGICAL                      :: lstart, new_day, new_year
     INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp)                     :: dtime
-    TYPE(t_subset)               :: subset
+    REAL(wp), POINTER            :: lat(:)
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
@@ -258,15 +259,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
 
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
-                                                      !  [mol(C)/m^2(canopy)]
-
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
     !dsl4jsb_Real2D_onChunk ::  NPP_pot_Rate_acc      ! averaged NPP rate over one day [mol(C)/m^2(canopy) s]
@@ -325,7 +317,6 @@ CONTAINS
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
-
     !
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI
@@ -469,9 +460,11 @@ CONTAINS
 
     ! dynveg a.k.a. vegetation_lcc
     lstart   = is_time_experiment_start(options%current_datetime)
-    lrestart = is_time_restart(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
     new_year = is_newyear(options%current_datetime, dtime)
+
+    ! ---------------------------
+    ! Go
 
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
@@ -479,18 +472,12 @@ CONTAINS
     IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
+
     ! Initializations
     co2flux_npp_2_atm_yday_ta  = 0._wp
     co2flux_npp_2_atm_ta       = 0._wp
     co2flux_soilresp_2_atm_ta  = 0._wp
     co2flux_herb_2_atm_ta = 0._wp
-
-    IF( new_year .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
-      c_decomp_humus_1_sum =  0._wp
-      c_decomp_humus_2_sum =  0._wp
-      c_into_humus_1_sum =  0._wp
-      c_into_humus_2_sum =  0._wp
-    ENDIF
 
     IF( new_year .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
       c_decomp_humus_1_sum =  0._wp
@@ -844,6 +831,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
+
   END SUBROUTINE update_C_NPP_pot_allocation
 
   ! -------------------------------------------------------------------------------------------------------
@@ -863,19 +851,19 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
-    CLASS(t_jsb_model), POINTER               :: model
+    TYPE(t_jsb_model), POINTER   :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk , ics, ice
 
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
+    model => Get_model(tile%owner_model_id)
+    iblk  =  options%iblk
+    ics   =  options%ics
+    ice   =  options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(CARBON_)
 
@@ -945,10 +933,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_soilresp_2_atm_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_herb_2_atm_ta,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta, weighted_by_fract)
-
-    ! variables for NLCC process
-    dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 
     ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
@@ -1500,12 +1484,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
-    IF (PRESENT(c_green)) &
-      & CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_woods)) &
-      & CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_reserve)) &
-      & CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
 
     IF (PRESENT(c_crop_harvest)) CALL get_per_tile(c_crop_harvest_ta(:), &
       & c_crop_harvest(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -1614,7 +1595,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     INTEGER :: nc, ic, ics, ice, iblk
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
-
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -1803,8 +1783,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     END DO
     !$ACC END PARALLEL LOOP
 
-    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
-    !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -1814,13 +1792,13 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   !
   SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
 
-    USE mo_util,             ONLY: one_of
-    USE mo_jsb_lcc_class,    ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
-    USE mo_jsb_task_class,   ONLY: t_jsb_task_options
-    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
-      &                            nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
-    USE mo_carbon_shared,    ONLY: add_litter_to_yasso_pool
-    USE mo_jsb_varlist,      ONLY: VARNAME_LEN
+    USE mo_util,                ONLY: one_of
+    USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
+    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+    USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
+      &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
+    USE mo_carbon_shared,       ONLY: add_litter_to_yasso_pool
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
@@ -1872,19 +1850,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
       not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
       ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood
-      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
-    ENDIF
-
-    ! Usually green, reserve and wood are distributed to ag and bg pools according to given fractions
-    this_fract_green_aboveGround = fract_green_aboveGround
-    this_fract_wood_aboveGround = fract_wood_aboveGround
-    IF(lcc_relocations%name .EQ. 'flcc_lcc') THEN
-      ! in this case there is no transport of green or reserve to AG litter pools, since it burned
-      this_fract_green_aboveGround = 0.0_wp
-      ! # in this case part of the ag wood has also already been added to the atmosphere flux
-      fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
-      not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
-      ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood 
       this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
     ENDIF
 
@@ -2323,3 +2288,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
 #endif
   END SUBROUTINE global_carbon_diagnostics
+
+#endif
+END MODULE mo_carbon_interface

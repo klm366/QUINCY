@@ -17,7 +17,7 @@ MODULE mo_atmland_constants
   USE mo_kind,            ONLY: wp
 
   IMPLICIT NONE
-  
+
   ! solar constant
   REAL(wp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
   REAL(wp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)

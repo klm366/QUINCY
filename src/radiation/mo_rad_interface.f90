@@ -92,11 +92,13 @@ MODULE mo_rad_interface
   INTERFACE tsk_albedo
     PROCEDURE Create_task_albedo
   END INTERFACE tsk_albedo
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
 
 CONTAINS
 
+  ! ================================================================================================================================
+  !! Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_radiation task
@@ -154,9 +156,9 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_surface_radiation     (model_id))
-    CALL this%Register_task(tsk_radiation_par         (model_id))
-    CALL this%Register_task(tsk_albedo                (model_id))
+    CALL this%Register_task(tsk_surface_radiation(model_id))
+    CALL this%Register_task(tsk_radiation_par    (model_id))
+    CALL this%Register_task(tsk_albedo           (model_id))
 
   END SUBROUTINE Register_rad_tasks
 
@@ -171,9 +173,6 @@ CONTAINS
   SUBROUTINE update_surface_radiation(tile, options)
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
-#ifdef SERIALIZE
-    !$claw verbatim USE mo_ser_common, ONLY: init
-#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -217,14 +216,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
 
-#ifdef SERIALIZE
-    !$claw verbatim call init('jsb_ser')
-#endif
-
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
@@ -279,7 +275,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_2 tile_name=tile%name
         CALL calc_radiation_surface_net( &
           & swvis_srf_down(:),           & ! in
           & swnir_srf_down(:),           & ! in
@@ -460,6 +455,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (.NOT. tile%is_vegetation) RETURN
@@ -486,7 +482,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   swpar_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in
-    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)      ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_soil)          ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par)                   ! in
@@ -1200,9 +1195,6 @@ CONTAINS
       END IF
     END IF
     !$ACC EXIT DATA DELETE(l_day)
-    DEALLOCATE(l_day)
-
-    !$claw acc exit data delete(l_day)
     DEALLOCATE(l_day)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

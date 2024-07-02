@@ -20,11 +20,6 @@
 !> - Init_vars => [[Init_vars_on_tile]]
 !> - Handler => [[Process_task_on_tile]]
 !>
-!> BSD 3-Clause
-!> spdx-id: BSD-3-Clause
-!>
-!>
-
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -46,13 +41,6 @@ MODULE mo_jsb_tile
 #ifdef _OPENACC
   USE openacc
 #define __acc_attach(ptr) CALL acc_attach(ptr)
-#else
-#define __acc_attach(ptr)
-#endif
-
-#ifdef _OPENACC
-  USE openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)
 #endif
@@ -316,7 +304,6 @@ CONTAINS
     INTEGER,           INTENT(in)    :: grid_id           !< Grid id
     LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
     ! -------------------------------------------------------------------------------------------------- !
-
     INTEGER                               :: iproc
     TYPE(t_jsb_model), POINTER            :: model
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -474,48 +461,6 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
 
-  END SUBROUTINE Init_tile
-
-  ! ======================================================================================================= !
-  !>
-  !> Add and initialise fraction variables for this tile - either from a file or according to specification
-  !>
-  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
-
-    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
-    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
-    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this               !< Current tile
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name       !< Model shortname
-    CHARACTER(len=*),  INTENT(in)    :: prefix             !< Prefix for variable names (generally empty)
-    CHARACTER(len=*),  INTENT(in)    :: suffix             !< Suffix for variable names
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions
-      !< If tile fractions can change (active lcc process). I.a. determines if fracts go to restart file
-    LOGICAL,           INTENT(in)    :: l_rel_fractions
-      !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
-      !< while the fractions in the code are absolute (with respect to the box tile)
-    ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
-    CLASS(t_jsb_aggregator),                  POINTER :: aggregator
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    INTEGER                    :: table
-    TYPE(t_input_file)         :: input_file
-    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
-    CHARACTER(len=50)          :: name_loc
-    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
-    CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
-
-    INTEGER :: isteptype, i, ilct
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
-    ! -------------------------------------------------------------------------------------------------- !
-    IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
-
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')
 
@@ -570,10 +515,6 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     ! Initialize fraction(s) of this tile from input file
 
-    ! -------------------------------------------------------------------------------------------------- !
-    ! Initialize fraction(s) of this tile from input file
-  
-    ! **** here we continue next time ****
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE. ! default: fraction of tile is changing
 
@@ -598,20 +539,8 @@ CONTAINS
       ELSE
         tmp_fract(:,:) = 1._wp
       END IF
-      ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
-    ELSEIF (this%fract_varname == 'allFirst') THEN
-        IF(ASSOCIATED(this%parent)) THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          IF (.NOT. this%Is_first_child()) THEN
-            tmp_fract(:,:) = 0._wp
-          END IF
-        ELSE
-          tmp_fract(:,:) = 1._wp
-        END IF
-        CALL this%Set_fraction(fract=tmp_fract(:,:))
-    ELSE ! fract_varname /= 'equal' OR 'allFirst' ==> fraction of the tile is read from input file
-      ! Open the input file
+    ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
       ! Determine the name of the tile fraction variable in the input file
       IF (TRIM(this%fract_varname) == '') THEN
@@ -698,9 +627,6 @@ CONTAINS
   END SUBROUTINE Init_fractions_on_tile
 
   ! ======================================================================================================= !
-  !> 
-  !> Initialise the child_idx vector for each variable on each process running on child tiles
-  !> - this vector then collects the process memory position of the according var on each child of the tile
   !>
   !> Initialise the child_idx vector for each variable on each process running on child tiles
   !> - this vector then collects the process memory position of the according var on each child of the tile
@@ -985,172 +911,6 @@ CONTAINS
 
   END SUBROUTINE Collect_bgc_materials_on_tile
 #endif
-
-  ! ======================================================================================================= !
-  !>
-  !> Identifies the number and types of bgc materials on this tile
-  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms!
-  !>       If something more generic is required in the future it'll need to be implemented then
-  !>       or alternatively if the bgcm stores as required for quincy are not required but "deeper" bgcm
-  !>       structures are, the collection of the pointers in the bgcm store might be surpressed if using
-  !>       bgcms but not Quincy...
-  !>
-  SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
-
-    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
-    USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the bgc materials are checked
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER     :: mem
-    CLASS(t_jsb_pool), POINTER       :: bgcm
-    CLASS(t_lnd_bgcm_store), POINTER :: bgcm_store
-    INTEGER                          :: i_proc, i_bgcm, i_compartment
-    INTEGER                          :: nr_of_bgcms_this_proc, nr_of_compartments
-    INTEGER                          :: this_dim, common_dim
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Count_and_classify_bgc_materials_on_tile'
-    ! -------------------------------------------------------------------------------------------------- !
-    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-
-    ! Loop over all processes
-    DO i_proc = 1, max_no_of_processes
-
-      ! If the current process is not on the current tile exit DO loop
-      SELECT CASE (this%process_action(i_proc))
-      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
-        CYCLE
-      END SELECT
-
-      ! Also exit the Do loop if this process has no memory
-      IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
-
-      ! Only processes are relevant here that have any bgc material in their process memory
-      mem => this%mem(i_proc)%p
-      IF(mem%has_bgc_materials) THEN
-
-        ! If this is the first memory in which we find a bgc material the store needs to be initialised
-        IF (.NOT. ASSOCIATED(this%bgcm_store)) THEN
-          ALLOCATE(bgcm_store)
-          this%bgcm_store => bgcm_store
-        ENDIF
-
-        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%pool_list)
-        this%bgcm_store%nr_of_bgc_materials = this%bgcm_store%nr_of_bgc_materials + nr_of_bgcms_this_proc
-        DO i_bgcm = 1, nr_of_bgcms_this_proc
-          bgcm => mem%bgc_material%pool_list(i_bgcm)%p
-
-          IF(bgcm%contains_elements) THEN
-            ! i.e. directly elements and no compartments
-            CALL assert_no_compartment_bgc_materials(bgcm, this%name, routine)
-            this_dim = get_dimension_of_element_variables(bgcm, this%name, routine)
-            IF(this_dim == 2) THEN
-              this%bgcm_store%nr_of_1l_2d_bgc_materials = this%bgcm_store%nr_of_1l_2d_bgc_materials + 1
-            ELSEIF(this_dim == 3) THEN
-              this%bgcm_store%nr_of_1l_3d_bgc_materials = this%bgcm_store%nr_of_1l_3d_bgc_materials + 1
-            ENDIF
-          ELSE
-            ! i.e. no elements but one layer of compartments which are then expected to have elements
-            ! but no further compartments!
-            nr_of_compartments = SIZE(bgcm%pool_list)
-            common_dim = -1
-            DO i_compartment = 1, nr_of_compartments
-              IF(.NOT. bgcm%pool_list(i_compartment)%p%contains_elements) THEN
-                CALL finish(TRIM(routine), 'Found bgcm '//TRIM(bgcm%name)//' in tile '//TRIM(this%name)// &
-                  & ' that contains a compartment without elements '//                                    &
-                  &  TRIM(bgcm%pool_list(i_compartment)%p%name)//                                         &
-                  & ' but no behaviour is implemented for this so far, please check!')
-              ENDIF
-              CALL assert_no_compartment_bgc_materials(bgcm%pool_list(i_compartment)%p, this%name, routine)
-              this_dim = get_dimension_of_element_variables(bgcm%pool_list(i_compartment)%p, this%name, routine)
-              IF(i_compartment == 1) THEN
-                common_dim = this_dim
-              ELSEIF(common_dim /= this_dim) THEN
-                CALL finish(TRIM(routine), &
-                  & 'Found compartments with elements with different dimensions for the bgcm '// &
-                  & TRIM(bgcm%name)//' in tile '//TRIM(this%name)//                              &
-                  & ', but no behaviour is implemented for this so far, please check!')
-              ENDIF
-            ENDDO ! For each compartment
-            IF(common_dim == 2) THEN
-              this%bgcm_store%nr_of_2l_2d_bgc_materials = this%bgcm_store%nr_of_2l_2d_bgc_materials + 1
-            ELSEIF(common_dim == 3) THEN
-              this%bgcm_store%nr_of_2l_3d_bgc_materials = this%bgcm_store%nr_of_2l_3d_bgc_materials + 1
-            ENDIF
-          ENDIF
-        ENDDO
-      ENDIF
-    ENDDO
-
-  END SUBROUTINE Count_and_classify_bgc_materials_on_tile
-
-  ! ======================================================================================================= !
-  !>
-  !> Collects the pointers to the variables that contain bgc elements
-  !>
-  SUBROUTINE Collect_bgc_materials_on_tile(this)
-    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER :: mem
-    TYPE(t_jsb_grid),    POINTER :: hgrid
-    TYPE(t_jsb_vgrid),   POINTER :: vgrid
-    INTEGER                      :: i_proc
-    INTEGER                      :: ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm
-    INTEGER                      :: ind_bgcm
-    INTEGER                      :: nblks, nproma, nsoil
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_bgc_materials_on_tile'
-    ! -------------------------------------------------------------------------------------------------- !
-    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-
-    ! If there is any process on this tile that has bgc materials, an instance of the bgcm store
-    ! would have been created on this tile in the collection routine
-    IF(ASSOCIATED(this%bgcm_store)) THEN
-      CALL this%bgcm_store%init()
-
-      ! and init indices for bookkeeping
-      ind_bgcm = 0
-      ind_1l_2d_bgcm = 0
-      ind_2l_2d_bgcm = 0
-      ind_1l_3d_bgcm = 0
-      ind_2l_3d_bgcm = 0
-    ELSE
-      ! If there is no bgcm store, then there are no active processes with bgcm material on this tile
-      RETURN
-    ENDIF
-
-    hgrid  => Get_grid(this%grid_id)
-    nproma = hgrid%nproma
-    nblks  = hgrid%nblks
-    vgrid  => Get_vgrid('soil_layer_sb')
-    nsoil  =  vgrid%n_levels
-
-    ! Loop over all processes
-    DO i_proc=1,max_no_of_processes
-      ! If the current process is not on the current tile exit DO loop
-      SELECT CASE (this%process_action(i_proc))
-      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
-        CYCLE
-      END SELECT
-
-      ! Also exit the DO loop if this process has no memory
-      IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
-
-      ! Only processes are relevant here that have any bgc material in their process memory
-      mem => this%mem(i_proc)%p
-      IF(mem%has_bgc_materials) THEN
-        CALL this%bgcm_store%append_bgcms(mem%bgc_material, nblks, nproma, nsoil, this%name, &
-          & ind_bgcm, ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm)
-      ENDIF
-    ENDDO
-
-  END SUBROUTINE Collect_bgc_materials_on_tile
 
   ! ======================================================================================================= !
   !>
@@ -1499,3 +1259,13 @@ CONTAINS
     END IF
 
     DO iproc=1,max_no_of_processes
+      IF (this%process_action(iproc) > 0) THEN
+        ! Print names of processes running on the tile
+        CALL message('     Process '//Get_process_name(iproc), 'Action '//Get_action_name(this%process_action(iproc)))
+      END IF
+    END DO
+
+  END SUBROUTINE Print_tile
+
+#endif
+END MODULE mo_jsb_tile

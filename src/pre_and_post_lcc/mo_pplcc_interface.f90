@@ -223,8 +223,9 @@ CONTAINS
             ! and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
-dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! out
-fract_fpc_max_save(:) = fract_fpc_max(:)
+            dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! out
+            
+            fract_fpc_max_save(:) = fract_fpc_max(:)
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
@@ -238,7 +239,6 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
 
         ! Convert all variables of this type
         DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
-
           ! Assertion: variable needs to contain substring expected for this type
           this_unit = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%unit
           IF (.NOT. INDEX(TRIM(this_unit), expected_string_in_unit) > 0) THEN
@@ -349,9 +349,10 @@ fract_fpc_max_save(:) = fract_fpc_max(:)
             dsl4jsb_Get_memory(PHENO_)
             ! and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
-            dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! inout
+            dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! in
-fract_fpc_max(:) = fract_fpc_max_save(:)
+
+            fract_fpc_max(:) = fract_fpc_max_save(:)
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
           ! CASE (WATER_CQ_TYPE)
@@ -386,8 +387,6 @@ fract_fpc_max(:) = fract_fpc_max_save(:)
       END IF
 
     END IF
-
-    IF (tile%name .EQ. 'box') CALL pplcc_fraction_diagnostics(tile, options)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

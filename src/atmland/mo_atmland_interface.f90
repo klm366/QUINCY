@@ -18,7 +18,7 @@ MODULE mo_atmland_interface
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
@@ -45,13 +45,8 @@ MODULE mo_atmland_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
 
-
 CONTAINS
 
-
-  ! ======================================================================================================= !
-  !> update atm2land
-  !>
   SUBROUTINE update_atm2land( &
     & tile, options,          &
     & t_air,                  &
@@ -107,7 +102,7 @@ CONTAINS
       & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER  :: iblk, ics, ice, nc, i
@@ -121,7 +116,7 @@ CONTAINS
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Real2D_onChunk ::  &
       & t_air_ptr,             &
       & q_air_ptr,             &
@@ -174,18 +169,6 @@ CONTAINS
     global_seconds_day = get_secs_of_day(mtime_current)
 
     model_scheme = model%config%model_scheme
-
-    model => Get_model(tile%owner_model_id)
-    use_quincy = model%config%use_quincy
-
-    ! make this logical accessible in the OpenACC code directly
-    tile_contains_lake = tile%contains_lake
-
-    model => Get_model(tile%owner_model_id)
-    grid  => get_grid(model%grid_id)
-    lon   => grid%lon(ics:ice, iblk)
-    mtime_current => time_config%tc_current_date
-    global_seconds_day = get_secs_of_day(mtime_current)
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -302,129 +285,6 @@ CONTAINS
 
     IF (PRESENT(DEBUG_VAR)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO i=1,nc
-        DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
-      END DO
-    END IF
-
-    IF (PRESENT(t_air)) THEN
-      t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
-    END IF
-    IF (PRESENT(q_air)) THEN
-      q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
-    END IF
-    IF(PRESENT(rain)) THEN
-      rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
-    END IF
-    IF (PRESENT(snow)) THEN
-      snow_ptr              => dsl4jsb_var2D_onChunk(A2L_, snow)
-    END IF
-    IF (PRESENT(wind_air)) THEN
-      wind_air_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_air)
-    END IF
-    IF (PRESENT(wind_10m)) THEN
-      wind_10m_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_10m)
-    END IF
-    IF (PRESENT(lw_srf_down)) THEN
-      lw_srf_down_ptr       => dsl4jsb_var2D_onChunk(A2L_, lw_srf_down)
-    END IF
-    IF (PRESENT(swvis_srf_down)) THEN
-      swvis_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
-    END IF
-    IF(PRESENT(swnir_srf_down)) THEN
-      swnir_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swnir_srf_down)
-    END IF
-    IF (PRESENT(swpar_srf_down)) THEN
-      swpar_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swpar_srf_down)
-    END IF
-    IF (PRESENT(fract_par_diffuse)) THEN
-      fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
-    END IF
-    IF (PRESENT(press_srf)) THEN
-      press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
-    END IF
-    IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
-    END IF
-    IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
-    END IF
-    IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
-    END IF
-    IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
-    END IF
-    IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
-    END IF
-    IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
-    END IF
-    IF (PRESENT(cos_zenith_angle)) THEN
-      cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
-    END IF
-    IF (PRESENT(CO2_air)) THEN
-      CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
-      CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (model%config%model_scheme == MODEL_QUINCY) THEN
-        CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
-      END IF
-    END IF
-    IF (PRESENT(nhx_deposition)) THEN
-      nhx_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, nhx_deposition)
-    END IF
-    IF (PRESENT(noy_deposition)) THEN
-      noy_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, noy_deposition)
-    END IF
-    IF (PRESENT(nhx_n15_deposition)) THEN
-      nhx_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, nhx_n15_deposition)
-    END IF
-    IF (PRESENT(noy_n15_deposition)) THEN
-      noy_n15_deposition_ptr  => dsl4jsb_var2D_onChunk(A2L_, noy_n15_deposition)
-    END IF
-    IF (PRESENT(p_deposition)) THEN
-      p_deposition_ptr        => dsl4jsb_var2D_onChunk(A2L_, p_deposition)
-    END IF
-    IF (PRESENT(drag_wtr)) THEN
-      drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
-    END IF
-    IF (PRESENT(drag_ice)) THEN
-      drag_ice_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_ice)
-    END IF
-    IF (PRESENT(t_acoef_wtr)) THEN
-      t_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_wtr)
-    END IF
-    IF (PRESENT(t_bcoef_wtr)) THEN
-      t_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_wtr)
-    END IF
-    IF (PRESENT(q_acoef_wtr)) THEN
-      q_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_wtr)
-    END IF
-    IF (PRESENT(q_bcoef_wtr)) THEN
-      q_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_wtr)
-    END IF
-    IF (PRESENT(t_acoef_ice)) THEN
-      t_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_ice)
-    END IF
-    IF (PRESENT(t_bcoef_ice)) THEN
-      t_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_ice)
-    END IF
-    IF (PRESENT(q_acoef_ice)) THEN
-      q_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_ice)
-    END IF
-    IF (PRESENT(q_bcoef_ice)) THEN
-      q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
-    END IF
-
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      daytime_counter             => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
-      local_time_day_seconds      => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
-    END IF
-
-    !$acc parallel default(present)
-    IF (PRESENT(DEBUG_VAR)) THEN
-      !$acc loop gang vector
       DO i=1,nc
         DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
       END DO
@@ -571,38 +431,6 @@ CONTAINS
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
       END DO
     END IF
-    !> MODEL_QUINCY
-    !>
-    IF (PRESENT(nhx_deposition)) THEN
-      !$acc loop gang vector
-      DO i=1,nc
-        nhx_deposition_ptr(i) = nhx_deposition(i)
-      END DO
-    END IF
-    IF (PRESENT(noy_deposition)) THEN
-      !$acc loop gang vector
-      DO i=1,nc
-        noy_deposition_ptr(i) = noy_deposition(i)
-      END DO
-    END IF
-    IF (PRESENT(nhx_n15_deposition)) THEN
-      !$acc loop gang vector
-      DO i=1,nc
-        nhx_n15_deposition_ptr(i) = nhx_n15_deposition(i)
-      END DO
-    END IF
-    IF (PRESENT(noy_n15_deposition)) THEN
-      !$acc loop gang vector
-      DO i=1,nc
-        noy_n15_deposition_ptr(i) = noy_n15_deposition(i)
-      END DO
-    END IF
-    IF (PRESENT(p_deposition)) THEN
-      !$acc loop gang vector
-      DO i=1,nc
-        p_deposition_ptr(i) = p_deposition(i)
-      END DO
-    END IF
 
     !> lakes
     !>
@@ -667,8 +495,8 @@ CONTAINS
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
       END IF
+
     END IF
-    !$acc end parallel
 
     !$ACC END PARALLEL
 
@@ -676,10 +504,6 @@ CONTAINS
 
   END SUBROUTINE update_atm2land
 
-
-  ! ======================================================================================================= !
-  !> update land2atm
-  !>
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_srf_rad, t_eff_srf, qsat_srf, s_srf,                                  &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &
@@ -1186,8 +1010,6 @@ CONTAINS
 
       !$ACC END PARALLEL
 
-      !$acc end data
-
     ELSE
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -1353,3 +1175,6 @@ CONTAINS
     !$ACC END DATA
 
   END SUBROUTINE update_land2atm
+
+#endif
+END MODULE mo_atmland_interface

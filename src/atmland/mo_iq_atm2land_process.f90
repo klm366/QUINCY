@@ -1,4 +1,4 @@
-!> Summary: quincy atm2land routines: only required within ICON-Land and not in QS (thus _iq_)
+!> quincy atm2land routines: only required within ICON-Land and not in QS (thus _iq_)
 !>
 !> ICON-Land
 !>
@@ -13,8 +13,8 @@
 !>
 !>### Contains routines for the a2l (atm2land) proc
 !>
-MODULE mo_q_atm2land_process
-#ifndef __NO_JSBACH__
+MODULE mo_iq_atm2land_process
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8
@@ -24,7 +24,7 @@ MODULE mo_q_atm2land_process
 
   PUBLIC :: update_local_time_and_daytime_counter
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_atm2land_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_iq_atm2land_process'
 
 CONTAINS
 
@@ -67,5 +67,5 @@ CONTAINS
   END SUBROUTINE update_local_time_and_daytime_counter
 
 #endif
-END MODULE mo_q_atm2land_process
+END MODULE mo_iq_atm2land_process
 

@@ -17,7 +17,7 @@
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp, i4, i8
+  USE mo_kind,        ONLY: wp
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop
 
@@ -37,7 +37,7 @@ MODULE mo_jsb_task_class
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
     REAL(wp)                  :: steplen = -1._wp
-    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor (differs between standalone and coupled simulations)
+    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
     INTEGER                   :: ics     = -1  ! Index of chunk start
@@ -137,7 +137,6 @@ CONTAINS
 !!$      IF (.NOT. ASSOCIATED(task%Aggregate)) &
 !!$        & CALL finish(TRIM(routine), 'Procedure pointer for Aggregate not set')
 !!$
-
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
         IF (timer_on('detail')) THEN

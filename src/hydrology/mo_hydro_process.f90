@@ -519,8 +519,6 @@ CONTAINS
       & runoff_glac_in_m,    & !< Runoff in m
       & snowmelt_in_m          !< Snow/ice melt in m
 
-    !$claw sca
-
     !----------------------------------------------------------------------------------------------
 
     ! Convert water fluxes to m water equivalent within the time step
@@ -870,125 +868,6 @@ CONTAINS
 
       END IF
     END IF
-
-  END SUBROUTINE arno_scheme
-
-
-  !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of subgrid orographic features
-  !!
-  !! @par Revision History
-  !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
-  !!   ARNO Scheme infiltration routine
-
-  SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
-
-    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
-
-    INTEGER,  INTENT(in) :: &
-      & nc, nlat
-
-    REAL(wp), INTENT(in)  :: oro_stddev(:)  !< standard deviation of orography                   [m]
-    REAL(wp), INTENT(out) :: steepness(:)   !< parameter defining the subgrid slope distribution [/]
-
-    REAL(wp) ::                       &
-      & sigma_0,                      & !< minimum value (100 m); below b = 0.01
-      & sigma_max                       !< resolution-dependent maximum
-    !
-    ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
-    !
-    ! b = (oro_stddev - sigma_0) / (oro_stddev + sigma_max)
-    !
-    sigma_0   = oro_var_min
-    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
-
-    ! Compute steepness parameter
-    steepness(:) = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
-    ! Limit parameter to realistic bounds
-    steepness(:) = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
-
-  END SUBROUTINE calc_orographic_features
-
-  !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of surface runoff based on the ARNO Scheme
-  !! (E. Todini, The ARNO rainfall-runoff model, doi:10.1016/S0022-1694(96)80016-3.)
-  !!
-  !! @par Revision History
-  !!   Revised by Tobias Stacke (MPI-M) in January 2023
-
-  SUBROUTINE arno_scheme(nc, l_infil_subzero, t_soil_sl1, water_to_soil, weq_rootzone, &
-    &                    steepness, weq_rootzone_max,                                  &
-    &                    runoff, infilt)
-
-    USE mo_jsb_physical_constants, ONLY: tmelt
-
-    INTEGER,  INTENT(in) :: nc
-
-    LOGICAL, INTENT(in)  :: l_infil_subzero
-
-    REAL(wp), INTENT(in) ::           &
-      & t_soil_sl1(:),                & !< temperature of uppermost soil layer               [K]
-      & water_to_soil(:),             & !< amount of water going into the soil               [m]
-      & weq_rootzone(:),              & !< liquid water + ice within the root zone           [m]
-      & steepness(:),                 & !< parameter defining the subgrid slope distribution [/]
-      & weq_rootzone_max(:)             !< maximum water holding capacity (liquid + ice) of the root zone [m]
-
-    REAL(wp), INTENT(out) ::          &
-      & runoff(:),                    & !< surface runoff                                    [m]
-      & infilt(:)                       !< infiltration of water into the soil               [m]
-
-    ! Local variables
-    INTEGER  ::                       &
-      & i                               !< grid cell index
-
-    REAL(wp) ::                       &
-      & ws_min_drain,                 & !< minimum amount of root zone soil water for drainage
-      & ws_rel,                       & !< relative rootzone soil moisture (water + ice)
-      & zb1, zbm, zconw1, zvol
-
-    !$claw acc parallel
-    !$claw acc loop gang vector
-    DO i = 1, nc
-
-      ! todo: parameters should be defined as parameters
-      zb1    = 1._wp + steepness(i)
-      zbm    = 1._wp / zb1
-      zconw1 = weq_rootzone_max(i) * zb1
-
-      !>  Surface runoff and infiltration
-      !   -----------------------------------
-      !   f(w) = 1 - (1 - w/w_max)**b
-
-      ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
-      ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
-      ws_min_drain = zwdmin * weq_rootzone_max(i)
-
-      ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
-      !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
-      IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
-        runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
-        infilt(i) = 0._wp
-
-      ELSE
-        IF (water_to_soil(i) > 0._wp .AND. weq_rootzone(i) > ws_min_drain) THEN   ! soilwater content above limit for drainage
-          ! compare jsbach3 documentation section 2.3.2.2
-          ws_rel = MIN(1._wp, weq_rootzone(i) / weq_rootzone_max(i))              ! relative rootzone soil moisture
-          zvol   = (1._wp - ws_rel)**zbm - water_to_soil(i) / zconw1              ! factor taking account subgrid scale
-                                                                                  ! inhomogeneity and steepness
-
-          runoff(i) = water_to_soil(i) - (weq_rootzone_max(i) - weq_rootzone(i))  ! > 0: amount of water exceeding soil capacity
-          IF (zvol > 0._wp) runoff(i) = runoff(i) + weq_rootzone_max(i) * zvol**zb1
-          runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)                ! no runoff < 0, limited by available water
-          infilt(i) = water_to_soil(i) - runoff(i)                                ! water not going into runoff is infiltrated
-
-        ELSE
-          runoff(i) = 0._wp                                                       ! no runoff as soil is too dry
-          infilt(i) = water_to_soil(i)                                            ! all water infiltrated
-
-        END IF
-      END IF
-
-    END DO
 
   END SUBROUTINE arno_scheme
 
@@ -1443,22 +1322,6 @@ CONTAINS
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_sevap(ic)        ! remaining demand is added to deficit
     END DO
 
-    ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
-    ! because this has to be consistent with the computation of the upper soil layer relative humidity
-    ! in sse_processes:relative_humidity_soil)
-    DO i = 1, nc
-      IF (deficit_sevap(i) < 0._wp) THEN                               ! remaining soil evaporation demand
-        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + deficit_sevap(i)         ! take water from uppermost soil layer
-        IF (wtr_soil_sl(i,1) < 0._wp) THEN                             ! if there is not enough liquid soil water
-          deficit_sevap(i) = wtr_soil_sl(i,1)                          ! this is the amount of water missing
-          wtr_soil_sl(i,1) = 0._wp                                     ! soil moisture cannot be negative
-        ELSE                                                           ! no deficit remains
-          deficit_sevap(i) = 0._wp
-        END IF
-      END IF
-      evapo_deficit(i) = evapo_deficit(i) + deficit_sevap(i)           ! remaining demand is added to deficit
-    END DO
-
     ! Correct remaining evapotranspiration deficit
     ! @todo this is an unfortunate necessity as sometimes the evaporative demand is not fully
     !       backed by the water available in the land surface reservoirs.
@@ -1867,9 +1730,6 @@ CONTAINS
 
     REAL(wp),  INTENT(in)    :: weq_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
-    !$claw end model-data
-
-    !$claw sca
 
     fract_snow_lice = TANH(weq_snow_lice * 100._wp)
 
@@ -1930,7 +1790,6 @@ CONTAINS
       & fract_pond,          &
       & fract_wet,           &
       & fract_snow_soil
-    !$claw end model-data
 
     REAL(wp) ::       &
       & qsat_srf_old, &
@@ -2053,7 +1912,6 @@ CONTAINS
       & fract_pond,          &
       & fract_wet,           &
       & fract_snow_soil
-    !$claw end model-data
 
     REAL(wp) ::       &
       & qsat_srf_old, &
@@ -2134,8 +1992,6 @@ CONTAINS
     REAL(wp), INTENT(in) :: &
       & snow,   &
       & orodev
-
-    !$claw sca routine
 
     Get_snow_fract_noforest = wsn2fract_const * TANH(snow * 100._wp) &
                                & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2fract_eps + wsn2fract_sigfac * orodev))
@@ -2232,8 +2088,6 @@ CONTAINS
     REAL(wp)             :: water_stress_factor
 
     REAL(wp) :: w_crit, w_wilt                       !< Soil water content at critical/wilting point
-
-    !$claw sca routine
 
     w_crit = w_soil_max * w_soil_crit_fract
     w_wilt = w_soil_max * w_soil_wilt_fract
@@ -2756,3 +2610,7 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
+  END SUBROUTINE get_soilhyd_properties
+
+#endif
+END MODULE mo_hydro_process

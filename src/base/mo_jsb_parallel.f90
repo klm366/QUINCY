@@ -77,3 +77,4 @@ CONTAINS
   END FUNCTION Get_omp_thread
 
 #endif
+END MODULE mo_jsb_parallel

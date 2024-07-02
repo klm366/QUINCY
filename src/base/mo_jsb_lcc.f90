@@ -896,3 +896,4 @@ CONTAINS
   END SUBROUTINE check_passive_lcc_vars
 
 #endif
+END MODULE mo_jsb_lcc

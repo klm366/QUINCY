@@ -184,9 +184,7 @@ CONTAINS
 
     END IF
 
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
-
   END SUBROUTINE turb_init_ic
 
+#endif
+END MODULE mo_turb_init

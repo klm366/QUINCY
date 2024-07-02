@@ -1,4 +1,4 @@
-!> Summary: defines routine for averaging variables
+!> defines routine for averaging variables
 !>
 !> ICON-Land
 !>
@@ -71,16 +71,18 @@ CONTAINS
   !! if the optional parameter 'do_calc' is present: the moving average is calculated only if do_calc = TRUE !
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_time_mavg(current_avg, new_value, avg_period_length, &   ! default  input arguments
+  PURE ELEMENTAL FUNCTION calc_time_mavg(dtime, &
+                                         current_avg, new_value, avg_period_length, &   ! default  input arguments
                                          do_calc, avg_period_unit) &                    ! optional input arguments
                                          RESULT(new_avg)
 
     USE mo_kind,                ONLY: wp
-    USE mo_jsb_math_constants,  ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,  ONLY: one_day, one_year
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+    REAL(wp), INTENT(in)                      :: dtime              !< timestep length
     REAL(wp), INTENT(in)                      :: current_avg        !< current average value
     REAL(wp), INTENT(in)                      :: new_value          !< new value
     REAL(wp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged

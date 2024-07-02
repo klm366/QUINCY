@@ -121,7 +121,7 @@ CONTAINS
 !!$    INTEGER,         INTENT(in) :: lct_type
 !!$    LOGICAL                     :: return_value
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains'
+!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains'
 !!$
 !!$    return_value = Contains_lct(this%id, lct_type)
 !!$
@@ -140,7 +140,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains_lct'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains_lct'
     ! -------------------------------------------------------------------------------------------------- !
 
     return_value = .FALSE.
@@ -162,7 +162,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_name'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_name'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%name /= '') THEN
       return_value = TRIM(this%name)
@@ -192,7 +192,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_longname'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_longname'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%long_name /= '') THEN
       return_value = TRIM(this%long_name)

@@ -368,45 +368,7 @@ CONTAINS
     current_tile => tile%Get_first_child_tile()
     is_age_class = .FALSE.
     i_tile = 0
-    i_cf_tile = 0
-
     DO WHILE (ASSOCIATED(current_tile))
-      i_tile = i_tile + 1
-      i_cf_tile = i_cf_tile + 1
-
-      ! if running with forest age classes (acs) the forest pfts themselves (i.e. the nodes above the acs) 
-      ! are not part of the lcc tiles
-      IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
-          ! Assertion: age-classes are subsequent parts of the lcc structure
-          !IF(debug_on()) THEN
-          age_class_tile => current_tile%Get_first_child_tile()
-          i_ac_index = i_tile
-          DO WHILE (ASSOCIATED(age_class_tile))
-            IF (.NOT. TRIM(age_class_tile%name) .EQ. TRIM(lcc_relocations%tile_names(i_ac_index))) THEN
-              CALL finish(TRIM(routine), 'Violation of assertion: age class (' //TRIM(age_class_tile%name) &
-                & //') is not listed in the expected place in the alcc lcc-structure. Found ' &
-                & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!') 
-            ENDIF
-            age_class_tile => age_class_tile%Get_next_sibling_tile()
-            i_ac_index = i_ac_index + 1
-          END DO
-          !ENDIF
-
-          ! forest pfts are not part of the lcc structure and thus the initial area has not yet been automatically collected
-          CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
-          cf_diff(:) = cf_current_year(:, i_cf_tile) - current_fract(:)
-          ! Prevent numerical issues
-          WHERE(abs(cf_diff(:)) < min_cf_change)
-            cf_diff(:) = 0.0_wp
-            cf_current_year(:, i_cf_tile) = current_fract(:)
-          END WHERE
-
-          ! the losses / gains of forest pfts need to be redistributed to the age classes that are its children
-          CALL redistribute_cover_fraction_changes_of_forest_pft(current_tile, options, cf_diff, i_tile, gained_area, lost_area)
-          i_tile = i_tile + current_tile%Get_no_of_children() - 1
-
-          ! Finally, update the fraction on the forest pft tile itself
-          CALL current_tile%Set_fraction(ics, ice, iblk, fract=cf_current_year(:, i_cf_tile))
 
       ! In case of forest age classes we have to decent one level further
       IF ((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN

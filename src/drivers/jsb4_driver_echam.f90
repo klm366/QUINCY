@@ -297,11 +297,6 @@ PROGRAM jsb4_driver
     coslat = COS(deg2rad * lat)
     sinlat = SIN(deg2rad * lat)
 
-    coslon = COS(deg2rad * lon)
-    sinlon = SIN(deg2rad * lon)
-    coslat = COS(deg2rad * lat)
-    sinlat = SIN(deg2rad * lat)
-
     !init for first timestep/day (according to jsb3: mo_jsbalone: init_driving)
     t_srf_proc = 273._wp
     fact_q_air_proc = 0.5_wp
@@ -517,3 +512,5 @@ PROGRAM jsb4_driver
   ! Stop MPI
   CALL p_stop
 #endif
+#endif
+END PROGRAM jsb4_driver

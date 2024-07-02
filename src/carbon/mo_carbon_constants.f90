@@ -36,29 +36,16 @@ MODULE mo_carbon_constants
   END ENUM
 
   ! Further constants
-  REAL(wp), PARAMETER :: molarMassC_kg             = 12.01_wp * 1.e-3_wp !< 12.01e-3_wp   -  Mass of 1 mol C   in kg
-  REAL(wp), PARAMETER :: molarMassCO2_kg           = amco2 * 1.e-3_wp    !< 44.0095e-3_wp -  Mass of 1 mol CO2 in kg
-                                                   
-  REAL(wp), PARAMETER :: FireFracWood2Atmos        =     0.2_wp          !< Fraction of wood carbon emitted to the atm by fire.
-                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
-  REAL(wp), PARAMETER :: fract_wood_aboveGround    =     0.7_wp          !< Fraction of C above ground in wood pool
-  REAL(wp), PARAMETER :: fract_green_aboveGround   =     0.5_wp          !< Fraction of C above ground in green pool
-  REAL(wp), PARAMETER :: sec_per_day               = 86400._wp           !< seconds per day
-  REAL(wp), PARAMETER :: days_per_year             =   365.25_wp
-  REAL(wp), PARAMETER :: sec_per_year              = days_per_year * sec_per_day
+  REAL(wp), PARAMETER :: molarMassC_kg           = 12.01_wp * 1.e-3_wp  !< 12.01e-3_wp   -  Mass of 1 mol C   in kg
+  REAL(wp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_wp     !< 44.0095e-3_wp -  Mass of 1 mol CO2 in kg
+  REAL(wp), PARAMETER :: FireFracWood2Atmos      =     0.2_wp           !< Fraction of wood carbon emitted to the atm by fire.
+                                                                        !< In JS3 called def_fire_fract_wood_2_atmos.
+  REAL(wp), PARAMETER :: fract_wood_aboveGround  =     0.7_wp           !< Fraction of C above ground in wood pool
+  REAL(wp), PARAMETER :: fract_green_aboveGround =     0.5_wp           !< Fraction of C above ground in green pool
+  REAL(wp), PARAMETER :: sec_per_day             = 86400._wp            !< seconds per day
+  REAL(wp), PARAMETER :: days_per_year           =   365.25_wp
+  REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
 
-  ! Parameters for nitrogen cycle, which are currently not used but may be used in the future
-  REAL(wp), PARAMETER :: N2O_rate_nitrification   = 0.001_wp        ! JSBACH assumes lower bound of estimation in the literature as:
-                                                                  !   (0.1%) due to nitrification
-  REAL(wp), PARAMETER :: N2O_rate_denitrification = 0.00125_wp    ! 0.0025_wp  ! & (0.2%) due to denitrification
-                                                                  ! actually 0.2% of denitrified N, not of N inputs
-                                                                  ! assumption: 50% loss of NO3 by leaching
-  REAL(wp), PARAMETER :: N2O_rate                 = 0.005_wp        ! JSBACH assumes 0.5-1%
-                                                                    !    N2O emissions rate per day (<0.1%-0.2% nitrification );
-                                                                    !    0.2-4.7% due to denit in Xu Ri, 2008 * therein
-  REAL(wp), PARAMETER :: sminn_NH4_fraction       = 0.4_wp          ! soil mineral NH4 is 40% of SMINN pool and rest in the form of
-                                                                    !  NO3. Ref: Xu Ri, 2008
-                                                  
   !   parameters for Yasso peat                   
   REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on 
                                                                        ! Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */

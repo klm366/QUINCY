@@ -29,12 +29,6 @@ MODULE mo_seb_memory_class
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
 
-  dsl4jsb_Use_processes SEB_
-  dsl4jsb_Use_config(SEB_)
-
-  dsl4jsb_Use_processes SEB_
-  dsl4jsb_Use_config(SEB_)
-
   IMPLICIT NONE
   PRIVATE
 
@@ -158,7 +152,6 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !! !$acc enter data pcreate(mem)
     dsl4jsb_Get_config(SEB_)
 
     CALL mem%Add_var( 't', mem%t,                                                    &

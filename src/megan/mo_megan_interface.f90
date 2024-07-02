@@ -110,7 +110,7 @@ CONTAINS
     USE mo_nwp_phy_types,      ONLY: t_nwp_phy_diag
     USE mo_nwp_phy_state,      ONLY: prm_diag
     ! And these likely only for ECHAM physics
-    USE mo_echam_phy_memory,   ONLY: t_echam_phy_field, prm_field
+!    USE mo_echam_phy_memory,   ONLY: prm_field
     USE mo_run_config,         ONLY: iforcing
     USE mo_impl_constants,     ONLY: inwp
 
@@ -251,11 +251,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_pfd)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_CO2)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_sm)
-    IF (iforcing == inwp) THEN
+!    IF (iforcing == inwp) THEN
       sw_toa_down => prm_diag(model%id)%flxdwswtoa(ics:ice,iblk)
-    ELSE
-      sw_toa_down => prm_field(model%id)%rsdt(ics:ice,iblk)
-    ENDIF
+!    ELSE ! ECHAM physics no longer supported
+!      sw_toa_down => prm_field(model%id)%rsdt(ics:ice,iblk)
+!    ENDIF
     isos => dsl4jsb_memory(MEGAN_)%iso
      COs => dsl4jsb_memory(MEGAN_)%CO
      NOs => dsl4jsb_memory(MEGAN_)%NO

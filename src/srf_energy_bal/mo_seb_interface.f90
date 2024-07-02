@@ -201,6 +201,8 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
     ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
@@ -354,9 +356,6 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
-
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
@@ -511,6 +510,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -540,9 +541,13 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
+
+    model => Get_model(tile%owner_model_id)
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)

@@ -161,8 +161,6 @@ CONTAINS
     INTEGER :: it
     REAL(wp) :: tluc
 
-    !$claw sca routine
-
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
     tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
@@ -188,8 +186,6 @@ CONTAINS
       & qsat,               & !< Surface saturation specific humidity
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
-
-    !$claw sca routine
 
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
@@ -278,13 +274,15 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants,      ONLY: grav
+    USE mo_jsb_physical_constants, ONLY: grav
 
-    REAL(wp), INTENT(in) :: drag      !< ..
-    REAL(wp), INTENT(in) :: steplen   !< ..
-    REAL(wp), INTENT(in) :: alpha     !< differs for standalone & coupled simulations
+    REAL(wp), INTENT(in) :: &
+      & drag,      &
+      & steplen,   &
+      & alpha
 
     heat_transfer_coef = drag / (alpha * grav * steplen)
+
   END FUNCTION heat_transfer_coef
 
   ! ======================================================================================================= !
@@ -492,3 +490,4 @@ CONTAINS
   END SUBROUTINE update_drag
 
 #endif
+END MODULE mo_phy_schemes

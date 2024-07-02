@@ -17,6 +17,8 @@ MODULE mo_turb_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE !, LAKE_TYPE
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d
@@ -201,3 +203,4 @@ CONTAINS
   END SUBROUTINE Init_turb_memory
 
 #endif
+END MODULE mo_turb_memory_class

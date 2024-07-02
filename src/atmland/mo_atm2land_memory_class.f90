@@ -31,9 +31,6 @@ MODULE mo_a2l_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 60
 
-  ! ======================================================================================================= !
-  !>Type definition for atm2land memory
-  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
@@ -49,7 +46,6 @@ MODULE mo_a2l_memory_class
 #endif
 
     TYPE(t_jsb_var_real2d) :: &
-      DEBUG_VAR          , &
       t_air              , &
       q_air              , &
       press_air          , &
@@ -117,26 +113,6 @@ MODULE mo_a2l_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
       & noy_deposition_const, &           !< constant value (avrg of 1st year of input value) of noy_deposition [mumol m-2 sec-1]
-      & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
-      & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
-      & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
-      & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
-#endif
-
-#ifdef __QUINCY_STANDALONE__
-    ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
-    TYPE(t_jsb_var_real2d) :: &
-      & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
-      & nhy_deposition_acc, &             !< accumulate (simply add) input value of nhy_deposition [mumol m-2 sec-1]
-      & p_deposition_acc, &               !< accumulate (simply add) input value of p_deposition [mumol m-2 sec-1]
-      & co2_mixing_ratio_acc, &           !< accumulate (simply add) input value of co2_mixing_ratio [ppm]
-      & co2_dC13_acc, &                   !< accumulate (simply add) input value of co2_dC13 [ppm]
-      & co2_DC14_acc, &                   !< accumulate (simply add) input value of co2_DC14 [scaled]
-      & const_input_timestep_counter      !< count number of timesteps since simulation start [unitless]
-
-    TYPE(t_jsb_var_real2d) :: &
-      & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
-      & nhy_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhy_deposition [mumol m-2 sec-1]
       & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
       & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
       & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
@@ -272,12 +248,6 @@ CONTAINS
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
-
-    ! --------------------------------------------------------------------------------------------------- !
-    ! variables used with jsbach4 & quincy
-    ! jsbach4 settings
-    !
-    IF (model%config%model_scheme == MODEL_JSBACH) THEN
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
@@ -433,14 +403,6 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
     END IF
-
-    CALL mem%Add_var( 'richardson', mem%richardson,                          &
-      & hgrid, surface,                                                      &
-      & t_cf('richardson number', '-', ''),                                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
       & hgrid, surface,                                                      &

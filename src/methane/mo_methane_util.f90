@@ -18,7 +18,7 @@ MODULE mo_methane_util
   USE mo_kind,                   ONLY: wp
   USE mo_methane_constants,      ONLY: T_ref, t_specie_const
   USE mo_jsb_physical_constants, ONLY: p_sealevel => p0sl_bg, argas, molarMassDryAir, tmelt
-  USE mo_exception,              ONLY: finish, message, message_text, em_warn
+  USE mo_exception,              ONLY: finish, message, message_text !, em_warn
 
   IMPLICIT NONE
   PRIVATE

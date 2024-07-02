@@ -57,9 +57,6 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    ! Local
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
@@ -69,10 +66,6 @@ CONTAINS
     CALL pheno_init_ic(tile)
     IF (tile%Is_last_process_tile(PHENO_)) THEN
       CALL pheno_finalize_init_vars()
-    END IF
-
-    IF (tile%Is_last_process_tile(PHENO_)) THEN
-        CALL pheno_finalize_init_vars()
     END IF
 
   END SUBROUTINE pheno_init
@@ -173,7 +166,7 @@ CONTAINS
 
   END SUBROUTINE pheno_read_init_vars
 
-  SUBROUTINE pheno_init_bc_jsbach(tile)
+  SUBROUTINE pheno_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -182,7 +175,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -215,10 +208,6 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
     !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)) ASYNC(1)
 
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
-
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
       !             later one might think about allometric relation ships in other multi annual plants, too?
@@ -239,12 +228,12 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
 
-  END SUBROUTINE pheno_init_bc_jsbach
+  END SUBROUTINE pheno_init_bc
 
-  SUBROUTINE pheno_init_ic_jsbach(tile)
+  SUBROUTINE pheno_init_ic(tile)
 
-    USE mo_pheno_process,     ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,          ONLY: get_time_interpolation_weights
+    USE mo_pheno_process, ONLY: get_foliage_projected_cover
+    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -267,7 +256,7 @@ CONTAINS
 
     REAL(wp) :: ClumpinessFactor_param, MaxLai_param
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
 
@@ -351,13 +340,9 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     END IF
 
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
-
-  END SUBROUTINE pheno_init_ic_jsbach
+  END SUBROUTINE pheno_init_ic
 
 #endif
 END MODULE mo_pheno_init
-

@@ -17,7 +17,6 @@
 !! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
 !! keyword "LCT_FILE".
 !!
-
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
@@ -154,6 +153,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
     REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
+    REAL(wp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
 
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
     INTEGER  :: growthform
@@ -287,16 +287,6 @@ CONTAINS
     USE mo_util_string, ONLY: tolower
 #endif
 
-    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
-    USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
-
-    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
-    USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
-
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
     CHARACTER(len=*), INTENT(in) :: usecase
@@ -389,6 +379,11 @@ CONTAINS
     LOGICAL            :: exists_woodlit_coef             = .FALSE.
     LOGICAL            :: exists_leaflit_coef             = .FALSE.
     LOGICAL            :: exists_litveg_coef              = .FALSE.
+    LOGICAL            :: exists_root_dist_beta           = .FALSE.
+    LOGICAL            :: exists_em_fac_iso            = .FALSE.
+    LOGICAL            :: exists_em_fac_CO             = .FALSE.
+    LOGICAL            :: exists_em_fac_NO             = .FALSE.
+    
     ! quincy model - start
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.
@@ -1685,3 +1680,4 @@ CONTAINS
 
   END FUNCTION Read_lctlib
 
+END MODULE mo_jsb_lctlib_class

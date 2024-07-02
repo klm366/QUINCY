@@ -86,6 +86,7 @@ MODULE mo_jsb4_forcing
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
   REAL(wp), PARAMETER :: cb = 5._wp
   REAL(wp), PARAMETER :: cc = 5._wp
+  REAL(wp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
 
@@ -153,25 +154,6 @@ MODULE mo_jsb4_forcing
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
-
-  ! ======================================================================================================= !
-  !>
-  !> this TYPE is NOT used with QUINCY in ICON-Land
-  !> implemented here for compatibility with QS (the quincy standalone model)
-  !>
-  !  QUINCY model
-  TYPE t_q_forcing_options
-    ! namelist
-    ! ..
-    ! calculated
-    ! ..
-    ! read from forcing files
-    INTEGER  :: forcing_year = 0
-    INTEGER  :: forcing_doy  = 0
-    REAL(wp) :: forcing_hour = 0.0_wp
-  END TYPE t_q_forcing_options
-  TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
-
 
   ! ======================================================================================================= !
   !>
@@ -823,8 +805,6 @@ CONTAINS
     !$ACC EXIT DATA DELETE(temporary_data1, help1, help2)
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
-    DEALLOCATE(rel_humidity)
-  END SUBROUTINE get_standalone_driver
 
   END SUBROUTINE get_standalone_driver
 
@@ -928,74 +908,6 @@ CONTAINS
     REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
     CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
 
-    ! --- Namelist parameters
-    INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
-    INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
-    INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
-                                        ! each atmospheric forcing time step that is read in      
-    INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
-    LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
-    !! false: forcing is expected for all variables and cells (e.g. echam)
-    LOGICAL                :: forcing_set_miss_to_constants    !! Set missing value in forcing over land cells to constant values (= false)
-    REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-    REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-
-    !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
-    CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
-    CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
-    REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
-    REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
-
-    CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
-    !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
-    CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
-    REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
-    LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
-    CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
-
-    CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
-    CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
-    REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
-
-    CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
-    CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
-    REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
-
-    CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
-    !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
-    CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
-    !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
-    REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
-
-    CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
-    CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
-    REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
-
-    CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
-    CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
-    CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
-    REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
-    REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
-    CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
-
-    CHARACTER(NF_MAX_NAME) :: forcing_dep_file_prefix          !! Prefix for files with NHx, NOy and P deposition data
-    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
-    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
-    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
-    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
-    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
@@ -1017,13 +929,6 @@ CONTAINS
 
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
-    delta_time    = dtime
-    time_step_len = steplen
-    time_steps_per_day = 86400/INT(delta_time)
-    ! Assertion: delta_time needs to be smaller or equal 86400
-    IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
-      & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
-
     delta_time    = dtime
     time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
@@ -1448,10 +1353,9 @@ CONTAINS
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
-    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
-        &  'daily, subdaily or timestep frequency, please check program flow.')
-    ENDIF
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) &
+      &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
+      &  'daily, subdaily or timestep frequency, please check program flow')
 
     ! TODO: test in case of lresume
 
@@ -1514,10 +1418,6 @@ CONTAINS
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
-
-      IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
-      forcing_input_variable%input_file = jsb_netcdf_open_input( &
-        & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc', model%grid_id)
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &
@@ -2828,3 +2728,7 @@ CONTAINS
 
     day_in_year = INT(get_year_day(date))
 
+  END FUNCTION day_in_year
+
+#endif
+END MODULE mo_jsb4_forcing

@@ -85,10 +85,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
-
-    model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
@@ -415,10 +412,6 @@ CONTAINS
 
   END SUBROUTINE sse_init_ic
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Intialize soil properties - jsbach4
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_properties(tile)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min, tmelt, alf, rhoh2o
@@ -603,8 +596,6 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
-    nproma = SIZE(heat_cond,1)
-    nblks  = SIZE(heat_cond,2)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
@@ -710,7 +701,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-    !$claw acc update host(vol_heat_cap_sl)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       ALLOCATE( &

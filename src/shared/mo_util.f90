@@ -47,6 +47,7 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -66,39 +67,6 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> conversion: uppercase -> lowercase
-  !!
-  !! implemented based on mo_util:toupper in jsbach4.1
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION tolower(string) RESULT(stringlower)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    CHARACTER(len=*), INTENT(in) :: string
-    CHARACTER(len=LEN_TRIM(string)) :: stringlower
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
-    INTEGER :: i
-
-    DO i = 1, LEN_TRIM(string)
-      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
-        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
-      ELSE
-        stringlower(i:i) = string(i:i)
-      ENDIF
-    ENDDO
-  END FUNCTION tolower
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> ifs2soil
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
     REAL(wp), INTENT(in) :: &

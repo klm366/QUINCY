@@ -476,6 +476,7 @@ CONTAINS
       IF (output_mode%l_nml) THEN
           CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
       END IF
+
     END IF ! not isRestart()
 
     IF (ltimer) CALL timer_start(timer_total)
@@ -757,8 +758,6 @@ CONTAINS
     CALL message(routine, 'clean-up finished')
     IF (ltimer) CALL print_timer
 
-    ! print performance timers:
-    IF (ltimer) CALL print_timer
   END SUBROUTINE jsbach_model
 
   ! ======================================================================================================= !
@@ -781,7 +780,6 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_q_atm2land_process,        ONLY: update_local_time_and_daytime_counter
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,        ONLY: update_local_time_and_daytime_counter
@@ -792,7 +790,6 @@ CONTAINS
 #endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
@@ -828,11 +825,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 #endif
-
-    ! quincy
-    dsl4jsb_Real2D_onDomain :: swpar_srf_down
-    dsl4jsb_Real2D_onDomain :: daytime_counter
-    dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -899,47 +891,6 @@ CONTAINS
     nproma = grid%Get_nproma()
 
     CALL model%Get_top_tile(tile)
-    IF (tile%contains_lake) THEN
-      ! We need separate variables for the land and the lake tile and cannot use the box tile.
-
-      ! Get pointer to the land tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          land_tile => tile%Get_first_child_tile()
-        ELSE
-          land_tile => land_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the land tile was found
-        IF (TRIM(land_tile%name) == 'land') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
-      dsl4jsb_Get_memory_tile(TURB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
-
-      ! Get pointer to the lake tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          lake_tile => tile%Get_first_child_tile()
-        ELSE
-          lake_tile => lake_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the lake tile was found
-        IF (TRIM(lake_tile%name) == 'lake') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
-      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
-    END IF
 
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
@@ -1185,3 +1136,5 @@ CONTAINS
   END SUBROUTINE run_one_timestep
 
 #endif
+#endif
+END MODULE mo_jsbach_model

@@ -1,4 +1,4 @@
-!> Summary: QUINCY radiation process interface
+!> QUINCY radiation process interface
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### definition and init of tasks for the radiation process incl. update and aggregate routines
 !>
 MODULE mo_q_rad_interface
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
@@ -59,7 +59,7 @@ MODULE mo_q_rad_interface
   INTERFACE tsk_q_radiation
     PROCEDURE Create_task_q_radiation
   END INTERFACE tsk_q_radiation
-  
+
   ! ======================================================================================================= !
   !> time_average_radiation task
   !>
@@ -91,9 +91,9 @@ CONTAINS
     ALLOCATE(tsk_q_radiation::return_ptr)
     CALL return_ptr%Construct(name='q_radiation', process_id=Q_RAD_, owner_model_id=model_id)
   END FUNCTION Create_task_q_radiation
-  
+
   !> time_average_q_radiation
-  !> 
+  !>
   FUNCTION Create_task_update_time_average_q_radiation(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
@@ -130,7 +130,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(Q_RAD_)) RETURN
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     CALL q_radiation(tile, options)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
@@ -252,11 +252,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D Q_RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! 3D Q_RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -289,25 +289,25 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     ! Q_PHENO_
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in 
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     ! 2D Q_RAD_
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc)                  ! in 
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
+    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc)                  ! in
+    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout
     ! 3D Q_RAD_
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_daytime_dacc_cl)    ! inout
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_daytime_dacc_cl)    ! inout
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout 
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout 
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
@@ -326,7 +326,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -366,28 +366,28 @@ CONTAINS
     !>
 
     ! docu:
-    ! calc_time_mavg(current average, new value, length of avg_period,  !
+    ! calc_time_mavg(dtime, current average, new value, length of avg_period,  !
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !> 
-    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
+    !>
+    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
+    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
 
     !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
     !>
-    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
+    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
+    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
 
     !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
-    !! 
-    rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
+    !!
+    rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(dtime, rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
       &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(ix_leaf,ixC,:) > eps8))
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')

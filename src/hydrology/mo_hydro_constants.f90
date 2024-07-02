@@ -63,9 +63,6 @@ MODULE mo_hydro_constants
     ! Parameters used for pond computations
     & oro_crit = 100._wp,                  & !< Reference topo standard deviation for pond scaling factor [m]
 
-    ! Parameters used for pond computations
-    & oro_crit = 100._wp,                   & !< Reference topo std for pond scaling factor [m]
-
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
     & conductance_k = 0.9_wp,              & !<
     & conductance_a = 5000._wp,            & !< Jm-3

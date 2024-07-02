@@ -261,6 +261,7 @@ CONTAINS
 
     CLASS(t_jsb_model), INTENT(inout) :: this
     LOGICAL, OPTIONAL,  INTENT(in)    :: debug
+
     CLASS(t_Task_queue),  POINTER :: current_queue_element
     CLASS(t_Message), POINTER :: msg
     LOGICAL :: l_debug
@@ -278,6 +279,7 @@ CONTAINS
     ! loop over all tasks in the task queue
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
+
       ASSOCIATE(task => current_queue_element%task)
         IF (this%processes(task%process_id)%p%config%active) THEN  ! Only if process this task belongs to is active
           this%current_task(no_omp_thread)%p => task
@@ -561,10 +563,14 @@ CONTAINS
         IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
         IF (tile%process_action(iproc) == INHERIT_) CYCLE
         DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          ASSOCIATE (var => tile%mem(iproc)%p%vars(ivar)%p)
+          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
+          CLASS IS (t_jsb_var_real2d)
             CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
             var%subset_type = itype
-          END ASSOCIATE
+          CLASS IS (t_jsb_var_real3d)
+            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
+            var%subset_type = itype
+          END SELECT
         END DO
 
         ! mem%pools
@@ -811,3 +817,5 @@ CONTAINS
   END SUBROUTINE Sync_vars_from_cpu_to_gpu
 #endif
 
+#endif
+END MODULE mo_jsb_model_class

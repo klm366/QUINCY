@@ -405,6 +405,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
@@ -574,8 +575,6 @@ CONTAINS
 
     !$ACC END DATA
 
-    !$claw acc end data
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_roughness
@@ -614,6 +613,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -719,6 +719,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
@@ -934,3 +935,5 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   !  ....
 
+#endif
+END MODULE mo_turb_interface

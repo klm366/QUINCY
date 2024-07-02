@@ -192,12 +192,6 @@ CONTAINS
       cpd_or_cvd = cpd
     END IF
 
-    l_is_newday = is_newday(options%current_datetime, options%dtime)
-    tmp_timesteps_per_day = timesteps_per_day(options%dtime)
-
-    l_is_newday = is_newday(options%current_datetime, options%dtime)
-    tmp_timesteps_per_day = timesteps_per_day(options%dtime)
-
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
@@ -302,25 +296,6 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
-    !$claw acc update device(is_glacier) !
-    !$claw acc end data
-
-    ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
-    ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
-    !$claw acc data present(tile_fract_zero)
-    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    tile_fract_zero(:) = fract(:) <= 0._wp .OR. tile%fract(ics:ice,iblk) <= 0._wp
-    !$claw acc update device(tile_fract_zero)
-    !$claw acc end data
-
-    IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
-
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
-    soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
@@ -675,8 +650,6 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
-    !$claw acc end data
-
   END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(alpha, steplen,     &
@@ -757,7 +730,6 @@ CONTAINS
       psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
     ! END DO
 
-    !$claw acc end data
   END SUBROUTINE surface_temp_implicit
   !
   ! ================================================================================================================================
@@ -789,13 +761,14 @@ CONTAINS
     REAL(wp) :: eps
     LOGICAL  :: use_tmx
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -879,7 +852,7 @@ CONTAINS
     REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
@@ -1075,8 +1048,10 @@ CONTAINS
      & F_pseudo_soil_temp
 
     REAL(wp),  intent(inout) :: pseudo_soil_temp
-    !$claw end model-data
 
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 
   END SUBROUTINE calc_pseudo_soil_temp
+
+#endif
+END MODULE mo_seb_land

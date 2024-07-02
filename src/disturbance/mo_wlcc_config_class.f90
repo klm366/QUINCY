@@ -48,6 +48,7 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
+    ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_wlcc_nml/           &
          active,                      &

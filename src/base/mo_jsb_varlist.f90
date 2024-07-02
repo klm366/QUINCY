@@ -37,13 +37,6 @@ MODULE mo_jsb_varlist
 #define __acc_attach(ptr)
 #endif
 
-#ifdef _OPENACC
-  use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
-#else
-#define __acc_attach(ptr)
-#endif
-
   IMPLICIT NONE
   PRIVATE
 
@@ -185,3 +178,5 @@ CONTAINS
 
   END FUNCTION
 
+#endif
+END MODULE mo_jsb_varlist

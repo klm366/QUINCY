@@ -37,3 +37,7 @@ CONTAINS
     return_ptr => Create_process_memory_core(iproc)
     !$ACC ENTER DATA CREATE(return_ptr)
     !$ACC ENTER DATA CREATE(return_ptr%vars)
+
+  END FUNCTION Create_process_memory
+
+END MODULE mo_jsb_process_factory

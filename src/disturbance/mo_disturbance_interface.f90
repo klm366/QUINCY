@@ -344,7 +344,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: burned_fract
 
     INTEGER  :: iblk, ics, ice
-
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -501,8 +500,6 @@ CONTAINS
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
 
       IF (tile%Has_process_memory(CARBON_)) THEN
-
-    ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
         ! Calculate carbon relocation connected with damages and fires
         IF (.NOT. model%processes(WLCC_)%p%config%active) THEN

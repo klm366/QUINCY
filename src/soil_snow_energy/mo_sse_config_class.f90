@@ -44,6 +44,18 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
+    !! quincy
+    ! INTEGER       :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see quincy-trac ticket #521
+    ! INTEGER       :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see quincy-trac ticket #521
+    REAL(wp)      :: soil_depth           !< actual soil and rooting depth
+    REAL(wp)      :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp)      :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+    REAL(wp)      :: soil_awc_prescribe, &
+                     soil_theta_prescribe
+    REAL(wp)      :: soil_sand            !< soil sand proportion - site specific from forcing info file
+    REAL(wp)      :: soil_silt            !< soil silt proportion - site specific from forcing info file
+    REAL(wp)      :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp)      :: bulk_density
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config

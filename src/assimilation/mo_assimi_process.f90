@@ -160,8 +160,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
 
-    !$claw sca
-
     ! Prepare CO2_conc_leaf_cl
     IF (C4Flag) THEN ! landcover type is C4 plants
       CO2_conc_leaf_cl = FCI1C4 * CO2_mol_mixing_ratio
@@ -439,7 +437,6 @@ CONTAINS
       & e_transport_rate_max_cl, & !
       & carbox_rate_cl,          & !
       & e_transport_rate_cl        !
-    !$claw end model-data
 
     !-----------------------------------------------------------------------
     ! Local variables
@@ -737,7 +734,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,   ONLY: f_aut_leaf, cCost
+    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
     REAL(wp),  INTENT(in), DIMENSION(:) ::   &
@@ -747,17 +744,14 @@ CONTAINS
 
     REAL(wp),  INTENT(out), DIMENSION(:) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
-    !$claw end model-data
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp)             :: hlp
+    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
     INTEGER :: nc, ic
-
-    !$claw sca
 
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?

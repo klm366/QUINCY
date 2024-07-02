@@ -162,7 +162,6 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
-    !$acc enter data copyin(new%lat)
 
     grid => new
 

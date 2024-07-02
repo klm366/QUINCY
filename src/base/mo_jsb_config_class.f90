@@ -141,8 +141,6 @@ CONTAINS
     LOGICAL                       :: init_from_ifs
     CHARACTER(len=filename_max)   :: ifs_filename
 
-
-
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_tmx, &
@@ -166,7 +164,6 @@ CONTAINS
 #endif
       init_from_ifs, &
       ifs_filename
-
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -293,20 +290,6 @@ CONTAINS
 #endif
 #endif
 
-    IF (enforce_water_budget) THEN
-      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
-        & 'Set enforce_water_budget to .False. to run the model anyway.')
-    ELSE
-      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
-    END IF
-
-    ! set the model configuration id
-#ifdef __QUINCY_STANDALONE__
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
-#else
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)
-#endif
-
     ! quincy - temporary solution @TODO
     model_config%flag_stand_harvest           = .FALSE.
     model_config%stand_replacing_year         = 1500
@@ -364,7 +347,7 @@ CONTAINS
     CALL setup_element(config, config%include_carbon14, ELEM_C14_ID, 'C14', caller)
     ! nitrogen15
     CALL setup_element(config, config%include_nitrogen15, ELEM_N15_ID, 'N15', caller)
-    
+
   END SUBROUTINE setup_element_index_map_in_config
 
   ! ======================================================================================================= !
@@ -392,3 +375,7 @@ CONTAINS
     CALL message(TRIM(short_name), TRIM(message_text))
 
   END SUBROUTINE setup_element
+#endif
+
+#endif
+END MODULE mo_jsb_config_class

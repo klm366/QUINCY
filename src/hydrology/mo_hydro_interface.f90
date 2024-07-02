@@ -559,8 +559,6 @@ CONTAINS
       RETURN
     END IF
 
-    !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
-
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
@@ -852,8 +850,6 @@ CONTAINS
 
     !$ACC WAIT(1)
 
-    !$claw acc end data
-
   END SUBROUTINE update_surface_hydrology
   !
   ! -------------------------------------------------------------------------------------------------------
@@ -982,24 +978,12 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_wres_org(:,:)
 
-    REAL(wp) :: N_perc
-    REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways
-    REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
-    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
-
-    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
-    REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
-    REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
-    REAL(wp), ALLOCATABLE ::  matrix_pot_org(:,:)
-    REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
-    REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
-    REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
@@ -1302,11 +1286,6 @@ CONTAINS
     !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
     !$ACC WAIT(1)
 
-    !$claw acc data create(tile, tile%fract, tile_fract)
-    !$claw acc parallel loop gang vector
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -1467,6 +1446,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1730,40 +1710,6 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
-
-    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
-    !!
-    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
-    IF (model%config%use_quincy) THEN
-      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
-        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
-                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
-      ELSEWHERE
-        beta_soil_gs(:) = 0.0_wp
-      END WHERE
-      beta_soil_ps(:) = beta_soil_gs(:)
-          !! original way of calc beta_soil_* in quincy
-          !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
-          !beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
-      ! catch beta_soil_ps getting zero
-      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
-      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
-      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
-    END IF
-
-    ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$claw acc data present(wtr_rootzone_avail, wtr_rootzone_avail_max, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
-    !$claw acc data present(wtr_soil_pot_scool_sl, wtr_rootzone_scool_act, wtr_rootzone_avail)
-    !$claw acc parallel loop gang vector
-    DO ic= 1, nc
-      IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
-        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
-      ELSE
-        ! weq_rootzone_max is zero for glacier tiles
-        wtr_rootzone_rel(ic) = 0._wp
-      END IF
-    END DO
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_water_stress
@@ -1822,7 +1768,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_water_stress(tile, options)
+  SUBROUTINE update_canopy_cond_stressed(tile, options)
     ! ---------------------------
     ! Variables
 
@@ -1834,19 +1780,24 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    ! TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
 
     dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
     dsl4jsb_Real2D_onChunk :: canopy_cond_limited
     dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: t
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_srf
 
     INTEGER :: iblk, ics, ice, nc, ic
     LOGICAL :: q_air_gt_qsat_tmp
     LOGICAL :: use_tmx
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
     iblk = options%iblk
     ics  = options%ics
@@ -1856,12 +1807,15 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
 
     use_tmx = model%config%use_tmx
 
     ! Get reference to variables for current block
     !
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
@@ -1997,10 +1951,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
-    !$cla$w acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
-    ALLOCATE(q_air(nc),q_air_eff(nc),qsat_srf_eff(nc),heat_tcoef(nc))
-    !$claw acc enter data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
 
     ! Get reference to variables for current block
     !
@@ -2334,6 +2284,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     dtime   = options%dtime
     steplen = options%steplen
     alpha   = options%alpha
@@ -2370,7 +2321,6 @@ CONTAINS
         !$ACC END PARALLEL LOOP
         !$ACC WAIT(1)
       END IF
-      !$claw acc exit data delete(skinres_max, skinres_canopy_max)
       RETURN
     END IF
 
@@ -2563,7 +2513,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_skin,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,       weighted_by_fract)
@@ -2667,7 +2616,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! inout
@@ -2731,8 +2679,6 @@ CONTAINS
 #endif
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2899,3 +2845,9 @@ CONTAINS
     IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
       &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
 
+    DEALLOCATE (scaling, in_domain)
+#endif
+  END SUBROUTINE global_hydrology_diagnostics
+
+#endif
+END MODULE mo_hydro_interface

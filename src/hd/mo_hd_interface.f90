@@ -369,8 +369,6 @@ CONTAINS
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
-    IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
-
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)
@@ -1055,3 +1053,6 @@ CONTAINS
     !$ACC WAIT(1)
 
   END SUBROUTINE hd_check_water_budget
+
+#endif
+END MODULE mo_hd_interface

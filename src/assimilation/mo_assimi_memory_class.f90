@@ -40,7 +40,6 @@ MODULE mo_assimi_memory_class
                                     ! This area is independent of the LAI. So even when the LAI is below 1 this area remains
                                     ! the same (it is still "covered").
       gross_assimilation,         & ! ...on tile area
-                                    ! quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
@@ -90,19 +89,16 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
       & canopy_cond_cl,           & ! Canopy conductance per layer and per leaf area
-                                    ! quincy: conductance for water per canopy layer [m s-1]
       & gross_assimilation_cl,    & ! Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
                                     ! Note, this is the gross assimilation on the leaf area that actually exists.
                                     ! The influence of the lai on the existing leaf area is already included.
                                     ! It is not the ground area below canopy!
-                                    ! quincy: gross assimilation rate per canopy layer [µmol CO2 m-2 s-1]
       & dark_respiration_cl,      & ! Dark respiration of leaf [ mol(co2) / (m^2(leaf area) * s) ]
       & carbox_rate_max_cl,       & ! [ mol(co2)/(m^2(leaf area) * s) ]
       & e_transport_rate_max_cl,  &
       & carbox_rate_cl,           &
       & e_transport_rate_cl,      &
       & CO2_conc_leaf_cl            ! CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
-                                    ! quincy: internal leaf CO2 concentration per canopy layer [ppm]
 
     TYPE(t_jsb_var_real2d) ::     &
       & canopy_cond_unlimited,    & ! Canopy conductance without water limit  [m/s] (mean value)
@@ -134,26 +130,25 @@ CONTAINS
     USE mo_jsb_class,         ONLY: Get_model
 
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),      INTENT(in)            :: prefix
-    CHARACTER(len=*),      INTENT(in)            :: suffix
-    INTEGER,               INTENT(in)            :: lct_ids(:)
-    INTEGER,               INTENT(in)            :: model_id
-    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*),    INTENT(in)    :: prefix
+    CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
+
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: table
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
-    ! ----------------------------------------------------------------------------------------------------- !
+
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
-    ! ----------------------------------------------------------------------------------------------------- !
-    model        => Get_model(model_id)
+    
     table        =  tables(1)
+
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    vgrid_canopy => Get_vgrid('canopy_layer')
-#else
     canopy_layer => Get_vgrid('canopy_layer')
     model   => Get_model(model_id)
 
@@ -166,7 +161,13 @@ CONTAINS
       & output_level=BASIC,                                                        &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
+    CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
+      & hgrid, surface,                                                                                           &
+      & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) / s', 'Gross photosynthesis on tile area'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                                                           &
+      & output_level=BASIC,                                                                                       &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
       & hgrid, surface,                                                                                           &
@@ -361,3 +362,5 @@ CONTAINS
 
   END SUBROUTINE Init_assimi_memory
 
+#endif
+END MODULE mo_assimi_memory_class

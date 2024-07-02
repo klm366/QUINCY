@@ -24,7 +24,7 @@ MODULE mo_methane_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io_netcdf_iface, ONLY: nf, nf_inq_dimid, nf_inq_dimlen, nf_get_vara_double, nf_inq_varndims, nf_inq_varid
+  USE mo_jsb_io_netcdf_iface, ONLY: nf !, nf_inq_dimid, nf_inq_dimlen, nf_get_vara_double, nf_inq_varndims, nf_inq_varid
   USE mo_jsb_parallel,        ONLY: my_process_is_stdio, p_io, mpi_comm, p_bcast
   USE mo_ch4_memory_class,    ONLY: t_timeseries
   USE mo_methane_constants,   ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts
@@ -35,7 +35,7 @@ MODULE mo_methane_init
 
   IMPLICIT NONE
   PRIVATE
-
+include "netcdf.inc"
   PUBLIC :: methane_init
 
   TYPE t_ch4_init_vars

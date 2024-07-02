@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_, TOP_, CH4_, MEGAN_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -62,11 +62,6 @@ CONTAINS
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 
-  ! ------------------------------------------------------------------------------------------------------ !
-  !> Set up grid for standalone model if using ECHAM infrastructure
-  !
-  SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
-
 #ifndef __ICON__
     ! >> TODO: echam
     USE mo_gaussgrid,            ONLY : inigau
@@ -75,7 +70,7 @@ CONTAINS
     ! <<
     USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
     USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: new_grid
+    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,             ONLY: Register_grid
 #endif
 
@@ -146,11 +141,6 @@ CONTAINS
   !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
 
-  ! ------------------------------------------------------------------------------------------------------ !
-  !> Set up grid provided by host model (ICON coupled/standalone or ECHAM coupled)
-  !
-  SUBROUTINE setup_grid_patch( model_id, patch, type)
-
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
@@ -170,6 +160,7 @@ CONTAINS
       & CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
+
     grid => new_grid(patch, type)
     CALL Register_grid(grid)
     model%grid_id = grid%id
@@ -187,11 +178,6 @@ CONTAINS
   !>
   !>   model_scheme: MODEL_JSBACH, MODEL_QUINCY
   !>
-  SUBROUTINE jsbach_init(model_id)
-
-  ! ------------------------------------------------------------------------------------------------------ !
-  !> Initializes a model instance
-  !
   SUBROUTINE jsbach_init(model_id)
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
@@ -215,12 +201,14 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
 #endif
+    USE mo_top_init,            ONLY: topmodel_init
+    USE mo_methane_init,        ONLY: methane_init
+    USE mo_megan_init,          ONLY: megan_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fage_init,           ONLY: fage_init
 
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
-    USE mo_spq_init,            ONLY: spq_init
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
     USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
@@ -257,9 +245,6 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-    grid  => Get_grid(model%grid_id)
-    blks = grid%get_blk_start()
-    blke = grid%get_blk_end()
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
@@ -320,8 +305,8 @@ CONTAINS
           CALL model%Queue_task(NLCC_, "nlcc")
         END IF
 
-        IF (model%processes(FLCC_)%p%config%active) THEN
-          CALL model%Queue_task(FLCC_, "flcc")
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc")
         END IF
 
         ! Do postprocessing after all LCC tasks were executed
@@ -336,8 +321,6 @@ CONTAINS
 
       ! ------------------------ tasks that do not change area
       !
-      CALL model%Queue_task(TCQ_,    "tcq")
-
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
@@ -563,10 +546,6 @@ CONTAINS
 #endif
       END SELECT
 
-      IF (tile%Is_process_active(Q_RAD_)) THEN
-        CALL q_rad_init(tile)
-      END IF
-
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(SEB_)) THEN
@@ -651,11 +630,9 @@ CONTAINS
       END SELECT
 #endif
 
+#ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(TCQ_)) THEN
-          CALL tcq_init(tile)
-        END IF
         IF (tile%Is_process_active(TOP_)) THEN
           CALL topmodel_init(tile)
         END IF
@@ -665,16 +642,12 @@ CONTAINS
         IF (tile%Is_process_active(MEGAN_)) THEN
           CALL megan_init(tile)
         END IF
-#ifndef __NO_JSBACH_HD__
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(HD_)) THEN
           CALL hd_init_bc(tile)
           CALL hd_init_ic(tile)
         END IF
       END SELECT
 #endif
-      END SELECT
 
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !
@@ -805,7 +778,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
+    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -820,9 +793,9 @@ CONTAINS
 
       IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
-        IF (        tile%is_vegetation                                          &
+        IF (        tile%is_vegetation                                   &
             & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-            & .AND. tile%lcts(1)%lib_id == 0)                                   &
+            & .AND. tile%lcts(1)%lib_id == 0)                            &
           & CALL finish(TRIM(routine), &
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
@@ -852,20 +825,6 @@ CONTAINS
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init_lcc(tile)
         END IF
-
-        IF (tile%Is_process_active(ALCC_)) THEN
-          CALL alcc_init_lcc(tile)
-        END IF
-
-        IF (tile%Is_process_active(FLCC_)) THEN
-          CALL flcc_init_lcc(tile)
-        END IF
-
-        IF (tile%Is_process_active(WLCC_)) THEN
-          CALL wlcc_init_lcc(tile)
-        END IF
-
-      END SELECT
 
         IF (tile%Is_process_active(ALCC_)) THEN
           CALL alcc_init_lcc(tile)
@@ -918,11 +877,6 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Do some more initialization after restart files have been read
-  !
-  SUBROUTINE jsbach_init_after_restart(model_id)
-
-  ! ------------------------------------------------------------------------------------------------------ !
   !> Do some more initialization after restart files have been read
   !
   SUBROUTINE jsbach_init_after_restart(model_id)
@@ -1011,3 +965,8 @@ CONTAINS
     CALL model%cpu_to_gpu()
 #endif
 
+  END SUBROUTINE jsbach_init_after_restart
+  ! ====================================================================================================== !
+
+#endif
+END MODULE mo_jsb_model_init

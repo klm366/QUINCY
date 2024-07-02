@@ -77,10 +77,6 @@ CONTAINS
   !>
   SUBROUTINE Init_rad_config(config)
 
-  ! ======================================================================================================= !
-  !> read RAD_ namelist and init configuration parameters
-  !>
-  SUBROUTINE Init_rad_config(config)
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     CLASS(t_rad_config), INTENT(inout) :: config
