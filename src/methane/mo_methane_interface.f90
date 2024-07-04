@@ -265,9 +265,9 @@ CONTAINS
     USE mo_methane_constants, ONLY: CH4_consts, CO2_consts, O2_consts, emission_factors_for_methane,                   &
     &                               LT_TROPICAL_FOREST, LT_EXTRATROPICAL_FOREST, LT_SAVANNAH, LT_AGRICULTURE, LT_PEAT
     USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, determine_Henry_cc
-    USE mo_methane_process,   ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire
-    USE mo_methane_process,   ONLY: soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm
-    USE mo_methane_process,   ONLY: reaction_diffusion, ebullition, init_gas_pools
+    USE mo_methane_process,   ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire, &
+                                    soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm,  &
+                                    reaction_diffusion, ebullition, init_gas_pools
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
