@@ -385,15 +385,16 @@ CONTAINS
         ! Check if h_offset_ct is consistant with assumed micro-scale connection.
         ! If not adjust the direction of flow:
         ! For gravity driven fluxes, connections are only assumed to be present
-        ! for positive differences in surface height (for negative offsets, micro_cnct_grvt is inverted and
-        ! for a zero-offset, micro_cnct_grvt is set to 0). 
+        ! for positive differences in surface height (for negative offsets, micro_cnct_grvt is inverted
+        ! and for a zero-offset, micro_cnct_grvt is set to 0). 
         ! For diffusive fluxes, connections are reversed in case of negative differences in surface height,
-        ! to simplify the call to subroutines in update_lex
+        ! to simplify the call to subroutines in update_lex and the determination of the effective slopes
 
         microcon_grvt_ct(:,lex_ids,:) = micro_cnct_grvt(lex_idt,lex_ids)
         microcon_dfsn_ct(:,lex_ids,:) = micro_cnct_dfsn(lex_idt,lex_ids)
         macrocon_grvt_ct(:,lex_ids,:) = macro_cnct_grvt(lex_idt,lex_ids)
 
+        ! Setting zero connectivity where height offsets negative (and zero in case of microcon_grvt_ct)
         IF (micro_cnct_grvt(lex_idt,lex_ids) > 0.0_wp) THEN
           WHERE (h_offset_ct(:,lex_ids,:) <= 0.0_wp)
             microcon_grvt_ct(:,lex_ids,:) = 0._wp
@@ -402,16 +403,18 @@ CONTAINS
             microcon_dfsn_ct(:,lex_ids,:) = 0._wp
           END WHERE
         END IF
-        IF (micro_cnct_grvt(lex_ids,lex_idt) > 0.0_wp) THEN
-          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp)
+        ! Setting the micro connectivity where initially the connection is asumed to be in other direction
+        ! but is changed due to sign of height offsets 
+        IF (micro_cnct_grvt(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
+          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile -
             microcon_grvt_ct(:,lex_ids,:) = micro_cnct_grvt(lex_ids,lex_idt)
           END WHERE
           WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp)
-            microcon_dfsn_ct(:,lex_ids,:) = micro_cnct_grvt(lex_ids,lex_idt)
+            microcon_dfsn_ct(:,lex_ids,:) = micro_cnct_dfsn(lex_ids,lex_idt)
           END WHERE
         END IF
 
-        ! Summing up the fractions of a tile that are connected to siblings via slopes
+       ! Summing up the fractions of a tile that are connected to siblings via slopes
         fract_microcon(:,:) = fract_microcon(:,:) &
                           & + fract_sibl(:,:) * microcon_grvt_ct(:,lex_ids,:)
         fract_macrocon(:,:) = fract_macrocon(:,:) &
@@ -469,12 +472,10 @@ CONTAINS
         fact_lag_srf(:,:) = fact_lag_srf(:,:) + fact_lag_srf_ct(:,lex_ids,:)
         fact_lag_blg(:,:) = fact_lag_blg(:,:) + fact_lag_blg_ct(:,lex_ids,:)
 
-        ! Determine effective slope based in macro slope and weighted sum of micro slopes        
-        WHERE ((fract(:,:)+fract_microcon(:,:) > 0.0_wp) .AND.               &
-            &  (micro_slope_ct(:,lex_ids,:)    > 0.0_wp))
-          slope_eff(:,:) = slope_eff(:,:)                                    &
-            &  + microcon_grvt_ct(:,lex_ids,:) * micro_slope_ct(:,lex_ids,:) &
-            &  * fract_sibl(:,:)/(fract(:,:)+fract_microcon(:,:))
+        ! Determine effective slope based on macro slope and weighted sum of micro slopes
+        WHERE (micro_slope_ct(:,lex_ids,:) > 0.0_wp)
+          slope_eff(:,:) = slope_eff(:,:)  &
+            &            + micro_slope_ct(:,lex_ids,:) * microcon_dfsn_ct(:,lex_ids,:)
         END WHERE 
 
       END DO
@@ -530,8 +531,6 @@ CONTAINS
       DEALLOCATE(fact_lag_micro_blg)
       DEALLOCATE(fact_lag_macro_srf)
       DEALLOCATE(fact_lag_macro_blg)
-
-
       DEALLOCATE(fact_lag_srf_ct)
       DEALLOCATE(fact_lag_blg_ct)
     END IF
