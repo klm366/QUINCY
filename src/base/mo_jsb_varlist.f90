@@ -114,6 +114,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
+    LOGICAL           :: loutput_loc
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: n_groups
@@ -147,8 +148,10 @@ CONTAINS
     ALLOCATE(groups_loc(n_groups))
     groups_loc(1) = 'ALL'
     groups_loc(2) = 'jsb_all'
+    loutput_loc = .TRUE.; IF (PRESENT(loutput)) loutput_loc = loutput
     IF (PRESENT(groups)) THEN
       groups_loc(3:n_groups) = groups(:)
+      loutput_loc = .TRUE.
     END IF
 
     ! calls the generic routine on the host model
@@ -156,7 +159,7 @@ CONTAINS
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput_loc, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose)
 

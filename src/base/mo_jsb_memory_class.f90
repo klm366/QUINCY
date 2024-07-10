@@ -178,6 +178,7 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       no_groups = 2 * (4 - output_level)
+      loutput_loc = .TRUE.
     ELSE
       no_groups = 0
     END IF
@@ -222,7 +223,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput_loc, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
       verbose=verbose)
@@ -333,6 +334,7 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       no_groups = 2 * (4 - output_level)
+      loutput_loc = .TRUE.
     ELSE
       no_groups = 0
     END IF
@@ -361,7 +363,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput_loc, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
@@ -503,6 +505,7 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       no_groups = 2 * (4 - output_level)
+      loutput_loc = .TRUE.
     ELSE
       no_groups = 0
     END IF
@@ -531,7 +534,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput_loc, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
