@@ -330,6 +330,7 @@ CONTAINS
       &                                  calc_diffusion_water,      &
       &                                  calc_diffusion_energy,     &
       &                                  calc_snow_redistribution,  &
+      &                                  shift_fluxes_sl,           &
       &                                  remove_exess_water
 
     USE mo_hydro_process, ONLY: get_soilhyd_properties
@@ -364,6 +365,7 @@ CONTAINS
     REAL(wp) :: fract_sibl(options%nc)                          !< Cover fractions of sibling tile [/]
 
     REAL(wp) ::  &  
+      &  wtr_latflow_sl_used(options%nc,options%nsoil_w),    &  !< Outflow from latflow res. with water in bedrock-layers on sibling moved to the layer above [m timestep-1]
       &  hyd_cond_sl(options%nc,options%nsoil_w),            &  !< Saturation hydraulic conductivity for tile [m s-1]
       &  hyd_cond_sl_sibl(options%nc,options%nsoil_w),       &  !< Saturation hydraulic conductivity for sibling [m s-1]
       &  diffus_sl(options%nc,options%nsoil_w),              &  !< diffusivity for tile [m2 s-1]
@@ -682,6 +684,30 @@ CONTAINS
 
       ! Start calculating exchange processes between different tiles
       IF (lex_idt /= lex_ids) THEN
+        
+        ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
+        ! and for micro-scale connections, also for differences in surface elevation
+        wtr_latflow_sl_used(:,:) = wtr_latflow_sl(:,:)
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          IF (microcon_grvt_ct(ic,lex_ids) > 0._wp .AND. h_offset_ct(ic,lex_ids) > 0._wp) THEN
+            CALL shift_fluxes_sl( nsoil,                &
+              &  h_offset_ct(ic,lex_ids),               &
+              &  soil_depth_sl(ic,:),                   &
+              &  soil_depth_sl_sibl(ic,:),              &   
+              &  wtr_latflow_sl_used(ic,:)              &
+              )
+          ELSE
+            !$ACC LOOP SEQ
+            DO is = nsoil, 2, -1
+              IF (soil_depth_sl_sibl(ic, is) <= 0._wp) THEN
+                wtr_latflow_sl_used(ic,is-1) = wtr_latflow_sl_used(ic,is-1) + wtr_latflow_sl_used(ic,is)
+                wtr_latflow_sl_used(ic,is)   = 0._wp
+              END IF   
+            END DO
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
 
         ! Lateral fluxes of surface runoff.
         ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
@@ -714,7 +740,7 @@ CONTAINS
                   & fract_latflow_blg_ct(ic,lex_ids),       &
                   & fract(ic),                              &
                   & fract_sibl(ic),                         &
-                  & wtr_latflow_sl(ic,is)*fos,              &
+                  & wtr_latflow_sl_used(ic,is)*fos,         &
                   & wtr_drainage_in_sl_sibl(ic,is),         &
                   & wtr_drainage_out_sl(ic,is),             &
                   & wtr_lex_net_sl(ic,is),                  &
@@ -722,6 +748,21 @@ CONTAINS
                   & wtr_soil_sl_sibl(ic,is)                 &
                   )
               END DO
+            END DO
+            !$ACC END PARALLEL LOOP
+
+            ! Remove excess water from soil and surface
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+            DO ic = 1,nc 
+              CALL remove_exess_water(                        &
+                & weq_pond_max_sibl(ic),                      &
+                & ice_pond_sibl(ic),                          &
+                & wtr_pond_sibl(ic),                          &
+                & water_to_soil_lex_sibl(ic),                 &
+                & nsoil=nsoil,                                &
+                & wtr_soil_sat_sl=wtr_soil_sat_sl_sibl(ic,:), &
+                & wtr_soil_sl=wtr_soil_sl_sibl(ic,:)          &
+                )
             END DO
             !$ACC END PARALLEL LOOP
           END IF

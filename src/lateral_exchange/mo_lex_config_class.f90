@@ -37,6 +37,7 @@ MODULE mo_lex_config_class
        & l_snow_trns,            & !< enable lateral transport of snow between tiles
        & l_dffsn_wtr,            & !< enable diffusive water exchange between tiles
        & l_dffsn_nrg,            & !< enable diffusive heat exchange between tiles
+       & l_nested,               & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
        & l_dpr4ponds,            & !< if no tile-specific pond fraction / depth is provided assume depressions to be ponds  
        & l_noslope_dpr             !< if no tile-specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero 
     INTEGER                     :: ncontis !< number of connected tiles used in setup
@@ -69,7 +70,8 @@ CONTAINS
        & l_infil_trns,             & !< enable lateral infiltration between tiles
        & l_snow_trns,              & !< enable lateral transport of snow between tiles
        & l_dffsn_wtr,              & !< enable diffusive water exchange between tiles
-       & l_dffsn_nrg,              & !< enable diffusive heat exchange between tiles 
+       & l_dffsn_nrg,              & !< enable diffusive heat exchange between tiles
+       & l_nested,                 & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
        & l_dpr4ponds,              & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
        & l_noslope_dpr               !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero  
 
@@ -84,6 +86,7 @@ CONTAINS
          l_snow_trns,           & !< enable lateral transport of snow between tiles
          l_dffsn_wtr,           & !< enable diffusive water exchange between tiles
          l_dffsn_nrg,           & !< enable diffusive heat exchange between tiles
+         l_nested,              & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
          l_dpr4ponds,           & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
          l_noslope_dpr            !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero   
 
@@ -103,6 +106,7 @@ CONTAINS
     l_snow_trns         = .TRUE.
     l_dffsn_wtr         = .TRUE.
     l_dffsn_nrg         = .TRUE.
+    l_nested            = .TRUE.
     l_dpr4ponds         = .TRUE.
     l_noslope_dpr       = .TRUE.
 
@@ -120,6 +124,7 @@ CONTAINS
     config%l_snow_trns         = l_snow_trns
     config%l_dffsn_wtr         = l_dffsn_wtr
     config%l_dffsn_nrg         = l_dffsn_nrg
+    config%l_nested            = l_nested
     config%l_dpr4ponds         = l_dpr4ponds
     config%l_noslope_dpr       = l_noslope_dpr
 
@@ -166,6 +171,12 @@ CONTAINS
       CALL message(TRIM(routine), 'Lateral diffusion (energy) is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral diffusion (energy) is disabled')
+    END IF
+
+    IF (l_nested) THEN
+      CALL message(TRIM(routine), 'Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself')
+    ELSE
+      CALL message(TRIM(routine), 'Nested constellations are being ignored and geomtry is calculated exclusivly based on the characteristics of two tiles)')
     END IF
 
     IF (l_dpr4ponds) THEN

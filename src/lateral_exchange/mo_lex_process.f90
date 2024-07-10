@@ -26,7 +26,7 @@ MODULE mo_lex_process
   PUBLIC :: calc_runoff_transport, calc_drainage_transport,  &
           & calc_lat_pond_soil_flux, calc_diffusion_water,   &
           & calc_diffusion_energy, calc_snow_redistribution, &
-          & remove_exess_water,                              &
+          & remove_exess_water, shift_fluxes_sl,             &
           & get_geometry, get_flow_lags, check_flow_matrix
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lex_process'
@@ -987,6 +987,89 @@ CONTAINS
     END IF
 
   END SUBROUTINE remove_exess_water
+
+  !  
+  ! ===============================================================================================================================
+  !>
+  !! Adjust lateral fluxes according to differences in surface elevation and bedrock boundary
+  !!
+  SUBROUTINE shift_fluxes_sl(                 &
+    & nsoil,                                  &
+    & h_offset,                               &
+    & dsoil_lvt, dsoil_dpr,                   &   
+    & flx_lat_sl                              &
+    )
+     
+
+    INTEGER , INTENT(in)    :: nsoil             !< Number of soil ayers
+
+
+    REAL(wp), INTENT(in)    :: h_offset          !< Differece in surface elevation between elevation and depression [m]
+
+    REAL(wp), INTENT(in)    :: dsoil_lvt(:),  &  !< Soil depth on layers of elevation tile [m]
+      &                        dsoil_dpr(:)      !< Soil depth on layers of depression tile [m]
+
+    REAL(wp), INTENT(inout) :: flx_lat_sl(:)     !< Lateralal flux to be adjusted [?]
+
+
+    INTEGER                 :: nrgrd,         &  !< Number of layers on helper grid determined by layer overlaps
+      &                        i,             &  !< Counter variable
+      &                        i_lvt, i_dpr      !< Index variables for layers on in elevation (i_lvt) and in depression (i_dpr)
+
+    REAL(wp)                :: z_lvt,         &  !< Layer bottom of current layer on elevation tile [m]
+      &                        z_dpr,         &  !< Layer bottom of current layer on depression tile [m]
+      &                        z_rgrd_top,    &  !< Top of current layer on helper grid [m]
+      &                        z_rgrd_bot,    &  !< Bottom of current layer on helper grid [m]
+      &                        h                 !< Height of current layer [m]
+
+
+    REAL(wp)                :: flx_lat_sl_upd(nsoil) !< Updated lateral flux [?]
+
+    flx_lat_sl_upd(:) = 0._wp
+
+    nrgrd       = nsoil * 2 + 1    
+
+    i_lvt = 0
+    z_lvt = dsoil_lvt(1)
+
+    i_dpr = 0
+    z_dpr = dsoil_dpr(1) + h_offset
+
+    z_rgrd_top = 0._wp
+    z_rgrd_bot = MIN(z_lvt, z_dpr)
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO i  = 1, nrgrd
+      h                     = z_rgrd_bot-z_rgrd_top
+      flx_lat_sl_upd(i_dpr) = flx_lat_sl_upd(i_dpr) + flx_lat_sl(i_lvt) * h / dsoil_lvt(i_lvt)
+
+      IF (z_rgrd_bot == z_lvt .AND. z_lvt < SUM(dsoil_lvt(:))) THEN
+        i_lvt = i_lvt + 1
+        IF (i_lvt <= nsoil) THEN
+          z_lvt = z_lvt + dsoil_lvt(i_lvt)
+        END IF
+      END IF
+
+      IF (z_rgrd_bot == z_dpr .AND. z_dpr < SUM(dsoil_dpr(:)) + h_offset) THEN
+        i_dpr = i_dpr + 1
+        IF (i_dpr <= nsoil) THEN
+          z_dpr = z_dpr + dsoil_dpr(i_dpr)
+        END IF
+      ELSE IF (z_rgrd_bot >= SUM(dsoil_dpr(:)) + h_offset) THEN
+        z_dpr = z_lvt
+      END IF
+      
+      z_rgrd_top=z_rgrd_bot
+      z_rgrd_bot=MIN(z_lvt, z_dpr)
+
+    END DO
+    !$ACC END PARALLEL   
+
+    flx_lat_sl(:) = flx_lat_sl_upd(:)
+
+  END SUBROUTINE shift_fluxes_sl
+
 
   !
   ! ===============================================================================================================================

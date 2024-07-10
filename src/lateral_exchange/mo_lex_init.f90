@@ -29,12 +29,15 @@ MODULE mo_lex_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
+  ! Use of processes in this module
   dsl4jsb_Use_processes LEX_, HYDRO_
 
+  ! Use of process configurations
   dsl4jsb_Use_config(LEX_)
-  dsl4jsb_Use_memory(LEX_)
-
   dsl4jsb_Use_config(HYDRO_)
+
+  ! Use of process memories
+  dsl4jsb_Use_memory(LEX_)
   dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
@@ -59,8 +62,9 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile ! Tile with LEX_ process running
 
-    ! Local variables
-    !
+
+    dsl4jsb_Def_config(LEX_)
+
     dsl4jsb_Def_memory(LEX_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory_tile(HYDRO_, sibl)
@@ -135,6 +139,7 @@ CONTAINS
       & fact_lag_srf_ct,       &
       & fact_lag_blg_ct
 
+
     lex_idt = tile%lcts(1)%lex_id
     IF (lex_idt > 0) THEN
 
@@ -175,6 +180,9 @@ CONTAINS
       ALLOCATE(micro_cnct_grvt(nconti,nconti))
       ALLOCATE(micro_cnct_dfsn(nconti,nconti))
       ALLOCATE(macro_cnct_grvt(nconti,nconti))
+
+      ! Get lateral exchange config
+      dsl4jsb_Get_config(LEX_)
 
 
       ! Base connection matrixes: 
@@ -262,15 +270,6 @@ CONTAINS
           )
       IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: micro_cnct_grvt')
 
-
-      test_matrix(:,:) = micro_cnct_dfsn(:,:)
-      CALL check_flow_matrix(               &    
-        & nconti,                           &
-        & test_matrix(:,:),                 &
-        & has_loop                          &
-          )
-      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: micro_cnct_dfsn')
-
       test_matrix(:,:) = macro_cnct_grvt(:,:)
       CALL check_flow_matrix(               &    
         & nconti,                           &
@@ -288,7 +287,7 @@ CONTAINS
       DO it = 1, nconti
         IF (SUM(micro_cnct_dfsn(it,:)) > 1._wp) THEN
           CALL finish(TRIM(routine), '*** Connected fraction exceeds 1.')             
-        ELSE IF (sum(micro_cnct_dfsn(it,:)) > 0._wp) THEN
+        ELSE IF (sum(micro_cnct_dfsn(it,:)) > 0._wp .AND. dsl4jsb_Config(LEX_)%l_nested) THEN
           IF (SUM(test_matrix(:,it)) > 1._wp) THEN
             CALL finish(TRIM(routine), '*** Contained tile encloses more than one tile') 
           ELSE IF (sum(micro_cnct_dfsn(:,it)) > 0._wp .AND. SUM(micro_cnct_dfsn(:,it)) < 1._wp) THEN
@@ -296,7 +295,7 @@ CONTAINS
           ELSE IF (SUM(micro_cnct_dfsn(:,it)) == 1._wp) THEN
             src_id=MAXLOC(micro_cnct_dfsn(:,it), 1)
             IF (SUM(micro_cnct_dfsn(:,src_id)) > 0._wp) THEN
-              CALL finish(TRIM(routine), '*** 4-level tile-nesting not implemented')            
+              CALL finish(TRIM(routine), '*** 3-level tile-nesting not implemented')            
             END IF
           END IF
         END IF     
@@ -316,31 +315,33 @@ CONTAINS
       ALLOCATE(fract_nclsd(nproma, nconti, nblks))
       area_nclsd(:,:,:)   = 0._wp
       fract_nclsd(:,:,:)  = 0._wp
-      DO it = 1, nsibl
+      IF (dsl4jsb_Config(LEX_)%l_nested) THEN
+        DO it = 1, nsibl
  
-        IF (it == 1) THEN
-          sibl => tile%parent_tile%Get_first_child_tile()
-        ELSE
-          sibl => sibl%Get_next_sibling_tile()
-        END IF
-        lex_ids = sibl%lcts(1)%lex_id
+          IF (it == 1) THEN
+            sibl => tile%parent_tile%Get_first_child_tile()
+          ELSE
+            sibl => sibl%Get_next_sibling_tile()
+          END IF
+          lex_ids = sibl%lcts(1)%lex_id
 
-        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE  
+          IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE  
 
-        dsl4jsb_Get_memory_tile(HYDRO_, sibl)
-        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
+          dsl4jsb_Get_memory_tile(HYDRO_, sibl)
+          dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
 
-        ALLOCATE(fract_sibl(nproma, nblks))
-        CALL sibl%Get_fraction(fract=fract_sibl(:,:))
+          ALLOCATE(fract_sibl(nproma, nblks))
+          CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
 
-        trgt_id = INT(FINDLOC(micro_cnct_dfsn(lex_ids,:), 1._wp, 1))
-        IF (trgt_id /= 0) THEN
-          area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
-          fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
-        END IF
-        DEALLOCATE(fract_sibl)
-      END DO
+          trgt_id = INT(FINDLOC(micro_cnct_dfsn(lex_ids,:), 1._wp, 1))
+          IF (trgt_id /= 0) THEN
+            area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
+            fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
+          END IF
+          DEALLOCATE(fract_sibl)
+        END DO
+      END IF
 
 
       ! First Loop over neighbour tiles
@@ -421,6 +422,13 @@ CONTAINS
                           & + fract_sibl(:,:) * macrocon_grvt_ct(:,lex_ids,:)
 
       END DO
+      
+      ! Ensuring that sum of microcon_dfsn_ct of a given tile still <= 1. after connections have been adjusted
+      DO it = 1, nconti
+        WHERE (SUM(microcon_dfsn_ct(:,:,:), DIM=2) > 1._wp)
+          microcon_dfsn_ct(:,it,:) = microcon_dfsn_ct(:,it,:) / SUM(microcon_dfsn_ct(:,:,:), DIM=2)
+        END WHERE
+      END DO
 
       !$ACC UPDATE DEVICE(h_offset_ct, length_scale_ct, length_iface_ct, micro_slope_ct) ASYNC(1)
       !$ACC UPDATE DEVICE(microcon_grvt_ct, microcon_dfsn_ct, macrocon_grvt_ct) ASYNC(1)
@@ -456,8 +464,8 @@ CONTAINS
           & ret_micro_srf, ret_micro_blg,                      &
           & ret_macro_srf, ret_macro_blg,                      &
           & length_scale_ct(:,lex_ids,:),                      &
-          & microcon_grvt_ct(:,lex_ids,:),                    &
-          & macrocon_grvt_ct(:,lex_ids,:),                    &
+          & microcon_grvt_ct(:,lex_ids,:),                     &
+          & macrocon_grvt_ct(:,lex_ids,:),                     &
           & fract(:,:), fract_sibl(:,:),                       &
           & fract_microcon(:,:), fract_macrocon(:,:),          &
           & fact_lag_micro_srf(:,:), fact_lag_micro_blg(:,:),  &
