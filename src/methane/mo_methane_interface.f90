@@ -32,6 +32,7 @@ MODULE mo_methane_interface
   dsl4jsb_Use_config(CH4_)
   dsl4jsb_Use_config(TOP_)
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_memory(CH4_)
   dsl4jsb_Use_memory(TOP_)
   dsl4jsb_Use_memory(SSE_)
@@ -280,6 +281,7 @@ CONTAINS
     dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(CH4_)
     dsl4jsb_Def_memory(TOP_)
@@ -390,12 +392,19 @@ CONTAINS
     dsl4jsb_Get_Config(CH4_)
     dsl4jsb_Get_Config(TOP_)
     dsl4jsb_Get_Config(SSE_)
+    dsl4jsb_Get_Config(NLCC_)
 
     dt    = 86400._wp / REAL(dsl4jsb_Config(CH4_)%nstep_per_day,wp)
 
     CALL get_date_components(options%current_datetime, year=year, hour=hour, minute=minute, second=sec)
     sec = sec + minute*60 + hour*3600
     IF (MOD(sec,INT(dt)) /= 0) RETURN ! Not a methane time step
+
+    IF (dsl4jsb_Config(CH4_)%do_termite .AND. .NOT. dsl4jsb_Config(NLCC_)%active) THEN
+      IF (iblk==1) &
+        CALL message(routine,'Termite methane can only be calculated when the NLCC process is active. Termites are switched off')
+      dsl4jsb_Config(CH4_)%do_termite = .FALSE.
+    ENDIF
 
     iblk  = options%iblk
     ics   = options%ics
