@@ -200,7 +200,7 @@ CONTAINS
 
   SUBROUTINE methane_update_atm_GHG_conc(options,GAS,source,atm_conc,nml_conc,GHG_atm,dst,dbg)
     USE mo_jsb_time,          ONLY: is_newyear, is_time_experiment_start, is_time_restart, get_date_components
-    USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3
+    USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3, concentration_mol_m3_2_vmr
     USE mo_methane_constants, ONLY: t_specie_const
     USE mo_ch4_memory_class,  ONLY: t_timeseries
     USE mo_util,              ONLY: real2string
@@ -228,7 +228,7 @@ CONTAINS
 
     lupdate = .FALSE.
     SELECT CASE (src)
-      CASE (1) ! Constamt from namelist - just copy if not already done
+      CASE (1) ! Constant from namelist - just copy if not already done
         IF (lrestart .OR. lstart) THEN
           DO ic = 1, nc
             dst(ic) = nml_conc
@@ -250,7 +250,8 @@ CONTAINS
         ENDIF
     END SELECT
     IF (lupdate .AND. dbg) &
-      CALL message(routine,'Updated atmospheric '//TRIM(GAS%specie_name)//' concentration: '//real2string(dst(1)))
+      CALL message(routine,'Updated atmospheric '//TRIM(GAS%specie_name)//' vmr: '// &
+                           real2string(concentration_mol_m3_2_vmr(GAS,dst(1))))
 
   END SUBROUTINE methane_update_atm_GHG_conc
 
