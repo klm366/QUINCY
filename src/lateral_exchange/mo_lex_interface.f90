@@ -381,6 +381,8 @@ CONTAINS
       &  weq_wres_sl(options%nc,options%nsoil_w),            &  !< moisture residual for tile [m]
       &  weq_wres_sl_sibl(options%nc,options%nsoil_w)           !< moisture residual for sibling [m]
 
+    REAL(wp) ::  hlp1                                           !< helper variables
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lex'
     CHARACTER(len=5000)         :: message_text_long
 
@@ -464,6 +466,7 @@ CONTAINS
       &  wtr_pond_sibl,          &
       &  weq_pond_sibl,          &
       &  ice_pond_sibl,          &
+      &  fract_pond_max_sibl,    &
       &  weq_pond_max_sibl,      &
       &  weq_snow_sibl,          &
       &  weq_snow_soil_sibl,     &
@@ -641,6 +644,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   nrg_diffusion_out_sl, sibl)   ! inout
 
       dsl4jsb_Get_var2D_onChunk_tile_name(HYDRO_, ice_pond, sibl)               ! in
+      dsl4jsb_Get_var2D_onChunk_tile_name(HYDRO_, fract_pond_max, sibl)         ! in
       dsl4jsb_Get_var2D_onChunk_tile_name(HYDRO_, weq_pond_max, sibl)           ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, soil_depth_sl, sibl)          ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl, sibl)  ! in 
@@ -713,12 +717,13 @@ CONTAINS
         ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
         IF (dsl4jsb_Config(LEX_)%l_runoff_trns) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-          DO ic=1,nc 
+          DO ic=1,nc
+            hlp1 = wtr_latflow_srf(ic)*fos
             CALL calc_runoff_transport( dtime,              &
               & fract_latflow_srf_ct(ic,lex_ids),           &
               & fract(ic),                                  &
               & fract_sibl(ic),                             &
-              & wtr_latflow_srf(ic)*fos,                    &
+              & hlp1,                                       &
               & wtr_runoff_in_sibl(ic),                     &
               & wtr_runoff_out(ic),                         &
               & wtr_lex_net_srf(ic),                        &
@@ -736,11 +741,12 @@ CONTAINS
             !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)   
             DO is = 1,nsoil
               DO ic=1,nc
+                hlp1 = wtr_latflow_sl_used(ic,is)*fos
                 CALL calc_drainage_transport( dtime,        &
                   & fract_latflow_blg_ct(ic,lex_ids),       &
                   & fract(ic),                              &
                   & fract_sibl(ic),                         &
-                  & wtr_latflow_sl_used(ic,is)*fos,         &
+                  & hlp1,                                   &
                   & wtr_drainage_in_sl_sibl(ic,is),         &
                   & wtr_drainage_out_sl(ic,is),             &
                   & wtr_lex_net_sl(ic,is),                  &
@@ -836,13 +842,14 @@ CONTAINS
 
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1,nc
+            hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
             IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
               & (microcon_grvt_ct(ic,lex_ids) > 0._wp)) THEN
               ! Lateral ingress from pond to connected tile 
               CALL calc_lat_pond_soil_flux(nsoil, dtime,    &
               &  h_offset_ct(ic,lex_ids),                   &
               &  length_scale_ct(ic,lex_ids),               &
-              &  length_iface_ct(ic,lex_ids),               &
+              &  hlp1,                                      &
               &  fract(ic),                                 &
               &  fract_sibl(ic),                            &
               &  soil_depth_sl(ic,:),                       &
