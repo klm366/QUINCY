@@ -411,7 +411,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     tspd  = timesteps_per_day(dt)
-    dbg   = dsl4jsb_Config(CH4_)%dbg_process
+    dbg   = dsl4jsb_Config(CH4_)%dbg_process .AND. .NOT. ASSOCIATED(tile%get_prev_sibling_tile()) .AND. (iblk==1)
 
     lstart = is_time_experiment_start(options%current_datetime)
     lrestart = is_time_restart(options%current_datetime)
@@ -666,13 +666,12 @@ CONTAINS
     CALL reset_chem_specie( O2_dry,nc,nsoil,dbg)
 
     IF (lstart .AND. dbg .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
-
     CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
-                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,iblk==1)
+                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
     CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
-                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,iblk==1)
+                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,dbg)
     CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
-                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,iblk==1)
+                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
     ! determine carbon input during time step for oxic and anoxic conditions
     ! convert respiration flux, respiration is defined NEGATIVE
