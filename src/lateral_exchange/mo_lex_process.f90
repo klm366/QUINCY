@@ -686,7 +686,7 @@ CONTAINS
           heat_flx_eq_lat = MIN( &
             &               ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), &
             &               ABS((t_dpr_rgrd - t_eq)  * h_cap_soil_dpr_rgrd * fr_dpr_rel)) &
-            &               *  a_inter / dtime
+            &               *  h / dtime
           ! Limiting heat flux to equilibrium flux
           IF (heat_flx_lat > 0._wp .AND. heat_flx_lat > ABS(heat_flx_eq_lat)) THEN
             heat_flx_lat = ABS(heat_flx_eq_lat)
