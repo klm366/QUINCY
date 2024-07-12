@@ -133,7 +133,15 @@ CONTAINS
     ! SPQ_ 2D
     dsl4jsb_Real2D_onDomain    :: soil_depth
     dsl4jsb_Real2D_onDomain    :: root_depth
+    dsl4jsb_Real2D_onDomain    :: t_srf_new
     dsl4jsb_Real2D_onDomain    :: t_srf_old
+    dsl4jsb_Real2D_onDomain    :: temp_srf_eff_4
+    dsl4jsb_Real2D_onDomain    :: qsat_star
+    dsl4jsb_Real2D_onDomain    :: s_star
+    dsl4jsb_Real2D_onDomain    :: fact_q_air
+    dsl4jsb_Real2D_onDomain    :: fact_qsat_srf
+    dsl4jsb_Real2D_onDomain    :: z0h
+    dsl4jsb_Real2D_onDomain    :: z0m
     dsl4jsb_Real2D_onDomain    :: w_skin
     dsl4jsb_Real2D_onDomain    :: w_soil_root
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
@@ -201,7 +209,15 @@ CONTAINS
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onDomain(SPQ_, soil_depth)
     dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, t_srf_new)
     dsl4jsb_Get_var2D_onDomain(SPQ_, t_srf_old)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, temp_srf_eff_4)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, qsat_star)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, s_star)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, fact_q_air)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, fact_qsat_srf)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, z0h)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, z0m)
     dsl4jsb_Get_var2D_onDomain(SPQ_, w_skin)
     dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root)
     dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root_pwp)
@@ -295,7 +311,7 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !> 3.0 init soil-property variables
+    !> 3.0 init soil-property variables and land2atmosphere variables
     !>
 
     !>   3.1 init with one site-specific value for all soil layers
@@ -307,8 +323,18 @@ CONTAINS
     silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_sb)
     clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_sb)
     volume_min_sl(:,:,:)  = 1._wp
+    ! land2atmosphere
+    !   these variables are initialized with the mem%Add_var() routine in addition (same values) !
     t_soil_sl(:,:,:)      = 273.15_wp
+    t_srf_new(:,:)        = 273.15_wp
     t_srf_old(:,:)        = 273.15_wp
+    temp_srf_eff_4(:,:)   = 273.15_wp ** 4.0_wp
+    qsat_star(:,:)        = 0.0075_wp   ! value from JSBACH
+    s_star(:,:)           = 2.9E5_wp    ! value from JSBACH
+    fact_q_air(:,:)       = 0.5_wp      ! value from JSBACH
+    fact_qsat_srf(:,:)    = 0.5_wp      ! value from JSBACH
+    z0h(:,:)              = 1.0_wp      ! value from JSBACH
+    z0m(:,:)              = 1.0_wp      ! value from JSBACH
 
 #ifdef __QUINCY_STANDALONE__
     !>     3.1.1 soil-layer specific init for sites of the "SPP 1685" site-set
@@ -442,12 +468,13 @@ CONTAINS
     !>
     ! by default use: fixed roots for QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     !                 because these models are not growing roots, suffering water limitations with dyn roots
+    ! and for QSOIL because else only the first soil layer would be initialised
     SELECT CASE(model%config%qmodel_id)
-    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+    CASE(QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
       dsl4jsb_Config(VEG_)%flag_dynamic_roots = .FALSE.
-      CALL message(TRIM(routine), ' set "flag_dynamic_roots = .FALSE." (using the canopy, test_canopy or test_radiation model)')
+      CALL message(TRIM(routine), ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
       print*,      TRIM(routine), ' set "flag_dynamic_roots = .FALSE."', &
-        &                         ' (which is the default for the canopy, test_canopy or test_radiation models)'
+        &                         ' (which is the default for the canopy, soil only, test_canopy or test_radiation models)'
     END SELECT
 
     ! init root fraction
@@ -471,8 +498,8 @@ CONTAINS
         &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
       ! soil layers 2 to x
       DO iblk = 1,nblks
-        DO ic = 2,nproma
-          DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO ic = 1,nproma
+          DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
             IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
               IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
                 root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &

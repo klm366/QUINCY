@@ -53,13 +53,6 @@ MODULE mo_l2a_memory_class
       & carbon_conservation_test        , &  !<
       & yday_c_state_sum                     !<
 
-    ! biosphere-level diagnostics
-    !   additional variables are created in VEG_ as '*_l2aveghlp' and are passed to the L2A_ var in 'mo_atmland_interface:update_land2atm'
-    !   TODO pass VEG_ '*_l2aveghlp' var to L2A_ variables and modify the model inteface accordingly
-    ! TYPE(t_jsb_var_real2d) ::       &
-    !   & net_biosphere_production  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
-    !   & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
-
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
       & latent_hflx_wtr                 , &  !< latent heat flux over water [W m-2]
@@ -221,28 +214,6 @@ CONTAINS
 
     END IF
 #endif
-
-      ! CALL mem%Add_var('net_biosphere_production', mem%net_biosphere_production, &
-      !   & hgrid, surface, &
-      !   & t_cf('net_biosphere_production', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
-      !   & t_grib1(table, 255, grib_bits), &
-      !   & t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix, &
-      !   & output_level = BASIC, &
-      !   & loutput = .TRUE., &
-      !   & lrestart = .FALSE., &
-      !   & initval_r = 0.0_wp)
-
-      ! CALL mem%Add_var('biological_n_fixation', mem%biological_n_fixation, &
-      !   & hgrid, surface, &
-      !   & t_cf('biological_n_fixation', '[micro-mol N m-2 s-1]', 'symbiotic + asymbiotic N fixation'), &
-      !   & t_grib1(table, 255, grib_bits), &
-      !   & t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix, &
-      !   & output_level = BASIC, &
-      !   & loutput = .TRUE., &
-      !   & lrestart = .FALSE., &
-      !   & initval_r = 0.0_wp)
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
