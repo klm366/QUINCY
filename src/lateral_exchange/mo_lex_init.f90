@@ -368,10 +368,8 @@ CONTAINS
         ! the offset in surface height (h_offset_ct), the characteric distance between the tile centres (length_scale_ct),
         ! the length of the interface between the two tiles (length_iface_ct) and the slope between the tiles (micro_slope_ct)
         CALL get_geometry(                                      &
-          & micro_cnct_grvt(lex_idt,lex_ids),                   &
           & micro_cnct_dfsn(lex_idt,lex_ids),                   &
           & micro_cnct_dfsn(lex_ids,lex_idt),                   &
-          & macro_cnct_grvt(lex_idt,lex_ids),                   &
           & fract(:,:), fract_sibl(:,:),                        &
           & fract_nclsd(:,lex_idt,:), fract_nclsd(:,lex_ids,:), &
           & area(:,:), area_sibl(:,:),                          &

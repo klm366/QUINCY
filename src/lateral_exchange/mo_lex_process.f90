@@ -1080,10 +1080,8 @@ CONTAINS
   ELEMENTAL PURE &
 #endif
   SUBROUTINE get_geometry(                      &
-    & microcon_slp_tile,                        &
     & microcon_dfsn_tile,                       &
     & microcon_dfsn_sibl,                       &
-    & macro_connect,                            &
     & fract, fract_sibl,                        &
     & fract_nclsd, fract_nclsd_sibl,            &
     & area, area_sibl,                          &
@@ -1097,10 +1095,8 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: pi
 
-    REAL(wp), INTENT(in)    :: microcon_slp_tile,   &  !< Micro-scale connectivity between tile and sibling  along slope[/]
-      &                        microcon_dfsn_tile,  &  !< Micro-scale connectivity between tile and sibling (if tile is encompased by sibl) [/]
-      &                        microcon_dfsn_sibl,  &  !< Micro-scale connectivity between sibling and tile (if sibl is encompased by tile) [/]
-      &                        macro_connect           !< Macro-scale connectivity between tile and sibling [/]
+    REAL(wp), INTENT(in)    :: microcon_dfsn_tile,  &  !< Micro-scale connectivity between tile and sibling (if tile is encompased by sibl) [/]
+      &                        microcon_dfsn_sibl      !< Micro-scale connectivity between sibling and tile (if sibl is encompased by tile) [/]
 
     REAL(wp), INTENT(in)    :: fract,               &  !< Cover fraction of tile [/]
       &                        fract_sibl,          &  !< Cover fraction of sibling [/]
@@ -1129,9 +1125,6 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    ! Calculate difference in surface elevation between tile and sibling
-    h_offset = h_surf - h_surf_sibl
-
     ! Calculate relative fractions
     IF ((fract + fract_sibl) == 0._wp) THEN
       fract_rel      = 0._wp
@@ -1139,7 +1132,15 @@ CONTAINS
     ELSE
       fract_rel      = fract      / (fract + fract_sibl)
       fract_rel_sibl = fract_sibl / (fract + fract_sibl)
-    END IF      
+    END IF   
+
+    ! Calculate difference in surface elevation between tile and sibling (only valid for any micro-connections)
+    IF ((microcon_dfsn_tile  == 0._wp .AND. microcon_dfsn_sibl  == 0._wp) .OR.  &
+      &  fract_rel           == 0._wp .OR.  fract_rel_sibl      == 0._wp) THEN
+      h_offset = 0._wp
+    ELSE
+      h_offset = h_surf - h_surf_sibl
+    END IF   
 
     ! Calculate characteristic length scale and interface length between tile and sibling:
     !
@@ -1152,8 +1153,8 @@ CONTAINS
     ! The area of C2 is determined so that a segment with a central angle (X/360) equal to the connected fraction contains an area
     ! equal to that of the larger tile and the area of a segment of C1 with the same central angle. 
     IF ((microcon_dfsn_tile == 0._wp .AND. microcon_dfsn_sibl == 0._wp) .OR.  &
-      &  fract_rel          == 0._wp .OR.  fract_rel_sibl == 0._wp      .OR.  &
-      &  area               == 0._wp .OR.  area_sibl      == 0._wp) THEN
+      &  fract_rel          == 0._wp .OR.  fract_rel_sibl     == 0._wp  .OR.  &
+      &  area               == 0._wp .OR.  area_sibl          == 0._wp) THEN
       length_scale = 0._wp
       length_iface = 0._wp
 
@@ -1234,8 +1235,10 @@ CONTAINS
       END IF         
     END IF
 
-    ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale    
-    IF (microcon_slp_tile > 0._wp .AND. length_scale > 0._wp) THEN
+    ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale
+    ! ... also in case that microcon_dfsn_sibl > since the microcon_slp will be reversed later on ...  
+    IF ((microcon_dfsn_tile > 0._wp .OR. microcon_dfsn_sibl > 0._wp) .AND. &
+      &  h_offset > 0._wp .AND. length_scale > 0._wp) THEN
       micro_slope = MIN(0.5_wp, h_offset / length_scale)
     ELSE
       micro_slope = 0._wp
