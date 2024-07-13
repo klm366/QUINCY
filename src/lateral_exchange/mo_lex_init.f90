@@ -400,17 +400,23 @@ CONTAINS
           WHERE (h_offset_ct(:,lex_ids,:) <= 0.0_wp)
             microcon_grvt_ct(:,lex_ids,:) = 0._wp
           END WHERE
+        END IF
+        IF (micro_cnct_dfsn(lex_idt,lex_ids) > 0.0_wp) THEN
           WHERE (h_offset_ct(:,lex_ids,:) < 0.0_wp)
             microcon_dfsn_ct(:,lex_ids,:) = 0._wp
           END WHERE
         END IF
+
         ! Setting the micro connectivity where initially the connection is asumed to be in other direction
         ! but is changed due to sign of height offsets 
         IF (micro_cnct_grvt(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
           WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile -
             microcon_grvt_ct(:,lex_ids,:) = micro_cnct_grvt(lex_ids,lex_idt)
           END WHERE
-          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp)
+        END IF
+
+        IF (micro_cnct_dfsn(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
+          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile -
             microcon_dfsn_ct(:,lex_ids,:) = micro_cnct_dfsn(lex_ids,lex_idt)
           END WHERE
         END IF
