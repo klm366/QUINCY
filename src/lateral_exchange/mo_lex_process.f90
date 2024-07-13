@@ -329,18 +329,18 @@ CONTAINS
   SUBROUTINE calc_diffusion_water(                  &
       &      nsoil, dtime,                          &
       &      h_offset, length_scale, len_inter,     &
-      &      lvt_fract, dpr_fract,                  &
-      &      dsoil_lvt, dsoil_dpr,                  &
-      &      field_cap_lvt, field_cap_dpr,          &
-      &      wsat_lvt, wsat_dpr,                    &
-      &      res_lvt, res_dpr,                      &
-      &      k_sat_lvt, k_sat_dpr,                  &
-      &      k_lvt, k_dpr,                          &
-      &      mpot_lvt, mpot_dpr,                    &
-      &      diffus_in_lvt, diffus_in_dpr,          &
-      &      diffus_out_lvt, diffus_out_dpr,        &
-      &      wtr_latflow_lvt, wtr_latflow_dpr,      &
-      &      wtr_soil_lvt, wtr_soil_dpr             &
+      &      tle_fract, sbl_fract,                  &
+      &      dsoil_tle, dsoil_sbl,                  &
+      &      field_cap_tle, field_cap_sbl,          &
+      &      wsat_tle, wsat_sbl,                    &
+      &      res_tle, res_sbl,                      &
+      &      k_sat_tle, k_sat_sbl,                  &
+      &      k_tle, k_sbl,                          &
+      &      mpot_tle, mpot_sbl,                    &
+      &      diffus_in_tle, diffus_in_sbl,          &
+      &      diffus_out_tle, diffus_out_sbl,        &
+      &      wtr_latflow_tle, wtr_latflow_sbl,      &
+      &      wtr_soil_tle, wtr_soil_sbl             &
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -348,215 +348,214 @@ CONTAINS
     INTEGER, INTENT(in)     :: nsoil                   !< Number of soil layers
 
     REAL(wp), INTENT(in)    :: dtime,               &  !< Timestep length [s]
-      &                        h_offset,            &  !< Differece in surface elevation between elevation and depression [m]
+      &                        h_offset,            &  !< Differece in surface elevation between tile and sibling [m]
       &                        length_scale,        &  !< Characteristic length scale of gradient between two adjacent tiles [m]
-      &                        len_inter,           &  !< Length of interface between elevation and depression [m m-2]
-      &                        lvt_fract,           &  !< Area fraction of elevation tile [/]
-      &                        dpr_fract               !< Area fraction of depression tile [/]
+      &                        len_inter,           &  !< Length of interface between tile and sibling [m m-2]
+      &                        tle_fract,           &  !< Area fraction of tile [/]
+      &                        sbl_fract               !< Area fraction of sibling [/]
 
-    REAL(wp), INTENT(in)    :: dsoil_lvt(:),        &  !< Soil depth on layers of elevation tile [m]
-      &                        dsoil_dpr(:),        &  !< Soil depth on layers of depression tile [m]
-      &                        field_cap_lvt(:),    &  !< Soil field capacity of elevation tile [m]
-      &                        field_cap_dpr(:),    &  !< Soil field capacity of depression tile [m]
-      &                        wsat_lvt(:),         &  !< Soil moisture at saturation depression tile [m]
-      &                        wsat_dpr(:),         &  !< Soil moisture at saturation elevation tile [m]
-      &                        res_lvt(:),          &  !< Residual soil moisture elevation tile [m]
-      &                        res_dpr(:),          &  !< Residual soil moisture depression tile [m]
-      &                        k_sat_lvt(:),        &  !< Saturation hydraulic conductivity elevation tile [m s-1]
-      &                        k_sat_dpr(:),        &  !< Saturation hydraulic conductivity depression tile [m s-1]
-      &                        k_lvt(:),            &  !< Soil layer hyd. conductivity on source tile [m s-1]
-      &                        k_dpr(:),            &  !< Soil layer hyd. conductivity on target tile [m s-1]
-      &                        mpot_lvt(:),         &  !< Soil layer matric potential on source tile [m]
-      &                        mpot_dpr(:)             !< Soil layer matric potential on target tile [m]
+    REAL(wp), INTENT(in)    :: dsoil_tle(:),        &  !< Soil depth on layers of tile [m]
+      &                        dsoil_sbl(:),        &  !< Soil depth on layers of sibling [m]
+      &                        field_cap_tle(:),    &  !< Soil field capacity of tile [m]
+      &                        field_cap_sbl(:),    &  !< Soil field capacity of sibling [m]
+      &                        wsat_tle(:),         &  !< Soil moisture at saturation sibling [m]
+      &                        wsat_sbl(:),         &  !< Soil moisture at saturation tile [m]
+      &                        res_tle(:),          &  !< Residual soil moisture tile [m]
+      &                        res_sbl(:),          &  !< Residual soil moisture sibling [m]
+      &                        k_sat_tle(:),        &  !< Saturation hydraulic conductivity tile [m s-1]
+      &                        k_sat_sbl(:),        &  !< Saturation hydraulic conductivity sibling [m s-1]
+      &                        k_tle(:),            &  !< Soil layer hyd. conductivity on source tile [m s-1]
+      &                        k_sbl(:),            &  !< Soil layer hyd. conductivity on target tile [m s-1]
+      &                        mpot_tle(:),         &  !< Soil layer matric potential on source tile [m]
+      &                        mpot_sbl(:)             !< Soil layer matric potential on target tile [m]
 
-    REAL(wp), INTENT(inout) :: diffus_in_lvt(:),    &  !< Diffusion influx at elevation tile [kg m-2 s-1]
-      &                        diffus_in_dpr(:),    &  !< Diffusion influx at depression tile [kg m-2 s-1]
-      &                        diffus_out_lvt(:),   &  !< Diffusion influx at elevation tile [kg m-2 s-1]
-      &                        diffus_out_dpr(:)       !< Diffusion influx at depression tile [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: diffus_in_tle(:),    &  !< Diffusion influx at tile [kg m-2 s-1]
+      &                        diffus_in_sbl(:),    &  !< Diffusion influx at sibling [kg m-2 s-1]
+      &                        diffus_out_tle(:),   &  !< Diffusion influx at tile [kg m-2 s-1]
+      &                        diffus_out_sbl(:)       !< Diffusion influx at sibling [kg m-2 s-1]
 
-    REAL(wp), INTENT(inout) :: wtr_latflow_lvt(:),  &  !< Netflux (below ground) on elevation tile [kg m-2 s-1]
-      &                        wtr_latflow_dpr(:)      !< Netflux (below ground) on depression tile [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: wtr_latflow_tle(:),  &  !< Netflux (below ground) on tile [kg m-2 s-1]
+      &                        wtr_latflow_sbl(:)      !< Netflux (below ground) on sibling [kg m-2 s-1]
 
-    REAL(wp), INTENT(inout) :: wtr_soil_lvt(:),     &  !< Soil water storage on elevation tile [m]
-      &                        wtr_soil_dpr(:)         !< Soil water storage on depression tile [m]
+    REAL(wp), INTENT(inout) :: wtr_soil_tle(:),     &  !< Soil water storage on tile [m]
+      &                        wtr_soil_sbl(:)         !< Soil water storage on sibling [m]
 
 
 
     ! Local variables ------------------------------------------------------------------------------------
 
     INTEGER                 :: nrgrd,               &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_lvt, i_dpr         !< Index variables for layers on helper grid (i), in elevation (i_lvt) and depression tile (i_dpr)  
+      &                        i, i_tle, i_sbl         !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)  
 
-    REAL(wp)                :: fr_lvt_rel,          &  !< Relative fraction of elevation tile [/]
-      &                        fr_dpr_rel,          &  !< Relative fraction of depression tile [/]
+    REAL(wp)                :: fr_tle_rel,          &  !< Relative fraction of tile [/]
+      &                        fr_sbl_rel,          &  !< Relative fraction of sibling [/]
       &                        h,                   &  !< Height of current layer [m]
       &                        a_inter,             &  !< Interface area on current layer [m2 m-2]
       &                        k_inter,             &  !< Hydraulic conductivity at interface [m s-1]
       &                        d_mpot,              &  !< Difference in matric potential [m]
       &                        wtr_rel_qlbrm,       &  !< Relative saturation at equilibrium between connected tiles [/]
-      &                        free_space,          &  !< Free pore space on elevation tile on a given layer [m]  
-      &                        wtr_avail,           &  !< Available water on depression tile on a given layer [m]
+      &                        free_space,          &  !< Free pore space on tile on a given layer [m]  
+      &                        wtr_avail,           &  !< Available water on sibling on a given layer [m]
       &                        wtr_2_qlbrm,         &  !< Amount of water moved in order to reach equilibrium state [m]
-      &                        wtr_flx_lat,         &  !< potential flux (based on k and mpot) between depression and elevation [m/s]
-      &                        wtr_lat,             &  !< actual flux between depression and elevation [m]
+      &                        wtr_flx_lat,         &  !< potential flux (based on k and mpot) between sibling and tile [m/s]
+      &                        wtr_lat,             &  !< actual flux between sibling and tile [m]
       &                        z_rgrd_top,          &  !< Top of current layer on helper grid [m]
       &                        z_rgrd_bot,          &  !< Bottom of current layer on helper grid [m] 
-      &                        z_lvt,               &  !< Layer bottom of current layer on elevation tile [m]
-      &                        z_dpr,               &  !< Layer bottom of current layer on depression tile [m]
-      &                        z_bot_lvt,           &  !< Bedrock boundary on elevation tile [m]
-      &                        z_bot_dpr,           &  !< Bedrock boundary on depression tile [m]
-      &                        wtr_soil_lvt_rgrd,   &  !< Soil water content on elevation tile on helper grid layer [m]
-      &                        wsat_lvt_rgrd,       &  !< Soil moisture at saturation on elevation tile on helper grid layer [m] 
-      &                        field_cap_lvt_rgrd,  &  !< Field capacity on elevation tile on helper grid layer [m]
-      &                        res_lvt_rgrd,        &  !< Residual soil moisture on elevation tile on helper grid layer [m]
-      &                        mpot_lvt_rgrd,       &  !< Matric potential on elevation tile on helper grid layer [m]
-      &                        k_lvt_rgrd,          &  !< Hydraulic conductivity on elevation tile on helper grid layer [[m s-1]
-      &                        wtr_soil_dpr_rgrd,   &  !< Soil water content on depression tile on helper grid layer [m]
-      &                        wsat_dpr_rgrd,       &  !< Soil moisture at saturation on depression tile on helper grid layer [m]
-      &                        field_cap_dpr_rgrd,  &  !< Field capacity on depression tile on helper grid layer [m]
-      &                        res_dpr_rgrd,        &  !< Residual soil moisture on depression tile on helper grid layer [m]
-      &                        mpot_dpr_rgrd,       &  !< Matric potential on deperssion tile on helper grid layer [m]
-      &                        k_dpr_rgrd              !< Hydraulic conductivity on depression tile on helper grid layer [[m s-1]
+      &                        z_tle,               &  !< Layer bottom of current layer on tile [m]
+      &                        z_sbl,               &  !< Layer bottom of current layer on sibling [m]
+      &                        z_bot_tle,           &  !< Bedrock boundary on tile [m]
+      &                        z_bot_sbl,           &  !< Bedrock boundary on sibling [m]
+      &                        wtr_soil_tle_rgrd,   &  !< Soil water content on tile on helper grid layer [m]
+      &                        wsat_tle_rgrd,       &  !< Soil moisture at saturation on tile on helper grid layer [m] 
+      &                        field_cap_tle_rgrd,  &  !< Field capacity on tile on helper grid layer [m]
+      &                        res_tle_rgrd,        &  !< Residual soil moisture on tile on helper grid layer [m]
+      &                        mpot_tle_rgrd,       &  !< Matric potential on tile on helper grid layer [m]
+      &                        k_tle_rgrd,          &  !< Hydraulic conductivity on tile on helper grid layer [[m s-1]
+      &                        wtr_soil_sbl_rgrd,   &  !< Soil water content on sibling on helper grid layer [m]
+      &                        wsat_sbl_rgrd,       &  !< Soil moisture at saturation on sibling on helper grid layer [m]
+      &                        field_cap_sbl_rgrd,  &  !< Field capacity on sibling on helper grid layer [m]
+      &                        res_sbl_rgrd,        &  !< Residual soil moisture on sibling on helper grid layer [m]
+      &                        mpot_sbl_rgrd,       &  !< Matric potential on deperssion tile on helper grid layer [m]
+      &                        k_sbl_rgrd              !< Hydraulic conductivity on sibling on helper grid layer [[m s-1]
 
-    REAL(wp)                :: diffus_lvt(nsoil),   &  !< Net diffusive flux on elevation on soil layers [m]
-      &                        diffus_dpr(nsoil)       !< Net diffusive flux on depression on soil layers [m]
+    REAL(wp)                :: diffus_tle(nsoil),   &  !< Net diffusive flux on tile on soil layers [m]
+      &                        diffus_sbl(nsoil)       !< Net diffusive flux on sibling on soil layers [m]
 
     nrgrd         = nsoil * 2 + 3
 
     ! Initilize fields for accumulating regridded output
-    diffus_lvt(:)        = 0._wp
-    diffus_dpr(:)        = 0._wp
+    diffus_tle(:)        = 0._wp
+    diffus_sbl(:)        = 0._wp
 
-    IF (h_offset > SUM(dsoil_lvt(:))) RETURN
-    IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
+    IF (h_offset > 0._wp .AND. h_offset > SUM(dsoil_tle(:))) RETURN
+    IF (h_offset < 0._wp .AND. abs(h_offset) > SUM(dsoil_sbl(:))) RETURN
+    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
 
     ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
-    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+    fr_tle_rel = tle_fract / (tle_fract+sbl_fract)
+    fr_sbl_rel = sbl_fract / (tle_fract+sbl_fract)
 
     ! Start setting up the interpolated helper grid
-    ! Initial values for elevation tile
-    i_lvt = 1
-    z_bot_lvt = SUM(dsoil_lvt(:))
-    z_lvt = dsoil_lvt(i_lvt)
-
-    ! Initial values for depression tile 
     IF (h_offset > 0._wp) THEN
-      i_dpr = 0
-      z_dpr = h_offset
-      z_bot_dpr = SUM(dsoil_dpr(:)) + h_offset
+      i_tle     = 1
+      i_sbl     = 0
+      z_tle     = dsoil_tle(i_tle)
+      z_sbl     = abs(h_offset)
+      z_bot_tle = SUM(dsoil_tle(:))
+      z_bot_sbl = SUM(dsoil_sbl(:)) + abs(h_offset)
+    ELSE IF (h_offset < 0._wp) THEN
+      i_tle     = 0
+      i_sbl     = 1
+      z_tle     = abs(h_offset)
+      z_sbl     = dsoil_sbl(i_sbl)
+      z_bot_tle = SUM(dsoil_tle(:)) + abs(h_offset)
+      z_bot_sbl = SUM(dsoil_sbl(:))
     ELSE
-      i_dpr = 1
-      z_dpr = dsoil_dpr(i_dpr)
-      z_bot_dpr = SUM(dsoil_dpr(:))
+      i_tle     = 1
+      i_sbl     = 1
+      z_tle     = dsoil_tle(i_tle)
+      z_sbl     = dsoil_sbl(i_sbl)
+      z_bot_tle = SUM(dsoil_tle(:))
+      z_bot_sbl = SUM(dsoil_sbl(:))
     END IF
 
     z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_lvt, z_dpr)    
+    z_rgrd_bot = MIN(z_tle, z_sbl)    
     
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO i = 1, nrgrd     
-      IF (z_rgrd_bot <= z_bot_lvt .AND. z_rgrd_bot <= z_bot_dpr .AND. & ! Above Bedrock in both tiles
-          i_lvt      <= nsoil     .AND. i_dpr      <= nsoil) THEN           ! within soil column
-        wtr_lat              = 0._wp
-        h                    = z_rgrd_bot - z_rgrd_top
-        a_inter              = len_inter * h
-        wtr_soil_lvt_rgrd    = wtr_soil_lvt(i_lvt)   * h / dsoil_lvt(i_lvt)
-        wsat_lvt_rgrd        = wsat_lvt(i_lvt)       * h / dsoil_lvt(i_lvt)
-        field_cap_lvt_rgrd   = field_cap_lvt(i_lvt)  * h / dsoil_lvt(i_lvt)
-        res_lvt_rgrd         = res_lvt(i_lvt)        * h / dsoil_lvt(i_lvt)
-        mpot_lvt_rgrd        = mpot_lvt(i_lvt)
-        k_lvt_rgrd           = k_lvt(i_lvt)
+      IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
+          i_tle      <= nsoil     .AND. i_sbl      <= nsoil) THEN       ! within soil column
 
-        IF (z_rgrd_bot > h_offset ) THEN ! Within the soil column of both tiles
+        IF (z_rgrd_bot > abs(h_offset) ) THEN ! Within the soil column of both tiles
           ! Flux is determined by the difference in matric potential between the two tiles
-          wtr_soil_dpr_rgrd  = wtr_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)
-          wsat_dpr_rgrd      = wsat_dpr(i_dpr)  * h / dsoil_dpr(i_dpr)
-          field_cap_dpr_rgrd = field_cap_dpr(i_dpr)  * h / dsoil_dpr(i_dpr)
-          res_dpr_rgrd       = res_dpr(i_dpr)   * h / dsoil_dpr(i_dpr)
-          mpot_dpr_rgrd      = mpot_dpr(i_dpr)
-          k_dpr_rgrd         = k_dpr(i_dpr)
-          k_inter            =(k_dpr_rgrd * k_lvt_rgrd)**0.5_wp
-          d_mpot             =  abs(mpot_lvt_rgrd) - abs(mpot_dpr_rgrd)
-          wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
 
-          wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_lvt_rgrd * fr_lvt_rel       &
-            &                +  wtr_soil_dpr_rgrd * fr_dpr_rel)      &
-            &                / (wsat_lvt_rgrd * fr_lvt_rel + wsat_dpr_rgrd * fr_dpr_rel ))
-          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression
+          wtr_lat            = 0._wp
+          h                  = z_rgrd_bot - z_rgrd_top
+          a_inter            = len_inter * h
+
+          wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
+          wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
+          field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
+          res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
+          mpot_tle_rgrd      = mpot_tle(i_tle)
+          k_tle_rgrd         = k_tle(i_tle)
+
+          wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
+          wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
+          field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
+          res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
+          mpot_sbl_rgrd      = mpot_sbl(i_sbl)
+          k_sbl_rgrd         = k_sbl(i_sbl)
+          k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
+          d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
+          wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
+          wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
+            &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
+            &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
+          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from tile to sibling
 
             wtr_2_qlbrm      = MAX(0._wp, &
-              &               (wtr_rel_qlbrm * wsat_dpr_rgrd - wtr_soil_dpr_rgrd) * fr_dpr_rel)
-            free_space       = MAX(0._wp,(field_cap_dpr_rgrd - wtr_soil_dpr_rgrd) * fr_dpr_rel)
-            wtr_avail        = MAX(0._wp,(wtr_soil_lvt_rgrd - res_lvt_rgrd) * fr_lvt_rel)
+              &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+            free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+            wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
             wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
             wtr_lat          = MAX(0._wp, wtr_lat)
 
-          ELSE ! Flux is going from depression to elevation
+          ELSE ! Flux is going from sibling to tile
 
             wtr_2_qlbrm      = MAX(0._wp, &
-              &               (wtr_rel_qlbrm  * wsat_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel)
-            free_space       = MAX(0._wp, (field_cap_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel)
-            wtr_avail        = MAX(0._wp, (wtr_soil_dpr_rgrd - res_dpr_rgrd) * fr_dpr_rel)
+              &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+            free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+            wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
             wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
             wtr_lat          = MIN(0._wp, wtr_lat)
+
+          END IF
+          diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
+          diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
+        END IF
+
+        IF (z_rgrd_bot == z_tle) THEN
+          i_tle = i_tle + 1
+          IF (i_tle <= nsoil) THEN
+            IF (dsoil_tle(i_tle) > 0._wp) THEN
+              z_tle = z_tle + dsoil_tle(i_tle)
+            ELSE
+              i_tle = nsoil + 1
+            END IF
           END IF
         END IF
 
-        diffus_lvt(i_lvt)   = diffus_lvt(i_lvt) - wtr_lat / fr_lvt_rel
-
-        IF (i_dpr > 0) THEN
-          diffus_dpr(i_dpr) = diffus_dpr(i_dpr) + wtr_lat / fr_dpr_rel
-        ENDIF
-
-        IF (z_rgrd_bot == z_lvt) THEN
-          i_lvt = i_lvt + 1
-          IF (i_lvt <= nsoil) THEN
-            IF (dsoil_lvt(i_lvt) > 0._wp) THEN
-              z_lvt = z_lvt + dsoil_lvt(i_lvt)
+        IF (z_rgrd_bot == z_sbl) THEN
+          i_sbl = i_sbl + 1
+          IF (i_sbl <= nsoil) THEN
+            IF (dsoil_sbl(i_sbl) > 0._wp) THEN
+              z_sbl = z_sbl + dsoil_sbl(i_sbl)
             ELSE
-              z_lvt = 10000._wp
-              i_lvt = nsoil + 10
+              i_sbl = nsoil + 1
             END IF
-          ELSE
-            z_lvt = 10000._wp
-            i_lvt = nsoil + 10
-          END IF
-        END IF
-
-        IF (z_rgrd_bot == z_dpr) THEN
-          i_dpr = i_dpr + 1
-          IF (i_dpr <= nsoil) THEN
-            IF (dsoil_dpr(i_dpr) > 0._wp) THEN
-              z_dpr = z_dpr + dsoil_dpr(i_dpr)
-            ELSE
-              z_dpr = 10000._wp
-              i_dpr = nsoil + 10
-            END IF
-          ELSE
-            z_dpr = 10000._wp
-            i_dpr = nsoil + 10
           END IF
         END IF      
 
         z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_lvt, z_dpr)
+        z_rgrd_bot=MIN(z_tle, z_sbl)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
 
     ! Adjusting the water contents and calculating the net- in- and outgoing fluxes for the tiles
-    wtr_soil_lvt(:)   =  wtr_soil_lvt(:)             + diffus_lvt(:)
-    wtr_soil_dpr(:)   =  wtr_soil_dpr(:)             + diffus_dpr(:)
+    wtr_soil_tle(:)   =  wtr_soil_tle(:)             + diffus_tle(:)
+    wtr_soil_sbl(:)   =  wtr_soil_sbl(:)             + diffus_sbl(:)
 
-    wtr_latflow_lvt   = wtr_latflow_lvt              + diffus_lvt(:)  * rhoh2o / dtime
-    wtr_latflow_dpr   = wtr_latflow_dpr              + diffus_dpr(:)  * rhoh2o / dtime
+    wtr_latflow_tle   = wtr_latflow_tle              + diffus_tle(:)  * rhoh2o / dtime
+    wtr_latflow_sbl   = wtr_latflow_sbl              + diffus_sbl(:)  * rhoh2o / dtime
 
-    diffus_in_lvt(:)  = diffus_in_lvt(:)  + MAX(0._wp, diffus_lvt(:)) * rhoh2o / dtime
-    diffus_in_dpr(:)  = diffus_in_dpr(:)  + MAX(0._wp, diffus_dpr(:)) * rhoh2o / dtime
-    diffus_out_lvt(:) = diffus_out_lvt(:) - MIN(0._wp, diffus_lvt(:)) * rhoh2o / dtime
-    diffus_out_dpr(:) = diffus_out_dpr(:) - MIN(0._wp, diffus_dpr(:)) * rhoh2o / dtime
+    diffus_in_tle(:)  = diffus_in_tle(:)  + MAX(0._wp, diffus_tle(:)) * rhoh2o / dtime
+    diffus_in_sbl(:)  = diffus_in_sbl(:)  + MAX(0._wp, diffus_sbl(:)) * rhoh2o / dtime
+    diffus_out_tle(:) = diffus_out_tle(:) - MIN(0._wp, diffus_tle(:)) * rhoh2o / dtime
+    diffus_out_sbl(:) = diffus_out_sbl(:) - MIN(0._wp, diffus_sbl(:)) * rhoh2o / dtime
 
   END SUBROUTINE calc_diffusion_water
 
@@ -568,124 +567,130 @@ CONTAINS
       &      nsoil, dtime,                             &
       &      dz, h_offset,                             &
       &      length_scale, len_inter,                  &
-      &      lvt_fract, dpr_fract,                     &
-      &      t_soil_lvt, t_soil_dpr,                   &
-      &      heat_cond_soil_lvt, heat_cond_soil_dpr,   &
-      &      heat_cap_soil_lvt, heat_cap_soil_dpr,     &
-      &      diffus_in_lvt, diffus_in_dpr,             &
-      &      diffus_out_lvt, diffus_out_dpr,           &
-      &      heat_flx_lat_lvt, heat_flx_lat_dpr        &
+      &      tle_fract, sbl_fract,                     &
+      &      t_soil_tle, t_soil_sbl,                   &
+      &      heat_cond_soil_tle, heat_cond_soil_sbl,   &
+      &      heat_cap_soil_tle, heat_cap_soil_sbl,     &
+      &      diffus_in_tle, diffus_in_sbl,             &
+      &      diffus_out_tle, diffus_out_sbl,           &
+      &      heat_flx_lat_tle, heat_flx_lat_sbl        &
       &      )
 
     INTEGER, INTENT(in)     :: nsoil                      !< Number of oil layers
 
     REAL(wp), INTENT(in)    :: dtime,                  &  !< Timestep length [s]
-      &                        h_offset,               &  !< Differece in surface elevation between elevation and depression [m]
+      &                        h_offset,               &  !< Differece in surface elevation between tile and sibling [m]
       &                        length_scale,           &  !< Characteristic length scale of gradient between two adjacent tiles [m]
-      &                        len_inter,              &  !< Length of interface between elevation and depression [m m-2]
-      &                        lvt_fract,              &  !< Area fraction of elevation tile [/]
-      &                        dpr_fract                  !< Area fraction of depression tile [/]
+      &                        len_inter,              &  !< Length of interface between tile and sibling [m m-2]
+      &                        tle_fract,              &  !< Area fraction of tile [/]
+      &                        sbl_fract                  !< Area fraction of sibling [/]
 
     REAL(wp), INTENT(in)    :: dz(:),                  &  !< Layer thickness [m]
-      &                        t_soil_lvt(:),          &  !< Soil tempertures of elevation tile [K]
-      &                        t_soil_dpr(:),          &  !< Soil tempertures of depression tile [K]
-      &                        heat_cond_soil_lvt(:),  &  !< Soil heat conductivity of elevation tile [J m-1 s-1 K-1]
-      &                        heat_cond_soil_dpr(:),  &  !< Soil heat conductivity of depression tile [J m-1 s-1 K-1]
-      &                        heat_cap_soil_lvt(:),   &  !< Soil heat capacity of elevation tile [J m-3 K-1]
-      &                        heat_cap_soil_dpr(:)       !< Soil heat capacity of depression tile [J m-3 K-1]
+      &                        t_soil_tle(:),          &  !< Soil tempertures of tile [K]
+      &                        t_soil_sbl(:),          &  !< Soil tempertures of sibling [K]
+      &                        heat_cond_soil_tle(:),  &  !< Soil heat conductivity of tile [J m-1 s-1 K-1]
+      &                        heat_cond_soil_sbl(:),  &  !< Soil heat conductivity of sibling [J m-1 s-1 K-1]
+      &                        heat_cap_soil_tle(:),   &  !< Soil heat capacity of tile [J m-3 K-1]
+      &                        heat_cap_soil_sbl(:)       !< Soil heat capacity of sibling [J m-3 K-1]
 
-    REAL(wp), INTENT(inout) :: diffus_in_lvt(:),       &  !< Diffusion influx at elevation tile [J m-2 s-1]
-      &                        diffus_in_dpr(:),       &  !< Diffusion outflux at depression tile [J m-2 s-1]
-      &                        diffus_out_lvt(:),      &  !< Diffusion influx at elevation tile [J m-2 s-1]
-      &                        diffus_out_dpr(:)          !< Diffusion outflux at depression tile [J m-2 s-1]
+    REAL(wp), INTENT(inout) :: diffus_in_tle(:),       &  !< Diffusion influx at tile [J m-2 s-1]
+      &                        diffus_in_sbl(:),       &  !< Diffusion outflux at sibling [J m-2 s-1]
+      &                        diffus_out_tle(:),      &  !< Diffusion influx at tile [J m-2 s-1]
+      &                        diffus_out_sbl(:)          !< Diffusion outflux at sibling [J m-2 s-1]
 
-    REAL(wp), INTENT(inout) :: heat_flx_lat_lvt(:),    &  !< Net Heat flux at elevation tile [J m-2 s-1]
-      &                        heat_flx_lat_dpr(:)        !< Net Heat flux at depression tile [J m-2 s-1]
+    REAL(wp), INTENT(inout) :: heat_flx_lat_tle(:),    &  !< Net Heat flux at tile [J m-2 s-1]
+      &                        heat_flx_lat_sbl(:)        !< Net Heat flux at sibling [J m-2 s-1]
 
 
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,                  &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_lvt, i_dpr            !< Index variables for layers on helper grid (i), in elevation (i_lvt) and depression tile (i_dpr)  
+      &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)  
 
-    REAL(wp)                :: fr_lvt_rel,             &  !< Relative fraction of elevation tile [/]
-      &                        fr_dpr_rel,             &  !< Relative fraction of depression tile [/]
-      &                        z_lvt,                  &  !< Layer bottom of current layer on elevation tile [m]
-      &                        z_dpr,                  &  !< Layer bottom of current layer on depression tile [m]
+    REAL(wp)                :: fr_tle_rel,             &  !< Relative fraction of tile [/]
+      &                        fr_sbl_rel,             &  !< Relative fraction of sibling [/]
+      &                        z_tle,                  &  !< Layer bottom of current layer on tile [m]
+      &                        z_sbl,                  &  !< Layer bottom of current layer on sibling [m]
       &                        z_rgrd_top,             &  !< Top of current layer on helper grid [m]
       &                        z_rgrd_bot,             &  !< Bottom of current layer on helper grid [m]
       &                        h,                      &  !< Height of current layer [m]
       &                        a_inter,                &  !< Interface area on current layer [m2 m-2]
-      &                        t_lvt_rgrd,             &  !< Soil tempertures of elevation tile on current layer on helper grid [K]
-      &                        t_dpr_rgrd,             &  !< Soil tempertures of depression tile on current layer on helper grid [K]
-      &                        h_cond_soil_lvt_rgrd,   &  !< Soil heat conductivity of elevation tile on current layer on helper grid [J m-1 s-1 K-1]
-      &                        h_cond_soil_dpr_rgrd,   &  !< Soil heat conductivity of depression tile on current layer on helper grid [J m-1 s-1 K-1]
-      &                        h_cap_soil_lvt_rgrd,    &  !< Soil heat capacity of elevation tile on current layer on helper grid [J m-3 K-1]
-      &                        h_cap_soil_dpr_rgrd,    &  !< Soil heat capacity of depression tile on current layer on helper grid [J m-3 K-1]
+      &                        t_tle_rgrd,             &  !< Soil tempertures of tile on current layer on helper grid [K]
+      &                        t_sbl_rgrd,             &  !< Soil tempertures of sibling on current layer on helper grid [K]
+      &                        h_cond_soil_tle_rgrd,   &  !< Soil heat conductivity of tile on current layer on helper grid [J m-1 s-1 K-1]
+      &                        h_cond_soil_sbl_rgrd,   &  !< Soil heat conductivity of sibling on current layer on helper grid [J m-1 s-1 K-1]
+      &                        h_cap_soil_tle_rgrd,    &  !< Soil heat capacity of tile on current layer on helper grid [J m-3 K-1]
+      &                        h_cap_soil_sbl_rgrd,    &  !< Soil heat capacity of sibling on current layer on helper grid [J m-3 K-1]
       &                        h_cond_inter,           &  !< Soil heat conductivity at interface on current layer on helper grid [J m-1 s-1 K-1]
       &                        d_t,                    &  !< Temperature difference on current layer on helper grid [K]
-      &                        heat_flx_lat,           &  !< Energy flux (based on h_cond_inter and d_t) between depression and elevation [J m-2 s-1]
+      &                        heat_flx_lat,           &  !< Energy flux (based on h_cond_inter and d_t) between sibling and tile [J m-2 s-1]
       &                        t_eq,                   &  !< Equilibrium temperature [K]
-      &                        heat_flx_eq_lat            !< Equilirium energy flux between depression and elevation [J m-2 s-1]
+      &                        heat_flx_eq_lat            !< Equilirium energy flux between sibling and tile [J m-2 s-1]
 
     nrgrd         = nsoil * 2 + 3
 
-    IF (h_offset > SUM(dz(:))) RETURN
-    IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
+    IF (abs(h_offset) > SUM(dz(:))) RETURN
+    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
 
     ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
-    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+    fr_tle_rel = tle_fract / (tle_fract+sbl_fract)
+    fr_sbl_rel = sbl_fract / (tle_fract+sbl_fract)
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
-    i_lvt = 1
-    z_lvt = dz(i_lvt)
-    i_dpr = 1
+
     IF (h_offset > 0._wp) THEN
-      i_dpr = 0
-      z_dpr = h_offset
+      i_tle     = 1
+      i_sbl     = 0
+      z_tle     = dz(i_tle)
+      z_sbl     = abs(h_offset)
+    ELSE IF (h_offset < 0._wp) THEN
+      i_tle     = 0
+      i_sbl     = 1
+      z_tle     = abs(h_offset)
+      z_sbl     = dz(i_sbl)
     ELSE
-      z_dpr = dz(i_dpr)
+      i_tle     = 1
+      i_sbl     = 1
+      z_tle     = dz(i_tle)
+      z_sbl     = dz(i_sbl)
     END IF
 
     z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_lvt, z_dpr)
+    z_rgrd_bot = MIN(z_tle, z_sbl)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO i = 1, nrgrd
-      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
+      IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
 
-        heat_flx_lat           = 0._wp
-
-        IF (z_rgrd_bot > h_offset ) THEN ! Within the soil column of both tiles
+        IF (z_rgrd_bot > abs(h_offset)) THEN ! Within the soil column of both tiles
           h                    = z_rgrd_bot - z_rgrd_top
           a_inter              = len_inter * h
 
-          t_lvt_rgrd           = t_soil_lvt(i_lvt)
-          h_cond_soil_lvt_rgrd = heat_cond_soil_lvt(i_lvt)
-          h_cap_soil_lvt_rgrd  = heat_cap_soil_lvt(i_lvt)
+          t_tle_rgrd           = t_soil_tle(i_tle)
+          h_cond_soil_tle_rgrd = heat_cond_soil_tle(i_tle)
+          h_cap_soil_tle_rgrd  = heat_cap_soil_tle(i_tle)
 
-          t_dpr_rgrd           = t_soil_dpr(i_dpr)
-          h_cond_soil_dpr_rgrd = heat_cond_soil_dpr(i_dpr)
-          h_cap_soil_dpr_rgrd  = heat_cap_soil_dpr(i_dpr)
+          t_sbl_rgrd           = t_soil_sbl(i_sbl)
+          h_cond_soil_sbl_rgrd = heat_cond_soil_sbl(i_sbl)
+          h_cap_soil_sbl_rgrd  = heat_cap_soil_sbl(i_sbl)
 
           ! Flux is determined by the difference in temperature between the two tiles
-          h_cond_inter         =(h_cond_soil_lvt_rgrd * h_cond_soil_dpr_rgrd)**0.5_wp
-          d_t                  = t_lvt_rgrd - t_dpr_rgrd
+          h_cond_inter         =(h_cond_soil_tle_rgrd * h_cond_soil_sbl_rgrd)**0.5_wp
+          d_t                  = t_tle_rgrd - t_sbl_rgrd
           heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
 
           ! Limiting heat flux to avoid instablilities for long time steps
           ! Determine flux required to equilibriate Temps within timestep
           ! Equilibrium temperature
-          t_eq = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
-            &  +  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
-            &  / (h_cap_soil_lvt_rgrd * fr_lvt_rel + h_cap_soil_dpr_rgrd * fr_dpr_rel)
+          t_eq = (t_tle_rgrd * h_cap_soil_tle_rgrd * fr_tle_rel  &
+            &  +  t_sbl_rgrd * h_cap_soil_sbl_rgrd * fr_sbl_rel) &
+            &  / (h_cap_soil_tle_rgrd * fr_tle_rel + h_cap_soil_sbl_rgrd * fr_sbl_rel)
           ! Heat flux to reach equilibrium temp
           heat_flx_eq_lat = MIN( &
-            &               ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), &
-            &               ABS((t_dpr_rgrd - t_eq)  * h_cap_soil_dpr_rgrd * fr_dpr_rel)) &
+            &               ABS((t_tle_rgrd - t_eq)  * h_cap_soil_tle_rgrd * fr_tle_rel), &
+            &               ABS((t_sbl_rgrd - t_eq)  * h_cap_soil_sbl_rgrd * fr_sbl_rel)) &
             &               *  h / dtime
           ! Limiting heat flux to equilibrium flux
           IF (heat_flx_lat > 0._wp .AND. heat_flx_lat > ABS(heat_flx_eq_lat)) THEN
@@ -695,31 +700,32 @@ CONTAINS
           END IF
 
           ! Diagnosing incoming-, outgoing- and net fluxes on tiles
-          diffus_in_lvt(i_lvt)    = diffus_in_lvt(i_lvt)  + MAX(0._wp, heat_flx_lat / fr_lvt_rel)
-          diffus_in_dpr(i_dpr)    = diffus_in_dpr(i_dpr)  + MAX(0._wp, heat_flx_lat / fr_dpr_rel)
-          diffus_out_lvt(i_lvt)   = diffus_out_lvt(i_lvt) - MIN(0._wp, heat_flx_lat / fr_lvt_rel)
-          diffus_out_dpr(i_dpr)   = diffus_out_dpr(i_dpr) - MIN(0._wp, heat_flx_lat / fr_dpr_rel)
+          diffus_in_tle(i_tle)    = diffus_in_tle(i_tle)  + MAX(0._wp, heat_flx_lat / fr_tle_rel)
+          diffus_in_sbl(i_sbl)    = diffus_in_sbl(i_sbl)  + MAX(0._wp, heat_flx_lat / fr_sbl_rel)
+          diffus_out_tle(i_tle)   = diffus_out_tle(i_tle) - MIN(0._wp, heat_flx_lat / fr_tle_rel)
+          diffus_out_sbl(i_sbl)   = diffus_out_sbl(i_sbl) - MIN(0._wp, heat_flx_lat / fr_sbl_rel)
 
-          heat_flx_lat_lvt(i_lvt) = heat_flx_lat_lvt(i_lvt)          - heat_flx_lat / fr_lvt_rel
-          heat_flx_lat_dpr(i_dpr) = heat_flx_lat_dpr(i_dpr)          + heat_flx_lat / fr_dpr_rel
+          heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle)          - heat_flx_lat / fr_tle_rel
+          heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl)          + heat_flx_lat / fr_sbl_rel
         END IF
 
         ! Determening the top and bottem of the next layer of the regridded
-        IF (z_rgrd_bot == z_lvt) THEN
-          i_lvt = i_lvt + 1
-          IF (i_lvt <= nsoil) THEN
-            z_lvt = z_lvt + dz(i_lvt)
+        IF (z_rgrd_bot == z_tle) THEN
+          i_tle = i_tle + 1
+          IF (i_tle <= nsoil) THEN
+            z_tle = z_tle + dz(i_tle)
           END IF
         END IF
 
-        IF (z_rgrd_bot == z_dpr) THEN
-          i_dpr = i_dpr + 1
-          IF (i_dpr <= nsoil) THEN
-            z_dpr = z_dpr + dz(i_dpr)
+        IF (z_rgrd_bot == z_sbl) THEN
+          i_sbl = i_sbl + 1
+          IF (i_sbl <= nsoil) THEN
+            z_sbl = z_sbl + dz(i_sbl)
           END IF
         END IF
+
         z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_lvt, z_dpr)
+        z_rgrd_bot=MIN(z_tle, z_sbl)
       END IF
     END DO
     !$ACC END PARALLEL
@@ -736,15 +742,15 @@ CONTAINS
       &      l_dynsnow,                             &
       &      dtime,                                 &
       &      h_offset,                              &
-      &      lvt_fract, dpr_fract,                  &
-      &      weq_pond_lvt, weq_pond_dpr,            &
-      &      snow_rdst_in_lvt, snow_rdst_in_dpr,    &
-      &      snow_rdst_out_lvt, snow_rdst_out_dpr,  &
-      &      wtr_latflow_lvt, wtr_latflow_dpr,      &
-      &      snow_soil_lvt, snow_soil_dpr,          &
-      &      snow_new_lvt, snow_new_dpr,            &
-      &      snow_lvt, snow_dpr,                    &
-      &      snow_dens_lvt, snow_dens_dpr           &
+      &      tle_fract, sbl_fract,                  &
+      &      weq_pond_tle, weq_pond_sbl,            &
+      &      snow_rdst_in_tle, snow_rdst_in_sbl,    &
+      &      snow_rdst_out_tle, snow_rdst_out_sbl,  &
+      &      wtr_latflow_tle, wtr_latflow_sbl,      &
+      &      snow_soil_tle, snow_soil_sbl,          &
+      &      snow_new_tle, snow_new_sbl,            &
+      &      snow_tle, snow_sbl,                    &
+      &      snow_dens_tle, snow_dens_sbl           &
       &      )
 
 
@@ -753,58 +759,58 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: l_dynsnow               !< Dynamic snow density is being used
 
     REAL(wp), INTENT(in)    :: dtime,               &  !< Timestep length [s]
-      &                        h_offset,            &  !< Differece in surface elevation between elevation and depression [m]
-      &                        lvt_fract,           &  !< Area fraction of elevation tile [/]
-      &                        dpr_fract               !< Area fraction of depression tile [/]
+      &                        h_offset,            &  !< Differece in surface elevation between tile and sibling [m]
+      &                        tle_fract,           &  !< Area fraction of tile [/]
+      &                        sbl_fract               !< Area fraction of sibling [/]
 
-    REAL(wp), INTENT(in)    :: weq_pond_lvt,        &  !< Pond storage on elevation tile [m]
-      &                        weq_pond_dpr            !< Pond storage on depression tile [m]
+    REAL(wp), INTENT(in)    :: weq_pond_tle,        &  !< Pond storage on tile [m]
+      &                        weq_pond_sbl            !< Pond storage on sibling [m]
 
-    REAL(wp), INTENT(inout) :: snow_rdst_in_lvt,    &  !< Snow redistribution influx at elevation tile [kg m-2 s-1]
-      &                        snow_rdst_in_dpr,    &  !< Snow redistribution influx at depression tile [kg m-2 s-1]
-      &                        snow_rdst_out_lvt,   &  !< Snow redistribution outflux at elevation tile [kg m-2 s-1]
-      &                        snow_rdst_out_dpr       !< Snow redistribution outflux at depression tile [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: snow_rdst_in_tle,    &  !< Snow redistribution influx at tile [kg m-2 s-1]
+      &                        snow_rdst_in_sbl,    &  !< Snow redistribution influx at sibling [kg m-2 s-1]
+      &                        snow_rdst_out_tle,   &  !< Snow redistribution outflux at tile [kg m-2 s-1]
+      &                        snow_rdst_out_sbl       !< Snow redistribution outflux at sibling [kg m-2 s-1]
 
     REAL(wp), INTENT(inout) :: &
-      &                        wtr_latflow_lvt,     &  !< Netflux (surface) on elevation tile [kg m-2 s-1]  
-      &                        wtr_latflow_dpr,     &  !< Netflux (surface) on depression tile [kg m-2 s-1]
-      &                        snow_soil_lvt,       &  !< Snow soil (WEQ) on elevation tile [m]
-      &                        snow_soil_dpr,       &  !< Snow soil (WEQ) on depression tile [m]
-      &                        snow_new_lvt,        &  !< New snow soil (WEQ) on elevation tile [m]
-      &                        snow_new_dpr,        &  !< New snow soil (WEQ) on depression tile [m]
-      &                        snow_lvt,            &  !< Snow (WEQ; can and soil) on elevation tile [m]
-      &                        snow_dpr,            &  !< Snow (WEQ; can and soil) on depression tile [m]
-      &                        snow_dens_lvt,       &  !< Snow density on elevation tile [kg m-3]
-      &                        snow_dens_dpr           !< Snow density on depression tile [kg m-3]
+      &                        wtr_latflow_tle,     &  !< Netflux (surface) on tile [kg m-2 s-1]  
+      &                        wtr_latflow_sbl,     &  !< Netflux (surface) on sibling [kg m-2 s-1]
+      &                        snow_soil_tle,       &  !< Snow soil (WEQ) on tile [m]
+      &                        snow_soil_sbl,       &  !< Snow soil (WEQ) on sibling [m]
+      &                        snow_new_tle,        &  !< New snow soil (WEQ) on tile [m]
+      &                        snow_new_sbl,        &  !< New snow soil (WEQ) on sibling [m]
+      &                        snow_tle,            &  !< Snow (WEQ; can and soil) on tile [m]
+      &                        snow_sbl,            &  !< Snow (WEQ; can and soil) on sibling [m]
+      &                        snow_dens_tle,       &  !< Snow density on tile [kg m-3]
+      &                        snow_dens_sbl           !< Snow density on sibling [kg m-3]
 
     ! Local variables ------------------------------------------------------------------------------------
 
-    REAL(wp)                :: fr_lvt_rel,          &  !< Relative fraction of elevation tile [/]
-      &                        fr_dpr_rel,          &  !< Relative fraction of depression tile [/]
-      &                        h_offset_snow_fix,   &  !< Differece in surface elevation including immobile snow layer between elevation and depression [m]
-      &                        snow_fix_lvt ,       &  !< Immobile snow on elevation [m]
-      &                        snow_fix_dpr ,       &  !< Immobile snow on depression [m]
-      &                        snow_fix_rel_lvt,    &  !< Fraction of immobile snow on elevation [/]
-      &                        snow_fix_rel_dpr,    &  !< Fraction of immobile snow on depression [/]
+    REAL(wp)                :: fr_tle_rel,          &  !< Relative fraction of tile [/]
+      &                        fr_sbl_rel,          &  !< Relative fraction of sibling [/]
+      &                        h_offset_snow_fix,   &  !< Differece in surface elevation including immobile snow layer between tile and sibling [m]
+      &                        snow_fix_tle ,       &  !< Immobile snow on tile [m]
+      &                        snow_fix_sbl ,       &  !< Immobile snow on sibling [m]
+      &                        snow_fix_rel_tle,    &  !< Fraction of immobile snow on tile [/]
+      &                        snow_fix_rel_sbl,    &  !< Fraction of immobile snow on sibling [/]
       &                        snow_depth_mob_avg,  &  !< Average depth of mobile snow [m]
-      &                        snow_depth_mob_lvt,  &  !< Depth of mobile snow on elevation [m]
-      &                        snow_depth_mob_dpr,  &  !< Depth of mobile snow on depression [m]
-      &                        snow_mob_lvt,        &  !< Mobile snow (WEQ) on elevation [m]
-      &                        snow_mob_dpr,        &  !< Mobile snow (WEQ)  on depression [m]
-      &                        snow_mob_upd_lvt,    &  !< Updated mobile snow (WEQ) on elevation [m]
-      &                        snow_mob_upd_dpr,    &  !< Updated mobile snow (WEQ) on depression [m]
+      &                        snow_depth_mob_tle,  &  !< Depth of mobile snow on tile [m]
+      &                        snow_depth_mob_sbl,  &  !< Depth of mobile snow on sibling [m]
+      &                        snow_mob_tle,        &  !< Mobile snow (WEQ) on tile [m]
+      &                        snow_mob_sbl,        &  !< Mobile snow (WEQ)  on sibling [m]
+      &                        snow_mob_upd_tle,    &  !< Updated mobile snow (WEQ) on tile [m]
+      &                        snow_mob_upd_sbl,    &  !< Updated mobile snow (WEQ) on sibling [m]
       &                        snow_dens_max,       &  !< Maximum snow density [kg m-3]
       &                        snow_dens_min,       &  !< Minimum snow density [kg m-3]
-      &                        snow_dens_fix_lvt,   &  !< Density of immobile snow on elevation [kg m-3]
-      &                        snow_dens_fix_dpr,   &  !< Density of immobile snow on depression [kg m-3]
-      &                        snow_rdst_lvt,       &  !< Snow (WEQ) redistribution flux on elevation [kg m-2 s-1]
-      &                        snow_rdst_dpr           !< Snow (WEQ) redistribution flux on depression [kg m-2 s-1]
+      &                        snow_dens_fix_tle,   &  !< Density of immobile snow on tile [kg m-3]
+      &                        snow_dens_fix_sbl,   &  !< Density of immobile snow on sibling [kg m-3]
+      &                        snow_rdst_tle,       &  !< Snow (WEQ) redistribution flux on tile [kg m-2 s-1]
+      &                        snow_rdst_sbl           !< Snow (WEQ) redistribution flux on sibling [kg m-2 s-1]
 
-    IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
+    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
 
     ! Setting initial values to 0.0
-    snow_rdst_lvt = 0._wp
-    snow_rdst_dpr = 0._wp
+    snow_rdst_tle = 0._wp
+    snow_rdst_sbl = 0._wp
 
     ! Snow density paraeters depending on snow scheme
     IF (l_dynsnow) THEN
@@ -816,114 +822,114 @@ CONTAINS
     END IF
 
     ! Determine relative fractions from absolute fractions
-    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
-    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+    fr_tle_rel = tle_fract / (tle_fract+sbl_fract)
+    fr_sbl_rel = sbl_fract / (tle_fract+sbl_fract)
 
     ! Determine amount of fixed and mobile fractions of the snow cover
     ! (assuming that in the previous time step the old snow has melted before the new snow)
-    snow_fix_lvt =  snow_soil_lvt - snow_new_lvt
-    snow_fix_dpr =  snow_soil_dpr - snow_new_dpr
-    snow_mob_lvt =  snow_new_lvt
-    snow_mob_dpr =  snow_new_dpr
+    snow_fix_tle =  snow_soil_tle - snow_new_tle
+    snow_fix_sbl =  snow_soil_sbl - snow_new_sbl
+    snow_mob_tle =  snow_new_tle
+    snow_mob_sbl =  snow_new_sbl
 
-    IF (snow_fix_lvt < 0._wp) THEN
-      snow_mob_lvt = snow_new_lvt + snow_fix_lvt
-      snow_fix_lvt = 0._wp
+    IF (snow_fix_tle < 0._wp) THEN
+      snow_mob_tle = snow_new_tle + snow_fix_tle
+      snow_fix_tle = 0._wp
     END IF
-    IF (snow_fix_dpr < 0._wp) THEN
-      snow_mob_dpr = snow_new_dpr + snow_fix_dpr
-      snow_fix_dpr = 0._wp
+    IF (snow_fix_sbl < 0._wp) THEN
+      snow_mob_sbl = snow_new_sbl + snow_fix_sbl
+      snow_fix_sbl = 0._wp
     END IF
 
     ! Determine snow density of fixed snow
-    IF (snow_fix_lvt > 0._wp) THEN
-      snow_fix_rel_lvt  = snow_fix_lvt / snow_soil_lvt
-      snow_dens_fix_lvt = (snow_dens_lvt - (snow_dens_min * (1._wp - snow_fix_rel_lvt))) &
-        &               / snow_fix_rel_lvt
+    IF (snow_fix_tle > 0._wp) THEN
+      snow_fix_rel_tle  = snow_fix_tle / snow_soil_tle
+      snow_dens_fix_tle = (snow_dens_tle - (snow_dens_min * (1._wp - snow_fix_rel_tle))) &
+        &               / snow_fix_rel_tle
     ELSE
-      snow_dens_fix_lvt = snow_dens_lvt
+      snow_dens_fix_tle = snow_dens_tle
     END IF
-    IF (snow_fix_dpr > 0._wp) THEN
-      snow_fix_rel_dpr  = snow_fix_dpr / snow_soil_dpr
-      snow_dens_fix_dpr = (snow_dens_dpr - (snow_dens_min * (1._wp - snow_fix_rel_dpr))) &
-        &               / snow_fix_rel_dpr
+    IF (snow_fix_sbl > 0._wp) THEN
+      snow_fix_rel_sbl  = snow_fix_sbl / snow_soil_sbl
+      snow_dens_fix_sbl = (snow_dens_sbl - (snow_dens_min * (1._wp - snow_fix_rel_sbl))) &
+        &               / snow_fix_rel_sbl
     ELSE
-      snow_dens_fix_dpr = snow_dens_dpr
+      snow_dens_fix_sbl = snow_dens_sbl
     END IF
 
     ! Determine height differences of the top of fixed snow
     h_offset_snow_fix = h_offset                                                   &
-      &               + weq_pond_lvt + snow_fix_lvt * (rhoh2o / snow_dens_fix_lvt) &
-      &               - weq_pond_dpr - snow_fix_dpr * (rhoh2o / snow_dens_fix_dpr)
+      &               + weq_pond_tle + snow_fix_tle * (rhoh2o / snow_dens_fix_tle) &
+      &               - weq_pond_sbl - snow_fix_sbl * (rhoh2o / snow_dens_fix_sbl)
 
-    ! Calculate snow redistribution for two cases (1) from elevation to depression or (2) from depression to elevation
+    ! Calculate snow redistribution for two cases (1) from tile to sibling or (2) from sibling to tile
     ! Transport only applies if in the source tile there is fixed snow
-    IF  ((h_offset_snow_fix >  1.0e-10_wp .AND. snow_fix_lvt > 0.01_wp) .OR. &
-         (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_dpr > 0.01_wp))THEN
+    IF  ((h_offset_snow_fix >  1.0e-10_wp .AND. snow_fix_tle > 0.01_wp) .OR. &
+         (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_sbl > 0.01_wp))THEN
 
-      snow_depth_mob_avg = (snow_mob_lvt * fr_lvt_rel + snow_mob_dpr * fr_dpr_rel) &
+      snow_depth_mob_avg = (snow_mob_tle * fr_tle_rel + snow_mob_sbl * fr_sbl_rel) &
         &                * (rhoh2o / snow_dens_min)
 
-      ! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on elevation
-      IF  (h_offset_snow_fix > 1.0e-10_wp .AND. snow_fix_lvt > 0.01_wp)THEN
-        IF (snow_depth_mob_avg / fr_dpr_rel <= h_offset_snow_fix ) THEN ! New snow fits into depression
-          snow_depth_mob_dpr = snow_depth_mob_avg / fr_dpr_rel
-          snow_depth_mob_lvt = 0._wp
+      ! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on tile
+      IF  (h_offset_snow_fix > 1.0e-10_wp .AND. snow_fix_tle > 0.01_wp)THEN
+        IF (snow_depth_mob_avg / fr_sbl_rel <= h_offset_snow_fix ) THEN ! New snow fits into sibling
+          snow_depth_mob_sbl = snow_depth_mob_avg / fr_sbl_rel
+          snow_depth_mob_tle = 0._wp
         ELSE
-          snow_depth_mob_dpr = h_offset_snow_fix  &
-            &                + (snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel)
-          snow_depth_mob_lvt =  snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel
+          snow_depth_mob_sbl = h_offset_snow_fix  &
+            &                + (snow_depth_mob_avg - h_offset_snow_fix * fr_sbl_rel)
+          snow_depth_mob_tle =  snow_depth_mob_avg - h_offset_snow_fix * fr_sbl_rel
         END IF
-      ! 2. (Fixed) snow surface is lower on elevation and there is fixed snow in depression
-      ELSE IF (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_dpr > 0.01_wp) THEN
+      ! 2. (Fixed) snow surface is lower on tile and there is fixed snow in sibling
+      ELSE IF (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_sbl > 0.01_wp) THEN
         h_offset_snow_fix = - h_offset_snow_fix ! Inversing sign of height offset to simplify calculations
-        IF (snow_depth_mob_avg / fr_lvt_rel <= h_offset_snow_fix ) THEN  ! New snow fits into elevation
-          snow_depth_mob_lvt = snow_depth_mob_avg / fr_lvt_rel
-          snow_depth_mob_dpr = 0._wp
+        IF (snow_depth_mob_avg / fr_tle_rel <= h_offset_snow_fix ) THEN  ! New snow fits into tile
+          snow_depth_mob_tle = snow_depth_mob_avg / fr_tle_rel
+          snow_depth_mob_sbl = 0._wp
         ELSE
-          snow_depth_mob_lvt = h_offset_snow_fix &
-                           & + (snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel)
-          snow_depth_mob_dpr =  snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel
+          snow_depth_mob_tle = h_offset_snow_fix &
+                           & + (snow_depth_mob_avg - h_offset_snow_fix * fr_tle_rel)
+          snow_depth_mob_sbl =  snow_depth_mob_avg - h_offset_snow_fix * fr_tle_rel
         END IF
       END IF
 
       ! Recalculation of snow weqs
-      snow_mob_upd_dpr = snow_depth_mob_dpr / (rhoh2o / snow_dens_min)
-      snow_mob_upd_lvt = snow_depth_mob_lvt / (rhoh2o / snow_dens_min)
+      snow_mob_upd_sbl = snow_depth_mob_sbl / (rhoh2o / snow_dens_min)
+      snow_mob_upd_tle = snow_depth_mob_tle / (rhoh2o / snow_dens_min)
 
-      snow_rdst_dpr    = snow_mob_upd_dpr - snow_mob_dpr
-      snow_rdst_lvt    = snow_mob_upd_lvt - snow_mob_lvt
+      snow_rdst_sbl    = snow_mob_upd_sbl - snow_mob_sbl
+      snow_rdst_tle    = snow_mob_upd_tle - snow_mob_tle
 
-      snow_soil_dpr    = snow_soil_dpr    + snow_rdst_dpr
-      snow_soil_lvt    = snow_soil_lvt    + snow_rdst_lvt
+      snow_soil_sbl    = snow_soil_sbl    + snow_rdst_sbl
+      snow_soil_tle    = snow_soil_tle    + snow_rdst_tle
 
-      snow_dpr         = snow_dpr         + snow_rdst_dpr
-      snow_lvt         = snow_lvt         + snow_rdst_lvt
+      snow_sbl         = snow_sbl         + snow_rdst_sbl
+      snow_tle         = snow_tle         + snow_rdst_tle
 
-      snow_new_dpr     = snow_new_dpr     + snow_rdst_dpr
-      snow_new_lvt     = snow_new_lvt     + snow_rdst_lvt
+      snow_new_sbl     = snow_new_sbl     + snow_rdst_sbl
+      snow_new_tle     = snow_new_tle     + snow_rdst_tle
 
       ! Converting redistribution flux from m/step -> kg m-2 s-1
-      snow_rdst_dpr     = snow_rdst_dpr * rhoh2o / dtime
-      snow_rdst_lvt     = snow_rdst_lvt * rhoh2o / dtime
+      snow_rdst_sbl     = snow_rdst_sbl * rhoh2o / dtime
+      snow_rdst_tle     = snow_rdst_tle * rhoh2o / dtime
 
-      wtr_latflow_lvt   = wtr_latflow_lvt   + snow_rdst_lvt
-      wtr_latflow_dpr   = wtr_latflow_dpr   + snow_rdst_dpr
+      wtr_latflow_tle   = wtr_latflow_tle   + snow_rdst_tle
+      wtr_latflow_sbl   = wtr_latflow_sbl   + snow_rdst_sbl
 
-      snow_rdst_in_lvt  = snow_rdst_in_lvt  + MAX(0._wp, snow_rdst_lvt)
-      snow_rdst_in_dpr  = snow_rdst_in_dpr  + MAX(0._wp, snow_rdst_dpr)
-      snow_rdst_out_lvt = snow_rdst_out_lvt - MIN(0._wp, snow_rdst_lvt)
-      snow_rdst_out_dpr = snow_rdst_out_dpr - MIN(0._wp, snow_rdst_dpr)
+      snow_rdst_in_tle  = snow_rdst_in_tle  + MAX(0._wp, snow_rdst_tle)
+      snow_rdst_in_sbl  = snow_rdst_in_sbl  + MAX(0._wp, snow_rdst_sbl)
+      snow_rdst_out_tle = snow_rdst_out_tle - MIN(0._wp, snow_rdst_tle)
+      snow_rdst_out_sbl = snow_rdst_out_sbl - MIN(0._wp, snow_rdst_sbl)
 
       ! Updating snow densities based on redistributed snow
-      IF (snow_rdst_dpr .NE. 0_wp .AND. snow_soil_dpr > 0._wp) THEN
-        snow_dens_dpr   = (snow_new_dpr * snow_dens_min &
-          &             + snow_fix_dpr * min(snow_dens_fix_dpr, snow_dens_max)) / snow_soil_dpr
+      IF (snow_rdst_sbl .NE. 0_wp .AND. snow_soil_sbl > 0._wp) THEN
+        snow_dens_sbl   = (snow_new_sbl * snow_dens_min &
+          &             + snow_fix_sbl * min(snow_dens_fix_sbl, snow_dens_max)) / snow_soil_sbl
       END IF
 
-      IF (snow_rdst_lvt .NE. 0_wp .AND. snow_soil_lvt > 0._wp) THEN
-        snow_dens_lvt   = (snow_new_lvt * snow_dens_min &
-          &             + snow_fix_lvt * min(snow_dens_fix_lvt, snow_dens_max)) / snow_soil_lvt
+      IF (snow_rdst_tle .NE. 0_wp .AND. snow_soil_tle > 0._wp) THEN
+        snow_dens_tle   = (snow_new_tle * snow_dens_min &
+          &             + snow_fix_tle * min(snow_dens_fix_tle, snow_dens_max)) / snow_soil_tle
       END IF
     END IF
 

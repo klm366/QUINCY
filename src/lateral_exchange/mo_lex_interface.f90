@@ -844,7 +844,7 @@ CONTAINS
           DO ic = 1,nc
             hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
             IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
-              & (microcon_grvt_ct(ic,lex_ids) > 0._wp)) THEN
+              & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
               ! Lateral ingress from pond to connected tile 
               CALL calc_lat_pond_soil_flux(nsoil, dtime,    &
               &  h_offset_ct(ic,lex_ids),                   &
