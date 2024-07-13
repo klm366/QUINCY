@@ -68,7 +68,9 @@ MODULE mo_lex_memory_class
       & wtr_drainage_out_sl,  &  !< drainage received by adjacent tiles [kg m-2 s-1] 
       & wtr_diffusion_out_sl, &  !< diffusion (water) received by adjacent tile  [kg m-2 s-1] 
       & nrg_diffusion_in_sl,  &  !< diffusion (energy) received from adjacent tile [J m-2 s-1]
-      & nrg_diffusion_out_sl     !< diffusion (energy) received by adjacent tile [J m-2 s-1]
+      & nrg_diffusion_out_sl, &  !< diffusion (energy) received by adjacent tile [J m-2 s-1]
+      & nrg_convection_in_sl, &  !< convection (energy contained in water) received from adjacent tile [J m-2 s-1]
+      & nrg_convection_out_sl    !< convection (energy contained in water) received by adjacent tile [J m-2 s-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_lex_memory
@@ -325,6 +327,23 @@ CONTAINS
         & loutput=l_lex, output_level=BASIC,                                                     &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
+    CALL mem%Add_var( 'nrg_convection_out_sl', mem%nrg_convection_out_sl,                        &
+        & hgrid, soil_w,                                                                         &
+        & t_cf('nrg_convection_out_sl', 'J m-2 s-1',                                             &
+        & 'convection (energy contained in water) received by adjacent tile'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
+        & loutput=l_lex, output_level=BASIC,                                                     &
+        & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'nrg_convection_in_sl', mem%nrg_convection_in_sl,                          &
+        & hgrid, soil_w,                                                                         &
+        & t_cf('nrg_convection_in_sl', 'J m-2 s-1',                                              &
+        & 'convection (energy contained in water) received from adjacent tile'),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
+        & loutput=l_lex, output_level=BASIC,                                                     &
+        & lrestart=.TRUE., initval_r=0.0_wp)
 
   END SUBROUTINE Init_lex_memory
 
