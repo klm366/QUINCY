@@ -21,8 +21,8 @@ MODULE mo_sse_process
   PRIVATE
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
-    & calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
+    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_soil_abcoeff, &
+    & calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -368,10 +368,9 @@ CONTAINS
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
     & t_soil_top,                         &
-    & vol_heat_cap, heat_cond,            &
+    & vol_heat_cap,                       &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
-    & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
     & ws_max, matric_pot, bclapp, ws,     &
@@ -448,14 +447,11 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
-    REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
 
     REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
-    REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(in)    ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
 
-    REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
-    REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
@@ -470,21 +466,12 @@ CONTAINS
     !  local Variables
 
     INTEGER  :: ic, is
-    REAL(wp) :: z1(nc,nsoil)
-    REAL(wp) :: zd1(nsoil-1)
-    REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
     REAL(wp) :: heat_cap(nc,nsoil)
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO is = 1,nsoil-1
-       zd1(is) = 1._wp / (mids(is+1) - mids(is))
-    END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC DATA CREATE(heat_cap)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ic = 1, nc
@@ -630,6 +617,122 @@ CONTAINS
       END IF
     END IF
 
+    !$ACC WAIT(1)
+    !$ACC END DATA
+
+  END SUBROUTINE calc_soil_temperature
+
+  SUBROUTINE calc_soil_abcoeff(           &
+    & nc, nsoil, dz, mids,                &
+    & delta_time,                         &
+    & vol_heat_cap, heat_cond,            &
+    & t_soil_sl,                          &
+    & t_soil_acoef, t_soil_bcoef,         &
+    & hcap_grnd, grnd_hflx                &
+    & )
+    !
+    !
+    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
+    !
+    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
+    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
+    !
+    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
+    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
+    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
+    !               ECHAM4 GCM.
+    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
+    !            U.Schlese DKRZ - February 2000  new soil temperatures
+    !            L Kornblueh, MPI, January 2003, removed MERGE
+    !
+    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
+    !
+    !   OBJECTIVE:  COMPUTATION OF:
+    !               THE GROUND TEMPERATURE EVOLUTION
+    !               THE GROUND SPECIFIC HEAT "CAPCAL"
+    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
+    !
+    !
+    !   METHOD:  IMPLICIT TIME INTEGRATION
+    !
+    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
+    !           T(K+1) = C(K) + D(K)*T(K)  (1)
+    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
+    !   T-DT TIME-STEP.
+    !   ROUTINE STRUCTURE:
+    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
+    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
+    !     PROFILE FOR THE T+DT TIME-STEP
+    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
+    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
+    !            FDIFF = A + B TS(T+DT)
+    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
+    !            WITH F0 = A + B (TS(T))
+    !                 CAPCAL = B*DT
+    !
+    !
+    !     ------------------------------------------------------------------
+    !
+    !     MODIFIED BY ALTUG EKICI
+    !
+    !     INCLUDED:
+    !     -PHASE CHANGE
+    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
+    !     -SUPERCOOLED WATER EQUATION
+    !     -THAW DEPTH CALCULATION
+    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
+    !     -ORGANIC LAYER ABOVE THE SOIL
+    !
+    !----------------------------------------------------------------------------------------------
+
+    IMPLICIT NONE
+
+    !-----------------------------------------------------------------------
+    !  arguments
+
+    INTEGER,  INTENT(in)    ::  nc                       !! length of the vector
+    INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
+    REAL(wp), INTENT(in)    ::  delta_time               !! Time step
+    REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
+    REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
+    REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
+    REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+
+    REAL(wp), INTENT(in)    ::  t_soil_sl(:,:)           !! soil temperature [K]
+    REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
+
+    REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
+    REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
+
+    !------------------------------------------------------------------
+    !  local Variables
+
+    INTEGER  :: ic, is
+    REAL(wp) :: z1(nc,nsoil)
+    REAL(wp) :: zd1(nsoil-1)
+    REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
+    REAL(wp) :: heat_cap(nc,nsoil)
+
+    !-----------------------------------------------------------------------------------------------
+    !  Computation of useful constants
+
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO is = 1,nsoil-1
+       zd1(is) = 1._wp / (mids(is+1) - mids(is))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO ic = 1, nc
+      DO is = 1, nsoil
+        heat_cap(ic,is) = dz(is) * vol_heat_cap(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
@@ -687,7 +790,8 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
-  END SUBROUTINE calc_soil_temperature
+  END SUBROUTINE calc_soil_abcoeff
+
 
   SUBROUTINE calc_snow_temperature(         &
     & nc, nsnow,                            &
