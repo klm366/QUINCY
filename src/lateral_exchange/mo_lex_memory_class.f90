@@ -47,7 +47,6 @@ MODULE mo_lex_memory_class
       & fact_lag_srf,         &  !< effective lag for lateral surface fluxes [s-1]
       & fact_lag_blg,         &  !< effective lag for lateral sub-surface fluxes [s-1]
       & wtr_runoff_in,        &  !< surface runoff received from adjacent tiles [kg m-2 s-1]
-      & wtr_infil_in,         &  !< infiltration from adjacent tiles [kg m-2 s-1]  
       & weq_snowblow_in,      &  !< snowblow from adjacent tiles [kg m-2 s-1]  
       & wtr_runoff_out,       &  !< surface runoff received by adjacent tiles [kg m-2 s-1] 
       & wtr_infil_out,        &  !< infiltration to adjacent tiles [kg m-2 s-1]  
@@ -62,7 +61,8 @@ MODULE mo_lex_memory_class
       & macrocon_grvt_ct,     &  !< macro-scale connection fraction [/]
       & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
       & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]  
-      & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/] 
+      & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/]
+      & wtr_infil_in_sl,      &  !< infiltration from adjacent tiles [kg m-2 s-1]   
       & wtr_drainage_in_sl,   &  !< drainage received from adjacent tiles [kg m-2 s-1] 
       & wtr_diffusion_in_sl,  &  !< diffusion (water) received from adjacent tile [kg m-2 s-1]
       & wtr_drainage_out_sl,  &  !< drainage received by adjacent tiles [kg m-2 s-1] 
@@ -177,14 +177,6 @@ CONTAINS
         & loutput=l_lex, output_level=BASIC,                                           &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'wtr_infil_in', mem%wtr_infil_in,                                &
-        & hgrid, surface,                                                              &
-        & t_cf('wtr_infil_in', 'kg m-2 s-1', 'infiltration from adjacent tiles'),      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
-        & loutput=l_lex, output_level=BASIC,                                           &
-        & lrestart=.TRUE., initval_r=0.0_wp)
-
     CALL mem%Add_var( 'weq_snowblow_out', mem%weq_snowblow_out,                        &
         & hgrid, surface,                                                              &
         & t_cf('weq_snowblow_out', 'kg m-2 s-1', 'snowblow to adjacent tiles'),        &
@@ -249,7 +241,6 @@ CONTAINS
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-
     CALL mem%Add_var( 'fract_latflow_srf_ct', mem%fract_latflow_srf_ct,                          &
         & hgrid, tiles,                                                                          &
         & t_cf('fract_latflow_srf_ct', '/', 'fraction of lateral (srf) flow to adjacent tile'),  &
@@ -273,6 +264,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                    &
         & loutput=l_lex, output_level=FULL,                                          &
+        & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'wtr_infil_in_sl', mem%wtr_infil_in_sl,                          &
+        & hgrid, soil_w,                                                               &
+        & t_cf('wtr_infil_in_sl', 'kg m-2 s-1', 'infiltration from adjacent tiles'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
+        & loutput=l_lex, output_level=BASIC,                                           &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_drainage_out_sl', mem%wtr_drainage_out_sl,                        &

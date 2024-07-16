@@ -156,7 +156,6 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_runoff_in
-    dsl4jsb_Real2D_onChunk :: wtr_infil_in
     dsl4jsb_Real2D_onChunk :: weq_snowblow_in
     dsl4jsb_Real2D_onChunk :: wtr_runoff_out
     dsl4jsb_Real2D_onChunk :: wtr_infil_out
@@ -167,6 +166,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_drainage_out_sl
     dsl4jsb_Real3D_onChunk :: wtr_diffusion_out_sl
 
+    dsl4jsb_Real3D_onChunk :: wtr_infil_in_sl
     dsl4jsb_Real3D_onChunk :: nrg_diffusion_in_sl
     dsl4jsb_Real3D_onChunk :: nrg_convection_in_sl
     dsl4jsb_Real3D_onChunk :: nrg_diffusion_out_sl
@@ -202,7 +202,6 @@ CONTAINS
     ! Get process variables
 
     dsl4jsb_Get_var2D_onChunk(LEX_,    wtr_runoff_in)        ! inout
-    dsl4jsb_Get_var2D_onChunk(LEX_,    wtr_infil_in)         ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,    weq_snowblow_in)      ! inout
 
     dsl4jsb_Get_var2D_onChunk(LEX_,    wtr_runoff_out)       ! inout
@@ -215,6 +214,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(LEX_,    wtr_drainage_out_sl)  ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,    wtr_diffusion_out_sl) ! inout
 
+    dsl4jsb_Get_var3D_onChunk(LEX_,    wtr_infil_in_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,    nrg_diffusion_in_sl)  ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,    nrg_convection_in_sl) ! inout
 
@@ -228,7 +228,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,    nrg_lex_net_sl)       ! inout
 
     wtr_runoff_in        = 0._wp
-    wtr_infil_in         = 0._wp
     weq_snowblow_in      = 0._wp
     wtr_runoff_out       = 0._wp
     wtr_infil_out        = 0._wp
@@ -238,6 +237,7 @@ CONTAINS
     wtr_drainage_out_sl  = 0._wp
     wtr_diffusion_out_sl = 0._wp
 
+    wtr_infil_in_sl      = 0._wp
     nrg_diffusion_in_sl  = 0._wp
     nrg_convection_in_sl = 0._wp
     nrg_diffusion_out_sl = 0._wp
@@ -294,11 +294,11 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_runoff_in,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, wtr_infil_in,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, weq_snowblow_in,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_runoff_out,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_infil_out,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, weq_snowblow_out,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, wtr_infil_in_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_drainage_in_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_diffusion_in_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_drainage_out_sl,  weighted_by_fract)
@@ -333,14 +333,15 @@ CONTAINS
   SUBROUTINE update_lex(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_lex_process,            ONLY: calc_runoff_transport,     &
-      &                                  calc_drainage_transport,   &
-      &                                  calc_lat_pond_soil_flux,   &
-      &                                  calc_diffusion_water,      &
-      &                                  calc_diffusion_energy,     &
-      &                                  calc_convection_energy,    &
-      &                                  calc_snow_redistribution,  &
-      &                                  shift_fluxes_sl,           &
+    USE mo_lex_process,            ONLY: calc_runoff_transport,           &
+      &                                  calc_drainage_transport,         &
+      &                                  calc_pond_soil_flux_water,       &
+      &                                  calc_pond_soil_flux_heat,        &
+      &                                  calc_diffusion_water,            &
+      &                                  calc_diffusion_heat,             &
+      &                                  calc_convection_heat,            &
+      &                                  calc_snow_redistribution,        &
+      &                                  shift_fluxes_sl,                 &
       &                                  remove_exess_water
 
     USE mo_hydro_process, ONLY: get_soilhyd_properties
@@ -370,9 +371,14 @@ CONTAINS
       &         lex_idc, lex_id_first, lex_id_last              !< lex id of current tile (lex_idc) and of the first (lex_id_first) and last tile (lex_id_last) on the present tile level
 
     REAL(wp) :: dtime                                           !< Timestep length [s]
+
     REAL(wp), PARAMETER :: fos = 0.99_wp                        !< Factor of safety to avoid negative fluxes due to roundoff errors [/]
-    REAL(wp) :: fract(options%nc)                               !< Cover fractions of tile [/]
-    REAL(wp) :: fract_sibl(options%nc)                          !< Cover fractions of sibling tile [/]
+
+    REAL(wp) ::  &
+      &  fract(options%nc),                                  &  !< Cover fractions of tile [/]
+      &  fract_sibl(options%nc),                             &  !< Cover fractions of sibling tile [/]
+      &  wtr_incomming_srf(options%nc),                      &  !< Lateral flux (surface) from sibling to tile [kg m-2 s-1]
+      &  wtr_incomming_srf_sibl(options%nc)                     !< Lateral flux (surface) from tile to sibling [kg m-2 s-1]
 
     REAL(wp) ::  &  
       &  wtr_latflow_sl_used(options%nc,options%nsoil_w),    &  !< Outflow from latflow res. with water in bedrock-layers on sibling moved to the layer above [m timestep-1]
@@ -390,8 +396,8 @@ CONTAINS
       &  weq_field_cap_sl_sibl(options%nc,options%nsoil_w),  &  !< field capacity for sibling [m] 
       &  weq_wres_sl(options%nc,options%nsoil_w),            &  !< moisture residual for tile [m]
       &  weq_wres_sl_sibl(options%nc,options%nsoil_w),       &  !< moisture residual for sibling [m]
-      &  wtr_incomming_sl(options%nc,options%nsoil_w),       &  !< Lateral flux from sibling to tile [kg m-2 s-1]
-      &  wtr_incomming_sl_sibl(options%nc,options%nsoil_w)      !< Lateral flux from tile to sibling [m]
+      &  wtr_incomming_sl(options%nc,options%nsoil_w),       &  !< Lateral flux (soil) from sibling to tile [kg m-2 s-1]
+      &  wtr_incomming_sl_sibl(options%nc,options%nsoil_w)      !< Lateral flux (soil) from tile to sibling [kg m-2 s-1]
 
     REAL(wp) ::  hlp1                                           !< helper variables
 
@@ -418,7 +424,6 @@ CONTAINS
       & wtr_latflow_srf,      &
       & wtr_lex_net_srf,      &
       & wtr_runoff_in,        &
-      & wtr_infil_in,         &
       & weq_snowblow_in,      &
       & wtr_runoff_out,       &
       & wtr_infil_out,        &
@@ -439,6 +444,7 @@ CONTAINS
       &  wtr_latflow_sl,         &
       &  soil_depth_sl,          &
       &  wtr_lex_net_sl,         &
+      & wtr_infil_in_sl,         &
       &  wtr_drainage_in_sl,     &
       &  wtr_diffusion_in_sl,    &
       &  wtr_drainage_out_sl,    &
@@ -472,7 +478,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::    &
       &  wtr_lex_net_srf_sibl,   &
       &  wtr_runoff_in_sibl,     &
-      &  wtr_infil_in_sibl,      &
       &  weq_snowblow_in_sibl,   &
       &  wtr_runoff_out_sibl,    &
       &  wtr_infil_out_sibl,     &
@@ -575,11 +580,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(LEX_,   length_scale_ct)        ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   length_iface_ct)        ! in
     dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_runoff_in)          ! inout
-    dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_infil_in)           ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   weq_snowblow_in)        ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_runoff_out)         ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_infil_out)          ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   weq_snowblow_out)       ! inout
+    dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_infil_in_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_drainage_in_sl)     ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_diffusion_in_sl)    ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_drainage_out_sl)    ! inout
@@ -649,7 +654,6 @@ CONTAINS
       dsl4jsb_Get_memory_tile(SSE_, sibl)
 
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_runoff_in, sibl)          ! inout
-      dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_infil_in, sibl)           ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   weq_snowblow_in, sibl)        ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_runoff_out, sibl)         ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_infil_out, sibl)          ! inout
@@ -709,6 +713,8 @@ CONTAINS
       ! Start calculating exchange processes between different tiles
       IF (lex_idt /= lex_ids) THEN
 
+        wtr_incomming_srf(:)       = 0._wp
+        wtr_incomming_srf_sibl(:)  = 0._wp
         wtr_incomming_sl(:,:)      = 0._wp
         wtr_incomming_sl_sibl(:,:) = 0._wp
         
@@ -728,7 +734,8 @@ CONTAINS
             !$ACC LOOP SEQ
             DO is = nsoil, 2, -1
               IF (soil_depth_sl_sibl(ic, is) <= 0._wp) THEN
-                wtr_latflow_sl_used(ic,is-1) = wtr_latflow_sl_used(ic,is-1) + wtr_latflow_sl_used(ic,is)
+                wtr_latflow_sl_used(ic,is-1) = wtr_latflow_sl_used(ic,is-1) &
+                  &                          + wtr_latflow_sl_used(ic,is)
                 wtr_latflow_sl_used(ic,is)   = 0._wp
               END IF   
             END DO
@@ -742,6 +749,7 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic=1,nc
             hlp1 = wtr_latflow_srf(ic)*fos
+            wtr_incomming_srf_sibl(ic) = wtr_incomming_srf_sibl(ic) - wtr_runoff_in_sibl(ic)
             CALL calc_runoff_transport( dtime,              &
               & fract_latflow_srf_ct(ic,lex_ids),           &
               & fract(ic),                                  &
@@ -753,6 +761,7 @@ CONTAINS
               & wtr_lex_net_srf_sibl(ic),                   &
               & wtr_pond_sibl(ic)                           &
               )
+            wtr_incomming_srf_sibl(ic) = wtr_incomming_srf_sibl(ic) + wtr_runoff_in_sibl(ic)
           END DO
           !$ACC END PARALLEL LOOP
         END IF
@@ -764,7 +773,8 @@ CONTAINS
             !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)   
             DO is = 1,nsoil
               DO ic=1,nc
-                wtr_incomming_sl_sibl(ic,is) = wtr_incomming_sl_sibl(ic,is) - wtr_drainage_in_sl_sibl(ic,is)
+                wtr_incomming_sl_sibl(ic,is) = wtr_incomming_sl_sibl(ic,is) &
+                  &                          - wtr_drainage_in_sl_sibl(ic,is)
                 hlp1 = wtr_latflow_sl_used(ic,is)*fos
                 CALL calc_drainage_transport( dtime,        &
                   & fract_latflow_blg_ct(ic,lex_ids),       &
@@ -777,7 +787,8 @@ CONTAINS
                   & wtr_lex_net_sl_sibl(ic,is),             &
                   & wtr_soil_sl_sibl(ic,is)                 &
                   )
-                wtr_incomming_sl_sibl(ic,is) = wtr_incomming_sl_sibl(ic,is) + wtr_drainage_in_sl_sibl(ic,is)
+                wtr_incomming_sl_sibl(ic,is) = wtr_incomming_sl_sibl(ic,is) &
+                  &                          + wtr_drainage_in_sl_sibl(ic,is)
               END DO
             END DO
             !$ACC END PARALLEL LOOP
@@ -870,8 +881,10 @@ CONTAINS
             hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
             IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
               & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
+              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_infil_in_sl(ic,:)
               ! Lateral ingress from pond to connected tile 
-              CALL calc_lat_pond_soil_flux(nsoil, dtime,    &
+              CALL calc_pond_soil_flux_water(               &
+              &  nsoil, dtime,                              &
               &  h_offset_ct(ic,lex_ids),                   &
               &  length_scale_ct(ic,lex_ids),               &
               &  hlp1,                                      &
@@ -881,13 +894,14 @@ CONTAINS
               &  wtr_soil_fc_sl(ic,:),                      &
               &  hyd_cond_sl(ic,:),                         &
               &  mpot_act(ic,:),                            &
-              &  wtr_infil_in(ic),                          &
               &  wtr_infil_out_sibl(ic),                    &
+              &  wtr_infil_in_sl(ic,:),                     &
               &  wtr_lex_net_srf_sibl(ic),                  &
               &  wtr_lex_net_sl(ic,:),                      &
               &  wtr_pond_sibl(ic),                         &
               &  wtr_soil_sl(ic,:)                          &
               &  )
+              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) + wtr_infil_in_sl(ic,:)
             END IF
           END DO
           !$ACC END PARALLEL LOOP
@@ -897,8 +911,10 @@ CONTAINS
             IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr .AND. &
               & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
               ! Diffusion between connected tiles (water).
-              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) - wtr_diffusion_in_sl_sibl(ic,:)
+              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:) &
+                &                         - wtr_diffusion_in_sl(ic,:)
+              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                &                         - wtr_diffusion_in_sl_sibl(ic,:)
               CALL calc_diffusion_water(nsoil, dtime,       &
               &  h_offset_ct(ic,lex_ids),                   &
               &  length_scale_ct(ic,lex_ids),               &
@@ -928,8 +944,10 @@ CONTAINS
               &  wtr_soil_sl(ic,:),                         &
               &  wtr_soil_sl_sibl(ic,:)                     &
               &  )
-              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) + wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) + wtr_diffusion_in_sl_sibl(ic,:)
+              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:) &
+                &                         + wtr_diffusion_in_sl(ic,:)
+              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                &                         + wtr_diffusion_in_sl_sibl(ic,:)
             END IF
           END DO
           !$ACC END PARALLEL LOOP
@@ -938,10 +956,37 @@ CONTAINS
           DO ic = 1,nc
             IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg .AND. &
               & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
+
               ! Diffusion between connected tiles (energy).
               ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
               ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-              CALL calc_diffusion_energy(nsoil, dtime,      &
+
+              IF (h_offset_ct(ic,lex_ids) > 0._wp) THEN
+                hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
+                CALL calc_pond_soil_flux_heat(              &
+                &  nsoil, dtime,                            &
+                &  soil_e%dz(:),                            &
+                &  h_offset_ct(ic,lex_ids),                 &
+                &  length_scale_ct(ic,lex_ids),             &
+                &  hlp1,                                    &
+                &  fract(ic),                               &
+                &  fract_sibl(ic),                          &
+                &  t_soil_sl_sibl(ic,1),                    &
+                &  vol_heat_cap_sl_sibl(ic,1),              &
+                &  wtr_pond_sibl(ic), ice_pond_sibl(ic),    &
+                &  t_soil_sl(ic,:),                         &
+                &  heat_cond_sl(ic,:),                      &
+                &  vol_heat_cap_sl_sibl(ic,:),              &
+                &  nrg_diffusion_in_sl_sibl(ic,1),          &
+                &  nrg_diffusion_out_sl_sibl(ic,1),         &
+                &  nrg_lex_net_sl_sibl(ic,1),               &
+                &  nrg_diffusion_in_sl(ic,:),               &
+                &  nrg_diffusion_out_sl(ic,:),              &
+                &  nrg_lex_net_sl(ic,:)                     &
+                &  )
+              END IF
+
+              CALL calc_diffusion_heat(nsoil, dtime,        &
               &  soil_e%dz(:),                              &
               &  h_offset_ct(ic,lex_ids),                   &
               &  length_scale_ct(ic,lex_ids),               &
@@ -971,11 +1016,13 @@ CONTAINS
               ! Fluxes reulting from the heat contained in the lateral fluxes of water
               ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
               ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-              Call calc_convection_energy(nsoil, dtime,      &
+              Call calc_convection_heat(nsoil, dtime,       &
               &  soil_e%dz(:),                              &
               &  h_offset_ct(ic,lex_ids),                   &
               &  fract(ic),                                 &
               &  fract_sibl(ic),                            &
+              &  wtr_incomming_srf(ic),                     &
+              &  wtr_incomming_srf_sibl(ic),                &
               &  t_soil_sl(ic,:),                           &
               &  t_soil_sl_sibl(ic,:),                      &
               &  wtr_incomming_sl(ic,:),                    &
@@ -1144,8 +1191,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,      weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_runoff_in,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, wtr_infil_in,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, weq_snowblow_in,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, wtr_infil_in_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_drainage_in_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_diffusion_in_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_runoff_out,        weighted_by_fract)
@@ -1153,6 +1200,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LEX_, weq_snowblow_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_drainage_out_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, wtr_diffusion_out_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, nrg_diffusion_in_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, nrg_diffusion_out_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, nrg_convection_in_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, nrg_convection_out_sl, weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(LEX_, microcon_grvt_ct,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, microcon_dfsn_ct,      weighted_by_fract)
