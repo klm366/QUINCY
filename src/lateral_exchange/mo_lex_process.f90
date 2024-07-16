@@ -701,13 +701,13 @@ CONTAINS
           END IF
 
           ! Diagnosing incoming-, outgoing- and net fluxes on tiles
-          diffus_in_tle(i_tle)    = diffus_in_tle(i_tle)  + MAX(0._wp, heat_flx_lat / fr_tle_rel)
-          diffus_in_sbl(i_sbl)    = diffus_in_sbl(i_sbl)  + MAX(0._wp, heat_flx_lat / fr_sbl_rel)
-          diffus_out_tle(i_tle)   = diffus_out_tle(i_tle) - MIN(0._wp, heat_flx_lat / fr_tle_rel)
-          diffus_out_sbl(i_sbl)   = diffus_out_sbl(i_sbl) - MIN(0._wp, heat_flx_lat / fr_sbl_rel)
+          diffus_in_tle(i_tle)    = diffus_in_tle(i_tle)  + MAX(0._wp, -heat_flx_lat / fr_tle_rel)
+          diffus_in_sbl(i_sbl)    = diffus_in_sbl(i_sbl)  + MAX(0._wp,  heat_flx_lat / fr_sbl_rel)
+          diffus_out_tle(i_tle)   = diffus_out_tle(i_tle) - MIN(0._wp, -heat_flx_lat / fr_tle_rel)
+          diffus_out_sbl(i_sbl)   = diffus_out_sbl(i_sbl) - MIN(0._wp,  heat_flx_lat / fr_sbl_rel)
 
-          heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle)          - heat_flx_lat / fr_tle_rel
-          heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl)          + heat_flx_lat / fr_sbl_rel
+          heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle)           - heat_flx_lat / fr_tle_rel
+          heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl)           + heat_flx_lat / fr_sbl_rel
         END IF
 
         ! Determening the top and bottem of the next layer of the regridded
