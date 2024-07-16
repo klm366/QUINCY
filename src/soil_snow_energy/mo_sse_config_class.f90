@@ -39,6 +39,7 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_heat_cap_pond !< T: Use effective heat capacity for top soil layer that includes the storage capacity of ponds
     LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
@@ -80,7 +81,7 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
@@ -92,7 +93,7 @@ CONTAINS
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
-      & l_soil_texture,                         &
+      & l_heat_cap_pond, l_soil_texture,        &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename
 
@@ -119,6 +120,7 @@ CONTAINS
     l_heat_cond_dyn  = .TRUE.
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
+    l_heat_cap_pond  = .FALSE.
     l_soil_texture   = .FALSE.
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
@@ -174,6 +176,10 @@ CONTAINS
     config%l_soil_texture  = l_soil_texture
     IF (l_soil_texture) THEN
       CALL message(TRIM(routine), 'Using soil texture to derive heat capacity and heat conductivity')
+    END IF
+    config%l_heat_cap_pond = l_heat_cap_pond
+    IF (l_heat_cap_pond) THEN
+      CALL message(TRIM(routine), 'Using effective heat capacity for top soil layer including the storage capacity of ponds')
     END IF
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
