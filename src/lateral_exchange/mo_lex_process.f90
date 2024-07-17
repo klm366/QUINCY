@@ -1104,9 +1104,12 @@ CONTAINS
   SUBROUTINE calc_snow_redistribution(              &
       &      l_dynsnow,                             &
       &      dtime,                                 &
+      &      cnct_rel,                              &
       &      h_offset,                              &
       &      tle_fract, sbl_fract,                  &
       &      weq_pond_tle, weq_pond_sbl,            &
+      &      snow_soil_tle_tm1, snow_new_tle_tm1,   &
+      &      snow_dens_tle_tm1,                     &
       &      snow_rdst_in_tle, snow_rdst_in_sbl,    &
       &      snow_rdst_out_tle, snow_rdst_out_sbl,  &
       &      wtr_latflow_tle, wtr_latflow_sbl,      &
@@ -1122,12 +1125,18 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: l_dynsnow               !< Dynamic snow density is being used
 
     REAL(wp), INTENT(in)    :: dtime,               &  !< Timestep length [s]
+      &                        cnct_rel,            &  !< connectivity of tile and sibing relative to the sum of connectivities of tile [/]
       &                        h_offset,            &  !< Differece in surface elevation between tile and sibling [m]
       &                        tle_fract,           &  !< Area fraction of tile [/]
       &                        sbl_fract               !< Area fraction of sibling [/]
 
     REAL(wp), INTENT(in)    :: weq_pond_tle,        &  !< Pond storage on tile [m]
       &                        weq_pond_sbl            !< Pond storage on sibling [m]
+
+    REAL(wp), INTENT(in)    :: snow_soil_tle_tm1,   &  !< Snow soil (WEQ) on tile at end of previous timestep [m]
+      &                        snow_new_tle_tm1,    &  !< New snow soil (WEQ) on tile at end of previous timestep [m]
+      &                        snow_dens_tle_tm1       !< Snow density on tile at end of previous timestep [kg m-3]
+
 
     REAL(wp), INTENT(inout) :: snow_rdst_in_tle,    &  !< Snow redistribution influx at tile [kg m-2 s-1]
       &                        snow_rdst_in_sbl,    &  !< Snow redistribution influx at sibling [kg m-2 s-1]
@@ -1190,13 +1199,13 @@ CONTAINS
 
     ! Determine amount of fixed and mobile fractions of the snow cover
     ! (assuming that in the previous time step the old snow has melted before the new snow)
-    snow_fix_tle =  snow_soil_tle - snow_new_tle
+    snow_fix_tle =  snow_soil_tle_tm1 - snow_new_tle_tm1
     snow_fix_sbl =  snow_soil_sbl - snow_new_sbl
-    snow_mob_tle =  snow_new_tle
+    snow_mob_tle =  snow_new_tle_tm1
     snow_mob_sbl =  snow_new_sbl
 
     IF (snow_fix_tle < 0._wp) THEN
-      snow_mob_tle = snow_new_tle + snow_fix_tle
+      snow_mob_tle = snow_new_tle_tm1 + snow_fix_tle
       snow_fix_tle = 0._wp
     END IF
     IF (snow_fix_sbl < 0._wp) THEN
@@ -1206,11 +1215,11 @@ CONTAINS
 
     ! Determine snow density of fixed snow
     IF (snow_fix_tle > 0._wp) THEN
-      snow_fix_rel_tle  = snow_fix_tle / snow_soil_tle
-      snow_dens_fix_tle = (snow_dens_tle - (snow_dens_min * (1._wp - snow_fix_rel_tle))) &
+      snow_fix_rel_tle  = snow_fix_tle / snow_soil_tle_tm1
+      snow_dens_fix_tle = (snow_dens_tle_tm1 - (snow_dens_min * (1._wp - snow_fix_rel_tle))) &
         &               / snow_fix_rel_tle
     ELSE
-      snow_dens_fix_tle = snow_dens_tle
+      snow_dens_fix_tle = snow_dens_tle_tm1
     END IF
     IF (snow_fix_sbl > 0._wp) THEN
       snow_fix_rel_sbl  = snow_fix_sbl / snow_soil_sbl
@@ -1260,8 +1269,8 @@ CONTAINS
       snow_mob_upd_sbl = snow_depth_mob_sbl / (rhoh2o / snow_dens_min)
       snow_mob_upd_tle = snow_depth_mob_tle / (rhoh2o / snow_dens_min)
 
-      snow_rdst_sbl    = snow_mob_upd_sbl - snow_mob_sbl
-      snow_rdst_tle    = snow_mob_upd_tle - snow_mob_tle
+      snow_rdst_sbl    = (snow_mob_upd_sbl - snow_mob_sbl) * cnct_rel
+      snow_rdst_tle    = (snow_mob_upd_tle - snow_mob_tle) * cnct_rel
 
       snow_soil_sbl    = snow_soil_sbl    + snow_rdst_sbl
       snow_soil_tle    = snow_soil_tle    + snow_rdst_tle

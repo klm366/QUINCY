@@ -377,6 +377,9 @@ CONTAINS
     REAL(wp) ::  &
       &  fract(options%nc),                                  &  !< Cover fractions of tile [/]
       &  fract_sibl(options%nc),                             &  !< Cover fractions of sibling tile [/]
+      &  snow_soil_tle_tm1(options%nc),                      &  !< Snow soil (WEQ) on tile at end of previous timestep [m]
+      &  snow_new_tle_tm1(options%nc),                       &  !< New snow soil (WEQ) on tile at end of previous timestep [m]
+      &  snow_dens_tle_tm1(options%nc),                      &  !< Snow density on tile at end of previous timestep [kg m-3]
       &  wtr_incomming_srf(options%nc),                      &  !< Lateral flux (surface) from sibling to tile [kg m-2 s-1]
       &  wtr_incomming_srf_sibl(options%nc)                     !< Lateral flux (surface) from tile to sibling [kg m-2 s-1]
 
@@ -629,6 +632,11 @@ CONTAINS
     lex_idt = tile%lcts(1)%lex_id
     CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
   
+    ! Initialze those variables, where the values at the end of ast time step, 
+    ! i.e. unmodified by interactions with siblings are needed.
+    snow_soil_tle_tm1(:)       = weq_snow_soil
+    snow_new_tle_tm1(:)        = new_snow_soil
+    snow_dens_tle_tm1(:)       = snow_soil_dens
 
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
@@ -717,7 +725,7 @@ CONTAINS
         wtr_incomming_srf_sibl(:)  = 0._wp
         wtr_incomming_sl(:,:)      = 0._wp
         wtr_incomming_sl_sibl(:,:) = 0._wp
-        
+       
         ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
         ! and for micro-scale connections, also for differences in surface elevation
         wtr_latflow_sl_used(:,:) = wtr_latflow_sl(:,:)
@@ -1107,15 +1115,21 @@ CONTAINS
           IF (dsl4jsb_Config(LEX_)%l_snow_trns .AND. &
             & (microcon_dfsn_ct(ic,lex_ids) > 0._wp)) THEN
 
+            hlp1 = MIN(1._wp, microcon_dfsn_ct(ic,lex_ids) / SUM(microcon_dfsn_ct(ic,:)))
+
             ! Snowblow between connected tiles 
             CALL calc_snow_redistribution(                  &
               & dsl4jsb_Config(SSE_)%l_dynsnow,             &
-              & dtime,                                      & 
+              & dtime,                                      &
+              & hlp1,                                       & 
               & h_offset_ct(ic,lex_ids),                    &
               & fract(ic),                                  &
               & fract_sibl(ic),                             &
               & weq_pond(ic),                               &
               & weq_pond_sibl(ic),                          &
+              & snow_soil_tle_tm1(ic),                      &
+              & snow_new_tle_tm1(ic),                       &
+              & snow_dens_tle_tm1(ic),                      &
               & weq_snowblow_in(ic),                        &
               & weq_snowblow_in_sibl(ic),                   &
               & weq_snowblow_out(ic),                       &
