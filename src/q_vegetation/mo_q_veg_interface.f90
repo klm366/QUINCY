@@ -600,6 +600,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_growth                          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc                           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, blended_height                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, dphi                                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp                                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
@@ -634,6 +636,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c14    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n15    , weighted_by_fract)
     ! VEG_ 3D
+    dsl4jsb_Aggregate_onChunk(VEG_, root_fraction_sl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, leaf_nitrogen_cl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_rub_cl                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_et_cl                    , weighted_by_fract)

@@ -30,7 +30,7 @@ MODULE mo_spq_memory_class
   PRIVATE
   PUBLIC :: t_spq_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 80
+  INTEGER, PARAMETER :: max_no_of_vars      = 90
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -85,13 +85,20 @@ MODULE mo_spq_memory_class
       & fact_q_air                      , &  !< factor representing air at actual water content [unitless]
       & fact_qsat_srf                        !< factor representing air at saturating water content [unitless]
 
+    TYPE(t_jsb_var_real2d)          :: &
+      spq_drag_srf           , &          !< surface_drag
+      spq_t_acoef            , &          !< temperature_acoef (Richtmeyer-Morton coefficient for explicit coupling)
+      spq_t_bcoef            , &          !< temperature_bcoef (Richtmeyer-Morton coefficient for explicit coupling)
+      spq_q_acoef            , &          !< specific_humidity_acoef (Richtmeyer-Morton coefficient for explicit coupling)
+      spq_q_bcoef            , &          !< specific_humidity_bcoef (Richtmeyer-Morton coefficient for explicit coupling)
+      spq_pch
+
     ! Additional variables for spq
     TYPE(t_jsb_var_real2d)          :: &
                                     w_skin,           & !< Water content in skin reservoir                                          [m]
                                     w_soil_root,      & !< Water content in root zone of the soil                                   [m]
                                     w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
-                                    w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
-                                    t_soil_root         !< Temperature of fine roots in the soil                                    [K]
+                                    w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
 
     TYPE(t_jsb_var_real3d)          :: &
       & frac_w_lat_loss_sl, &   !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
@@ -566,17 +573,6 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
-        & hgrid, surface, &
-        & t_cf('t_soil_root', 'K', 'Temperature of fine roots in the soil'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 273.15_wp)
 
       CALL mem%Add_var('frac_w_lat_loss_sl', mem%frac_w_lat_loss_sl, &
         & hgrid, vgrid_soil_sb, &
@@ -1072,6 +1068,60 @@ CONTAINS
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
           &  initval_r = 0.0_wp) ! initvalue
+
+      CALL mem%Add_var('spq_drag_srf', mem%spq_drag_srf,                       &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.TRUE.,                                                     &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_pch', mem%spq_pch,                                 &
+        & hgrid, surface,                                                      &
+        & t_cf('pch', '', ''),                                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_t_acoef', mem%spq_t_acoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_t_bcoef', mem%spq_t_bcoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_q_acoef', mem%spq_q_acoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_acoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_q_bcoef', mem%spq_q_bcoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_bcoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
 
     END IF ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
   END SUBROUTINE Init_spq_memory

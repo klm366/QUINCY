@@ -228,6 +228,7 @@ CONTAINS
   SUBROUTINE get_standalone_driver(                                                        &
     & model_id,                                                                            &  ! in
     & model_scheme,                                                                        &
+    & flag_snow,                                                                           &
     & startblk, endblk, startidx, endidx,                                                  &
     & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
@@ -241,6 +242,7 @@ CONTAINS
 
     INTEGER,  INTENT(IN)  :: model_id
     INTEGER,  INTENT(IN)  :: model_scheme
+    LOGICAL,  INTENT(IN)  :: flag_snow
     INTEGER,  INTENT(IN)  :: startblk
     INTEGER,  INTENT(IN)  :: endblk
     INTEGER,  INTENT(IN)  :: startidx(:)
@@ -408,63 +410,74 @@ CONTAINS
     END IF
 
     ! compute rain and snow
-    IF(forcing_options(model_id)%air_temperature_as_timestep) THEN
+    IF(flag_snow) THEN
+      IF(forcing_options(model_id)%air_temperature_as_timestep) THEN
 #ifdef _OPENACC
-      CALL finish(routine, 'Forcing option %air_temperature_as_timestep not ported to GPU, yet. Stop.')
+        CALL finish(routine, 'Forcing option %air_temperature_as_timestep not ported to GPU, yet. Stop.')
 #endif
-      IF(forcing_input(model_id)%precipitation%frequency == DAILY_) THEN
-        ! In case of daily precipitation the minimum and maximum read for air_temp are used
+        IF(forcing_input(model_id)%precipitation%frequency == DAILY_) THEN
+          ! In case of daily precipitation the minimum and maximum read for air_temp are used
 !$OMP PARALLEL DO PRIVATE(iblk, ic, it, argMin, argMax)
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG VECTOR COLLAPSE(2) PRIVATE(it, argMin, argMax)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-              argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
-              argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
+          !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+          !$ACC LOOP GANG VECTOR COLLAPSE(2) PRIVATE(it, argMin, argMax)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+                argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
+                argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk,1)
 
-              DO it = 1, SIZE(forcing_input(model_id)%air_temp%data_read,3)
-                  IF(argMin > forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
-                    argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
-                  ENDIF
-                  IF(argMax < forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
-                    argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
-                  ENDIF
-              ENDDO
+                DO it = 1, SIZE(forcing_input(model_id)%air_temp%data_read,3)
+                    IF(argMin > forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
+                      argMin = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
+                    ENDIF
+                    IF(argMax < forcing_input(model_id)%air_temp%data_read(ic, iblk, it)) THEN
+                      argMax = forcing_input(model_id)%air_temp%data_read(ic, iblk, it)
+                    ENDIF
+                ENDDO
 
-              CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
-                &                             0.5_wp*(argMin + argMax))
+                CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
+                  &                             0.5_wp*(argMin + argMax))
+            ENDDO
           ENDDO
-        ENDDO
-        !$ACC END PARALLEL
+          !$ACC END PARALLEL
 !$OMP END PARALLEL DO
 
+        ELSE
+          ! else currentvalue
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
+              & t_air_C(ic, iblk))
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
+        ENDIF
       ELSE
-        ! else currentvalue
+
 !$OMP PARALLEL DO PRIVATE(iblk, ic)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
             CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
-            & t_air_C(ic, iblk))
+              &                            0.5_wp*(tmax_data(ic, iblk) + tmin_data(ic, iblk)))
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
-!$OMP END PARALLEL DO
-
-      ENDIF
+      END IF
     ELSE
-
+      ! simulation without snow
 !$OMP PARALLEL DO PRIVATE(iblk, ic)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk = 1, nblks
         DO ic = 1, nproma
-          CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
-            &                            0.5_wp*(tmax_data(ic, iblk) + tmin_data(ic, iblk)))
-        ENDDO
-      ENDDO
+          rain(ic, iblk) = temporary_data1(ic, iblk)
+        END DO
+      END DO
       !$ACC END PARALLEL LOOP
-
-    ENDIF
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 3.0 Compute surface pressure

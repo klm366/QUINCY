@@ -578,10 +578,14 @@ CONTAINS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
+
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(SPQ_)) THEN
           CALL spq_init(tile)
+        END IF
+        IF (tile%Is_process_active(VEG_)) THEN
+          CALL veg_init(tile)
         END IF
         IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
           IF (tile%Is_process_active(SB_)) THEN
@@ -613,16 +617,6 @@ CONTAINS
           CALL fage_init(tile)
         END IF
       END SELECT
-
-#ifndef __NO_QUINCY__
-      ! VEG_ needs HYDRO_ to be initilized
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        IF (tile%Is_process_active(VEG_)) THEN
-          CALL veg_init(tile)
-        END IF
-      END SELECT
-#endif
 
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)

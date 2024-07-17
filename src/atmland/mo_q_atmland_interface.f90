@@ -142,6 +142,7 @@ CONTAINS
       & q_bcoef_ice
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SPQ_)
 
     INTEGER  :: iblk, ics, ice, nc, i
     INTEGER  :: global_seconds_day, current_year
@@ -237,6 +238,7 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SPQ_)
     IF (PRESENT(DEBUG_VAR)) THEN
       DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
     END IF
@@ -287,22 +289,22 @@ CONTAINS
       rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
     END IF
     IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
+      drag_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, spq_drag_srf)
     END IF
     IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
+      t_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_acoef)
     END IF
     IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
+      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_bcoef)
     END IF
     IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
+      q_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_acoef)
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
+      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_bcoef)
     END IF
     IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
+      pch_ptr               => dsl4jsb_var2D_onChunk(SPQ_, spq_pch)
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)

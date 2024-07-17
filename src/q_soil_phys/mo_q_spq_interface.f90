@@ -246,13 +246,12 @@ CONTAINS
     ! dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SPQ_)
 
-    ! dsl4jsb_Aggregate_onChunk(A2L_, ga                   , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, drag_srf             , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, pch                  , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, t_acoef              , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, t_bcoef              , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, q_acoef              , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, q_bcoef              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_drag_srf         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_pch              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_t_acoef          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_t_bcoef          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_q_acoef          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_q_bcoef          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, z0h                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, z0m                  , weighted_by_fract)
 
@@ -292,9 +291,8 @@ CONTAINS
     dsl4jsb_Get_memory(Q_RAD_)
 
     ! aggregate does not work here for A2L_ variables
-    ! dsl4jsb_Aggregate_onChunk(A2L_, ga                      , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, pch                     , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(A2L_, drag_srf                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_pch                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, spq_drag_srf                , weighted_by_fract)
     ! ---------------------------
     dsl4jsb_Aggregate_onChunk(Q_RAD_, net_radiation         , weighted_by_fract)
     ! ---------------------------
@@ -313,7 +311,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_root_pot         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_skin                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_root             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, t_soil_root             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evapopot                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, interception            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evaporation             , weighted_by_fract)

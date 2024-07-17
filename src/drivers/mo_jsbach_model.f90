@@ -785,6 +785,7 @@ CONTAINS
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
     dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_config(SPQ_)
 #else
     dsl4jsb_Use_processes A2L_, HYDRO_
 #endif
@@ -820,6 +821,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
     ! quincy
     dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_config(SPQ_)
 
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
@@ -846,6 +848,8 @@ CONTAINS
     INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
     INTEGER :: accelerator_frequency      !< bookkeeping configurations for the iq spin-up accelerator: frequency of executions
     INTEGER :: accelerator_start_year     !< bookkeeping configurations for the iq spin-up accelerator: start year of executions
+    ! IQ: further configuration
+    LOGICAL :: flag_snow = .TRUE. !< quincy boolean indicating if simulations should include snow (else read snow is added to rain)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -987,6 +991,7 @@ CONTAINS
           ! in
           & model_id,                                                                  &
           & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
           & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
           & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
           & sinlat, coslat, lon, evapo_act2pot,                                        &
@@ -1009,12 +1014,16 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(SPQ_)
+        dsl4jsb_Get_config(SPQ_)
+        flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
+
         CALL get_standalone_driver( &
           ! in
           & model_id,                                                                  &
           & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
           & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                 &
+          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                   &
           & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out

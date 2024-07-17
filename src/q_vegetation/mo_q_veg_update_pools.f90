@@ -57,11 +57,12 @@ CONTAINS
     USE mo_q_rad_parameters,                ONLY: rfr_ratio_toc
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
-    USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
+    USE mo_veg_constants,                   ONLY: itree, eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, &
+      &                                           fresp_growth, k_fpc
     USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
-                                                  def_co2_deltaC13, def_co2_deltaC14
+      &                                           def_co2_deltaC13, def_co2_deltaC14
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_q_pheno_constants,               ONLY: ievergreen
     ! ----------------------------------------------------------------------------------------------------- !
@@ -140,6 +141,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
+    dsl4jsb_Real2D_onChunk      :: fract_fpc
+    dsl4jsb_Real2D_onChunk      :: blended_height
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp
     dsl4jsb_Real2D_onChunk      :: growth_respiration
@@ -283,6 +286,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! CASE "plant" & "land": out / other Cases: in
     dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)                            ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, blended_height)                       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)                   ! in
@@ -562,7 +567,16 @@ CONTAINS
       dphi(ic) = w_soil_root_pot(ic) - lctlib%phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
     END DO
 
-    !>  2.1 implied change of root fraction given root growth
+    !>  2.1 calculate foliage projected cover fraction and blended_height for turbulence calculations
+    !>
+    ! note: the '* 1.0_wp' for calc of blended_height(:) is the minimum/default height in meter
+    ! using the VEG_ min_height parameter (= 0.1_wp) instead would change simulation results
+    DO ic = 1, nc
+      fract_fpc(ic) = 1.0_wp - EXP(-k_fpc * lai(ic))
+      blended_height(ic) = height(ic) * fract_fpc(ic) + (1._wp - fract_fpc(ic)) * 1.0_wp
+    END DO
+
+    !>  2.2 implied change of root fraction given root growth
     !>
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
       DO is = 1, nsoil_sb
@@ -664,7 +678,7 @@ CONTAINS
                              t_acclim         = t_air_tacclim_mavg(:), &
                              press_srf        = press_srf_tfrac_mavg(:), &
                              co2_mixing_ratio = co2_mixing_ratio_tfrac_mavg(:), &
-                             ga               = ga_tfrac_mavg(:), &
+                             aerodyn_cond     = ga_tfrac_mavg(:), &
                              beta_air         = beta_air_tfrac_mavg(:), &
                              beta_soa         = beta_soa_tphen_mavg(:), &
                              beta_soil_ps     = beta_soil_ps_tfrac_mavg(:), &
