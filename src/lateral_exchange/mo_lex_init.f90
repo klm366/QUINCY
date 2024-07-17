@@ -60,6 +60,10 @@ CONTAINS
       &                              ret_micro_srf, ret_macro_srf,    &
       &                              ret_micro_blg, ret_macro_blg
 
+    USE mo_lex_connectivities, ONLY: &
+      & micro_cnct_grvt_2tilelex, micro_cnct_dfsn_2tilelex, macro_cnct_grvt_2tilelex, & 
+      & micro_cnct_grvt_topolex, micro_cnct_dfsn_topolex, macro_cnct_grvt_topolex 
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile ! Tile with LEX_ process running
 
 
@@ -184,77 +188,18 @@ CONTAINS
       ! Get lateral exchange config
       dsl4jsb_Get_config(LEX_)
 
-
-      ! Base connection matrixes: 
-      ! In case of micro_cnct_grvt and macro_cnct_grvt, they give the fraction of fluxes (runoff and drainage) 
-      ! from a given tile to a specific, connected (downstream) tile. In case of micro_cnct_dfsn they indicate
-      ! the fraction of the outer border of a tile that is assumed to be connected to a specific tile. 
-      ! Note that connectivties are not directly used in the model, but adjusted based on their consitance
-      ! with the topographic information provided. 
-      !
-      ! micro_cnct_grvt: Connectivity for gravity driven fluxes (surface runoff & lateral drainage)
-      !                  between two interfacing tiles. Here, micro scale connections reflect landscapes where
-      !                  the tiles are well mixed and have comparativly small characteristic surface areas. 
-      !                  such as ponds and small scale depressions. 
-      !                  The matrix elements need to be provided to indicate the fractions of fluxes originating
-      !                  on the tile given by the row to the tile indicated by the column.
-      !
-      ! micro_cnct_dfsn: Connectivity for diffusive fluxes.
-      !                  between two interfacing tiles. Here, micro scale connections reflect landscapes where
-      !                  the tiles are well mixed and have comparativly small characteristic surface areas. 
-      !                  such as ponds and small scale depressions. 
-      !                  The matrix elements need to be provided to so that entries are given for the tile with the 
-      !                  relativly small characteristic surface area (given by the row)  
-      !                  which is assumed to be partially encompassed by a larger tile (indicated by the column)
-      !
-      ! macro_cnct_grvt: Connectivity for gravity driven fluxes (surface runoff & lateral drainage)
-      !                  between two tiles that are spatially seperated across larger distances, such as uplands, slopes and lowlands.
-      !                  The matrix elements need to be provided to so that entries are given for the tile with the 
-      !                  The matrix elements need to be provided to indicate the fractions of fluxes originating
-      !                  on the tile given by the row to the tile indicated by the column.
-      !
-      ! For micro_cnct_grvt and macro_cnct_grvt, indiviual matrix entries should not exceed 1. 
-      ! However, it is intended that the sum of a row can be larger than 1. The flow lags assumed for surface runoof and drainage
-      ! are linearly dependend on the matrix elements of micro_cnct_grvt and macro_cnct_grvt. Hence, the respective matrix entries 
-      ! determine the overall retention time hence the outgoing fluxes. But the distribution amongst all receiving tiles
-      ! is done relative to the weighted sum of all entries on a row, so the latter only depends on the values relatve to each other.
-      ! If, however, the sum of all entries on a row is smaller than 1, a fraction (1 - SUM(row elements)) of the outgoing fluxes
-      ! is directily given to the streamflow.
-      ! For micro_cnct_dfsn the sum of entries on a row should not exeed 1. Furthermore, the model does not (yet) properly considder nested 
-      ! configurations. These options for such a setup are limited to a case in which a single surface feature SF1 is fully encompassed by a second surface feature SF2, which in turn is encompassed by another (other) surface feature(s).
-
+      ! Get the general connection matrixes
       IF  (TRIM(model%config%usecase) == 'jsbach_topolex') THEN
 
-        micro_cnct_grvt=reshape( (/ 0.0, 1.0, 0.0 ,0.0,    &
-                                    0.0, 0.0, 0.0 ,0.0,    &
-                                    0.0, 0.0, 0.0 ,1.0,    &
-                                    0.0, 0.0, 0.0 ,0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
+        micro_cnct_grvt = reshape(micro_cnct_grvt_topolex, shape(micro_cnct_grvt), order=(/2,1/))
+        micro_cnct_dfsn = reshape(micro_cnct_dfsn_topolex, shape(micro_cnct_dfsn), order=(/2,1/))
+        macro_cnct_grvt = reshape(macro_cnct_grvt_topolex, shape(macro_cnct_grvt), order=(/2,1/))
 
-        micro_cnct_dfsn=reshape( (/ 0.0, 0.0, 0.0 ,0.0,    &
-                                    1.0, 0.0, 0.0 ,0.0,    &
-                                    0.0, 0.0, 0.0 ,0.0,    &
-                                    0.0, 0.0, 1.0 ,0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
-
-        macro_cnct_grvt=reshape( (/ 0.0, 0.0, 0.0 ,1.0,    &
-                                    0.0, 0.0, 0.0 ,1.0,    &
-                                    0.0, 0.0, 0.0 ,0.0,    &
-                                    0.0, 0.0, 0.0 ,0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
       ELSE IF (TRIM(model%config%usecase) == 'jsbach_2tilelex') THEN
 
-        micro_cnct_grvt=reshape( (/ 0.0, 1.0,    &
-                                    0.0, 0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
-
-        micro_cnct_dfsn=reshape( (/ 0.0, 0.0,    &
-                                    1.0, 0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
-
-        macro_cnct_grvt=reshape( (/ 0.0, 0.0,    &
-                                    0.0 ,0.0 /), &
-                       shape(micro_cnct_grvt), order=(/2,1/) )
+        micro_cnct_grvt = reshape(micro_cnct_grvt_2tilelex, shape(micro_cnct_grvt), order=(/2,1/))
+        micro_cnct_dfsn = reshape(micro_cnct_dfsn_2tilelex, shape(micro_cnct_dfsn), order=(/2,1/))
+        macro_cnct_grvt = reshape(macro_cnct_grvt_2tilelex, shape(macro_cnct_grvt), order=(/2,1/))
 
       ELSE
         CALL finish(TRIM(routine), '*** Lateral connection matrix not defined for usecase')
