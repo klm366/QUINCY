@@ -1458,8 +1458,8 @@ CONTAINS
   ELEMENTAL PURE &
 #endif
   SUBROUTINE get_geometry(                      &
-    & microcon_dfsn_tile,                       &
-    & microcon_dfsn_sibl,                       &
+    & microcon_ctc_tile,                        &
+    & microcon_ctc_sibl,                        &
     & fract, fract_sibl,                        &
     & fract_nclsd, fract_nclsd_sibl,            &
     & area, area_sibl,                          &
@@ -1473,8 +1473,8 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: pi
 
-    REAL(wp), INTENT(in)    :: microcon_dfsn_tile,  &  !< Micro-scale connectivity between tile and sibling (if tile is encompased by sibl) [/]
-      &                        microcon_dfsn_sibl      !< Micro-scale connectivity between sibling and tile (if sibl is encompased by tile) [/]
+    REAL(wp), INTENT(in)    :: microcon_ctc_tile,   &  !< Micro-scale connectivity between tile and sibling (if tile is encompased by sibl) [/]
+      &                        microcon_ctc_sibl       !< Micro-scale connectivity between sibling and tile (if sibl is encompased by tile) [/]
 
     REAL(wp), INTENT(in)    :: fract,               &  !< Cover fraction of tile [/]
       &                        fract_sibl,          &  !< Cover fraction of sibling [/]
@@ -1513,8 +1513,8 @@ CONTAINS
     END IF   
 
     ! Calculate difference in surface elevation between tile and sibling (only valid for any micro-connections)
-    IF ((microcon_dfsn_tile  == 0._wp .AND. microcon_dfsn_sibl  == 0._wp) .OR.  &
-      &  fract_rel           == 0._wp .OR.  fract_rel_sibl      == 0._wp) THEN
+    IF ((microcon_ctc_tile  == 0._wp .AND. microcon_ctc_sibl  == 0._wp) .OR.  &
+      &  fract_rel          == 0._wp .OR.  fract_rel_sibl     == 0._wp) THEN
       h_offset = 0._wp
     ELSE
       h_offset = h_surf - h_surf_sibl
@@ -1530,9 +1530,9 @@ CONTAINS
     ! The latter is assumed to be equal to half the distance between circumference of C1 and C2 added to the radius of C1.
     ! The area of C2 is determined so that a segment with a central angle (X/360) equal to the connected fraction contains an area
     ! equal to that of the larger tile and the area of a segment of C1 with the same central angle. 
-    IF ((microcon_dfsn_tile == 0._wp .AND. microcon_dfsn_sibl == 0._wp) .OR.  &
-      &  fract_rel          == 0._wp .OR.  fract_rel_sibl     == 0._wp  .OR.  &
-      &  area               == 0._wp .OR.  area_sibl          == 0._wp) THEN
+    IF ((microcon_ctc_tile == 0._wp .AND. microcon_ctc_sibl == 0._wp) .OR.  &
+      &  fract_rel         == 0._wp .OR.  fract_rel_sibl    == 0._wp  .OR.  &
+      &  area              == 0._wp .OR.  area_sibl         == 0._wp) THEN
       length_scale = 0._wp
       length_iface = 0._wp
 
@@ -1545,7 +1545,7 @@ CONTAINS
     ! Interface length is given [as m per m2] relative to the area containing both tiles
     ! i.e. scaled with fract_rel / area or fract_rel_sibl / area_sibl
     !
-    ELSE IF (microcon_dfsn_tile > microcon_dfsn_sibl) THEN ! Tile is encompassed by sibling
+    ELSE IF (microcon_ctc_tile > microcon_ctc_sibl) THEN ! Tile is encompassed by sibling
       IF (area_nclsd > 0._wp .AND. fract_nclsd > 1.0e-10_wp) THEN ! Tile encloses another tile
 
         area_cmbnd      = area_nclsd &
@@ -1556,11 +1556,11 @@ CONTAINS
         area_fact = 1._wp / fract_rel_cmbnd - 1._wp
 
         length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) &
-          &          * microcon_dfsn_tile * fract_rel / area
+          &          * microcon_ctc_tile * fract_rel / area
 
         rad_in  = (area_nclsd    / pi)**0.5_wp
 
-        rad_out = (area_cmbnd * (1._wp + area_fact / microcon_dfsn_tile) / pi)**0.5_wp
+        rad_out = (area_cmbnd * (1._wp + area_fact / microcon_ctc_tile) / pi)**0.5_wp
 
         length_scale = (rad_in + rad_out) / 2._wp
 
@@ -1569,11 +1569,11 @@ CONTAINS
         area_fact = 1._wp / fract_rel - 1._wp
 
         length_iface = ((4._wp * pi * area) ** 0.5_wp) & 
-          &          * microcon_dfsn_tile * fract_rel / area 
+          &          * microcon_ctc_tile * fract_rel / area 
 
         rad_in  = (area / pi)**0.5_wp
 
-        rad_out = (area *(1._wp + area_fact / microcon_dfsn_tile) / pi)**0.5_wp
+        rad_out = (area *(1._wp + area_fact / microcon_ctc_tile) / pi)**0.5_wp
                
         length_scale = rad_in + (rad_out - rad_in) / 2._wp
       END IF        
@@ -1589,11 +1589,11 @@ CONTAINS
         area_fact = 1._wp / fract_rel_cmbnd - 1._wp
 
         length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) & 
-          &          * microcon_dfsn_sibl * fract_rel_sibl / area_sibl 
+          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl 
 
         rad_in  = (area_nclsd_sibl / pi)**0.5_wp
 
-        rad_out = (area_cmbnd *(1._wp + area_fact / microcon_dfsn_sibl) / pi)**0.5_wp
+        rad_out = (area_cmbnd *(1._wp + area_fact / microcon_ctc_sibl) / pi)**0.5_wp
 
         length_scale = (rad_in + rad_out) / 2._wp
 
@@ -1602,11 +1602,11 @@ CONTAINS
         area_fact = 1._wp / fract_rel_sibl - 1._wp
  
         length_iface = ((4._wp * pi * area_sibl) ** 0.5_wp) & 
-          &          * microcon_dfsn_sibl * fract_rel_sibl / area_sibl 
+          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl 
 
         rad_in  = (area_sibl / pi)**0.5_wp
 
-        rad_out = (area_sibl *(1._wp + area_fact / microcon_dfsn_sibl) / pi)**0.5_wp
+        rad_out = (area_sibl *(1._wp + area_fact / microcon_ctc_sibl) / pi)**0.5_wp
 
         length_scale = rad_in + (rad_out - rad_in) / 2._wp
 
@@ -1614,8 +1614,8 @@ CONTAINS
     END IF
 
     ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale
-    ! ... also in case that microcon_dfsn_sibl > since the microcon_slp will be reversed later on ...  
-    IF ((microcon_dfsn_tile > 0._wp .OR. microcon_dfsn_sibl > 0._wp) .AND. &
+    ! ... also in case that microcon_ctc_sibl > since the microcon_slp will be reversed later on ...  
+    IF ((microcon_ctc_tile > 0._wp .OR. microcon_ctc_sibl > 0._wp) .AND. &
       &  h_offset > 0._wp .AND. length_scale > 0._wp) THEN
       micro_slope = MIN(0.5_wp, h_offset / length_scale)
     ELSE

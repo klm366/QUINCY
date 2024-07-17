@@ -56,9 +56,9 @@ MODULE mo_lex_memory_class
       & h_offset_ct,          &  !< difference in surface elevation between adjacent tiles [m]
       & length_scale_ct,      &  !< char. length scale of srf. heterogeneity [m]
       & length_iface_ct,      &  !< char. interface length between adjacent tiles [m m-2]
-      & microcon_grvt_ct,     &  !< micro-scale connection fraction with surface offset [/]
-      & microcon_dfsn_ct,     &  !< micro-scale connection fraction [/]
-      & macrocon_grvt_ct,     &  !< macro-scale connection fraction [/]
+      & microcon_ctc_ct,      &  !< micro-scale connectivity factors for direct contact [/]
+      & microcon_hfp_ct,      &  !< micro-scale connectivity factors for hydrological flow paths [/]
+      & macrocon_hfp_ct,      &  !< macro-scale connectivity factors for hydrological flow paths [/]
       & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
       & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]  
       & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/]
@@ -217,25 +217,25 @@ CONTAINS
         & loutput=l_lex, output_level=FULL,                                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_grvt_ct', mem%microcon_grvt_ct,                                  &
-        & hgrid, tiles,                                                                          &
-        & t_cf('microcon_grvt_ct', '/', 'micro-scale connection fraction with surface offset'),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-        & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
-        & loutput=l_lex, output_level=FULL,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var( 'microcon_dfsn_ct', mem%microcon_dfsn_ct,               &
+    CALL mem%Add_var( 'microcon_ctc_ct', mem%microcon_ctc_ct,                 &
         & hgrid, tiles,                                                       &
-        & t_cf('microcon_dfsn_ct', '/', 'micro-scale connection fraction'),   &
+        & t_cf('microcon_ctc_ct', '/', 'micro-scale connectivity factors for direct contact'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'macrocon_grvt_ct', mem%macrocon_grvt_ct,               &
+    CALL mem%Add_var( 'microcon_hfp_ct', mem%microcon_hfp_ct,                                    &
+        & hgrid, tiles,                                                                          &
+        & t_cf('microcon_hfp_ct', '/', 'micro-scale connectivity factors for hydrological flow paths'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
+        & loutput=l_lex, output_level=FULL,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'macrocon_hfp_ct', mem%macrocon_hfp_ct,                 &
         & hgrid, tiles,                                                       &
-        & t_cf('macrocon_grvt_ct', '/', 'macro-scale connection fraction'),   &
+        & t_cf('macrocon_hfp_ct', '/', 'macro-scale connectivity factors for hydrological flow paths'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
