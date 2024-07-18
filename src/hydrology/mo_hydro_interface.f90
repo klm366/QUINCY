@@ -31,8 +31,8 @@ MODULE mo_hydro_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -467,7 +467,6 @@ CONTAINS
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & weq_soil,           &
-      & ice_impedance,      &
       & trans_tmp,          &
       & flowlag_used,       &
       & slope_used
@@ -1250,7 +1249,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
 
-    dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: thaw_depth_max
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
 
@@ -1318,7 +1316,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
 
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth)         ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
@@ -1791,7 +1788,6 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
-    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
@@ -1803,8 +1799,6 @@ CONTAINS
     ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
 

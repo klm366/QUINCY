@@ -530,7 +530,6 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
@@ -569,7 +568,6 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
@@ -581,6 +579,7 @@ CONTAINS
         & grnd_hflx_soil                      (:  ), &
         & thaw_depth                          (:  ), &
         ! optional, in
+        & soil_depth_sl                       (:,:), &
         & ws_max_sl                           (:,:), &
         & matric_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &

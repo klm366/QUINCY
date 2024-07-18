@@ -449,6 +449,7 @@ CONTAINS
             &               + wtr_pond_overflow
         END IF
 
+        wtr_latflow_srf(ic) = 0._wp
         ! Compute fluxes based on ARNO scheme (semi-distributed scale approach)
         IF (hydro_scale == Semi_Distributed_) THEN
           ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
@@ -650,7 +651,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_
+    USE mo_hydro_constants,    ONLY: Uniform_
 
 
     INTEGER,  INTENT(in) :: &
@@ -734,8 +735,8 @@ CONTAINS
     ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd(nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, slope,              &
       &    soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,              &
-      &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl, &
-      &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,        &
+      &    soil_depth_sl, wtr_wres_sl, wtr_field_cap_sl, wtr_wsat_sl,                &
+      &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl,                       &
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                &
       &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
       &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
@@ -743,6 +744,7 @@ CONTAINS
       &    tpe_overflow, evapo_deficit, wtr_soilhyd_res, hyd_cond_bot,               &
       &    ltpe_closed, ltpe_open)
 
+    wtr_latflow_sl(:,:) = 0._wp
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
       CALL soilhyd_lat(l_pf_soil, nc, nsoil, dtime,          &
@@ -951,9 +953,9 @@ CONTAINS
   SUBROUTINE soilhyd(                                                &
     & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, slope,         &
     & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
-    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                             &
+    & dsoil, wtr_wres_sl,                                            &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                &
-    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,              &
+    & vol_porosity_sl, vol_field_cap_sl,                             &
     & vol_wres_sl,                                                   &
     & bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,               &
@@ -981,13 +983,11 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: slope(:)                   ! slope of gridcell / tile [/]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wres_sl(:,:)           !< residual water content of soil layer (reduced by ice) [m]
-    REAL(wp), INTENT(IN)            :: wtr_p_wilt_sl(:,:)         !< wilting point of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! saturation capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       ! hydraulic conductivity of saturated soil [m/s]
     REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       ! Volumetric soil porosity [m/m]
     REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      ! Volumetric field capacity [m/m]
-    REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         ! Volumetric permanent wilting point [m/m]
     REAL(wp), INTENT(IN)            :: vol_wres_sl(:,:)           !< Volumetric residual water content [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             ! exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matric_pot_sl(:,:)         ! Soil matric potential [m]
@@ -1033,7 +1033,6 @@ CONTAINS
     REAL(wp) :: remoist(nc)                  ! for TPE
     REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
-    REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
     REAL(wp) :: weq_wres_sl(nc,nsoil)        ! residual water content - not reduced relative to soil ice fraction [m]
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
@@ -1049,7 +1048,7 @@ CONTAINS
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
-    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl)                 &
+    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_wres_sl)                 &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     !> Finish in case of negative soil moisture
@@ -1075,7 +1074,6 @@ CONTAINS
         !
         weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * dsoil(ic,is)
         weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
-        weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
         weq_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * dsoil(ic,is)
 
         !> Supercooled soil water and water below the residual water content
