@@ -77,7 +77,7 @@ MODULE mo_ch4_config_class
 CONTAINS
   SUBROUTINE methane_GHG_atm_proc_and_msg(specie,source,mul,mmr,vmr,conc)
     USE mo_methane_constants,  ONLY: t_specie_const
-    USE mo_methane_util,       ONLY: convert_2_mol_m3
+    USE mo_methane_util,       ONLY: convert_2_mol_m3, concentration_mol_m3_2_vmr
     USE mo_util,               ONLY: real2string
 
     TYPE(t_specie_const), INTENT(in)    :: specie
@@ -94,7 +94,8 @@ CONTAINS
       CASE (1) ! Constant from namelist: Convert from whatever specified
         IF (conc >= 0._wp) conc = conc * mul
         CALL convert_2_mol_m3(specie,mmr*mul,vmr*mul,conc)
-        CALL message(routine,'Atmospheric value of '//TRIM(specie%specie_name)//' is constant at conc: '//real2string(conc))
+        CALL message(routine,'Atmospheric value of '//TRIM(specie%specie_name)//' is constant at vmr: '// &
+                             real2string(concentration_mol_m3_2_vmr(specie,conc)))
       CASE (2) ! Take time and spatially dependent input from atm (presently only available for CO2)
         CALL message(routine,'Using atmospheric values of '//TRIM(specie%specie_name)//' from host model')
       CASE (3) ! Time dependent input from file
