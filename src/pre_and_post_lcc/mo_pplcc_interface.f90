@@ -306,9 +306,6 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
-
     ! If not newday, do nothing
     IF (.NOT. is_newday(options%current_datetime,dtime)) RETURN
 
