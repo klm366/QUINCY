@@ -440,8 +440,8 @@ CONTAINS
       & drainage             
 
     dsl4jsb_Real3D_onChunk ::    &
-      &  microcon_hfp_ct,        &
       &  microcon_ctc_ct,        &
+      &  microcon_hfp_blg_ct,    &
       &  fract_latflow_srf_ct,   &
       &  fract_latflow_blg_ct,   &
       &  wtr_latflow_sl,         &
@@ -473,7 +473,7 @@ CONTAINS
       &  nrg_diffusion_out_sl,   &
       &  nrg_convection_out_sl,  &
       &  nrg_lex_net_sl,         &
-      &  h_offset_ct,            &   
+      &  h_offset_ct,            &
       &  length_scale_ct,        &
       &  length_iface_ct
 
@@ -575,8 +575,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_hfp_ct)        ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_ctc_ct)        ! in
+    dsl4jsb_Get_var3D_onChunk(LEX_,   microcon_hfp_blg_ct)    ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   fract_latflow_srf_ct)   ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   fract_latflow_blg_ct)   ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   h_offset_ct)            ! in
@@ -632,7 +632,7 @@ CONTAINS
     lex_idt = tile%lcts(1)%lex_id
     CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
   
-    ! Initialze those variables, where the values at the end of ast time step, 
+    ! Initialze those variables, where the values at the end of ast time step,
     ! i.e. unmodified by interactions with siblings are needed.
     snow_soil_tle_tm1(:)       = weq_snow_soil
     snow_new_tle_tm1(:)        = new_snow_soil
@@ -679,7 +679,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk_tile_name(HYDRO_, fract_pond_max, sibl)         ! in
       dsl4jsb_Get_var2D_onChunk_tile_name(HYDRO_, weq_pond_max, sibl)           ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, soil_depth_sl, sibl)          ! in
-      dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl, sibl)  ! in 
+      dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl, sibl)  ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_sat_sl, sibl)        ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl, sibl)         ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_res_sl, sibl)        ! in
@@ -731,12 +731,12 @@ CONTAINS
         wtr_latflow_sl_used(:,:) = wtr_latflow_sl(:,:)
         !$ACC LOOP GANG VECTOR
         DO ic = 1, nc
-          IF (microcon_hfp_ct(ic,lex_ids) > 0._wp .AND. h_offset_ct(ic,lex_ids) > 0._wp) THEN
+          IF (microcon_hfp_blg_ct(ic,lex_ids) > 0._wp .AND. h_offset_ct(ic,lex_ids) > 0._wp) THEN
 
             CALL shift_fluxes_sl( nsoil,                &
               &  h_offset_ct(ic,lex_ids),               &
               &  soil_depth_sl(ic,:),                   &
-              &  soil_depth_sl_sibl(ic,:),              &   
+              &  soil_depth_sl_sibl(ic,:),              &
               &  wtr_latflow_sl_used(ic,:)              &
               )
 
@@ -749,7 +749,7 @@ CONTAINS
                   &                          + wtr_latflow_sl_used(ic,is)
                 wtr_latflow_sl_used(ic,is)   = 0._wp
 
-              END IF   
+              END IF
             END DO
           END IF
         END DO
@@ -785,7 +785,7 @@ CONTAINS
           ! Lateral fluxes of subsurface runoff.
           ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
           IF (dsl4jsb_Config(LEX_)%l_drainage_trns) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)   
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
             DO is = 1,nsoil
               DO ic=1,nc
 
@@ -891,7 +891,7 @@ CONTAINS
             & bclapp_sl_sibl(:,:),                          &
             & pore_size_index_sl_sibl(:,:),                 &
             & ice_impedance=ice_impedance_sl_sibl(:,:),     &
-            & K=hyd_cond_sl_sibl(:,:),                      & 
+            & K=hyd_cond_sl_sibl(:,:),                      &
             & D=diffus_sl_sibl(:,:),                        &
             & mpot_act=mpot_act_sibl(:,:)                   &
             )
@@ -1121,7 +1121,7 @@ CONTAINS
             CALL calc_snow_redistribution(                  &
               & dsl4jsb_Config(SSE_)%l_dynsnow,             &
               & dtime,                                      &
-              & hlp1,                                       & 
+              & hlp1,                                       &
               & h_offset_ct(ic,lex_ids),                    &
               & fract(ic),                                  &
               & fract_sibl(ic),                             &
@@ -1246,9 +1246,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LEX_, nrg_convection_in_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, nrg_convection_out_sl, weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(LEX_, microcon_hfp_ct,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, microcon_ctc_ct,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LEX_, macrocon_hfp_ct,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, microcon_hfp_srf_ct,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, microcon_hfp_blg_ct,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, macrocon_hfp_srf_ct,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LEX_, macrocon_hfp_blg_ct,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, slope_eff,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_srf,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LEX_, fact_lag_blg,          weighted_by_fract)

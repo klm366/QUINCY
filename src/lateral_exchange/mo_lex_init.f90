@@ -61,8 +61,10 @@ CONTAINS
       &                              ret_micro_blg, ret_macro_blg
 
     USE mo_lex_connectivities, ONLY: &
-      & cmx_micro_ctc_2tilelex, cmx_micro_hfp_2tilelex, cmx_macro_hfp_2tilelex, & 
-      & cmx_micro_ctc_topolex,  cmx_micro_hfp_topolex, cmx_macro_hfp_topolex 
+      & cmx_micro_ctc_2tilelex, cmx_micro_hfp_srf_2tilelex, cmx_micro_hfp_blg_2tilelex, &
+      & cmx_macro_hfp_srf_2tilelex, cmx_macro_hfp_blg_2tilelex,                         &
+      & cmx_micro_ctc_topolex,  cmx_micro_hfp_srf_topolex, cmx_micro_hfp_blg_topolex,   &
+      & cmx_macro_hfp_srf_topolex, cmx_macro_hfp_blg_topolex
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile ! Tile with LEX_ process running
 
@@ -96,11 +98,14 @@ CONTAINS
       &        lex_idt,  &  !< lex id of of tile
       &        lex_ids      !< lex id of sibling
 
-    REAL(wp), POINTER :: test_matrix(:,:),    & !< matrix used to check for inconsitances in base matrices
-      &                  cmx_micro_ctc(:,:),  & !< base matrix for micro-scale connectivity between connected tiles (via direct contact)
-      &                  cmx_micro_hfp(:,:),  & !< base matrix for micro-scale connectivity between connected tiles (via hydrological flow paths)
-      &                  cmx_macro_hfp(:,:)     !< base matrix for macro-scale connectivity between connected tiles
-   
+    REAL(wp), POINTER :: &
+      &        test_matrix(:,:),       & !< matrix used to check for inconsitances in base matrices
+      &        cmx_micro_ctc(:,:),     & !< base matrix for micro-scale connectivity via direct contact
+      &        cmx_micro_hfp_srf(:,:), & !< base matrix for micro-scale connectivity via surface hydrological flow paths
+      &        cmx_micro_hfp_blg(:,:), & !< base matrix for micro-scale connectivity via below-ground hydrological flow paths
+      &        cmx_macro_hfp_srf(:,:), & !< base matrix for macro-scale connectivity via surface hydrological flow paths
+      &        cmx_macro_hfp_blg(:,:)    !< base matrix for macro-scale connectivity via below-ground hydrological flow paths
+
     ! Pointers to variables in memory for tile
     dsl4jsb_Real2D_onDomain :: &
       & h_surf,                &
@@ -118,8 +123,10 @@ CONTAINS
       & fract_latflow_srf_ct,  &
       & fract_latflow_blg_ct,  &
       & microcon_ctc_ct,       &
-      & microcon_hfp_ct,       &
-      & macrocon_hfp_ct
+      & microcon_hfp_srf_ct,   &
+      & microcon_hfp_blg_ct,   &
+      & macrocon_hfp_srf_ct,   &
+      & macrocon_hfp_blg_ct
 
     ! Pointers to variables in memory for sibling
     dsl4jsb_Real2D_onDomain :: &
@@ -130,8 +137,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & fract,                 &
       & fract_sibl,            &
-      & fract_microcon,        &
-      & fract_macrocon,        &
+      & fract_microcon_srf,    &
+      & fract_microcon_blg,    &
+      & fract_macrocon_srf,    &
+      & fract_macrocon_blg,    &
       & fact_lag_micro_srf,    &
       & fact_lag_micro_blg,    &
       & fact_lag_macro_srf,    &
@@ -163,8 +172,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(LEX_,   length_iface_ct)      ! out
       dsl4jsb_Get_var3D_onDomain(LEX_,   micro_slope_ct)       ! out
       dsl4jsb_Get_var3D_onDomain(LEX_,   microcon_ctc_ct)      ! out
-      dsl4jsb_Get_var3D_onDomain(LEX_,   microcon_hfp_ct)      ! out
-      dsl4jsb_Get_var3D_onDomain(LEX_,   macrocon_hfp_ct)      ! out
+      dsl4jsb_Get_var3D_onDomain(LEX_,   microcon_hfp_srf_ct)  ! out
+      dsl4jsb_Get_var3D_onDomain(LEX_,   microcon_hfp_blg_ct)  ! out
+      dsl4jsb_Get_var3D_onDomain(LEX_,   macrocon_hfp_srf_ct)  ! out
+      dsl4jsb_Get_var3D_onDomain(LEX_,   macrocon_hfp_blg_ct)  ! out
       dsl4jsb_Get_var3D_onDomain(LEX_,   fract_latflow_srf_ct) ! out
       dsl4jsb_Get_var3D_onDomain(LEX_,   fract_latflow_blg_ct) ! out
 
@@ -178,12 +189,16 @@ CONTAINS
       nconti = connecttiles%n_levels
 
       ALLOCATE(fract(nproma, nblks))
-      ALLOCATE(fract_microcon(nproma, nblks))
-      ALLOCATE(fract_macrocon(nproma, nblks))
       ALLOCATE(test_matrix(nconti,nconti))
-      ALLOCATE(cmx_micro_hfp(nconti,nconti))
       ALLOCATE(cmx_micro_ctc(nconti,nconti))
-      ALLOCATE(cmx_macro_hfp(nconti,nconti))
+      ALLOCATE(cmx_micro_hfp_srf(nconti,nconti))
+      ALLOCATE(cmx_micro_hfp_blg(nconti,nconti))
+      ALLOCATE(cmx_macro_hfp_srf(nconti,nconti))
+      ALLOCATE(cmx_macro_hfp_blg(nconti,nconti))
+      ALLOCATE(fract_microcon_srf(nproma, nblks))
+      ALLOCATE(fract_microcon_blg(nproma, nblks))
+      ALLOCATE(fract_macrocon_srf(nproma, nblks))
+      ALLOCATE(fract_macrocon_blg(nproma, nblks))
 
       ! Get lateral exchange config
       dsl4jsb_Get_config(LEX_)
@@ -192,14 +207,20 @@ CONTAINS
       IF  (TRIM(model%config%usecase) == 'jsbach_topolex') THEN
 
         cmx_micro_ctc = reshape(cmx_micro_ctc_topolex, shape(cmx_micro_ctc), order=(/2,1/))
-        cmx_micro_hfp = reshape(cmx_micro_hfp_topolex, shape(cmx_micro_hfp), order=(/2,1/))
-        cmx_macro_hfp = reshape(cmx_macro_hfp_topolex, shape(cmx_macro_hfp), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_topolex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_topolex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_topolex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_topolex, shape(cmx_macro_hfp_blg), order=(/2,1/))
 
       ELSE IF (TRIM(model%config%usecase) == 'jsbach_2tilelex') THEN
 
         cmx_micro_ctc = reshape(cmx_micro_ctc_2tilelex, shape(cmx_micro_ctc), order=(/2,1/))
-        cmx_micro_hfp = reshape(cmx_micro_hfp_2tilelex, shape(cmx_micro_hfp), order=(/2,1/))
-        cmx_macro_hfp = reshape(cmx_macro_hfp_2tilelex, shape(cmx_macro_hfp), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_2tilelex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_2tilelex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_2tilelex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_2tilelex, shape(cmx_macro_hfp_blg), order=(/2,1/))
 
       ELSE
         CALL finish(TRIM(routine), '*** Lateral connection matrix not defined for usecase')
@@ -207,22 +228,37 @@ CONTAINS
 
       ! Check the base matrices for inconsistancies
       ! First check wether any matrix contains a closed loop
-      test_matrix(:,:) = cmx_micro_hfp(:,:)
-      CALL check_flow_matrix(               &    
+      test_matrix(:,:) = cmx_micro_hfp_srf(:,:)
+      CALL check_flow_matrix(               &
         & nconti,                           &
         & test_matrix(:,:),                 &
         & has_loop                          &
           )
-      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_micro_hfp')
+      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_micro_hfp_srf')
 
-      test_matrix(:,:) = cmx_macro_hfp(:,:)
-      CALL check_flow_matrix(               &    
+      test_matrix(:,:) = cmx_micro_hfp_blg(:,:)
+      CALL check_flow_matrix(               &
         & nconti,                           &
         & test_matrix(:,:),                 &
         & has_loop                          &
           )
-      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_macro_hfp')
+      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_micro_hfp_blg')
 
+      test_matrix(:,:) = cmx_macro_hfp_srf(:,:)
+      CALL check_flow_matrix(               &
+        & nconti,                           &
+        & test_matrix(:,:),                 &
+        & has_loop                          &
+          )
+      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_macro_hfp_srf')
+
+      test_matrix(:,:) = cmx_macro_hfp_blg(:,:)
+      CALL check_flow_matrix(               &
+        & nconti,                           &
+        & test_matrix(:,:),                 &
+        & has_loop                          &
+          )
+      IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_macro_hfp_blg')
 
       ! Second check wether cmx_micro_ctc is consistent with current assumptions on geometric relations
       test_matrix(:,:) = 0._wp 
@@ -231,16 +267,16 @@ CONTAINS
       END WHERE
       DO it = 1, nconti
         IF (SUM(cmx_micro_ctc(it,:)) > 1._wp) THEN
-          CALL finish(TRIM(routine), '*** Connected fraction exceeds 1.')             
+          CALL finish(TRIM(routine), '*** Connected fraction exceeds 1.')
         ELSE IF (sum(cmx_micro_ctc(it,:)) > 0._wp .AND. dsl4jsb_Config(LEX_)%l_nested) THEN
           IF (SUM(test_matrix(:,it)) > 1._wp) THEN
-            CALL finish(TRIM(routine), '*** Contained tile encloses more than one tile') 
+            CALL finish(TRIM(routine), '*** Contained tile encloses more than one tile')
           ELSE IF (sum(cmx_micro_ctc(:,it)) > 0._wp .AND. SUM(cmx_micro_ctc(:,it)) < 1._wp) THEN
             CALL finish(TRIM(routine), '*** Contained tile encloses another tile only partially')
           ELSE IF (SUM(cmx_micro_ctc(:,it)) == 1._wp) THEN
             src_id=MAXLOC(cmx_micro_ctc(:,it), 1)
             IF (SUM(cmx_micro_ctc(:,src_id)) > 0._wp) THEN
-              CALL finish(TRIM(routine), '*** 3-level tile-nesting not implemented')            
+              CALL finish(TRIM(routine), '*** 3-level tile-nesting not implemented')
             END IF
           END IF
         END IF     
@@ -248,14 +284,16 @@ CONTAINS
 
       CALL tile%Get_fraction(fract=fract(:,:))
       
-      fract_microcon(:,:) = 0._wp
-      fract_macrocon(:,:) = 0._wp
+      fract_microcon_srf(:,:) = 0._wp
+      fract_microcon_blg(:,:) = 0._wp
+      fract_macrocon_srf(:,:) = 0._wp
+      fract_macrocon_blg(:,:) = 0._wp
 
-      ! First Loop over tiles to determine the areas and cover fractions 
-      ! of any tile enclosed by annother tile. Needed for nested constellations
-      ! note that at the moment this only works for a setup in which a single surface 
-      ! feature SF1 is fully enclosed by surface feature SF2, which in turn is enclosed by 
-      ! another surface features.
+      ! First Loop over tiles to determine the areas and cover fractions.
+      ! of any tile enclosed by annother tile. Needed for nested constellations.
+      ! Note that at the moment this only works for a setup in which a single surface
+      ! feature SF1 is fully enclosed by surface feature SF2, which in turn is enclosed by
+      ! another (other) surface feature (s).
       ALLOCATE(area_nclsd(nproma, nconti, nblks))
       ALLOCATE(fract_nclsd(nproma, nconti, nblks))
       area_nclsd(:,:,:)   = 0._wp
@@ -270,7 +308,7 @@ CONTAINS
           END IF
           lex_ids = sibl%lcts(1)%lex_id
 
-          IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE  
+          IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
           dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
@@ -289,8 +327,8 @@ CONTAINS
       END IF
 
 
-      ! First Loop over neighbour tiles
-      ! Get geometry and the effective connectedness of tile
+      ! Second Loop over neighbour tiles to get the
+      ! the geometry and the effective connectedness of a tile.
       DO it = 1, nsibl
  
         IF (it == 1) THEN
@@ -300,7 +338,7 @@ CONTAINS
         END IF
         lex_ids = sibl%lcts(1)%lex_id
 
-        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE  
+        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
         dsl4jsb_Get_memory_tile(HYDRO_, sibl)
         dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, h_surf, sibl)  ! in
@@ -313,8 +351,8 @@ CONTAINS
         ! the offset in surface height (h_offset_ct), the characteric distance between the tile centres (length_scale_ct),
         ! the length of the interface between the two tiles (length_iface_ct) and the slope between the tiles (micro_slope_ct)
         CALL get_geometry(                                      &
-          & cmx_micro_ctc(lex_idt,lex_ids),                    &
-          & cmx_micro_ctc(lex_ids,lex_idt),                    &
+          & cmx_micro_ctc(lex_idt,lex_ids),                     &
+          & cmx_micro_ctc(lex_ids,lex_idt),                     &
           & fract(:,:), fract_sibl(:,:),                        &
           & fract_nclsd(:,lex_idt,:), fract_nclsd(:,lex_ids,:), &
           & area(:,:), area_sibl(:,:),                          &
@@ -329,19 +367,26 @@ CONTAINS
         ! Check if h_offset_ct is consistant with assumed micro-scale connection.
         ! If not adjust the direction of flow:
         ! For hydrological flow paths, connections are only assumed to be present
-        ! for positive differences in surface height (for negative offsets, cmx_micro_hfp is inverted
-        ! and for a zero-offset, cmx_micro_hfp is set to 0). 
+        ! for positive differences in surface height (for negative offsets, cmx_micro_hfp_x is inverted
+        ! and for a zero-offset, cmx_micro_x is set to 0). 
         ! For direct conections, connectivities are reversed in case of negative differences in surface height,
         ! to simplify the call to subroutines in update_lex and the determination of the effective slopes
 
-        microcon_hfp_ct(:,lex_ids,:) = cmx_micro_hfp(lex_idt,lex_ids)
-        microcon_ctc_ct(:,lex_ids,:) = cmx_micro_ctc(lex_idt,lex_ids)
-        macrocon_hfp_ct(:,lex_ids,:) = cmx_macro_hfp(lex_idt,lex_ids)
+        microcon_ctc_ct(:,lex_ids,:)     = cmx_micro_ctc(lex_idt,lex_ids)
+        microcon_hfp_srf_ct(:,lex_ids,:) = cmx_micro_hfp_srf(lex_idt,lex_ids)
+        microcon_hfp_blg_ct(:,lex_ids,:) = cmx_micro_hfp_blg(lex_idt,lex_ids)
+        macrocon_hfp_srf_ct(:,lex_ids,:) = cmx_macro_hfp_srf(lex_idt,lex_ids)
+        macrocon_hfp_blg_ct(:,lex_ids,:) = cmx_macro_hfp_blg(lex_idt,lex_ids)
 
-        ! Setting zero connectivity where height offsets negative (and zero in case of microcon_hfp_ct)
-        IF (cmx_micro_hfp(lex_idt,lex_ids) > 0.0_wp) THEN
+        ! Setting zero connectivity where height offsets negative (and zero in case of microcon_hfp_x_ct)
+        IF (cmx_micro_hfp_srf(lex_idt,lex_ids) > 0.0_wp) THEN
           WHERE (h_offset_ct(:,lex_ids,:) <= 0.0_wp)
-            microcon_hfp_ct(:,lex_ids,:) = 0._wp
+            microcon_hfp_srf_ct(:,lex_ids,:) = 0._wp
+          END WHERE
+        END IF
+        IF (cmx_micro_hfp_blg(lex_idt,lex_ids) > 0.0_wp) THEN
+          WHERE (h_offset_ct(:,lex_ids,:) <= 0.0_wp)
+            microcon_hfp_blg_ct(:,lex_ids,:) = 0._wp
           END WHERE
         END IF
         IF (cmx_micro_ctc(lex_idt,lex_ids) > 0.0_wp) THEN
@@ -352,23 +397,33 @@ CONTAINS
 
         ! Setting the micro connectivity where initially the connection is asumed to be in other direction
         ! but is changed due to sign of height offsets 
-        IF (cmx_micro_hfp(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
-          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile -
-            microcon_hfp_ct(:,lex_ids,:) = cmx_micro_hfp(lex_ids,lex_idt)
+        IF (cmx_micro_hfp_srf(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
+          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile is -
+            microcon_hfp_srf_ct(:,lex_ids,:) = cmx_micro_hfp_srf(lex_ids,lex_idt)
+          END WHERE
+        END IF
+
+        IF (cmx_micro_hfp_blg(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
+          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile is -
+            microcon_hfp_blg_ct(:,lex_ids,:) = cmx_micro_hfp_blg(lex_ids,lex_idt)
           END WHERE
         END IF
 
         IF (cmx_micro_ctc(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
-          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile -
+          WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile  is -
             microcon_ctc_ct(:,lex_ids,:) = cmx_micro_ctc(lex_ids,lex_idt)
           END WHERE
         END IF
 
        ! Summing up the fractions of a tile that are connected to siblings via hydrological flow paths
-        fract_microcon(:,:) = fract_microcon(:,:) &
-                          & + fract_sibl(:,:) * microcon_hfp_ct(:,lex_ids,:)
-        fract_macrocon(:,:) = fract_macrocon(:,:) &
-                          & + fract_sibl(:,:) * macrocon_hfp_ct(:,lex_ids,:)
+        fract_microcon_srf(:,:) = fract_microcon_srf(:,:) &
+                          & + fract_sibl(:,:) * microcon_hfp_srf_ct(:,lex_ids,:)
+        fract_microcon_blg(:,:) = fract_microcon_blg(:,:) &
+                          & + fract_sibl(:,:) * microcon_hfp_blg_ct(:,lex_ids,:)
+        fract_macrocon_srf(:,:) = fract_macrocon_srf(:,:) &
+                          & + fract_sibl(:,:) * macrocon_hfp_srf_ct(:,lex_ids,:)
+        fract_macrocon_blg(:,:) = fract_macrocon_blg(:,:) &
+                          & + fract_sibl(:,:) * macrocon_hfp_blg_ct(:,lex_ids,:)
 
       END DO
       
@@ -380,10 +435,7 @@ CONTAINS
       END DO
 
       !$ACC UPDATE DEVICE(h_offset_ct, length_scale_ct, length_iface_ct, micro_slope_ct) ASYNC(1)
-      !$ACC UPDATE DEVICE(microcon_hfp_ct, microcon_ctc_ct, macrocon_hfp_ct) ASYNC(1)
-
-      ! Second loop over neighbour tiles
-      ! Get effective flow lags of tile and get effective slope
+      !$ACC UPDATE DEVICE(microcon_ctc_ct, microcon_hfp_srf_ct, microcon_hfp_blg_ct, macrocon_hfp_srf_ct, macrocon_hfp_blg_ct) ASYNC(1)
 
       ALLOCATE(fact_lag_micro_srf(nproma, nblks))
       ALLOCATE(fact_lag_micro_blg(nproma, nblks))
@@ -392,7 +444,9 @@ CONTAINS
 
       ALLOCATE(fact_lag_srf_ct(nproma, nconti, nblks))
       ALLOCATE(fact_lag_blg_ct(nproma, nconti, nblks))
-      
+
+      ! Third loop over neighbour tiles:
+      ! Get effective flow lags of tile and get effective slope
       slope_eff(:,:) = macro_slope(:,:)
       DO it = 1, nsibl
         IF (it == 1) THEN
@@ -413,10 +467,13 @@ CONTAINS
           & ret_micro_srf, ret_micro_blg,                      &
           & ret_macro_srf, ret_macro_blg,                      &
           & length_scale_ct(:,lex_ids,:),                      &
-          & microcon_hfp_ct(:,lex_ids,:),                     &
-          & macrocon_hfp_ct(:,lex_ids,:),                     &
           & fract(:,:), fract_sibl(:,:),                       &
-          & fract_microcon(:,:), fract_macrocon(:,:),          &
+          & microcon_hfp_srf_ct(:,lex_ids,:),                  &
+          & microcon_hfp_blg_ct(:,lex_ids,:),                  &
+          & macrocon_hfp_srf_ct(:,lex_ids,:),                  &
+          & macrocon_hfp_blg_ct(:,lex_ids,:),                  &
+          & fract_microcon_srf(:,:), fract_microcon_blg(:,:),  &
+          & fract_macrocon_srf(:,:), fract_macrocon_blg(:,:),  &
           & fact_lag_micro_srf(:,:), fact_lag_micro_blg(:,:),  &
           & fact_lag_macro_srf(:,:), fact_lag_macro_blg(:,:)   &
           )
@@ -439,7 +496,7 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(slope_eff, fact_lag_srf, fact_lag_blg) ASYNC(1)
 
-      ! Third loop over neighbour tiles
+      ! Fourth loop over neighbour tiles:
       ! Determines the fraction of flow from tile to sibling
       DO it = 1, nsibl
         IF (it == 1) THEN
@@ -453,22 +510,27 @@ CONTAINS
 
         ! Determine the fraction of flow from tile to sibling as: 
         ! Ratio of flow lag between tile and sibling and effective lag factor for tile
-        WHERE((fract_macrocon(:,:) == 0._wp) .AND. (fract_microcon(:,:) == 0._wp))
+        WHERE((fract_macrocon_srf(:,:) == 0._wp) .AND. (fract_microcon_srf(:,:) == 0._wp))
           fract_latflow_srf_ct(:,lex_ids,:) = 0.0
-          fract_latflow_blg_ct(:,lex_ids,:) = 0.0  
         ELSE WHERE
           fract_latflow_srf_ct(:,lex_ids,:) = fact_lag_srf_ct(:,lex_ids,:) / fact_lag_srf(:,:)
+        END WHERE
+        WHERE((fract_macrocon_blg(:,:) == 0._wp) .AND. (fract_microcon_blg(:,:) == 0._wp))
+          fract_latflow_blg_ct(:,lex_ids,:) = 0.0
+        ELSE WHERE
           fract_latflow_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) / fact_lag_blg(:,:)
         END WHERE
 
         ! If a tile is not fully connected to downstream tiles (cmx_micro_hfp + cmx_macro_hfp > 1.0)
         ! A fraction of the generated outflow is given to streamflow this is done by scaling 
         ! the fractions lateral flow directed to downstream a downstream tile        
-        WHERE   (SUM(microcon_hfp_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_ct(:,:,:), DIM=2) < 1._wp)
+        WHERE   (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2) < 1._wp)
           fract_latflow_srf_ct(:,lex_ids,:) = fract_latflow_srf_ct(:,lex_ids,:)  &
-            & * (SUM(microcon_hfp_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_ct(:,:,:), DIM=2))
+            & * (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2))
+        END WHERE
+        WHERE   (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2) < 1._wp)
           fract_latflow_blg_ct(:,lex_ids,:) =  fract_latflow_blg_ct(:,lex_ids,:) &
-            & * (SUM(microcon_hfp_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_ct(:,:,:), DIM=2))
+            & * (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2))
         END WHERE
        
       END DO
@@ -477,11 +539,16 @@ CONTAINS
 
       DEALLOCATE(fract)
       DEALLOCATE(fract_sibl)
-      DEALLOCATE(fract_microcon)
-      DEALLOCATE(fract_macrocon)
       DEALLOCATE(test_matrix)
-      DEALLOCATE(cmx_micro_hfp)
-      DEALLOCATE(cmx_macro_hfp)
+      DEALLOCATE(cmx_micro_ctc)
+      DEALLOCATE(cmx_micro_hfp_srf)
+      DEALLOCATE(cmx_micro_hfp_blg)
+      DEALLOCATE(cmx_macro_hfp_srf)
+      DEALLOCATE(cmx_macro_hfp_blg)
+      DEALLOCATE(fract_microcon_srf)
+      DEALLOCATE(fract_microcon_blg)
+      DEALLOCATE(fract_macrocon_srf)
+      DEALLOCATE(fract_macrocon_blg)
       DEALLOCATE(area_nclsd)
       DEALLOCATE(fract_nclsd)
       DEALLOCATE(fact_lag_micro_srf)

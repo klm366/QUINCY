@@ -57,8 +57,10 @@ MODULE mo_lex_memory_class
       & length_scale_ct,      &  !< char. length scale of srf. heterogeneity [m]
       & length_iface_ct,      &  !< char. interface length between adjacent tiles [m m-2]
       & microcon_ctc_ct,      &  !< micro-scale connectivity factors for direct contact [/]
-      & microcon_hfp_ct,      &  !< micro-scale connectivity factors for hydrological flow paths [/]
-      & macrocon_hfp_ct,      &  !< macro-scale connectivity factors for hydrological flow paths [/]
+      & microcon_hfp_srf_ct,      &  !< micro-scale connectivity factors for surface hydrological flow paths [/]
+      & microcon_hfp_blg_ct,      &  !< micro-scale connectivity factors for below-ground hydrological flow paths [/]
+      & macrocon_hfp_srf_ct,      &  !< macro-scale connectivity factors for surface hydrological flow paths [/]
+      & macrocon_hfp_blg_ct,      &  !< macro-scale connectivity factors for below-ground hydrological flow paths [/]
       & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
       & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]  
       & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/]
@@ -225,17 +227,33 @@ CONTAINS
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_hfp_ct', mem%microcon_hfp_ct,                                    &
+    CALL mem%Add_var( 'microcon_hfp_srf_ct', mem%microcon_hfp_srf_ct,                                    &
         & hgrid, tiles,                                                                          &
-        & t_cf('microcon_hfp_ct', '/', 'micro-scale connectivity factors for hydrological flow paths'),   &
+        & t_cf('microcon_hfp_srf_ct', '/', 'micro-scale connectivity factors for surface hydrological flow paths'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
         & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'macrocon_hfp_ct', mem%macrocon_hfp_ct,                 &
+    CALL mem%Add_var( 'microcon_hfp_blg_ct', mem%microcon_hfp_blg_ct,                                    &
+        & hgrid, tiles,                                                                          &
+        & t_cf('microcon_hfp_blg_ct', '/', 'micro-scale connectivity factors for below-ground hydrological flow paths'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
+        & loutput=l_lex, output_level=FULL,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'macrocon_hfp_srf_ct', mem%macrocon_hfp_srf_ct,                 &
         & hgrid, tiles,                                                       &
-        & t_cf('macrocon_hfp_ct', '/', 'macro-scale connectivity factors for hydrological flow paths'),    &
+        & t_cf('macrocon_hfp_srf_ct', '/', 'macro-scale connectivity factors for surface hydrological flow paths'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix, l_aggregate_all=.TRUE.,                             &
+        & loutput=l_lex, output_level=FULL,                                   &
+        & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'macrocon_hfp_blg_ct', mem%macrocon_hfp_blg_ct,                 &
+        & hgrid, tiles,                                                       &
+        & t_cf('macrocon_hfp_blg_ct', '/', 'macro-scale connectivity factors for below-ground hydrological flow paths'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &

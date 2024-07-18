@@ -207,7 +207,7 @@ CONTAINS
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,             &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_lvt              !< Index variables for layers on helper grid (i) and in elevation (i_lvt)  
+      &                        i, i_lvt              !< Index variables for layers on helper grid (i) and in elevation (i_lvt)
 
     REAL(wp)                :: fr_lvt_rel,        &  !< Relative fraction of elevation tile [/]
       &                        fr_dpr_rel,        &  !< Relative fraction of depression tile [/]
@@ -281,7 +281,7 @@ CONTAINS
           END IF
         END IF
         diffusion(i_lvt)      = diffusion(i_lvt) + wtr_lat
-      END IF  
+      END IF
       ! Layer bottom was on soil layer
       IF (z_rgrd_bot == z_lvt) THEN
         i_lvt = i_lvt + 1
@@ -301,14 +301,14 @@ CONTAINS
       ! Finding new layer Bottom
       IF (z_rgrd_bot < h_offset - wtr_pond_dpr_ini) THEN ! Still above water level in depression
         z_rgrd_bot_new = MIN(h_offset - wtr_pond_dpr_ini, z_lvt)
-      ELSE IF (z_rgrd_bot < h_offset ) THEN              ! Within the ponded surface water in the depression 
+      ELSE IF (z_rgrd_bot < h_offset ) THEN              ! Within the ponded surface water in the depression
         z_rgrd_bot_new = MIN(h_offset, z_lvt)
       ELSE
         z_rgrd_bot_new = z_lvt
-      END IF       
+      END IF
 
       z_rgrd_top=z_rgrd_bot
-      z_rgrd_bot=z_rgrd_bot_new      
+      z_rgrd_bot=z_rgrd_bot_new
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -375,7 +375,7 @@ CONTAINS
 
 
     ! Local variables ------------------------------------------------------------------------------------
-    INTEGER                 :: i, i_lvt                   !< Index variables for layers on grid (i) on in elevation (i_lvt)  
+    INTEGER                 :: i, i_lvt                   !< Index variables for layers on grid (i) on in elevation (i_lvt)
 
     REAL(wp)                :: fr_lvt_rel,             &  !< Relative fraction of elevation [/]
       &                        fr_dpr_rel,             &  !< Relative fraction of depression [/]
@@ -416,7 +416,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO i = 1, nsoil
-      IF (i_lvt <= nsoil .AND.                        & 
+      IF (i_lvt <= nsoil .AND.                        &
         & z_rgrd_bot >  h_offset - weq_pond_dpr .AND. &
         & z_rgrd_bot <= h_offset) THEN ! Within the ponded surface water in the depression
         h                    = z_rgrd_bot - z_rgrd_top
@@ -538,7 +538,7 @@ CONTAINS
     ! Local variables ------------------------------------------------------------------------------------
 
     INTEGER                 :: nrgrd,               &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_tle, i_sbl         !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)  
+      &                        i, i_tle, i_sbl         !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)
 
     REAL(wp)                :: fr_tle_rel,          &  !< Relative fraction of tile [/]
       &                        fr_sbl_rel,          &  !< Relative fraction of sibling [/]
@@ -613,7 +613,7 @@ CONTAINS
     END IF
 
     z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_tle, z_sbl)    
+    z_rgrd_bot = MIN(z_tle, z_sbl)
     
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
@@ -690,7 +690,7 @@ CONTAINS
               i_sbl = nsoil + 1
             END IF
           END IF
-        END IF      
+        END IF
 
         z_rgrd_top=z_rgrd_bot
         z_rgrd_bot=MIN(z_tle, z_sbl)
@@ -758,7 +758,7 @@ CONTAINS
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,                  &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)  
+      &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)
 
     REAL(wp)                :: fr_tle_rel,             &  !< Relative fraction of tile [/]
       &                        fr_sbl_rel,             &  !< Relative fraction of sibling [/]
@@ -887,7 +887,7 @@ CONTAINS
 
 ! ===============================================================================================================================
   !>
-  !! Compute intertile heat exchenge due to lateral movement of water 
+  !! Compute intertile heat exchenge due to lateral movement of water
   !!
   SUBROUTINE calc_convection_heat(                         &
       &      nsoil, dtime,                                 &
@@ -934,7 +934,7 @@ CONTAINS
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,                  &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), on tile (i_tle) and sibling tile (i_sbl)  
+      &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), on tile (i_tle) and sibling tile (i_sbl)
 
     REAL(wp)                :: z_tle,                  &  !< Layer bottom of current layer on tile [m]
       &                        z_sbl,                  &  !< Layer bottom of current layer on sibling [m]
@@ -943,8 +943,8 @@ CONTAINS
       &                        h,                      &  !< Height of current layer [m]
       &                        t_tle_rgrd,             &  !< Soil tempertures of tile on current layer on helper grid [K]
       &                        t_sbl_rgrd,             &  !< Soil tempertures of sibling on current layer on helper grid [K]
-      &                        d_t_wtr_soil_tle,       &  !< Temperture difference between incomming water and soil on tile on current layer on helper grid [K] 
-      &                        d_t_wtr_soil_sbl,       &  !< Temperture difference between incomming water and soil on sibling on current layer on helper grid [K] 
+      &                        d_t_wtr_soil_tle,       &  !< Temperture difference between incomming water and soil on tile on current layer on helper grid [K]
+      &                        d_t_wtr_soil_sbl,       &  !< Temperture difference between incomming water and soil on sibling on current layer on helper grid [K]
       &                        h_cap_soil_tle_rgrd,    &  !< Soil heat capacity of tile on current layer on helper grid [J m-3 K-1]
       &                        h_cap_soil_sbl_rgrd,    &  !< Soil heat capacity of sibling on current layer on helper grid [J m-3 K-1]
       &                        wtr_flx_in_tle_regrid,  &  !< Incomming water on tile (from sibling) on current layer on helper grid [m3 m-2 s] 
@@ -974,7 +974,7 @@ CONTAINS
       i_sbl = 1
       z_tle = dz(i_tle)
       z_sbl = dz(i_sbl)
-    END IF 
+    END IF
 
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_tle, z_sbl)
@@ -995,7 +995,7 @@ CONTAINS
           t_tle_rgrd            = t_soil_tle(1)
           h_cap_soil_tle_rgrd   = heat_cap_soil_tle(1)
           wtr_flx_in_tle_regrid = 0._wp
-        END IF 
+        END IF
 
         IF (i_sbl > 0) THEN
           t_sbl_rgrd            = t_soil_sbl(i_sbl)
@@ -1005,7 +1005,7 @@ CONTAINS
           t_sbl_rgrd            = t_soil_sbl(1)
           h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(1)
           wtr_flx_in_tle_regrid = 0._wp
-        END IF 
+        END IF
 
         ! Effective heat flux is determined so that: 
         ! t_sl_new = t_wtr + (t_sl-t_wtr) * (h - h_wtr) / h * vol_heat_cap_sl_old / vol_heat_cap_sl_new.
@@ -1024,7 +1024,7 @@ CONTAINS
         ! This could happen in the above formulation if wtr_flx_in_tle_regrid * dtime > h
         ! Here, we use the current soil heat capacities instead of assuming that 
         ! the water content will change according to wtr_flx * dtime.
-        ! This makes the limits more retrictive, given that these are anyway very large margins.         
+        ! This makes the limits more retrictive, given that these are anyway very large margins.
         IF (     heat_flx_tle < 0._wp) THEN
           heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
         ELSE IF (heat_flx_tle > 0._wp) THEN
@@ -1312,7 +1312,7 @@ CONTAINS
   !>
   !! Limit soil water and pond storage content
   !!
-  SUBROUTINE remove_exess_water(              &    
+  SUBROUTINE remove_exess_water(              &
     & weq_pond_max,                           &
     & ice_pond,                               &
     & wtr_pond,                               &
@@ -1374,7 +1374,7 @@ CONTAINS
   SUBROUTINE shift_fluxes_sl(                 &
     & nsoil,                                  &
     & h_offset,                               &
-    & dsoil_lvt, dsoil_dpr,                   &   
+    & dsoil_lvt, dsoil_dpr,                   &
     & flx_lat_sl                              &
     )
      
@@ -1405,7 +1405,7 @@ CONTAINS
 
     flx_lat_sl_upd(:) = 0._wp
 
-    nrgrd       = nsoil * 2 + 1    
+    nrgrd       = nsoil * 2 + 1
 
     i_lvt = 0
     z_lvt = dsoil_lvt(1)
@@ -1442,7 +1442,7 @@ CONTAINS
       z_rgrd_bot=MIN(z_lvt, z_dpr)
 
     END DO
-    !$ACC END PARALLEL   
+    !$ACC END PARALLEL
 
     flx_lat_sl(:) = flx_lat_sl_upd(:)
 
@@ -1468,7 +1468,7 @@ CONTAINS
     & h_offset,                                 &
     & length_scale,                             &
     & length_iface,                             &
-    & micro_slope                               & 
+    & micro_slope                               &
     )
 
     USE mo_jsb_math_constants,     ONLY: pi
@@ -1510,7 +1510,7 @@ CONTAINS
     ELSE
       fract_rel      = fract      / (fract + fract_sibl)
       fract_rel_sibl = fract_sibl / (fract + fract_sibl)
-    END IF   
+    END IF
 
     ! Calculate difference in surface elevation between tile and sibling (only valid for any micro-connections)
     IF ((microcon_ctc_tile  == 0._wp .AND. microcon_ctc_sibl  == 0._wp) .OR.  &
@@ -1518,7 +1518,7 @@ CONTAINS
       h_offset = 0._wp
     ELSE
       h_offset = h_surf - h_surf_sibl
-    END IF   
+    END IF
 
     ! Calculate characteristic length scale and interface length between tile and sibling:
     !
@@ -1549,7 +1549,7 @@ CONTAINS
       IF (area_nclsd > 0._wp .AND. fract_nclsd > 1.0e-10_wp) THEN ! Tile encloses another tile
 
         area_cmbnd      = area_nclsd &
-          &             * (fract_nclsd + fract) / fract_nclsd     
+          &             * (fract_nclsd + fract) / fract_nclsd
         fract_rel_cmbnd = (fract_nclsd + fract) &
           &             / (fract_nclsd + fract + fract_sibl)
 
@@ -1576,7 +1576,7 @@ CONTAINS
         rad_out = (area *(1._wp + area_fact / microcon_ctc_tile) / pi)**0.5_wp
                
         length_scale = rad_in + (rad_out - rad_in) / 2._wp
-      END IF        
+      END IF
     ELSE  ! Sibling is encompassed by tile
       IF (area_nclsd_sibl > 0._wp .AND. fract_nclsd_sibl > 1.0e-10_wp) THEN  ! Sibling encloses another tile
 
@@ -1610,7 +1610,7 @@ CONTAINS
 
         length_scale = rad_in + (rad_out - rad_in) / 2._wp
 
-      END IF         
+      END IF
     END IF
 
     ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale
@@ -1637,9 +1637,11 @@ CONTAINS
     & ret_micro_uncon_srf, ret_micro_uncon_blg,      &
     & ret_macro_srf, ret_macro_blg,                  &
     & length_scale,                                  &
-    & micro_connect, macro_connect,                  &
     & fract, fract_sibl,                             &
-    & fract_microcon, fract_macrocon,                &
+    & micro_connect_srf, micro_connect_blg,          &
+    & macro_connect_srf, macro_connect_blg,          &
+    & fract_microcon_srf, fract_microcon_blg,        &
+    & fract_macrocon_srf, fract_macrocon_blg,        &
     & fact_lag_micro_srf, fact_lag_micro_blg,        &
     & fact_lag_macro_srf, fact_lag_macro_blg         &
     )
@@ -1658,18 +1660,21 @@ CONTAINS
       &                        ret_macro_blg            !< Retention time for macro-scale fluxes below the surfcace [s]
 
     REAL(wp), INTENT(in)    :: length_scale,         &  !< Assumed distance between centers of micro-scale connected tiles [m]
-      &                        micro_connect,        &  !< Micro-scale connectivity between tile and sibling [/]
-      &                        macro_connect,        &  !< Macro-scale connectivity between tile and sibling [/]
       &                        fract,                &  !< cover fraction of tile [/]
       &                        fract_sibl,           &  !< cover fraction of sibling [/]
-      &                        fract_microcon,       &  !< (Weighted) Sum of micro-scale connection fractions on tile [/]
-      &                        fract_macrocon           !< (Weighted) Sum of macro-scale connection fractions on tile [/]
+      &                        micro_connect_srf,    &  !< Micro-scale connectivity (surface) between tile and sibling [/]
+      &                        micro_connect_blg,    &  !< Micro-scale connectivity (below-ground) between tile and sibling [/]
+      &                        macro_connect_srf,    &  !< Macro-scale connectivity (surface) between tile and sibling [/]
+      &                        macro_connect_blg,    &  !< Macro-scale connectivity (below-ground) between tile and sibling [/]
+      &                        fract_microcon_srf,   &  !< (Weighted) Sum of micro-scale connect. fractions (surface) on tile [/]
+      &                        fract_microcon_blg,   &  !< (Weighted) Sum of micro-scale connect. fractions (below-ground) on tile [/]
+      &                        fract_macrocon_srf,   &  !< (Weighted) Sum of macro-scale connect. fractions (surface) on tile [/]
+      &                        fract_macrocon_blg       !< (Weighted) Sum of macro-scale connect. fractions (below-ground) on tile [/]
 
-
-    REAL(wp), INTENT(out)   :: fact_lag_micro_srf,   &  !< lag factor for micro-scale surface fluxes between tile and sibling [s-1]  
-                               fact_lag_micro_blg,   &  !< lag factor for micro-scale below-ground fluxes between tile and sibling [s-1] 
+    REAL(wp), INTENT(out)   :: fact_lag_micro_srf,   &  !< lag factor for micro-scale surface fluxes between tile and sibling [s-1]
+                               fact_lag_micro_blg,   &  !< lag factor for micro-scale below-ground fluxes between tile and sibling [s-1]
                                fact_lag_macro_srf,   &  !< lag factor for macro-scale surface fluxes between tile and sibling [s-1]
-                               fact_lag_macro_blg       !< lag factor for macro-scale below-ground fluxes between tile and sibling [s-1] 
+                               fact_lag_macro_blg       !< lag factor for macro-scale below-ground fluxes between tile and sibling [s-1]
 
    ! Local variables
    !
@@ -1679,51 +1684,59 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling, 
+    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling,
     ! and the cover fraction of sibling relative to the total connected farction of tile
 
     ret_micro_srf = MAX(length_scale / velocity_srf, 3600._wp)
     ret_micro_blg = MAX(length_scale / velocity_blg, 3600._wp)
 
-    IF (micro_connect > 0._wp) THEN
+    IF (micro_connect_srf > 0._wp) THEN
       fact_lag_micro_srf = 1._wp / ret_micro_srf &
-        &                * micro_connect * fract_sibl / fract_microcon
-      fact_lag_micro_blg = 1._wp / ret_micro_blg &
-        &                * micro_connect * fract_sibl / fract_microcon
+        &                * micro_connect_srf * fract_sibl / fract_microcon_srf
     ELSE
       fact_lag_micro_srf = 0.0_wp
-      fact_lag_micro_blg = 0.0_wp   
-    END IF      
+    END IF
 
-    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling, 
+    IF (micro_connect_blg > 0._wp) THEN
+      fact_lag_micro_blg = 1._wp / ret_micro_blg &
+        &                * micro_connect_blg * fract_sibl / fract_microcon_blg
+    ELSE
+      fact_lag_micro_blg = 0.0_wp
+    END IF
+
+    ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling,
     ! and the cover fraction of sibling relative to the total connected farction of tile.
-    ! Additionally, the lag foctor is decreased accoring to the micro-scale connectivity, assuming that the fractions of the tile 
+    ! Additionally, the lag foctor is decreased accoring to the micro-scale connectivity, assuming that the fractions of the tile
     ! that have a micro-scale connectivity do not additionally feature macro-scale connections. 
-    IF ((macro_connect > 0._wp) .AND. (fract > 0._wp)) THEN
+    IF ((macro_connect_srf > 0._wp) .AND. (fract > 0._wp)) THEN
 
       fact_lag_macro_srf = 1._wp / ret_macro_srf                       &
-        &                * macro_connect * fract_sibl / fract_macrocon &
-        &                * MAX(0._wp, (fract - fract_microcon) / fract)
-
-
-      fact_lag_macro_blg = 1._wp / ret_macro_blg                       &
-        &                * macro_connect * fract_sibl / fract_macrocon &
-        &                * MAX(0._wp, (fract - fract_microcon) / fract)
-
-
+        &                * macro_connect_srf * fract_sibl / fract_macrocon_srf &
+        &                * MAX(0._wp, (fract - fract_microcon_srf) / fract)
     ELSE
       fact_lag_macro_srf = 0.0_wp
-      fact_lag_macro_blg = 0.0_wp   
-    END IF  
+    END IF
+
+    IF ((macro_connect_blg > 0._wp) .AND. (fract > 0._wp)) THEN
+      fact_lag_macro_blg = 1._wp / ret_macro_blg                       &
+        &                * macro_connect_blg * fract_sibl / fract_macrocon_blg &
+        &                * MAX(0._wp, (fract - fract_microcon_blg) / fract)
+    ELSE
+      fact_lag_macro_blg = 0.0_wp
+    END IF
 
     ! For outflow on tiles that have no downstream tile, lag factors are calculated based on the time-scales of the macro-scale retention times.
     ! The respective fluxes are given to surface runoff and drainage.
     IF ((lex_idt == lex_ids)       .AND. &
-      & (fract_microcon == 0.0_wp) .AND. (fract_macrocon == 0.0_wp)) THEN
+      & (fract_microcon_srf == 0.0_wp) .AND. (fract_macrocon_srf == 0.0_wp)) THEN
       fact_lag_micro_srf = 1._wp / ret_micro_uncon_srf
-      fact_lag_micro_blg = 1._wp / ret_micro_uncon_blg
       fact_lag_macro_srf = 0._wp
-      fact_lag_macro_blg = 0._wp     
+    END IF
+
+    IF ((lex_idt == lex_ids)       .AND. &
+      & (fract_microcon_blg == 0.0_wp) .AND. (fract_macrocon_blg == 0.0_wp)) THEN
+      fact_lag_micro_blg = 1._wp / ret_micro_uncon_blg
+      fact_lag_macro_blg = 0._wp
     END IF
 
   END SUBROUTINE get_flow_lags
@@ -1733,7 +1746,7 @@ CONTAINS
   !>
   !! Check wether matrix contains closed loop
   !!
-  SUBROUTINE check_flow_matrix(               &    
+  SUBROUTINE check_flow_matrix(               &
     & nconti,                                 &
     & matrix,                                 &
     & has_loop                                &
@@ -1755,16 +1768,16 @@ CONTAINS
       DO is = 1, nconti
         IF (matrix(is,it) > 0._wp) THEN ! sibling connects to tile
           IF (SUM(matrix(:,is)) > 0._wp) THEN ! sibling has tiles connected to it
-            trgt_id=is ! sibling is currenttarget          
+            trgt_id=is ! sibling is current target
             src_id=MAXLOC(matrix(:,is), 1)  ! getting the largest incomming connection
             cntr=0  ! Starting counter for closed loop check
             DO WHILE (cntr < nconti)
               IF (SUM(matrix(:,src_id)) == 0._wp) THEN ! (incomming) connected tile is end of flow net branch
-                matrix(src_id,trgt_id)=0._wp ! Setting the current source -> target to 0, to not get on the branch again 
+                matrix(src_id,trgt_id)=0._wp ! Setting the current source -> target to 0, to not get on the branch again
                 IF (sum(matrix(:,is)) > 0._wp) THEN ! Check if connected sibling still has incomming connections
                   trgt_id=is ! Set target back to siblig
-                  src_id=MAXLOC(matrix(:,is), 1) ! and find new source 
-                  cntr=0 ! Goind down new branch so counter is reset 
+                  src_id=MAXLOC(matrix(:,is), 1) ! and find new source
+                  cntr=0 ! Goind down new branch so counter is reset
                 ELSE
                   matrix(is,it) = 0._wp ! set sibling -> tile conection to 0 (sibling branch has no closed loop)
                   cntr=nconti-1 ! nothing more to be checked 
@@ -1780,8 +1793,8 @@ CONTAINS
             END DO
           ELSE
             matrix(is,it) = 0._wp
-          END IF 
-        END IF 
+          END IF
+        END IF
       END DO
     END DO
 
