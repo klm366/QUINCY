@@ -11,7 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Contains the interfaces to the lex processes and the reset of the lateral flux fields after these have been used in the HYDRO_ and SSE_ modules.
+!>#### Contains interfaces to lex processes and reset of lateral flux fields after these have been used in HYDRO_ and SSE_ modules
 !>
 MODULE mo_lex_interface
 #ifndef __NO_JSBACH__
@@ -21,16 +21,14 @@ MODULE mo_lex_interface
 
   ! Use of basic structures
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -142,9 +140,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
-    TYPE(t_jsb_model), POINTER :: model
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_lex_fluxes'
 
@@ -183,16 +180,11 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(LEX_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     ! Get process memories
     dsl4jsb_Get_memory(LEX_)
@@ -272,8 +264,8 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER  :: iblk, ics, ice
+
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_lex_fluxes'
 
@@ -281,11 +273,8 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(LEX_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -328,7 +317,8 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !> Implementation of "update" for task "lex"
-  !! Task "lex" determines the transport of surface runoff, lateral drainage, lateral ingress from ponds, the diffusive transport of water and energy and the redistribution of snow.
+  !! Task "lex" determines the transport of surface runoff, lateral drainage, lateral ingress from ponds,
+  !! the diffusive transport of water and energy and the redistribution of snow.
   !!
   SUBROUTINE update_lex(tile, options)
 
@@ -353,10 +343,8 @@ CONTAINS
     ! Local variables
 
     CLASS(t_jsb_tile_abstract), POINTER :: sibl                 !< Sibling tile with LEX_ process running on them
-    CLASS(t_jsb_tile_abstract), POINTER :: counter_tile         !< Tile used only to get the first and last lex_ids on current tile level
 
     TYPE(t_jsb_model), POINTER    :: model
-    TYPE(t_jsb_grid),  POINTER    :: grid
     TYPE(t_jsb_vgrid), POINTER    :: soil_e
 
     INTEGER  :: iblk,                                        &  !< options%iblk
@@ -365,7 +353,7 @@ CONTAINS
       &         nc,                                          &  !< options%nc
       &         nsoil,                                       &  !< options%nsoil_w
       &         nsibl,                                       &  !< number of siblings on tile level
-      &         ic, is, it,                                  &  !< counter variables for loops over cells (ic), soil layers (is) and tiles (it)
+      &         ic, is, it,                                  &  !< counters for loops over cells (ic), soil layers (is), tiles (it)
       &         lex_idt,                                     &  !< lex id of tile
       &         lex_ids,                                     &  !< lex id of sibling tile
       &         lex_idc, lex_id_first, lex_id_last              !< lex id of current tile (lex_idc) and of the first (lex_id_first) and last tile (lex_id_last) on the present tile level
@@ -394,9 +382,7 @@ CONTAINS
       &  ice_impedance_sl(options%nc,options%nsoil_w),       &  !< ice impedence factor for tile [/]
       &  ice_impedance_sl_sibl(options%nc,options%nsoil_w),  &  !< ice impedence factor for sibling [/]
       &  weq_wsat_sl(options%nc,options%nsoil_w),            &  !< Soil moisture at saturation for tile [m]
-      &  weq_wsat_sl_sibl(options%nc,options%nsoil_w),       &  !< Soil moisture at saturation for sibling [m]
-      &  weq_field_cap_sl(options%nc,options%nsoil_w),       &  !< field capacity for tile [m]
-      &  weq_field_cap_sl_sibl(options%nc,options%nsoil_w),  &  !< field capacity for sibling [m] 
+      &  weq_wsat_sl_sibl(options%nc,options%nsoil_w),       &  !< Soil moisture at saturation for sibling [m] 
       &  weq_wres_sl(options%nc,options%nsoil_w),            &  !< moisture residual for tile [m]
       &  weq_wres_sl_sibl(options%nc,options%nsoil_w),       &  !< moisture residual for sibling [m]
       &  wtr_incomming_sl(options%nc,options%nsoil_w),       &  !< Lateral flux (soil) from sibling to tile [kg m-2 s-1]
@@ -426,10 +412,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: &
       & wtr_latflow_srf,      &
       & wtr_lex_net_srf,      &
-      & wtr_runoff_in,        &
       & weq_snowblow_in,      &
       & wtr_runoff_out,       &
-      & wtr_infil_out,        &
       & weq_snowblow_out,     &
       & weq_pond,             &
       & weq_snow,             &
@@ -447,8 +431,7 @@ CONTAINS
       &  wtr_latflow_sl,         &
       &  soil_depth_sl,          &
       &  wtr_lex_net_sl,         &
-      & wtr_infil_in_sl,         &
-      &  wtr_drainage_in_sl,     &
+      &  wtr_infil_in_sl,        &
       &  wtr_diffusion_in_sl,    &
       &  wtr_drainage_out_sl,    &
       &  wtr_diffusion_out_sl,   &
@@ -460,7 +443,6 @@ CONTAINS
       &  wtr_soil_res_sl,        &
       &  hyd_cond_sat_sl,        &
       &  vol_porosity_sl,        &
-      &  vol_field_cap_sl,       &
       &  vol_wres_sl,            &
       &  matric_pot_sl,          &
       &  bclapp_sl,              &
@@ -482,7 +464,6 @@ CONTAINS
       &  wtr_lex_net_srf_sibl,   &
       &  wtr_runoff_in_sibl,     &
       &  weq_snowblow_in_sibl,   &
-      &  wtr_runoff_out_sibl,    &
       &  wtr_infil_out_sibl,     &
       &  weq_snowblow_out_sibl,  &
       &  wtr_pond_sibl,          &
@@ -501,7 +482,6 @@ CONTAINS
       &  wtr_lex_net_sl_sibl,         &
       &  wtr_drainage_in_sl_sibl,     &
       &  wtr_diffusion_in_sl_sibl,    &
-      &  wtr_drainage_out_sl_sibl,    &
       &  wtr_diffusion_out_sl_sibl,   &
       &  wtr_soil_sl_sibl,            &
       &  ice_soil_sl_sibl,            &
@@ -511,7 +491,6 @@ CONTAINS
       &  wtr_soil_res_sl_sibl,        &
       &  hyd_cond_sat_sl_sibl,        &
       &  vol_porosity_sl_sibl,        &
-      &  vol_field_cap_sl_sibl,       &
       &  vol_wres_sl_sibl,            &
       &  matric_pot_sl_sibl,          &
       &  bclapp_sl_sibl,              &
@@ -535,7 +514,6 @@ CONTAINS
 
     ! Get local variables from tile information
     model  => Get_model(tile%owner_model_id)
-    grid   => Get_grid(model%grid_id)
     soil_e => Get_vgrid('soil_depth_energy')
     nsibl  = tile%parent_tile%Get_no_of_children()
 
@@ -582,13 +560,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(LEX_,   h_offset_ct)            ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   length_scale_ct)        ! in
     dsl4jsb_Get_var3D_onChunk(LEX_,   length_iface_ct)        ! in
-    dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_runoff_in)          ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   weq_snowblow_in)        ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_runoff_out)         ! inout
-    dsl4jsb_Get_var2D_onChunk(LEX_,   wtr_infil_out)          ! inout
     dsl4jsb_Get_var2D_onChunk(LEX_,   weq_snowblow_out)       ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_infil_in_sl)        ! inout
-    dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_drainage_in_sl)     ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_diffusion_in_sl)    ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_drainage_out_sl)    ! inout
     dsl4jsb_Get_var3D_onChunk(LEX_,   wtr_diffusion_out_sl)   ! inout
@@ -605,7 +580,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_res_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_wres_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)              ! in
@@ -663,12 +637,10 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_runoff_in, sibl)          ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   weq_snowblow_in, sibl)        ! inout
-      dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_runoff_out, sibl)         ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   wtr_infil_out, sibl)          ! inout
       dsl4jsb_Get_var2D_onChunk_tile_name(LEX_,   weq_snowblow_out, sibl)       ! inout
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   wtr_drainage_in_sl, sibl)     ! inout
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   wtr_diffusion_in_sl, sibl)    ! inout
-      dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   wtr_drainage_out_sl, sibl)    ! inout
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   wtr_diffusion_out_sl, sibl)   ! inout
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   nrg_diffusion_in_sl, sibl)    ! inout
       dsl4jsb_Get_var3D_onChunk_tile_name(LEX_,   nrg_convection_in_sl, sibl)   ! inout
@@ -684,7 +656,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl, sibl)         ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, wtr_soil_res_sl, sibl)        ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_porosity_sl, sibl)        ! in
-      dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_field_cap_sl, sibl)       ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, vol_wres_sl, sibl)            ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, matric_pot_sl, sibl)          ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(HYDRO_, bclapp_sl, sibl)              ! in
@@ -834,7 +805,6 @@ CONTAINS
           DO is = 1, nsoil
             DO  ic = 1, nc
               weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * soil_depth_sl(ic,is)
-              weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
               weq_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
             END DO
           END DO
@@ -866,8 +836,6 @@ CONTAINS
           DO is = 1, nsoil
             DO  ic = 1, nc
               weq_wsat_sl_sibl     (ic,is) = vol_porosity_sl_sibl (ic,is) &
-                &                          * soil_depth_sl_sibl(ic,is)
-              weq_field_cap_sl_sibl(ic,is) = vol_field_cap_sl_sibl(ic,is) &
                 &                          * soil_depth_sl_sibl(ic,is)
               weq_wres_sl_sibl     (ic,is) = vol_wres_sl_sibl(ic,is)      &
                 &                          * soil_depth_sl_sibl(ic,is)
@@ -1192,8 +1160,8 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER  :: iblk, ics, ice
+
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_lex'
 
@@ -1201,11 +1169,8 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(LEX_)
     dsl4jsb_Get_memory(HYDRO_)

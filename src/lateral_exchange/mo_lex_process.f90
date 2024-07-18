@@ -395,6 +395,8 @@ CONTAINS
       &                        t_eq,                   &  !< Equilibrium temperature [K]
       &                        heat_flx_eq_lat            !< Equilirium energy flux between depression and elevation [J m-2 s-1]
 
+    weq_pond_dpr    = wtr_pond_dpr + ice_pond_dpr
+
     IF (h_offset < 1.0e-10_wp .OR. weq_pond_dpr < 1.0e-10_wp) RETURN
     IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
 
@@ -410,7 +412,6 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, h_offset)
 
-    weq_pond_dpr    = wtr_pond_dpr + ice_pond_dpr
     h_cond_pond_dpr = (wtr_pond_dpr * hcond_water + ice_pond_dpr * hcond_ice) / weq_pond_dpr
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -955,6 +956,7 @@ CONTAINS
     nrgrd         = nsoil * 2 + 3
 
     IF (abs(h_offset) > SUM(dz(:))) RETURN
+    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
@@ -1004,7 +1006,7 @@ CONTAINS
         ELSE
           t_sbl_rgrd            = t_soil_sbl(1)
           h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(1)
-          wtr_flx_in_tle_regrid = 0._wp
+          wtr_flx_in_sbl_regrid = 0._wp
         END IF
 
         ! Effective heat flux is determined so that: 
@@ -1039,13 +1041,17 @@ CONTAINS
         ! Diagnosing incoming-, outgoing- and net fluxes on tiles
         ! Note that the the outgoing fluxes are not included in the net fluxes
         ! since these do not change the temperature (only the heat capcity)
-        cnvctv_in_tle(i_tle)    = cnvctv_in_tle(i_tle)  + heat_flx_tle
-        cnvctv_in_sbl(i_sbl)    = cnvctv_in_sbl(i_sbl)  + heat_flx_sbl
-        cnvctv_out_tle(i_tle)   = cnvctv_out_tle(i_tle) + heat_flx_sbl * sbl_fract / tle_fract
-        cnvctv_out_sbl(i_sbl)   = cnvctv_out_sbl(i_sbl) + heat_flx_tle * tle_fract / sbl_fract
+        IF (i_tle > 0) THEN
+          cnvctv_in_tle(i_tle)    = cnvctv_in_tle(i_tle)  + heat_flx_tle
+          cnvctv_out_tle(i_tle)   = cnvctv_out_tle(i_tle) + heat_flx_sbl * sbl_fract / tle_fract
+          heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle) + heat_flx_tle
+        END IF
 
-        heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle) + heat_flx_tle
-        heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl) + heat_flx_sbl
+        IF (i_sbl > 0) THEN
+          cnvctv_in_sbl(i_sbl)    = cnvctv_in_sbl(i_sbl)  + heat_flx_sbl
+          cnvctv_out_sbl(i_sbl)   = cnvctv_out_sbl(i_sbl) + heat_flx_tle * tle_fract / sbl_fract
+          heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl) + heat_flx_sbl
+        END IF
 
         ! Determening the top and bottem of the next layer of the regridded
         IF (z_rgrd_bot == z_tle) THEN
@@ -1407,10 +1413,10 @@ CONTAINS
 
     nrgrd       = nsoil * 2 + 1
 
-    i_lvt = 0
+    i_lvt = 1
     z_lvt = dsoil_lvt(1)
 
-    i_dpr = 0
+    i_dpr = 1
     z_dpr = dsoil_dpr(1) + h_offset
 
     z_rgrd_top = 0._wp
