@@ -237,8 +237,6 @@ CONTAINS
         fract_water = (water / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
         fract_ice   = (  ice / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
 
-        fract_water = MIN(1._wp, fract_water)
-        fract_ice   = MIN(fract_ice, 1._wp - fract_water)
         hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice
@@ -409,7 +407,7 @@ CONTAINS
     & nidx, nsoil, dz, mids,              &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
-    & t_unfilt, dsoil,                    &
+    & t_unfilt,                           &
     & vol_heat_cap, heat_cond,            &
     & lat_hflx,                           &
     & t_soil_sl,                          &
@@ -417,8 +415,8 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matric_pot, bclapp, ws,     &
-    & ice, frozen, melt, liquid_max       &
+    & dsoil, ws_max, matric_pot, bclapp,  & 
+    & ws, ice, frozen, melt, liquid_max   &
     & )
     !
     !
@@ -490,7 +488,6 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_unfilt(:)              !! surface temperature at top of soil [K]
-    REAL(wp), INTENT(in)    ::  dsoil(:,:)               !! soil depth until bedrock [m]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
     REAL(wp), INTENT(in)    ::  lat_hflx(:,:)            !! Lateral heat flux [J m-3 s-1]
@@ -502,6 +499,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(wp), INTENT(in), OPTIONAL    ::  dsoil(:,:)        !! soil depth until bedrock [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter

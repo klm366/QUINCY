@@ -138,13 +138,9 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
 
     dsl4jsb_Def_config(LEX_)
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(LEX_)
 
