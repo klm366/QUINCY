@@ -235,6 +235,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER   :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
     INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    REAL(wp)                          :: dtime                !< timestep length
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -268,6 +269,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN !< only if the present tile is a pft
@@ -314,47 +316,47 @@ CONTAINS
     !>1.0 moving averages
     !>
     ! docu:
-    ! calc_time_mavg(current average, new value, length of avg_period,  !
+    ! calc_time_mavg(dtime, current average, new value, length of avg_period,  !
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
 
     !>  1.1 tlabile (averages at the timescale of the labile pool)
     !>
-    myc_export_n_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tlabile_mavg_sl(:,:), &
+    myc_export_n_tlabile_mavg_sl(:,:) = calc_time_mavg(dtime, myc_export_n_tlabile_mavg_sl(:,:), &
       &                                                sb_mycorrhiza_export_mt(ixN,:,:), mavg_period_tlabile)
-    myc_export_p_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_p_tlabile_mavg_sl(:,:), &
+    myc_export_p_tlabile_mavg_sl(:,:) = calc_time_mavg(dtime, myc_export_p_tlabile_mavg_sl(:,:), &
       &                                                sb_mycorrhiza_export_mt(ixP,:,:), mavg_period_tlabile)
 
     !>  1.2 lctlib tau_mycorrhiza
     !>
-    myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_c_tmyc_mavg_sl(:,:),                &
+    myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(dtime, myc_export_c_tmyc_mavg_sl(:,:),                &
       &                                             sb_mycorrhiza_export_mt(ixC,:,:),        &
                                                     lctlib%tau_mycorrhiza, avg_period_unit='year')
-    myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tmyc_mavg_sl(:,:),                &
+    myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(dtime, myc_export_n_tmyc_mavg_sl(:,:),                &
       &                                             sb_mycorrhiza_export_mt(ixN,:,:),        &
                                                     lctlib%tau_mycorrhiza, avg_period_unit='year')
 
     !>  1.3 tmic (microbial community acclimation)
     !>
-    microbial_cue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), &
+    microbial_cue_eff_tmic_mavg(:,:) = calc_time_mavg(dtime, microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), &
                                                       mavg_period_tmic)
-    microbial_nue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_nue_eff_tmic_mavg(:,:), microbial_nue_eff(:,:), &
+    microbial_nue_eff_tmic_mavg(:,:) = calc_time_mavg(dtime, microbial_nue_eff_tmic_mavg(:,:), microbial_nue_eff(:,:), &
                                                       mavg_period_tmic)
-    microbial_pue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_pue_eff_tmic_mavg(:,:), microbial_pue_eff(:,:), &
+    microbial_pue_eff_tmic_mavg(:,:) = calc_time_mavg(dtime, microbial_pue_eff_tmic_mavg(:,:), microbial_pue_eff(:,:), &
                                                       mavg_period_tmic)
 
     !>  1.4 tenzyme (memory time-scale for enzyme allocation)
     !>
-    dom_cn_mavg(:,:)             = calc_time_mavg(dom_cn_mavg(:,:), dom_cn(:,:), &
+    dom_cn_mavg(:,:)             = calc_time_mavg(dtime, dom_cn_mavg(:,:), dom_cn(:,:), &
                                                   mavg_period_tenzyme)
-    dom_cp_mavg(:,:)             = calc_time_mavg(dom_cp_mavg(:,:), dom_cp(:,:), &
+    dom_cp_mavg(:,:)             = calc_time_mavg(dtime, dom_cp_mavg(:,:), dom_cp(:,:), &
                                                   mavg_period_tenzyme)
-    enzyme_frac_poly_c_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_c_mavg(:,:), enzyme_frac_poly_c(:,:), &
+    enzyme_frac_poly_c_mavg(:,:) = calc_time_mavg(dtime, enzyme_frac_poly_c_mavg(:,:), enzyme_frac_poly_c(:,:), &
                                                   mavg_period_tenzyme)
-    enzyme_frac_poly_n_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_n_mavg(:,:), enzyme_frac_poly_n(:,:), &
+    enzyme_frac_poly_n_mavg(:,:) = calc_time_mavg(dtime, enzyme_frac_poly_n_mavg(:,:), enzyme_frac_poly_n(:,:), &
                                                   mavg_period_tenzyme)
-    enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
+    enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(dtime, enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
                                                   mavg_period_tenzyme)
 
   END SUBROUTINE calculate_time_average_soilbiogeochemistry

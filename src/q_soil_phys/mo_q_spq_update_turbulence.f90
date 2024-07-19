@@ -44,7 +44,6 @@ CONTAINS
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
-    USE mo_jsb_math_constants,     ONLY: dtime
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
     USE mo_atmland_util,           ONLY: calc_spec_humidity_sat
     USE mo_jsb_physical_constants, ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, rd_o_cpd, rvd1
@@ -62,7 +61,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib                !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, zg, zgh, zdu2, zril, zcdnl, zchln, &
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
-                                             csat, cair, z0m, z0h, zchnl, zlev, wind_air
+                                             csat, cair, zchnl, zlev, wind_air
     REAL(wp), DIMENSION(options%nc)       :: fract_fpc, blended_height
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     INTEGER                               :: iblk, ics, ice, nc,ic !< dimensions
@@ -90,6 +89,8 @@ CONTAINS
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk                :: fact_q_air
     dsl4jsb_Real2D_onChunk                :: fact_qsat_srf
+    dsl4jsb_Real2D_onChunk                :: z0h
+    dsl4jsb_Real2D_onChunk                :: z0m
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     dsl4jsb_Real3D_onChunk                :: w_snow_snl
@@ -130,6 +131,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_q_air)           ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, fact_qsat_srf)        ! in
+    dsl4jsb_Get_var2D_onChunk(SPQ_, z0h)                  ! out
+    dsl4jsb_Get_var2D_onChunk(SPQ_, z0m)                  ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_snow_snl)            ! in

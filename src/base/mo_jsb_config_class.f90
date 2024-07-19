@@ -59,7 +59,6 @@ MODULE mo_jsb_config_class
 #endif
 
     ! quincy @TODO temporary solution for model%config%options
-    REAL(wp)          :: dtime                   !< length of one time step in seconds; defaults to 1800  @TODO
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
     LOGICAL           :: l_do_stand_replacing_harvest
@@ -291,7 +290,6 @@ CONTAINS
 #endif
 
     ! quincy - temporary solution @TODO
-    model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
     model_config%flag_stand_harvest           = .FALSE.
     model_config%stand_replacing_year         = 1500
     model_config%l_do_stand_replacing_harvest = .FALSE.

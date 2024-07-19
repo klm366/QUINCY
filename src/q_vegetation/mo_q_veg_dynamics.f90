@@ -22,7 +22,7 @@ MODULE mo_q_veg_dynamics
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
-  USE mo_jsb_math_constants,   ONLY: one_year, one_day, dtime, eps8, eps4
+  USE mo_jsb_math_constants,   ONLY: one_year, one_day, eps8, eps4
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -67,6 +67,7 @@ CONTAINS
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)   :: fpc                    !< current foliage projective cover
+    REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -103,6 +104,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
@@ -176,7 +178,7 @@ CONTAINS
     IF (.NOT. model%config%l_transient_spinup) THEN
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
         CASE ("cohort")
-          cohort_age(:)        = cohort_age(:) + model%config%dtime / (one_year * one_day)
+          cohort_age(:)        = cohort_age(:) + dtime / (one_year * one_day)
           do_cohort_harvest(:) = false                                               ! per default it is set to FALSE
           WHERE (cohort_age(:) > dsl4jsb_Config(VEG_)%cohort_harvest_interval)
             do_cohort_harvest(:) = true
@@ -191,6 +193,7 @@ CONTAINS
     ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
     CALL calc_veg_mortality( &
       & nc                                              , & ! in
+      & dtime                                           , &
       & model%config%elements_index_map(:)              , &
       & model%config%is_element_used(:)                 , &
       & lctlib%growthform                               , &
@@ -229,6 +232,7 @@ CONTAINS
       IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN
         CALL calc_veg_establishment( &
           & nc                                  , & ! in
+          & dtime                               , &
           & model%config%elements_index_map(:)  , &
           & model%config%is_element_used(:)     , &
           & lctlib%tau_seed_est                 , &
@@ -319,6 +323,7 @@ CONTAINS
   !>
   SUBROUTINE calc_veg_mortality( &
     & nc                        , &
+    & dtime                     , &
     & elements_index_map        , &
     & is_element_used           , &
     & lctlib_growthform         , &
@@ -336,6 +341,7 @@ CONTAINS
       &                                 ITREE, IGRASS, background_mort_rate_tree, background_mort_rate_grass
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                         !< dimensions
+    REAL(wp),                 INTENT(in)    :: dtime                      !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_growthform          !< lctlib paramter
@@ -540,6 +546,7 @@ CONTAINS
   !>
   SUBROUTINE calc_veg_establishment( &
     & nc                          , &
+    & dtime                       , &
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_tau_seed_est         , &
@@ -556,6 +563,7 @@ CONTAINS
     USE mo_jsb_physical_constants,      ONLY: Tzero
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
+    REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter

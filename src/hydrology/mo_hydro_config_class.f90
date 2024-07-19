@@ -28,7 +28,8 @@ MODULE mo_hydro_config_class
   PUBLIC :: t_hydro_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
-    CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
+    CHARACTER(len=filename_max) :: bc_sso_filename   !< For elevation and oro_stddev
+    CHARACTER(len=filename_max) :: ic_moist_filename !< For `l_read_initial_moist=.TRUE.`
     REAL(wp)               :: &
       & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
                                 !  maximum snow depth on leaves  [m water equivalent]
@@ -43,6 +44,8 @@ MODULE mo_hydro_config_class
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
+      & l_read_initial_moist, & !< Force reading initial soil moisture for layers from `ic_moist_filename`
+                                !  even if `init_from_ifs=.TRUE.`
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
       & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Use organic component of soil layers
@@ -52,12 +55,17 @@ MODULE mo_hydro_config_class
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
       & l_ponds                 !< Additional surface water storage
     INTEGER               ::  &
-      & soilhydmodel,         & !< Choice of soil hydrological model:
-                                !! 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
+      & soilhydmodel,         & !< Choice of soil hydrological model to calc soil hydraulic properties:
+                                !! 'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
       & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
                                 !! 'upstream' (default) or 'arithmetic' mean
-      & pond_dynamics           !< Choice of pond dynamics scheme (i.e. depth-area scaling)
-                                !! tanh (default), quadratic
+      & pond_dynamics,        & !< Choice of pond dynamics scheme (i.e. depth-area scaling)
+                                !! 'tanh' (default), 'quadratic'
+      & hydro_scale             !< 'semi_distributed': use the ARNO scheme assuming sub-grid scale variations in infiltration
+                                !! and subsurface drainage (default)
+                                !! 'uniform': assume uniform soil moisture distribution
+                                !! (e.g. for applications like HydroTiles, HighRes or sitelevel)
+
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -75,8 +83,8 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_, Quad_, Tanh_
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, Upstream_, Arithmetic_, &
+      &                              Quad_, Tanh_, Semi_Distributed_, Uniform_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -84,9 +92,9 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics
-    LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
-      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
+    CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
+    LOGICAL                     :: l_read_initial_moist, sanitize_restart, enforce_water_budget, l_organic, &
+      &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -99,6 +107,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & scheme_stom_cond,           &
+      & l_read_initial_moist,       &
       & sanitize_restart,           &
       & enforce_water_budget,       &
       & l_organic,                  &
@@ -109,7 +118,8 @@ CONTAINS
       & l_ponds,                    &
       & soilhydmodel,               &
       & interpol_mean,              &
-      & pond_dynamics
+      & pond_dynamics,              &
+      & hydro_scale
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -139,6 +149,7 @@ CONTAINS
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     scheme_stom_cond       = 'echam5'
+    l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
@@ -147,9 +158,10 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
-    soilhydmodel           = "BrooksCorey"
-    interpol_mean          = "upstream"
     pond_dynamics          = "tanh"
+    soilhydmodel           = "VanGenuchten"
+    interpol_mean          = "upstream"
+    hydro_scale            = "semi_distributed"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -179,6 +191,8 @@ CONTAINS
     END IF
 
     config%scheme_stom_cond       = scheme_stom_cond
+
+    config%l_read_initial_moist   = l_read_initial_moist
 
     config%sanitize_restart       = sanitize_restart
     IF (config%sanitize_restart) THEN
@@ -221,15 +235,15 @@ CONTAINS
     END IF
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
-    CASE("brookscorey")
-      config%soilhydmodel = BrooksCorey_
-      CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
-    CASE("clapphornberger")
-      config%soilhydmodel = ClappHornberger_
-      CALL message(TRIM(routine), 'Soil hydrology uses the Clapp & Hornberger model')
     CASE("vangenuchten")
       config%soilhydmodel = VanGenuchten_
       CALL message(TRIM(routine), 'Soil hydrology uses the Van Genuchten model')
+    CASE("brookscorey")
+      config%soilhydmodel = BrooksCorey_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
+    CASE("campbell")
+      config%soilhydmodel = Campbell_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Campbell model')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology model '//TRIM(soilhydmodel)//' not implemented')
     END SELECT
@@ -254,6 +268,17 @@ CONTAINS
       CALL message(TRIM(routine), 'Pond dynamics scheme uses tanh scaling')
     CASE default
       CALL finish(TRIM(routine), 'Pond dynamics scheme '//TRIM(pond_dynamics)//' not implemented')
+    END SELECT
+
+    SELECT CASE(TRIM(tolower(hydro_scale)))
+    CASE("semi_distributed")
+      config%hydro_scale = Semi_Distributed_
+      CALL message(TRIM(routine), 'Using semi-distributed scale parametrization (ARNO scheme) for soil hydrological fluxes')
+    CASE("uniform")
+      config%hydro_scale = Uniform_
+      CALL message(TRIM(routine), 'Using uniform scale process implementation for hydrological fluxes (still experimental)')
+    CASE default
+      CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT
 
     CALL close_nml(nml_handler)
