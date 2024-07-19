@@ -1090,16 +1090,24 @@ CONTAINS
           &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
 
         IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
+
+          ! in most years the spin-up will not be accelerated
+          !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
           IF(is_newyear(datetime_new, dtime)) THEN
             current_year = get_year(datetime_new)
-            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
             dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execution_counter)
             accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
             accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
             accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
             !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
-            !$ACC PRIVATE(dtime, accelerator_max_executions, accelerator_frequency, accelerator_start_year) &
-            !$ACC PRESENT(lon(:,:), swpar_srf_down(:,:), daytime_counter(:,:), local_time_day_seconds(:,:))
             DO iblk = 1, nblks
               DO ic = 1, nproma
                 CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &

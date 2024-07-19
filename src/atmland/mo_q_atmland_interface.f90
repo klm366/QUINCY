@@ -627,6 +627,9 @@ CONTAINS
 
     ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
     IF (run_spinup_accelerator) THEN
+      ! in most years the spin-up will not be accelerated
+      slow_sb_pool_accelerator_execute(:) = 0.0_wp
+
       IF(is_newyear(mtime_current, dtime)) THEN
         CALL finish(TRIM(routine), 'This functionality has so far not been tested within a coupled run, but should be!')
 

@@ -1148,8 +1148,6 @@ CONTAINS
                                                         & assoc_dom_c_loss_mavg_sl(ic,:), &
                                                         & sb_pool_mt(ix_dom_assoc,:,ic,:))
             END IF ! simple soil or jsm
-            ! Reset to "false" after execution
-            slow_sb_pool_accelerator_execute(ic) = 0.0_wp
           END IF
         END DO
       END SELECT
