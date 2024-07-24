@@ -24,17 +24,12 @@ MODULE mo_lex_init
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,          ONLY: get_model
-  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io,             ONLY: missval
-  USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string, soil_init_from_texture
 
   ! Use of processes in this module
   dsl4jsb_Use_processes LEX_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(LEX_)
-  dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(LEX_)
@@ -76,7 +71,6 @@ CONTAINS
     dsl4jsb_Def_memory_tile(HYDRO_, sibl)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':lex_init'
-    CHARACTER(len=5000)         :: message_text_long
 
     CLASS(t_jsb_tile_abstract), POINTER :: sibl ! Sibling tile with LEX_ process running
 
@@ -91,8 +85,6 @@ CONTAINS
       &        nsibl,    &  !< number of siblings on current tile level
       &        nconti,   &  !< number of connected tiles on current tile level
       &        it,       &  !< counter for loop over tiles
-      &        is,       &  !< counter for loop over siblings (when on loop over tiles)
-      &        cntr,     &  !< counter used for checkin for circular tile conections
       &        src_id,   &  !< source lex_id
       &        trgt_id,  &  !< target lex_id
       &        lex_idt,  &  !< lex id of of tile
@@ -137,10 +129,12 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & fract,                 &
       & fract_sibl,            &
-      & fract_microcon_srf,    &
-      & fract_microcon_blg,    &
-      & fract_macrocon_srf,    &
-      & fract_macrocon_blg,    &
+      & hlp1,                  &
+      & hlp2,                  &
+      & fract_micro_hfp_srf,   &
+      & fract_micro_hfp_blg,   &
+      & fract_macro_hfp_srf,   &
+      & fract_macro_hfp_blg,   &
       & fact_lag_micro_srf,    &
       & fact_lag_micro_blg,    &
       & fact_lag_macro_srf,    &
@@ -188,17 +182,21 @@ CONTAINS
       connecttiles => Get_vgrid('connecttiles')
       nconti = connecttiles%n_levels
 
+
+      IF (debug_on()) CALL message(routine, 'Initializing variables for lateral exchange')
+
       ALLOCATE(fract(nproma, nblks))
+      ALLOCATE(fract_sibl(nproma, nblks))
       ALLOCATE(test_matrix(nconti,nconti))
       ALLOCATE(cmx_micro_ctc(nconti,nconti))
       ALLOCATE(cmx_micro_hfp_srf(nconti,nconti))
       ALLOCATE(cmx_micro_hfp_blg(nconti,nconti))
       ALLOCATE(cmx_macro_hfp_srf(nconti,nconti))
       ALLOCATE(cmx_macro_hfp_blg(nconti,nconti))
-      ALLOCATE(fract_microcon_srf(nproma, nblks))
-      ALLOCATE(fract_microcon_blg(nproma, nblks))
-      ALLOCATE(fract_macrocon_srf(nproma, nblks))
-      ALLOCATE(fract_macrocon_blg(nproma, nblks))
+      ALLOCATE(fract_micro_hfp_srf(nproma, nblks))
+      ALLOCATE(fract_micro_hfp_blg(nproma, nblks))
+      ALLOCATE(fract_macro_hfp_srf(nproma, nblks))
+      ALLOCATE(fract_macro_hfp_blg(nproma, nblks))
 
       ! Get lateral exchange config
       dsl4jsb_Get_config(LEX_)
@@ -284,10 +282,10 @@ CONTAINS
 
       CALL tile%Get_fraction(fract=fract(:,:))
       
-      fract_microcon_srf(:,:) = 0._wp
-      fract_microcon_blg(:,:) = 0._wp
-      fract_macrocon_srf(:,:) = 0._wp
-      fract_macrocon_blg(:,:) = 0._wp
+      fract_micro_hfp_srf(:,:) = 0._wp
+      fract_micro_hfp_blg(:,:) = 0._wp
+      fract_macro_hfp_srf(:,:) = 0._wp
+      fract_macro_hfp_blg(:,:) = 0._wp
 
       ! First Loop over tiles to determine the areas and cover fractions.
       ! of any tile enclosed by annother tile. Needed for nested constellations.
@@ -313,7 +311,6 @@ CONTAINS
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
           dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
 
-          ALLOCATE(fract_sibl(nproma, nblks))
           CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
 
@@ -322,7 +319,6 @@ CONTAINS
             area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
             fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
           END IF
-          DEALLOCATE(fract_sibl)
         END DO
       END IF
 
@@ -344,7 +340,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, h_surf, sibl)  ! in
         dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
 
-        ALLOCATE(fract_sibl(nproma, nblks))
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
         ! Determine the geometric relationship between two connected tiles, i.e.
@@ -416,21 +411,28 @@ CONTAINS
         END IF
 
        ! Summing up the fractions of a tile that are connected to siblings via hydrological flow paths
-        fract_microcon_srf(:,:) = fract_microcon_srf(:,:) &
-                          & + fract_sibl(:,:) * microcon_hfp_srf_ct(:,lex_ids,:)
-        fract_microcon_blg(:,:) = fract_microcon_blg(:,:) &
-                          & + fract_sibl(:,:) * microcon_hfp_blg_ct(:,lex_ids,:)
-        fract_macrocon_srf(:,:) = fract_macrocon_srf(:,:) &
-                          & + fract_sibl(:,:) * macrocon_hfp_srf_ct(:,lex_ids,:)
-        fract_macrocon_blg(:,:) = fract_macrocon_blg(:,:) &
-                          & + fract_sibl(:,:) * macrocon_hfp_blg_ct(:,lex_ids,:)
-
+        fract_micro_hfp_srf(:,:) = fract_micro_hfp_srf(:,:) &
+          &                      + fract_sibl(:,:) * microcon_hfp_srf_ct(:,lex_ids,:)
+        fract_micro_hfp_blg(:,:) = fract_micro_hfp_blg(:,:) &
+          &                      + fract_sibl(:,:) * microcon_hfp_blg_ct(:,lex_ids,:)
+        fract_macro_hfp_srf(:,:) = fract_macro_hfp_srf(:,:) &
+          &                      + fract_sibl(:,:) * macrocon_hfp_srf_ct(:,lex_ids,:)
+        fract_macro_hfp_blg(:,:) = fract_macro_hfp_blg(:,:) &
+          &                      + fract_sibl(:,:) * macrocon_hfp_blg_ct(:,lex_ids,:)
       END DO
       
       ! Ensuring that sum of microcon_ctc_ct of a given tile still <= 1. after connections have been adjusted
+      ! Here microcon_ctc is recalculated based on length_iface_ct calculated above
+
+      ALLOCATE(hlp1(nproma, nblks))
+      ALLOCATE(hlp2(nproma, nblks))
+
+      hlp1(:,:) = SUM(length_iface_ct(:,:,:), DIM=2, MASK=microcon_ctc_ct(:,:,:) > 0._wp)
+      hlp2(:,:) = MIN(1._wp, SUM(microcon_ctc_ct(:,:,:), DIM=2))
+      microcon_ctc_ct(:,:,:) = 0._wp
       DO it = 1, nconti
-        WHERE (SUM(microcon_ctc_ct(:,:,:), DIM=2) > 1._wp)
-          microcon_ctc_ct(:,it,:) = microcon_ctc_ct(:,it,:) / SUM(microcon_ctc_ct(:,:,:), DIM=2)
+        WHERE (hlp1(:,:) > 0._wp)
+          microcon_ctc_ct(:,it,:) = length_iface_ct(:,it,:) / hlp1(:,:) * hlp2(:,:)
         END WHERE
       END DO
 
@@ -461,21 +463,21 @@ CONTAINS
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
         ! Get effective flow lag between tile and sibling
-        CALL get_flow_lags(                                    &
-          & lex_idt, lex_ids,                                  &
-          & vel_lat_srf, vel_lat_blg,                          &
-          & ret_micro_srf, ret_micro_blg,                      &
-          & ret_macro_srf, ret_macro_blg,                      &
-          & length_scale_ct(:,lex_ids,:),                      &
-          & fract(:,:), fract_sibl(:,:),                       &
-          & microcon_hfp_srf_ct(:,lex_ids,:),                  &
-          & microcon_hfp_blg_ct(:,lex_ids,:),                  &
-          & macrocon_hfp_srf_ct(:,lex_ids,:),                  &
-          & macrocon_hfp_blg_ct(:,lex_ids,:),                  &
-          & fract_microcon_srf(:,:), fract_microcon_blg(:,:),  &
-          & fract_macrocon_srf(:,:), fract_macrocon_blg(:,:),  &
-          & fact_lag_micro_srf(:,:), fact_lag_micro_blg(:,:),  &
-          & fact_lag_macro_srf(:,:), fact_lag_macro_blg(:,:)   &
+        CALL get_flow_lags(                                     &
+          & lex_idt, lex_ids,                                   &
+          & vel_lat_srf, vel_lat_blg,                           &
+          & ret_micro_srf, ret_micro_blg,                       &
+          & ret_macro_srf, ret_macro_blg,                       &
+          & length_scale_ct(:,lex_ids,:),                       &
+          & fract(:,:), fract_sibl(:,:),                        &
+          & microcon_hfp_srf_ct(:,lex_ids,:),                   &
+          & microcon_hfp_blg_ct(:,lex_ids,:),                   &
+          & macrocon_hfp_srf_ct(:,lex_ids,:),                   &
+          & macrocon_hfp_blg_ct(:,lex_ids,:),                   &
+          & fract_micro_hfp_srf(:,:), fract_micro_hfp_blg(:,:), &
+          & fract_macro_hfp_srf(:,:), fract_macro_hfp_blg(:,:), &
+          & fact_lag_micro_srf(:,:), fact_lag_micro_blg(:,:),   &
+          & fact_lag_macro_srf(:,:), fact_lag_macro_blg(:,:)    &
           )
 
         fact_lag_srf_ct(:,lex_ids,:) = fact_lag_micro_srf(:,:) + fact_lag_macro_srf(:,:)
@@ -490,8 +492,7 @@ CONTAINS
         WHERE (micro_slope_ct(:,lex_ids,:) > 0.0_wp)
           slope_eff(:,:) = slope_eff(:,:)  &
             &            + micro_slope_ct(:,lex_ids,:) * microcon_ctc_ct(:,lex_ids,:)
-        END WHERE 
-
+        END WHERE
       END DO
 
       !$ACC UPDATE DEVICE(slope_eff, fact_lag_srf, fact_lag_blg) ASYNC(1)
@@ -510,12 +511,12 @@ CONTAINS
 
         ! Determine the fraction of flow from tile to sibling as: 
         ! Ratio of flow lag between tile and sibling and effective lag factor for tile
-        WHERE((fract_macrocon_srf(:,:) == 0._wp) .AND. (fract_microcon_srf(:,:) == 0._wp))
+        WHERE((fract_macro_hfp_srf(:,:) == 0._wp) .AND. (fract_micro_hfp_srf(:,:) == 0._wp))
           fract_latflow_srf_ct(:,lex_ids,:) = 0.0
         ELSE WHERE
           fract_latflow_srf_ct(:,lex_ids,:) = fact_lag_srf_ct(:,lex_ids,:) / fact_lag_srf(:,:)
         END WHERE
-        WHERE((fract_macrocon_blg(:,:) == 0._wp) .AND. (fract_microcon_blg(:,:) == 0._wp))
+        WHERE((fract_macro_hfp_blg(:,:) == 0._wp) .AND. (fract_micro_hfp_blg(:,:) == 0._wp))
           fract_latflow_blg_ct(:,lex_ids,:) = 0.0
         ELSE WHERE
           fract_latflow_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) / fact_lag_blg(:,:)
@@ -539,16 +540,18 @@ CONTAINS
 
       DEALLOCATE(fract)
       DEALLOCATE(fract_sibl)
+      DEALLOCATE(hlp1)
+      DEALLOCATE(hlp2)
       DEALLOCATE(test_matrix)
       DEALLOCATE(cmx_micro_ctc)
       DEALLOCATE(cmx_micro_hfp_srf)
       DEALLOCATE(cmx_micro_hfp_blg)
       DEALLOCATE(cmx_macro_hfp_srf)
       DEALLOCATE(cmx_macro_hfp_blg)
-      DEALLOCATE(fract_microcon_srf)
-      DEALLOCATE(fract_microcon_blg)
-      DEALLOCATE(fract_macrocon_srf)
-      DEALLOCATE(fract_macrocon_blg)
+      DEALLOCATE(fract_micro_hfp_srf)
+      DEALLOCATE(fract_micro_hfp_blg)
+      DEALLOCATE(fract_macro_hfp_srf)
+      DEALLOCATE(fract_macro_hfp_blg)
       DEALLOCATE(area_nclsd)
       DEALLOCATE(fract_nclsd)
       DEALLOCATE(fact_lag_micro_srf)
