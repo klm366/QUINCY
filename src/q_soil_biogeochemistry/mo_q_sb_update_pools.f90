@@ -1492,7 +1492,7 @@ CONTAINS
                                                   & pool_slow_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 inout
-    INTEGER,  INTENT(in)    :: nsoil_sb                  !> dimensions
+    INTEGER,  INTENT(in)    :: nsoil_sb                  !> soil dimension
     REAL(wp), INTENT(in)    :: dtime                     !> timestep length [s]
     REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !> soil depth at each layer[m]
     INTEGER,  INTENT(in)    :: spinup_accelerator_length !> loop times of acceleration, read from namelist
@@ -1507,7 +1507,7 @@ CONTAINS
     REAL                      :: tau_slow !> slow soil pool turnover rate [timestep]
     REAL                      :: pool_c_slow, pool_c14_slow !> the total slow soil pool [mol m-2]
     REAL                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
-    INTEGER                   :: ilength, ic !counter for loops
+    INTEGER                   :: ilength, i_soil !counter for loops
     ! ------------------------------------------------------------------------------------------------------------
     !> accelerating the spin-up of slow pool
     !!
@@ -1515,10 +1515,19 @@ CONTAINS
     !> 1.0 record current stoichiometry, apparent turnover rate of slow pool and slow pool distribution across all soil layers
     !!
     !> 1.1 record current stoichiometry
-    c13c_slow_sl(:) = pool_slow_sl(ixC13,:) / pool_slow_sl(ixC,:)
-    nc_slow_sl(:)   = pool_slow_sl(ixN,:) / pool_slow_sl(ixC,:)
-    n15n_slow_sl(:) = pool_slow_sl(ixN15,:) / pool_slow_sl(ixN,:)
-    pn_slow_sl(:)   = pool_slow_sl(ixP,:) / pool_slow_sl(ixN,:)
+    DO i_soil = 1,nsoil_sb
+      IF (pool_slow_sl(ixC,i_soil) > eps8) THEN
+        c13c_slow_sl(i_soil) = pool_slow_sl(ixC13,i_soil) / pool_slow_sl(ixC,i_soil)
+        nc_slow_sl(i_soil)   = pool_slow_sl(ixN,i_soil) / pool_slow_sl(ixC,i_soil)
+        n15n_slow_sl(i_soil) = pool_slow_sl(ixN15,i_soil) / pool_slow_sl(ixN,i_soil)
+        pn_slow_sl(i_soil)   = pool_slow_sl(ixP,i_soil) / pool_slow_sl(ixN,i_soil)
+      ELSE
+        c13c_slow_sl(i_soil) = 0._wp
+        nc_slow_sl(i_soil)   = 0._wp
+        n15n_slow_sl(i_soil) = 0._wp
+        pn_slow_sl(i_soil)   = 0._wp
+      END IF
+    END DO
 
     !> 1.2 calculate the total turnover rate across all soil layers
     pool_c_slow = SUM(pool_slow_sl(ixC,:) * soil_depth_sl(:))
@@ -1527,32 +1536,36 @@ CONTAINS
     formation_c14_mavg = SUM(formation_c14_mavg_sl(:) * soil_depth_sl(:))
     loss_c_mavg = SUM(loss_c_mavg_sl(:) * soil_depth_sl(:))
 
-    tau_slow  = pool_c_slow / loss_c_mavg
-
     !> 1.3 get the current slow soil pool profile
-    ratio_sl(:) = pool_slow_sl(ixC,:) / pool_c_slow
-    ratio_c14_sl(:) = pool_slow_sl(ixC14,:) / pool_c14_slow
+    IF ((pool_c_slow > eps8) .AND. (loss_c_mavg > eps8)) THEN
+      tau_slow  = pool_c_slow / loss_c_mavg
 
-    !> 2.0 do the spin-up acceleration
-    DO ilength = 1, spinup_accelerator_length
-       pool_c_slow   = pool_c_slow + &
-                          & ((-(pool_c_slow / tau_slow) + formation_c_mavg) / &
-                          & dtime * one_day * one_year)
-       !> C14 has the additional decay rate
-       pool_c14_slow = pool_c14_slow + &
-                          & ((-(pool_c14_slow / tau_slow) - (pool_c14_slow * lambda_C14 * dtime) + formation_c14_mavg) / &
-                          & dtime * one_day * one_year)
-    ENDDO
+      DO i_soil = 1,nsoil_sb
+        ratio_sl(i_soil) = pool_slow_sl(ixC,i_soil) / pool_c_slow
+        ratio_c14_sl(i_soil) = pool_slow_sl(ixC14,i_soil) / pool_c14_slow
+      END DO
 
-    !> 2.1 re-distribute the slow soil pool at each soil layer
-    pool_slow_sl(ixC,:) = pool_c_slow * ratio_sl(:)
-    pool_slow_sl(ixC14,:) = pool_c14_slow * ratio_c14_sl(:)
+      !> 2.0 do the spin-up acceleration
+      DO ilength = 1, spinup_accelerator_length
+        pool_c_slow   = pool_c_slow + &
+                            & ((-(pool_c_slow / tau_slow) + formation_c_mavg) / &
+                            & dtime * one_day * one_year)
+        !> C14 has the additional decay rate
+        pool_c14_slow = pool_c14_slow + &
+                            & ((-(pool_c14_slow / tau_slow) - (pool_c14_slow * lambda_C14 * dtime) + formation_c14_mavg) / &
+                            & dtime * one_day * one_year)
+      END DO
 
-    !> 3.0 update other element pools
-    pool_slow_sl(ixC13,:) = pool_slow_sl(ixC,:) * c13c_slow_sl(:)
-    pool_slow_sl(ixN,:)   = pool_slow_sl(ixC,:) * nc_slow_sl(:)
-    pool_slow_sl(ixN15,:) = pool_slow_sl(ixN,:) * n15n_slow_sl(:)
-    pool_slow_sl(ixP,:)   = pool_slow_sl(ixN,:) * pn_slow_sl(:)
+      !> 2.1 re-distribute the slow soil pool at each soil layer
+      pool_slow_sl(ixC,:) = pool_c_slow * ratio_sl(:)
+      pool_slow_sl(ixC14,:) = pool_c14_slow * ratio_c14_sl(:)
+
+      !> 3.0 update other element pools
+      pool_slow_sl(ixC13,:) = pool_slow_sl(ixC,:) * c13c_slow_sl(:)
+      pool_slow_sl(ixN,:)   = pool_slow_sl(ixC,:) * nc_slow_sl(:)
+      pool_slow_sl(ixN15,:) = pool_slow_sl(ixN,:) * n15n_slow_sl(:)
+      pool_slow_sl(ixP,:)   = pool_slow_sl(ixN,:) * pn_slow_sl(:)
+    END IF
 
   END SUBROUTINE calc_accelerated_slow_soil_pool_spinup
 
