@@ -294,8 +294,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SPQ_, spq_pch                     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, spq_drag_srf                , weighted_by_fract)
     ! ---------------------------
-    dsl4jsb_Aggregate_onChunk(Q_RAD_, net_radiation         , weighted_by_fract)
-    ! ---------------------------
     ! 2D
     dsl4jsb_Aggregate_onChunk(SPQ_, fact_q_air              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, qsat_star               , weighted_by_fract)

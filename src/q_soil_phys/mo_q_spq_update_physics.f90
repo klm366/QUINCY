@@ -85,7 +85,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: q_air
     dsl4jsb_Real2D_onChunk                :: press_srf
     dsl4jsb_Real2D_onChunk                :: wind_10m
-    dsl4jsb_Real2D_onChunk                :: lw_srf_down
     dsl4jsb_Real2D_onChunk                :: rain
     dsl4jsb_Real2D_onChunk                :: snow
     ! SPQ_ 2D
@@ -162,8 +161,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: canopy_cond
     dsl4jsb_Real3D_onChunk                :: ftranspiration_sl
     ! Q_RAD_
-    dsl4jsb_Real2D_onChunk                :: sw_srf_net
-    dsl4jsb_Real2D_onChunk                :: net_radiation
+    dsl4jsb_Real2D_onChunk                :: rad_srf_net
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk                :: height
     dsl4jsb_Real2D_onChunk                :: fract_fpc
@@ -200,9 +198,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)          ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, rain)                 ! inout
-    dsl4jsb_Get_var2D_onChunk(A2L_, snow)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)                 ! in
     ! ---------------------------
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, spq_t_acoef)          ! in
@@ -275,16 +272,15 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, snow_present_snl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_liquid_snl)             ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)     ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)       ! in
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl) ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, sw_srf_net)           ! in
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, net_radiation)        ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rad_srf_net)          ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)            ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                    ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)       ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     is_standalone = jsbach_runs_standalone()
@@ -313,7 +309,7 @@ CONTAINS
                                      steplen, &
                                      alpha, &
                                      is_standalone, &
-                                     sw_srf_net(:), lw_srf_down(:), &
+                                     rad_srf_net(:), &
                                      t_air(:), spq_t_acoef(:), spq_t_bcoef(:), &
                                      q_air(:), spq_q_acoef(:), spq_q_bcoef(:), &
                                      press_srf(:), wind_10m(:), &
@@ -327,7 +323,7 @@ CONTAINS
                                      t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), &                                  ! inout
                                      evapopot(:), evaporation(:), evaporation_snow, &                                  ! inout
                                      interception(:), transpiration(:), &                                              ! inout
-                                     sensible_heat_flx(:), latent_heat_flx(:), ground_heat_flx(:), net_radiation(:), & ! inout
+                                     sensible_heat_flx(:), latent_heat_flx(:), ground_heat_flx(:), &                   ! inout
                                      snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux (:), &                 ! inout
                                      snow_melt_to_soil(:), &                                                           ! inout
                                      therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), &                             ! inout
@@ -452,7 +448,7 @@ CONTAINS
                                          steplen, &
                                          alpha, &
                                          is_standalone, &
-                                         sw_srf_net, lw_srf_down, &
+                                         rad_srf_net, &
                                          t_air, t_acoef, t_bcoef, &
                                          q_air, q_acoef, q_bcoef, &
                                          press_srf, wind_10m, &
@@ -466,7 +462,7 @@ CONTAINS
                                          t_srf_new, t_srf_old, temp_srf_eff_4, &                                      ! inout
                                          evapopot, evaporation, evaporation_snow, &                                   ! inout
                                          interception, transpiration, &                                               ! inout
-                                         sensible_heat_flx, latent_heat_flx, ground_heat_flx, net_radiation, &        ! inout
+                                         sensible_heat_flx, latent_heat_flx, ground_heat_flx, &                       ! inout
                                          snow_height, snow_soil_heat_flux, snow_srf_heat_flux, &                      ! inout
                                          snow_melt_to_soil, &                                                         ! inout
                                          therm_cond_sl,t_soil_sl,w_soil_sl, &                                         ! inout
@@ -499,8 +495,7 @@ CONTAINS
     REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
     REAL(wp),                                         INTENT(in)    :: alpha                  !< implicitness factor
     LOGICAL,                                          INTENT(in)    :: is_standalone          !< standalone run?
-    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2]
-                                                                       lw_srf_down, &         !< longwave downward radiation [W/m2]
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rad_srf_net, &         !< surface net radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
                                                                        t_acoef, &             !< Richtmeyer-Morton Coefficient Ta
                                                                        t_bcoef, &             !< Richtmeyer-Morton Coefficient Tb
@@ -538,7 +533,6 @@ CONTAINS
                                                                        sensible_heat_flx, &   !< sensible heat flux [W/m2]
                                                                        latent_heat_flx, &     !< latent heat flux [W/m2]
                                                                        ground_heat_flx, &     !< ground heat flux [W/m2]
-                                                                       net_radiation, &       !< net radiation
                                                                        snow_height, &         !< snow depth as metric value [m]
                                                                        snow_soil_heat_flux, & !< snow soil heat flux [W/m2]
                                                                        snow_srf_heat_flux, &  !< snow heat flux from top snow layer to layer below [W / m2]
@@ -605,9 +599,8 @@ CONTAINS
       heat_transfer_coefficient(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
     END DO
 
-    !>   1.2 net radiation flux at the surface
+    !>   1.2 Calculate potential evaporation rate
     !>
-    net_radiation(:) = sw_srf_net(:) + lw_srf_down(:) - stbo * zemiss_def * t_srf_old(:)**4._wp
     evapopot(:)      = -1._wp * heat_transfer_coefficient(:) * (q_air(:) - q_sat_srf(:))
 
     !>   1.3 calculate snow and water-saturated fraction of tile
@@ -682,7 +675,7 @@ CONTAINS
                                       s_old(:), &
                                       q_sat_srf(:), &
                                       dQdT(:), &
-                                      net_radiation(:), &
+                                      rad_srf_net(:), &
                                       srf_heat_flx_old(:), &
                                       heat_transfer_coefficient(:), &
                                       fact_q_air(:), &
@@ -1539,7 +1532,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_temp_srf_new_implicit(steplen, alpha, t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, &
                                                   s_old,qsat_srf_old,dQdT, &
-                                                  net_radiation,ground_heat_flx,heat_transfer_coefficient, &
+                                                  rad_srf_net,ground_heat_flx,heat_transfer_coefficient, &
                                                   cair,csat,snow_cover_fract,heat_capa_srf) RESULT (s_new)
 
     USE mo_jsb_physical_constants,    ONLY: LatentHeatVaporization, LatentHeatSublimation, stbo, zemiss_def
@@ -1557,7 +1550,7 @@ CONTAINS
                             s_old, &
                             qsat_srf_old, &
                             dQdT, &
-                            net_radiation, &
+                            rad_srf_net, &
                             ground_heat_flx, &
                             heat_transfer_coefficient, &
                             cair, &
@@ -1577,13 +1570,13 @@ CONTAINS
      zcs = LatentHeatSublimation * snow_cover_fract + LatentHeatVaporization * (csat - snow_cover_fract)
 
      zcolin = heat_capa_srf * zicp + &
-              pdt * (zicp * 4.0_wp * stbo * zemiss_def * ((zicp * s_old) ** 3.0_wp) - &
-              heat_transfer_coefficient * ( zca * q_Acoef - zcs) * zicp * dQdT)
+              pdt * (zicp * 4.0_wp * stbo * zemiss_def * ((zicp * s_old) ** 3.0_wp)        &
+       &              - heat_transfer_coefficient * ( zca * q_Acoef - zcs) * zicp * dQdT)
 
      zcohfl = -pdt * heat_transfer_coefficient * (t_Acoef - 1.0_wp)
 
-     zcoind = pdt * (net_radiation + heat_transfer_coefficient * t_Bcoef + heat_transfer_coefficient * &
-                 ((zca * q_Acoef - zcs) * qsat_srf_old + zca * q_Bcoef) + ground_heat_flx)
+     zcoind = pdt * (rad_srf_net + heat_transfer_coefficient * t_Bcoef + heat_transfer_coefficient &
+       &              * ((zca * q_Acoef - zcs) * qsat_srf_old + zca * q_Bcoef) + ground_heat_flx)
 
      s_new  = (zcolin * s_old + zcoind) / (zcolin + zcohfl)
 

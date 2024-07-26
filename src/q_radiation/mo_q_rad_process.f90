@@ -48,6 +48,7 @@ CONTAINS
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_q_rad_parameters,      ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl, &
       &                                 def_alb_vis_snow, def_alb_nir_snow
+    USE mo_jsb_physical_constants, ONLY: zemiss_def, stbo
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_RAD_)
@@ -95,7 +96,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk :: albedo
     dsl4jsb_Real2D_onChunk :: albedo_noon
-    dsl4jsb_Real2D_onChunk :: net_radiation
     ! Q_RAD_ 3D
     dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
@@ -106,12 +106,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: arad_shaded_nir_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_nir_cl
     ! A2L_
+    dsl4jsb_Real2D_onChunk :: lw_srf_down
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
     dsl4jsb_Real2D_onChunk :: fract_par_diffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: t_srf_old
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: w_snow_snl
     ! VEG_ 2D
@@ -150,6 +153,7 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
@@ -178,7 +182,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc)            ! out
     dsl4jsb_Get_var2D_onChunk(Q_RAD_, albedo)                   ! out
     dsl4jsb_Get_var2D_onChunk(Q_RAD_, albedo_noon)              ! out
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, net_radiation)            ! out
     ! Q_RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)           ! out
@@ -189,6 +192,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(Q_RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, t_srf_old)                ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
     ! ---------------------------
@@ -257,11 +262,9 @@ CONTAINS
 
     sw_srf_net(:) = swvis_srf_net(:) + swnir_srf_net(:)
 
-    !> 5.0 diagnose net radiation (temporarily here for diagnostic purposes)
+    !> 5.0 calculate net radiation as sum of short and longwave net radiation
     !!
-    !! Only for now longwave balance is zero
-    rad_srf_net(:)   = sw_srf_net(:)
-    net_radiation(:) = rad_srf_net(:)
+    rad_srf_net(:)   = sw_srf_net(:) + lw_srf_down(:) - stbo * zemiss_def * t_srf_old(:)**4._wp
 
     !> 6.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !!
