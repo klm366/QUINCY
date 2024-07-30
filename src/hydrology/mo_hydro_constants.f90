@@ -64,10 +64,6 @@ MODULE mo_hydro_constants
                                                       !< this corresponds to a drainage of the water content between wsmax and wd within about 2.1  to 12.5 days
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
-    ! Parameters required for Uniform_ scale hydrology
-    & ret_macro_srf = 36000._wp ,          &  !< retention time for surface runoff on macro scale (10 hours)
-    & ret_macro_blg = 432000._wp,          &  !< retention time for sub-surface runoff on macro scale (5 days) similar to drain_max
-
     ! Parameters used for pond computations
     & oro_crit = 100._wp,                  & !< Reference topo standard deviation for pond scaling factor [m]
 

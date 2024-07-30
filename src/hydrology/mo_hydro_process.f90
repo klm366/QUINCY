@@ -1445,14 +1445,45 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! Additional corrections for excess soil moisture
-    ! In case of over-saturation water would not have infiltrated in the first place --> pile
+
+    ! Initial estimate of latera drainage are too low if soils were dry at the beginning of time step.
+    ! Hence, add water to lateral drainage according to k_sat - k_act 
+    ! In case of last soil layer only k_sat since no lateral drainage was calculated before
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        ! If saturation moisture is exceeded, add exess water to lateral drainage (according to ksat)
+        IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
+          IF (is < last_soil_layer(ic)) THEN
+            drainage_sl(ic,is) = drainage_sl(ic,is)                                                   & 
+              & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+              & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+            wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
+              & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+              & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+          ELSE
+            drainage_sl(ic,is) = drainage_sl(ic,is) & 
+              & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+              & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+            wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) &
+              & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+              & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+          END IF
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+    ! In case of still over-saturation water would not have infiltrated in the first place --> pile
     ! water upwards
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ! If saturation moisture is exceeded, add the excess water to next higher soil layer
+        ! If saturation moisture is exceeded, add exess water to lateral drainage (according to ksat) and to next higher soil layer
         IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
           wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
           wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)

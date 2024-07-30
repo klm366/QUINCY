@@ -384,7 +384,6 @@ CONTAINS
       &                                  calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
-    USE mo_hydro_constants,        ONLY: ret_macro_srf
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -640,7 +639,7 @@ CONTAINS
 
     l_latflow_to_streamflow = .TRUE.
     slope_used   = steepness
-    flowlag_used = dtime / ret_macro_srf
+    flowlag_used = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_srf
 
     IF (is_experiment_start) THEN ! Start of experiment
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1231,7 +1230,6 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_hydro_constants,        ONLY: ret_macro_blg
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1334,7 +1332,7 @@ CONTAINS
 
     l_latflow_to_streamflow = .TRUE.
     slope_used   = dsl4jsb_var2D_onChunk (HYDRO_, steepness)
-    flowlag_used = dtime / ret_macro_blg
+    flowlag_used = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_blg
 
     CALL calc_soil_hydrology( &
       ! in
