@@ -26,6 +26,9 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_config(VEG_)
+#endif
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -229,6 +232,9 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(VEG_)
+#endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -409,6 +415,8 @@ CONTAINS
     ! # QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
     !
     CASE (MODEL_QUINCY)
+      dsl4jsb_Get_config(VEG_)
+
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
                 .OR. (model%config%qmodel_id == QCANOPY))) THEN
@@ -435,6 +443,9 @@ CONTAINS
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT
+        ENDIF
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF(model%config%qmodel_id == QLAND) THEN

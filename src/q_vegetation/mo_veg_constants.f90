@@ -185,13 +185,21 @@ MODULE mo_veg_constants
       ! maximum change in photosynthetic N fractions
       delta_n_fraction    , & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
       ! maximum change in CN ratio of canopy
-      delta_n_leaf            !< maximum fractional change for optimal adjsutment of canopy N allocation
+      delta_n_leaf            !< maximum fractional change for optimal adjustment of canopy N allocation
 
+  ! parameters used for product pool decay
+  REAL(wp), SAVE :: &
+      tau_pp_fuelwood,   & !< exponential time constants for the decay of the fuel product pool
+      tau_pp_paper,      & !< exponential time constants for the decay of the paper product pool
+      tau_pp_fiberboard, & !< exponential time constants for the decay of the fiberboard product pool
+      tau_pp_oirw,       & !< exponential time constants for the decay of the other IRW product pool
+      tau_pp_pv,         & !< exponential time constants for the decay of the plywood and veneer product pool
+      tau_pp_sawnwood      !< exponential time constants for the decay of the sawnwood product pool
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
-      INTEGER, PARAMETER ::    &
-      itree         = 1  ,     &
+  INTEGER, PARAMETER ::    &
+      itree         = 1,   &
       igrass        = 2
 
 
@@ -343,6 +351,15 @@ CONTAINS
 !@todo:should this be 1/20days?
       delta_n_fraction            = 0.048_wp        ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
       delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
+
+    ! parameters used for product pool decay [years] - these need to be > 0.0_wp
+    ! following values are all taken from Nuetzel (2021, LMU master thesis)
+    tau_pp_fuelwood = 0.53
+    tau_pp_paper = 1.50
+    tau_pp_fiberboard = 13.2
+    tau_pp_oirw = 16.5
+    tau_pp_pv = 24.9
+    tau_pp_sawnwood = 49.9
 
   END SUBROUTINE init_veg_constants
 
