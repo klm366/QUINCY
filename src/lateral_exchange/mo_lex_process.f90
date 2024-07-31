@@ -1640,7 +1640,6 @@ CONTAINS
   SUBROUTINE get_flow_lags(                          &
     & lex_idt, lex_ids,                              &
     & velocity_srf, velocity_blg,                    &
-    & ret_micro_uncon_srf, ret_micro_uncon_blg,      &
     & ret_macro_srf, ret_macro_blg,                  &
     & length_scale,                                  &
     & fract, fract_sibl,                             &
@@ -1660,8 +1659,6 @@ CONTAINS
     REAL(wp), INTENT(in)    ::                       &
       &                        velocity_srf,         &  !< Potential velocity of lateral flow through connected flow pathways [m s-1]
       &                        velocity_blg,         &  !< Potential velocity of lateral flow at the surface [m s-1]
-      &                        ret_micro_uncon_srf,  &  !< Retention time for micro-scale fluxes at the surfcace, when no connections exist[s]
-      &                        ret_micro_uncon_blg,  &  !< Retention time for micro-scale fluxes below the surfcace, when no connections exist [s]
       &                        ret_macro_srf,        &  !< Retention time for macro-scale fluxes at the surfcace [s]
       &                        ret_macro_blg            !< Retention time for macro-scale fluxes below the surfcace [s]
 
@@ -1735,14 +1732,14 @@ CONTAINS
     ! The respective fluxes are given to surface runoff and drainage.
     IF ((lex_idt == lex_ids)       .AND. &
       & (fract_microcon_srf == 0.0_wp) .AND. (fract_macrocon_srf == 0.0_wp)) THEN
-      fact_lag_micro_srf = 1._wp / ret_micro_uncon_srf
-      fact_lag_macro_srf = 0._wp
+      fact_lag_micro_srf = 0._wp
+      fact_lag_macro_srf = 1._wp / ret_macro_srf
     END IF
 
     IF ((lex_idt == lex_ids)       .AND. &
       & (fract_microcon_blg == 0.0_wp) .AND. (fract_macrocon_blg == 0.0_wp)) THEN
-      fact_lag_micro_blg = 1._wp / ret_micro_uncon_blg
-      fact_lag_macro_blg = 0._wp
+      fact_lag_micro_blg = 0._wp
+      fact_lag_macro_blg = 1._wp / ret_macro_blg
     END IF
 
   END SUBROUTINE get_flow_lags

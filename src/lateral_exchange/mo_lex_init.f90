@@ -30,6 +30,7 @@ MODULE mo_lex_init
 
   ! Use of process configurations
   dsl4jsb_Use_config(LEX_)
+  dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(LEX_)
@@ -51,9 +52,7 @@ CONTAINS
 
     USE mo_lex_process,        ONLY: check_flow_matrix, get_geometry, &
       &                              get_flow_lags
-    USE mo_hydro_constants,    ONLY: vel_lat_srf, vel_lat_blg,        &
-      &                              ret_micro_srf, ret_macro_srf,    &
-      &                              ret_micro_blg, ret_macro_blg
+    USE mo_hydro_constants,    ONLY: vel_lat_srf, vel_lat_blg
 
     USE mo_lex_connectivities, ONLY: &
       & cmx_micro_ctc_2tilelex, cmx_micro_hfp_srf_2tilelex, cmx_micro_hfp_blg_2tilelex, &
@@ -65,6 +64,7 @@ CONTAINS
 
 
     dsl4jsb_Def_config(LEX_)
+    dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(LEX_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -198,8 +198,9 @@ CONTAINS
       ALLOCATE(fract_macro_hfp_srf(nproma, nblks))
       ALLOCATE(fract_macro_hfp_blg(nproma, nblks))
 
-      ! Get lateral exchange config
+      ! Get config
       dsl4jsb_Get_config(LEX_)
+      dsl4jsb_Get_config(HYDRO_)
 
       ! Get the general connection matrixes
       IF  (TRIM(model%config%usecase) == 'jsbach_topolex') THEN
@@ -466,8 +467,8 @@ CONTAINS
         CALL get_flow_lags(                                     &
           & lex_idt, lex_ids,                                   &
           & vel_lat_srf, vel_lat_blg,                           &
-          & ret_micro_srf, ret_micro_blg,                       &
-          & ret_macro_srf, ret_macro_blg,                       &
+          & dsl4jsb_Config(HYDRO_)%ret_macro_srf,               &
+          & dsl4jsb_Config(HYDRO_)%ret_macro_blg,               &
           & length_scale_ct(:,lex_ids,:),                       &
           & fract(:,:), fract_sibl(:,:),                        &
           & microcon_hfp_srf_ct(:,lex_ids,:),                   &

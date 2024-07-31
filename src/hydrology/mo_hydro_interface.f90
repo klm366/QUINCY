@@ -385,7 +385,6 @@ CONTAINS
       &                                  calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
-    USE mo_hydro_constants,        ONLY: ret_macro_srf
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -657,7 +656,7 @@ CONTAINS
     ELSE
       l_latflow_to_streamflow = .TRUE.
       slope_used   = steepness
-      flowlag_used = dtime / ret_macro_srf
+      flowlag_used = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_srf
     END IF
 
     IF (is_experiment_start) THEN ! Start of experiment
@@ -798,8 +797,8 @@ CONTAINS
         & l_infil_subzero_config,         & ! in
         & l_latflow_to_streamflow,        & ! in
         & snow_depth_max_config,          & ! in
-        & slope_used,                     & ! effective slope on tile or steepness for standard scheme    []
-        & flowlag_used,                   & ! lag factor to account for retention in surface runoff luxes    []
+        & slope_used,                     & ! effective slope on tile or steepness for standard scheme [/]
+        & flowlag_used,                   & ! lag factor to account for retention in surface runoff fluxes [/]
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & ! Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
@@ -1258,7 +1257,6 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_hydro_constants,        ONLY: ret_macro_blg
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1367,9 +1365,8 @@ CONTAINS
     ELSE
       l_latflow_to_streamflow = .TRUE.
       slope_used   = dsl4jsb_var2D_onChunk (HYDRO_, steepness)
-      flowlag_used = dtime / ret_macro_blg
+      flowlag_used = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_blg
     END IF
-
 
     CALL calc_soil_hydrology( &
       ! in

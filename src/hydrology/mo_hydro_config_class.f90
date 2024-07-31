@@ -38,8 +38,10 @@ MODULE mo_hydro_config_class
                                 !  i.e. at which water stress starts to be above zero
       & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
                                 !  i.e. when no transpiration occurs anymore
-      & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !  infinitely growing snow depth; -1. for no limitation
+      & ret_macro_blg,        & !< Assumed retention time for below ground runoff, i.e. avg. time before water reaches tributary
+      & ret_macro_srf           !< Assumed retention time for surface runoff, i.e. avg. time before water reaches tributary
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -92,6 +94,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
+    REAL(wp)                    :: ret_macro_blg, ret_macro_srf 
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, enforce_water_budget, l_organic, &
       &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
@@ -106,6 +109,8 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
+      & ret_macro_blg,              &
+      & ret_macro_srf,              & 
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -148,6 +153,8 @@ CONTAINS
     w_soil_crit_fract      = 0.75_wp
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
+    ret_macro_blg          = 432000._wp
+    ret_macro_srf          = 36000._wp
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -189,6 +196,9 @@ CONTAINS
     IF (snow_depth_max >= 0._wp) THEN
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
+
+    config%ret_macro_blg       = ret_macro_blg
+    config%ret_macro_srf       = ret_macro_srf
 
     config%scheme_stom_cond       = scheme_stom_cond
 
@@ -277,6 +287,7 @@ CONTAINS
     CASE("uniform")
       config%hydro_scale = Uniform_
       CALL message(TRIM(routine), 'Using uniform scale process implementation for hydrological fluxes (still experimental)')
+      CALL message(TRIM(routine), 'Runoff retention times [s]:'//TRIM(real2string(ret_macro_blg))//' (below ground) and '//TRIM(real2string(ret_macro_srf))//' (surface)')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT
