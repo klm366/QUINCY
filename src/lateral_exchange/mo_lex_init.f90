@@ -72,8 +72,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':lex_init'
 
-    CLASS(t_jsb_tile_abstract), POINTER :: sibl ! Sibling tile with LEX_ process running
-
+    CLASS(t_jsb_tile_abstract), POINTER :: sibl,       & ! Sibling tile with LEX_ process running
+      &                                    dummy         ! Dummy tile  
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: connecttiles
@@ -85,10 +85,12 @@ CONTAINS
       &        nsibl,    &  !< number of siblings on current tile level
       &        nconti,   &  !< number of connected tiles on current tile level
       &        it,       &  !< counter for loop over tiles
+      &        is,       &  !< counter for loop over tiles when within loop over tiles
       &        src_id,   &  !< source lex_id
       &        trgt_id,  &  !< target lex_id
       &        lex_idt,  &  !< lex id of of tile
-      &        lex_ids      !< lex id of sibling
+      &        lex_ids,  &  !< lex id of sibling
+      &        lex_idd      !< lex id of dummy
 
     REAL(wp), POINTER :: &
       &        test_matrix(:,:),       & !< matrix used to check for inconsitances in base matrices
@@ -131,6 +133,8 @@ CONTAINS
       & fract_sibl,            &
       & hlp1,                  &
       & hlp2,                  &
+      & hlp3,                  &
+      & hlp4,                  &
       & fract_micro_hfp_srf,   &
       & fract_micro_hfp_blg,   &
       & fract_macro_hfp_srf,   &
@@ -141,6 +145,7 @@ CONTAINS
       & fact_lag_macro_blg
 
     dsl4jsb_Real3D_onDomain :: &
+      & fracts,                &
       & area_nclsd,            &
       & fract_nclsd,           &
       & fact_lag_srf_ct,       &
@@ -288,31 +293,34 @@ CONTAINS
       fract_macro_hfp_srf(:,:) = 0._wp
       fract_macro_hfp_blg(:,:) = 0._wp
 
-      ! First Loop over tiles to determine the areas and cover fractions.
-      ! of any tile enclosed by annother tile. Needed for nested constellations.
+      ! First Loop over tiles to set up field containing all cover fractions and
+      ! to determine the areas and cover fractions of any tile enclosed by annother tile.
+      ! The latter are needed for nested constellations.
       ! Note that at the moment this only works for a setup in which a single surface
       ! feature SF1 is fully enclosed by surface feature SF2, which in turn is enclosed by
       ! another (other) surface feature (s).
+      ALLOCATE(fracts(nproma, nconti, nblks))
       ALLOCATE(area_nclsd(nproma, nconti, nblks))
       ALLOCATE(fract_nclsd(nproma, nconti, nblks))
       area_nclsd(:,:,:)   = 0._wp
       fract_nclsd(:,:,:)  = 0._wp
-      IF (dsl4jsb_Config(LEX_)%l_nested) THEN
-        DO it = 1, nsibl
- 
-          IF (it == 1) THEN
-            sibl => tile%parent_tile%Get_first_child_tile()
-          ELSE
-            sibl => sibl%Get_next_sibling_tile()
-          END IF
-          lex_ids = sibl%lcts(1)%lex_id
+      DO it = 1, nsibl
+        IF (it == 1) THEN
+          sibl => tile%parent_tile%Get_first_child_tile()
+        ELSE
+          sibl => sibl%Get_next_sibling_tile()
+        END IF
+        lex_ids = sibl%lcts(1)%lex_id
 
-          IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
+        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
+
+        CALL sibl%Get_fraction(fract=fract_sibl(:,:))
+        fracts(:,lex_ids,:) = fract_sibl(:,:)
+ 
+        IF (dsl4jsb_Config(LEX_)%l_nested) THEN
 
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
           dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
-
-          CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
 
           trgt_id = INT(FINDLOC(cmx_micro_ctc(lex_ids,:), 1._wp, 1))
@@ -320,12 +328,14 @@ CONTAINS
             area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
             fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
           END IF
-        END DO
-      END IF
+        END IF
+      END DO
 
 
       ! Second Loop over neighbour tiles to get the
       ! the geometry and the effective connectedness of a tile.
+      ALLOCATE(hlp1(nproma, nblks))
+      ALLOCATE(hlp2(nproma, nblks))
       DO it = 1, nsibl
  
         IF (it == 1) THEN
@@ -343,12 +353,56 @@ CONTAINS
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
+        ! Setting up fields of micro scale connectivities 
+        ! corresponding to a direct contact of tiles:
+        ! One possibility is to use cmx_micro_ctc directly, the other is 
+        ! to assume a well-mixed distirbution of tiles, with cmx_micro_ctc
+        ! being weighted by the cover fraction of the connected sibing
+        ! relative to the cover fractions of all connected siblings.
+       
+        hlp1(:,:) = 0._wp
+        hlp2(:,:) = 0._wp
+
+        IF (dsl4jsb_Config(LEX_)%l_wellmixed) THEN
+          DO is = 1, nsibl
+            IF (is == 1) THEN
+              dummy => tile%parent_tile%Get_first_child_tile()
+            ELSE
+              dummy => dummy%Get_next_sibling_tile()
+            END IF
+          
+            lex_idd = dummy%lcts(1)%lex_id
+
+            IF (lex_idd == 0 .OR. lex_idd /= lex_idd) CYCLE
+
+            IF (cmx_micro_ctc(lex_idt,lex_idd) > 0._wp) THEN
+              hlp1(:,:) = hlp1(:,:) + fracts(:,lex_idd,:) * cmx_micro_ctc(lex_idt,lex_idd)
+            END IF
+
+            IF (cmx_micro_ctc(lex_ids,lex_idd) > 0._wp) THEN
+              hlp2(:,:) = hlp2(:,:) + fracts(:,lex_idd,:) * cmx_micro_ctc(lex_ids,lex_idd)
+            END IF
+
+          END DO
+          WHERE (hlp1(:,:) > 0._wp)
+            hlp1(:,:) = cmx_micro_ctc(lex_idt,lex_ids) * fract_sibl(:,:) &
+              &       / hlp1(:,:) * SUM(cmx_micro_ctc(lex_idt,:))
+          END WHERE
+
+          WHERE (hlp2(:,:) > 0._wp)
+            hlp2(:,:) = cmx_micro_ctc(lex_ids,lex_idt) * fract(:,:) &
+              &       / hlp2(:,:) * SUM(cmx_micro_ctc(lex_ids,:))
+          END WHERE
+        ELSE
+          hlp1(:,:) = cmx_micro_ctc(lex_idt,lex_ids)
+          hlp2(:,:) = cmx_micro_ctc(lex_ids,lex_idt)
+        END IF 
+
         ! Determine the geometric relationship between two connected tiles, i.e.
         ! the offset in surface height (h_offset_ct), the characteric distance between the tile centres (length_scale_ct),
         ! the length of the interface between the two tiles (length_iface_ct) and the slope between the tiles (micro_slope_ct)
         CALL get_geometry(                                      &
-          & cmx_micro_ctc(lex_idt,lex_ids),                     &
-          & cmx_micro_ctc(lex_ids,lex_idt),                     &
+          & hlp1(:,:), hlp2(:,:),                               &
           & fract(:,:), fract_sibl(:,:),                        &
           & fract_nclsd(:,lex_idt,:), fract_nclsd(:,lex_ids,:), &
           & area(:,:), area_sibl(:,:),                          &
@@ -368,7 +422,7 @@ CONTAINS
         ! For direct conections, connectivities are reversed in case of negative differences in surface height,
         ! to simplify the call to subroutines in update_lex and the determination of the effective slopes
 
-        microcon_ctc_ct(:,lex_ids,:)     = cmx_micro_ctc(lex_idt,lex_ids)
+        microcon_ctc_ct(:,lex_ids,:)     = hlp1(:,:)
         microcon_hfp_srf_ct(:,lex_ids,:) = cmx_micro_hfp_srf(lex_idt,lex_ids)
         microcon_hfp_blg_ct(:,lex_ids,:) = cmx_micro_hfp_blg(lex_idt,lex_ids)
         macrocon_hfp_srf_ct(:,lex_ids,:) = cmx_macro_hfp_srf(lex_idt,lex_ids)
@@ -407,7 +461,7 @@ CONTAINS
 
         IF (cmx_micro_ctc(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
           WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile  is -
-            microcon_ctc_ct(:,lex_ids,:) = cmx_micro_ctc(lex_ids,lex_idt)
+            microcon_ctc_ct(:,lex_ids,:) = hlp2(:,:)
           END WHERE
         END IF
 
@@ -425,15 +479,14 @@ CONTAINS
       ! Ensuring that sum of microcon_ctc_ct of a given tile still <= 1. after connections have been adjusted
       ! Here microcon_ctc is recalculated based on length_iface_ct calculated above
 
-      ALLOCATE(hlp1(nproma, nblks))
-      ALLOCATE(hlp2(nproma, nblks))
-
-      hlp1(:,:) = SUM(length_iface_ct(:,:,:), DIM=2, MASK=microcon_ctc_ct(:,:,:) > 0._wp)
-      hlp2(:,:) = MIN(1._wp, SUM(microcon_ctc_ct(:,:,:), DIM=2))
+      ALLOCATE(hlp3(nproma, nblks))
+      ALLOCATE(hlp4(nproma, nblks))
+      hlp3(:,:) = SUM(length_iface_ct(:,:,:), DIM=2, MASK=microcon_ctc_ct(:,:,:) > 0._wp)
+      hlp4(:,:) = MIN(1._wp, SUM(microcon_ctc_ct(:,:,:), DIM=2))
       microcon_ctc_ct(:,:,:) = 0._wp
       DO it = 1, nconti
-        WHERE (hlp1(:,:) > 0._wp)
-          microcon_ctc_ct(:,it,:) = length_iface_ct(:,it,:) / hlp1(:,:) * hlp2(:,:)
+        WHERE (hlp3(:,:) > 0._wp)
+          microcon_ctc_ct(:,it,:) = length_iface_ct(:,it,:) / hlp3(:,:) * hlp4(:,:)
         END WHERE
       END DO
 
@@ -541,8 +594,11 @@ CONTAINS
 
       DEALLOCATE(fract)
       DEALLOCATE(fract_sibl)
+      DEALLOCATE(fracts)
       DEALLOCATE(hlp1)
       DEALLOCATE(hlp2)
+      DEALLOCATE(hlp3)
+      DEALLOCATE(hlp4)
       DEALLOCATE(test_matrix)
       DEALLOCATE(cmx_micro_ctc)
       DEALLOCATE(cmx_micro_hfp_srf)

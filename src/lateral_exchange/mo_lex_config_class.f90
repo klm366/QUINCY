@@ -38,6 +38,7 @@ MODULE mo_lex_config_class
        & l_dffsn_wtr,            & !< enable diffusive water exchange between tiles
        & l_dffsn_nrg,            & !< enable diffusive heat exchange between tiles
        & l_cnvctn_nrg,           & !< enable convective (via movement of water) heat exchange between tiles
+       & l_wellmixed,            & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
        & l_nested,               & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
        & l_dpr4ponds,            & !< if no tile-specific pond fraction / depth is provided assume depressions to be ponds  
        & l_noslope_dpr             !< if no tile-specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero 
@@ -73,6 +74,7 @@ CONTAINS
        & l_dffsn_wtr,              & !< enable diffusive water exchange between tiles
        & l_dffsn_nrg,              & !< enable diffusive heat exchange between tiles
        & l_cnvctn_nrg,             & !< enable convective (via movement of water) heat exchange between tiles
+       & l_wellmixed,              & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
        & l_nested,                 & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
        & l_dpr4ponds,              & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
        & l_noslope_dpr               !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero  
@@ -89,6 +91,7 @@ CONTAINS
          l_dffsn_wtr,           & !< enable diffusive water exchange between tiles
          l_dffsn_nrg,           & !< enable diffusive heat exchange between tiles
          l_cnvctn_nrg,          & !< enable convective (via movement of water) heat exchange between tiles
+         l_wellmixed,           & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
          l_nested,              & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
          l_dpr4ponds,           & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
          l_noslope_dpr            !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero   
@@ -110,6 +113,7 @@ CONTAINS
     l_dffsn_wtr         = .TRUE.
     l_dffsn_nrg         = .TRUE.
     l_cnvctn_nrg        = .TRUE.
+    l_wellmixed         = .TRUE.
     l_nested            = .TRUE.
     l_dpr4ponds         = .TRUE.
     l_noslope_dpr       = .TRUE.
@@ -129,6 +133,7 @@ CONTAINS
     config%l_dffsn_wtr         = l_dffsn_wtr
     config%l_dffsn_nrg         = l_dffsn_nrg
     config%l_cnvctn_nrg        = l_cnvctn_nrg
+    config%l_wellmixed         = l_wellmixed
     config%l_nested            = l_nested
     config%l_dpr4ponds         = l_dpr4ponds
     config%l_noslope_dpr       = l_noslope_dpr
@@ -182,6 +187,12 @@ CONTAINS
       CALL message(TRIM(routine), 'Lateral convection (energy) is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral convection (energy) is disabled')
+    END IF
+
+    IF (l_wellmixed) THEN
+      CALL message(TRIM(routine), 'Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)')
+    ELSE
+      CALL message(TRIM(routine), 'Microcon_ctc based exclusivly on values of matrix elements')
     END IF
 
     IF (l_nested) THEN
