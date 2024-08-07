@@ -88,33 +88,6 @@ MODULE mo_q_assimi_memory_class
       tau_c_woods                   ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
 
-!                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
-!                                         CO2_conc_leaf_acc,              & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
-!                                                                           ! (mean value)
-!                                         CO2_conc_leaf_unlimited_acc,    & ! CO2 concentration inside leaf for no water stress
-!                                                                           ! [MOL(CO2)/MOL(AIR)] (mean value)
-!
-!                                         carbox_rate_max,                & ! Maximum carboxylation rate (=VCmax)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         e_transport_rate_max,           & ! Maximum electron transport rate (=Jmax)
-!                                                                           ! (only C3 plants)[MOL(CO2)/M^2 S]
-!                                         carbox_rate,                    & ! Actual carboxylation rate (=JC)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         e_transport_rate,               & ! Actual electron transport rate (=JE)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         net_assimilation,               & ! Canopy net assimilation assimilation
-!                                                                           ! [MOL(CO2)/m^2 s] (mean value)
-
-!
-!      REAL(wp), POINTER, DIMENSION(:,:) ::                               &
-!                                         CO2_flux_net_acc,               & ! net CO2 flux to the atmosphere
-!                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
-!                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
-!                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_nlcc_acc                 ! CO2 flux to the atmosphere from vegetation dynamics
-!                                                                           ! (disturbance?)
-!
-
     ! t_canopy variables
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
