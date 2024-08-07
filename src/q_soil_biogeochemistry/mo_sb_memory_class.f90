@@ -63,6 +63,7 @@ MODULE mo_sb_memory_class
       & sb_pool_total_c14        , &        !< sum of all sb_pool%*%carbon14    [mol m-3]
       & sb_pool_total_n15                   !< sum of all sb_pool%*%nitrogen15  [mol m-3]
     ! som: dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
+    ! + below ground litter: soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d) ::  &
       & sb_pool_total_som_c,   & !< sum of 'soil organic matter' and below ground litter (layers 2:nsoil) of sb_pool%*%carbon     [mol m-3]
       & sb_pool_total_som_n,   & !< sum of 'soil organic matter' and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen   [mol m-3]
@@ -70,14 +71,14 @@ MODULE mo_sb_memory_class
       & sb_pool_total_som_c13, & !< sum of 'soil organic matter' and below ground litter (layers 2:nsoil) of sb_pool%*%carbon13   [mol m-3]
       & sb_pool_total_som_c14, & !< sum of 'soil organic matter' and below ground litter (layers 2:nsoil) of sb_pool%*%carbon14   [mol m-3]
       & sb_pool_total_som_n15    !< sum of 'soil organic matter' and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen15 [mol m-3]
-    ! litter: soluable_litter & polymeric_litter & woody_litter
-    TYPE(t_jsb_var_real3d) ::        &
-      & sb_pool_total_ag_litter_c,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon     [mol m-3]
-      & sb_pool_total_ag_litter_n,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen   [mol m-3]
-      & sb_pool_total_ag_litter_p,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%phosphorus [mol m-3]
-      & sb_pool_total_ag_litter_c13, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon13   [mol m-3]
-      & sb_pool_total_ag_litter_c14, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon14   [mol m-3]
-      & sb_pool_total_ag_litter_n15    !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen15 [mol m-3]
+    ! ag litter: soluble_litter & polymeric_litter & woody_litter
+    TYPE(t_jsb_var_real2d) ::        &
+      & sb_pool_total_ag_litter_c,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon     [mol m-2]
+      & sb_pool_total_ag_litter_n,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen   [mol m-2]
+      & sb_pool_total_ag_litter_p,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%phosphorus [mol m-2]
+      & sb_pool_total_ag_litter_c13, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon13   [mol m-2]
+      & sb_pool_total_ag_litter_c14, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon14   [mol m-2]
+      & sb_pool_total_ag_litter_n15    !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen15 [mol m-2]
     ! various bgcm diagnostics
     TYPE(t_jsb_var_real3d)  :: &
       & sb_pool_woody_litter_c         !< woody litter or sb_pool [mol m-3]
@@ -702,8 +703,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c', mem%sb_pool_total_ag_litter_c, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_c', 'mol m-3', 'total C, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_c', 'mol m-2', 'total C, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -713,8 +714,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_n', mem%sb_pool_total_ag_litter_n, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_n', 'mol m-3', 'total N, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_n', 'mol m-2', 'total N, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -724,8 +725,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_p', mem%sb_pool_total_ag_litter_p, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_p', 'mol m-3', 'total P, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_p', 'mol m-2', 'total P, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -735,8 +736,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c13', mem%sb_pool_total_ag_litter_c13, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_c13', 'mol m-3', 'total C13, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_c13', 'mol m-2', 'total C13, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -746,8 +747,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c14', mem%sb_pool_total_ag_litter_c14, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_c14', 'mol m-3', 'total C14, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_c14', 'mol m-2', 'total C14, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -757,8 +758,8 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_n15', mem%sb_pool_total_ag_litter_n15, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_pool_total_ag_litter_n15', 'mol m-3', 'total N15, sum of the above ground litter in sb_pool components'), &
+        & hgrid, surface, &
+        & t_cf('sb_pool_total_ag_litter_n15', 'mol m-2', 'total N15, sum of the above ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
