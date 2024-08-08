@@ -120,7 +120,8 @@ CONTAINS
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_abcoeff, &
-      &                                  calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
+      &                                  calc_snow_temperature, calc_snow_abcoeff, &
+      &                                  calc_soilwater_phasechange, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -549,20 +550,12 @@ CONTAINS
         ! in
         & nc                                       , &
         & nsoil                                    , &
-        & soil_e%dz(:)                             , &
-        & soil_e%levels(:)                         , &
-        & dtime                                    , &
         & lstart                                   , &
-        & dsl4jsb_Config(SSE_)%l_freeze            , &
-        & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_unfilt_corrected                  (:  ), &
-        & vol_heat_cap_sl                     (:,:), &
-        ! inout
-        & t_soil_sl                           (:,:), &
         & t_soil_snowfree_acoef               (:,:), &
         & t_soil_snowfree_bcoef               (:,:), &
-        ! out
-        & thaw_depth                          (:  )  &
+        ! inout
+        & t_soil_sl                           (:,:)  &
         & )
 
       CALL calc_soil_abcoeff( &
@@ -582,6 +575,9 @@ CONTAINS
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  )  &
         & )
+
+      thaw_depth(:) = 0._wp
+
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
       !$ACC ENTER DATA CREATE(ws_max_sl)
@@ -715,70 +711,91 @@ CONTAINS
         ! in
         & nc                                       , &
         & nsoil                                    , &
-        & soil_e%dz(:)                             , &
-        & soil_e%levels(:)                         , &
-        & dtime                                    , &
         & lstart                                   , &
-        & dsl4jsb_Config(SSE_)%l_freeze            , &
-        & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_withsnow_top                 (:  ), &
-        & vol_heat_cap_sl                     (:,:), &
-        ! inout
-        & t_soil_withsnow_sl                  (:,:), &
         & t_soil_withsnow_acoef               (:,:), &
         & t_soil_withsnow_bcoef               (:,:), &
-        ! out
-        & thaw_depth                          (:  ), &
-        ! optional, in
-        & ws_max_sl                           (:,:), &
-        & matric_pot_sl                       (:,:), &
-        & bclapp_sl                           (:,:), &
-        ! optional, inout
-        & wtr_soil_withsnow_sl                (:,:), &
-        & ice_soil_withsnow_sl                (:,:), &
-        ! optional, out
-        & wtr_freeze_withsnow_sl              (:,:), &
-        & ice_melt_withsnow_sl                (:,:), &
-        & wtr_scool_withsnow_sl               (:,:)  &
+        ! inout
+        & t_soil_withsnow_sl                  (:,:)  &
         & )
 
-      ! Compute soil temperatures for snow-free fraction (needs to be second to overwrite
-      !   the soil heat fluxes from the snow covered fraction!)
+      ! Compute soil temperatures for snow-free fraction
       CALL calc_soil_temperature( &
         ! in
         & nc                                       , &
         & nsoil                                    , &
-        & soil_e%dz(:)                             , &
-        & soil_e%levels(:)                         , &
-        & dtime                                    , &
         & lstart                                   , &
-        & dsl4jsb_Config(SSE_)%l_freeze            , &
-        & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_unfilt_corrected                  (:  ), &
-        & vol_heat_cap_sl                     (:,:), &
-        ! inout
-        & t_soil_snowfree_sl                  (:,:), &
         & t_soil_snowfree_acoef               (:,:), &
         & t_soil_snowfree_bcoef               (:,:), &
-        ! out
-        & thaw_depth                          (:  ), &
-        ! optional, in
-        & ws_max_sl                           (:,:), &
-        & matric_pot_sl                       (:,:), &
-        & bclapp_sl                           (:,:), &
-        ! optional, inout
-        & wtr_soil_snowfree_sl                (:,:), &
-        & ice_soil_snowfree_sl                (:,:), &
-        ! optional, out
-        & wtr_freeze_snowfree_sl              (:,:), &
-        & ice_melt_snowfree_sl                (:,:), &
-        & wtr_scool_snowfree_sl               (:,:)  &
+        ! inout
+        & t_soil_snowfree_sl                  (:,:)  &
         & )
 
       ! Add a routine to represent the lateral exchange of heat between the snow-free and snow-covered
       ! soil column in dependence of soil layer depth and snow fraction. The basic idea is that with
       ! increasing depth the insulating effect of snow should diminish and soil column temperatures
-      ! should converge.
+      ! should converge. If this is done, freezing and melting for the two columns should be computed
+      ! afterwards and need an routine of its own.
+
+      ! Compute soil water/ice phase change for snow-covered fraction
+      IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+        CALL calc_soilwater_phasechange( &
+          ! in
+          & nc                                       , &
+          & nsoil                                    , &
+          & lstart                                   , &
+          & dsl4jsb_Config(SSE_)%l_supercool         , &
+          & dtime                                    , &
+          & soil_e%dz(:)                             , &
+          & soil_e%levels(:)                         , &
+          & vol_heat_cap_sl                     (:,:), &
+          & ws_max_sl                           (:,:), &
+          & matric_pot_sl                       (:,:), &
+          & bclapp_sl                           (:,:), &
+          ! inout
+          & wtr_soil_withsnow_sl                (:,:), &
+          & ice_soil_withsnow_sl                (:,:), &
+          & t_soil_withsnow_sl                  (:,:), &
+          ! out
+          & wtr_freeze_withsnow_sl              (:,:), &
+          & ice_melt_withsnow_sl                (:,:), &
+          & wtr_scool_withsnow_sl               (:,:), &
+          & thaw_depth                          (:  )  &
+          & )
+
+        ! Compute soil water/ice phase change for snow-free fraction
+        CALL calc_soilwater_phasechange( &
+          ! in
+          & nc                                       , &
+          & nsoil                                    , &
+          & lstart                                   , &
+          & dsl4jsb_Config(SSE_)%l_supercool         , &
+          & dtime                                    , &
+          & soil_e%dz(:)                             , &
+          & soil_e%levels(:)                         , &
+          & vol_heat_cap_sl                     (:,:), &
+          & ws_max_sl                           (:,:), &
+          & matric_pot_sl                       (:,:), &
+          & bclapp_sl                           (:,:), &
+          ! inout
+          & wtr_soil_snowfree_sl                (:,:), &
+          & ice_soil_snowfree_sl                (:,:), &
+          & t_soil_snowfree_sl                  (:,:), &
+          ! out
+          & wtr_freeze_snowfree_sl              (:,:), &
+          & ice_melt_snowfree_sl                (:,:), &
+          & wtr_scool_snowfree_sl               (:,:), &
+          & thaw_depth                          (:  )  &
+          & )
+      ELSE
+        wtr_freeze_withsnow_sl(:,:) = 0._wp
+        ice_melt_withsnow_sl(:,:)   = 0._wp
+        wtr_scool_withsnow_sl(:,:)  = 0._wp
+        wtr_freeze_snowfree_sl(:,:) = 0._wp
+        ice_melt_snowfree_sl(:,:)   = 0._wp
+        wtr_scool_snowfree_sl(:,:)  = 0._wp
+      END IF
 
       ! Compute soil temperatures for snow-covered fraction
       CALL calc_soil_abcoeff( &

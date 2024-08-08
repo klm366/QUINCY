@@ -21,8 +21,9 @@ MODULE mo_sse_process
   PRIVATE
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_soil_abcoeff, &
-    & calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
+    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, &
+    & calc_soil_abcoeff, calc_snow_temperature, calc_snow_abcoeff, &
+    & calc_soiltemp_old, calc_soilwater_phasechange, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -364,17 +365,10 @@ CONTAINS
   ! @return     { description_of_the_return_value } !
   !
   SUBROUTINE calc_soil_temperature(       &
-    & nc, nsoil, dz, mids,                &
-    & delta_time, lstart,                 &
-    & l_freeze, l_supercool,              &
+    & nc, nsoil, lstart,                  &
     & t_soil_top,                         &
-    & vol_heat_cap,                       &
-    & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
-    & thaw_depth,                         &
-    ! optional
-    & ws_max, matric_pot, bclapp, ws,     &
-    & ice, frozen, melt, liquid_max       &
+    & t_soil_sl                           &
     & )
     !
     !
@@ -431,8 +425,6 @@ CONTAINS
     !
     !----------------------------------------------------------------------------------------------
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
-
     IMPLICIT NONE
 
     !-----------------------------------------------------------------------
@@ -440,69 +432,21 @@ CONTAINS
 
     INTEGER,  INTENT(in)    ::  nc                       !! length of the vector
     INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
-    REAL(wp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
-    LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
-    REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
-    REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
-    REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
-
-    REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(in)    ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(in)    ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
-
-    REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
-    REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
-    REAL(wp), INTENT(inout), OPTIONAL ::  ws(:,:)           !! Water storage [m]
-    REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
-    REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
+    REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: ic, is
-    REAL(wp) :: heat_cap(nc,nsoil)
-
-    !-----------------------------------------------------------------------------------------------
-    !  Computation of useful constants
-
-    !$ACC DATA CREATE(heat_cap)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO ic = 1, nc
-      DO is = 1, nsoil
-        heat_cap(ic,is) = dz(is) * vol_heat_cap(ic,is)
-      END DO
-    END DO
-    !$ACC END PARALLEL LOOP
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
     !-----------------------------------------------------------------------------------------------
-
-    IF (PRESENT(ws)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          frozen    (ic,is) = 0._wp
-          melt      (ic,is) = 0._wp
-          liquid_max(ic,is) = 0._wp
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      thaw_depth(ic) = 0._wp
-    END DO
-    !$ACC END PARALLEL LOOP
 
     IF (.NOT. lstart) THEN
 
@@ -526,61 +470,131 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
+    END IF
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
+
+  END SUBROUTINE calc_soil_temperature
+
+  SUBROUTINE calc_soilwater_phasechange(        &
+    & nc, nsoil, lstart, l_supercool,           &
+    & delta_time, dz, mids,                     &
+    & vol_heat_cap, ws_max, matric_pot, bclapp, &
+    & ws, ice, t_soil_sl,                       &
+    & frozen, melt, liquid_max, thaw_depth      &
+    & )
+
+    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
+
+    IMPLICIT NONE
+
+    !-----------------------------------------------------------------------
+    !  arguments
+
+    INTEGER,  INTENT(in)    ::  nc                !! length of the vector
+    INTEGER,  INTENT(in)    ::  nsoil             !! number of soil layers
+    LOGICAL,  INTENT(in)    ::  lstart            !! T: start of experiment
+    LOGICAL,  INTENT(in)    ::  l_supercool       !! T: compute supercooled water
+    REAL(wp), INTENT(in)    ::  delta_time        !! Time step
+    REAL(wp), INTENT(in)    ::  dz(:)             !! soil layer thickness [m]
+    REAL(wp), INTENT(in)    ::  mids(:)           !! depth of mids of soil layers [m]
+    REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:) !! soil heat capacity [J/m^3K]
+    REAL(wp), INTENT(in)    ::  ws_max(:,:)       !! Maximum water storage [m]
+    REAL(wp), INTENT(in)    ::  matric_pot(:,:)   !! Soil matric potential
+    REAL(wp), INTENT(in)    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
+    REAL(wp), INTENT(inout) ::  ws(:,:)           !! Water storage [m]
+    REAL(wp), INTENT(inout) ::  ice(:,:)          !! Ice storage [m]
+    REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)    !! soil temperature [K]
+    REAL(wp), INTENT(out)   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
+    REAL(wp), INTENT(out)   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
+    REAL(wp), INTENT(out)   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
+    REAL(wp), INTENT(out)   ::  thaw_depth(:)     !! Thawing depth [m]
+
+    !------------------------------------------------------------------
+    !  local Variables
+
+    INTEGER  :: ic, is
+    REAL(wp) :: heat_cap(nc,nsoil)
+
+    !-----------------------------------------------------------------------------------------------
+    !  Computation of useful constants
+
+    !$ACC DATA CREATE(heat_cap)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO ic = 1, nc
+      DO is = 1, nsoil
+        heat_cap(ic,is) = dz(is) * vol_heat_cap(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !-----------------------------------------------------------------------------------------------
+    !  Initialize fields
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        frozen    (ic,is) = 0._wp
+        melt      (ic,is) = 0._wp
+        liquid_max(ic,is) = 0._wp
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      thaw_depth(ic) = 0._wp
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    IF (.NOT. lstart) THEN
+
       ! Phase change calculations
-      IF (l_freeze .AND. PRESENT(ws)) THEN
-
-        IF (l_supercool) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = Get_liquid_max( &
-                & t_soil_sl (ic,is), &
-                & ws_max    (ic,is), &
-                & matric_pot(ic,is), &
-                & bclapp    (ic,is)  &
-                & )
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = 0._wp
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
-
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO ic=1,nc
-          DO is=1,nsoil
-            IF (t_soil_sl(ic,is) < tmelt .AND. ws(ic,is) > liquid_max(ic,is)) THEN
-              frozen(ic,is) = MIN(ws(ic,is) - liquid_max(ic,is), &
-                &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
-                &              )
-            ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
-            END IF
-          END DO
-        END DO
-        !$ACC END PARALLEL LOOP
-
-        ! Note: only either frozen or melt is non-zero at any given point
+      IF (l_supercool) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is=1,nsoil
           DO ic=1,nc
-            ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
-            ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
-            t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
-              & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
-
-            frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
-            melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+            liquid_max(ic,is) = Get_liquid_max( &
+              & t_soil_sl (ic,is), &
+              & ws_max    (ic,is), &
+              & matric_pot(ic,is), &
+              & bclapp    (ic,is)  &
+              & )
           END DO
         END DO
         !$ACC END PARALLEL LOOP
       END IF
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO ic=1,nc
+        DO is=1,nsoil
+          IF (t_soil_sl(ic,is) < tmelt .AND. ws(ic,is) > liquid_max(ic,is)) THEN
+            frozen(ic,is) = MIN(ws(ic,is) - liquid_max(ic,is), &
+              &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
+              &              )
+          ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
+            melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      ! Note: only either frozen or melt is non-zero at any given point
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO is=1,nsoil
+        DO ic=1,nc
+          ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
+          ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
+          t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
+            & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
+
+          frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
+          melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! Thawing depth
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -605,22 +619,12 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-    ELSE ! lstart
-      IF (l_freeze .AND. PRESENT(ws)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO is = 1, nsoil
-          DO ic=1,nc
-            liquid_max(ic,is) = 0._wp
-          END DO
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
     END IF
 
     !$ACC WAIT(1)
     !$ACC END DATA
 
-  END SUBROUTINE calc_soil_temperature
+  END SUBROUTINE calc_soilwater_phasechange
 
   SUBROUTINE calc_soil_abcoeff(           &
     & nc, nsoil, dz, mids,                &
