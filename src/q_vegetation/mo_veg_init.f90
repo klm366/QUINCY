@@ -485,12 +485,16 @@ CONTAINS
       !
       ! NOTE: upper bound of a layer is the larger value compared to lower bound !
       !
-      ! soil layer 1
-      root_fraction_sl(:, 1, :) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:, 1, :))) &
-        &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
-      ! soil layers 2 to x
       DO iblk = 1,nblks
         DO ic = 1,nproma
+          ! soil layer 1
+          IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
+            root_fraction_sl(:, 1, :) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:, 1, :))) &
+              &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
+          ELSE
+            root_fraction_sl(ic, 1, iblk) = 0.0_wp
+          END IF
+          ! soil layers 2 to x
           DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
             IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
               IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN

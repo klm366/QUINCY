@@ -51,7 +51,6 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_, Q_RAD_, Q_PHENO_, SPQ_
-    USE mo_jsb4_forcing,          ONLY: forcing_options_quincy
     USE mo_veg_constants,         ONLY: ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
@@ -159,20 +158,7 @@ CONTAINS
           &                                         diameter(:))
     ENDSELECT
 
-    !>  1.1 check stand harvest year (if this functionality is enabled: model%config\%flag_stand_harvest)
-    !>
-    ! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
-    IF (model%config%flag_stand_harvest .AND. .NOT. model%config%l_transient_spinup) THEN
-      model%config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
-      ! set stand_harvest to TRUE for the 1st timestep of the stand_replacing_year only
-      IF (forcing_options_quincy%forcing_year .EQ. model%config%stand_replacing_year .AND. &
-        & forcing_options_quincy%forcing_doy  .EQ. 1                                 .AND. &
-        & forcing_options_quincy%forcing_hour .LT. eps4                                     ) THEN
-        model%config%l_do_stand_replacing_harvest = .TRUE.
-      END IF
-    END IF
-
-    !>  1.2 Increase age of the cohort [years] & check if cohort harvest is reached
+    !>  1.1 Increase age of the cohort [years] & check if cohort harvest is reached
     !>
     ! apply this only after spinup of transient mode has finished
     IF (.NOT. model%config%l_transient_spinup) THEN
