@@ -15,7 +15,7 @@ MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_util,              ONLY: real2string, logical2string
+  USE mo_util,              ONLY: real2string
   USE mo_util_string,       ONLY: tolower
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
@@ -48,8 +48,8 @@ MODULE mo_hydro_config_class
                                 !  even if `init_from_ifs=.TRUE.`
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
       & enforce_water_budget, & !< stop in case of water conservation problem
-      & l_organic,            & !< Use organic component of soil layers
-      & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
+      & l_organic,            & !< Calculate soil hydrological parameters depending on organic matter fractions
+      & l_socmap,             & !< Read organic matter fractions from 3D map
       & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
@@ -208,20 +208,32 @@ CONTAINS
         &                       //' You should switch off enforce_water_budget in case sanitizing is needed.')
     END IF
 
-    config%l_organic              = l_organic
+    config%l_soil_texture = l_soil_texture
+    IF (l_soil_texture) THEN
+      CALL message(TRIM(routine), 'Calculate hydrological parameters for mineral soils from soil texture.')
+    END IF
+
+    config%l_organic = l_organic
     IF (l_organic) THEN
-      CALL message(TRIM(routine), 'Using organic component in soil hydrology')
+      CALL message(TRIM(routine), 'Include organic matter in calculation of hydrological soil parameters.')
     ELSE
-      IF (l_socmap) CALL message(TRIM(routine), 'Setting l_socmap=false since l_organic=false in soil hydrology')
-      l_socmap = .FALSE.
+      IF (l_soil_texture) THEN
+        CALL message (TRIM(routine), 'WARNING: l_organic=.F. and l_soil_texture=.T.' &
+                                   //' => Hydrological soil parameters represent purely mineral soils!')
+      ELSE
+        CALL message (TRIM(routine), 'Soil hydrological parameters read from bc file.')
+      END IF
     END IF
 
     config%l_socmap = l_socmap
-    IF (l_socmap .AND. l_organic) &
-      & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
-
-    config%l_soil_texture      = l_soil_texture
-    IF (l_soil_texture) CALL message(TRIM(routine), 'Using soil texture in soil hydrology')
+    IF (l_socmap .AND. l_organic) THEN
+      CALL message(TRIM(routine), 'Read map with soil organic carbon fractions from bc file.')
+    ELSE IF (.NOT. l_socmap .AND. l_organic) THEN
+      CALL message(TRIM(routine), 'Calculate soil organic carbon fractions from forest fractions.')
+    ELSE IF (l_socmap .AND. .NOT. l_organic) THEN
+      CALL message(TRIM(routine), 'Setting l_socmap=false since l_organic=false and organic matter fractions are not used.')
+      config%l_socmap = .FALSE.
+    END IF
 
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero

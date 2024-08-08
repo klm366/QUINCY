@@ -24,7 +24,7 @@ outtime=00:00:00
 ic_soil_from_gauss=/work/mj0060/m220053/ini_files/0012-0035/land/r0002/ic_land_soil_1850.nc
 ic_soil_new=ic_land_soil_1850_vga0437.nc
 
-CDO="cdo -s"  # tested with cdo-2.0.6
+CDO="cdo -s -f nc4 -b F64"  # tested with cdo-2.0.6
 
 for var in hydro_wtr_soil_sl_box hydro_ice_soil_sl_box hydro_weq_snow_box; do
   $CDO selvar,${var} -seltime,${outtime} -seldate,${outdate} ${output} ${var}.nc

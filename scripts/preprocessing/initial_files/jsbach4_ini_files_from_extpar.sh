@@ -19,7 +19,7 @@
 #
 # This script modifies
 #   bc_land_frac:
-#   - Generates lake, glacier and vegetation fractions from extpar output.
+#   - Generates lake and vegetation fractions from extpar output.
 #
 #   bc_land_phys:
 #   - Calculates albedo, roughness length and forest fraction, as well as
@@ -31,32 +31,25 @@
 #   - Soil texture data from extpar (i.e. sand, silt and clay fractions, as
 #     well as organic layer fraction) is added.
 #
-# First version by Thomas Raddatz, MPIM,       Sept. 2022
-#
-#  Veronika Gayler, MPIM,      April 2023
-#      - Adaptations to work with master scipt create_icon-land_ini_files.sh
-#      - Corrected netcdf attributes, additional comments
-#-----------------------------------------------------------------------------
 set -e
 
 # file names and paths (exported from master script create_icon-land_ini_files.sh)
-path_extpar=${extpar_dir:-/work/mj0060/m212070/test_extpar4jsbach/extpar4jsbach}
-file_extpar=${extpar_file:-icon_extpar4jsbach_20230404.nc}
+path_extpar=${extpar_dir}        # Directory name of the extpar file
+file_extpar=${extpar_file}       # Extpar file name
 file_extpar=${file_extpar%.nc}
 
-icon_grid=${icon_grid:-/pool/data/ICON/grids/public/mpim/0043/icon_grid_0043_R02B04_G.nc}
+icon_grid=${icon_grid}
 
 path_bc=${bc_file_dir}_from_gauss
 path_bc_new=${bc_file_dir}_with_extpar
-start_year=${start_year}
-end_year=${end_year}
+year_list=${year_list}
 work_dir=${work_dir}
 
 prog=$(basename $0)
 clean_up=true  # Remove intermediate files
 
 # Tools and commands
-cdo="cdo -s"
+cdo="cdo -s -f nc4 -b F64"
 ncatted="ncatted"
 rm=/usr/bin/rm
 cp=/usr/bin/cp
@@ -72,8 +65,6 @@ history_att="$(date): Generated with $prog (${git_repo}:${git_branch} rev. ${git
 # Parameters
 value_albedo_max=60. # maximum value of background albedo accepted [%]
 value_albedo_min=6.  # minimum value of background albedo accepted [%]
-fillvalue_albedo_glac=12.
-fillvalue_albedo_coast=12.
 lower_bound_NDVI_veg_fract=0.12
 upper_bound_NDVI_veg_fract=0.92
 upper_bound_veg_fract=0.98
@@ -84,8 +75,9 @@ upper_bound_lai_clim=6.
 fact_NDVI_lai_clim=8.8235294 # should be: upper_bound_lai_clim / (upper_bound_NDVI_lai_clim - lower_bound_NDVI_lai_clim)
 minimum_root_depth=0.15
 
-min_fract=${min_fract:-0.001} # minimum land grid cell fraction other than 0.
+min_fract=${min_fract} # minimum land grid cell fraction other than 0.
 
+start_year=$(echo ${year_list} | cut -f1 -d" ")
 year=${start_year}
 
 [[ -d ${path_bc_new} ]] || mkdir -p ${path_bc_new}
@@ -95,11 +87,12 @@ echo '------------------------------------------------------------------'
 echo "${prog}: Working directory: $(pwd)"
 echo "${prog}: Output  directory: ${path_bc_new}"
 echo '------------------------------------------------------------------'
+echo "${prog}: Extpar file used: ${path_extpar}/${file_extpar}.nc"
 echo "${prog}: Generation of boundary condition files: start_year=${start_year}"
 
-file_bc_frac=bc_land_frac_${year}
-file_bc_phys=bc_land_phys_${year}
-file_bc_soil=bc_land_soil_${year}
+file_bc_frac=bc_land_frac
+file_bc_phys=bc_land_phys
+file_bc_soil=bc_land_soil
 
 # copy boundary condition files and initial condition files
 ${cp} -p ${path_bc}/${file_bc_frac}.nc      ${file_bc_frac}_orig.nc
@@ -112,7 +105,7 @@ ln -fs ${path_extpar}/${file_extpar}.nc   ${file_extpar}.nc
 # -----------------------------
 # Modify lake fraction
 # --------------------
-# We use lake fractions from flake (extpar variable FR_LAKE), however the Caspian Sea is
+# We use lake fractions from the FLake global lake database. The Caspian Sea is
 # not counted as lake in this data set. Also other smaller water bodies in that region
 # are missing. So lake fractions of Caspian Sea/Aral Lake area are replaced with
 # Globcover data (extpar variable LU_CLASS_FRACTION, class 21).
@@ -144,6 +137,9 @@ ${cdo} chname,FR_LAKE,fract_lake -mul ${file_extpar}_fr_lake_casp.nc ${file_extp
       ${file_extpar}_fract_lake.nc
 ${cdo} chname,fract_lake,lake ${file_extpar}_fract_lake.nc ${file_extpar}_lake.nc
 
+# Extract glacier mask from the original bc_land_fract file for usage below.
+${cdo} -selvar,glac ${file_bc_frac}_orig.nc glac.nc
+
 # Adapt the land fraction
 # -----------------------
 # Land fraction 'land' - relative to the grid cell
@@ -160,34 +156,11 @@ if [[ ${clean_up} == true ]]; then
         ${file_extpar}_fr_land_mask.nc
 fi
 
-# Modify glacier fraction
-# -----------------------
-# Select extpar field of glacier fraction (from Globcover, relative to the grid cell fraction)
-# and convert it relative to the land fraction. We need an integer mask, also at coastal grid cells.
-${cdo} div -selvar,ICE ${file_extpar}.nc -selvar,FR_LAND ${file_extpar}.nc ${file_extpar}_glac.nc
-${cdo} setmisstoc,0 -gtc,0.5 ${file_extpar}_glac.nc glac.tmp
-${cdo} setmisstoc,0 -ifthen -gtc,${min_fract} notsea.nc glac.tmp glac.nc
-
-${cdo} chname,ICE,fract_glac glac.nc ${file_extpar}_fract_glac.nc
-${cdo} chname,ICE,glac       glac.nc ${file_extpar}_glac.nc
-${cdo}   -addc,1. -mulc,-1.  glac.nc ${file_extpar}_no-glac.nc
-
-# Calculate new vegetation fraction (rel. to the land fraction, i.e. 1-glacier)
-${cdo} chname,ICE,fract_veg ${file_extpar}_no-glac.nc ${file_extpar}_fract_veg.nc
-
-# Do not change variables sea and notsea
-${cdo} selvar,notsea ${file_bc_frac}_orig.nc ${file_extpar}_notsea.nc
-${cdo} selvar,sea    ${file_bc_frac}_orig.nc ${file_extpar}_sea.nc
-# Adapt remaining ${file_bc_frac} variables to new glacier mask
-${cdo} mul ${file_bc_frac}_orig.nc ${file_extpar}_no-glac.nc ${file_bc_frac}_glac0.nc
-
 # Replace original fractions in bc_frac file with the new variables from extpar
-${cdo} -O merge ${file_extpar}_fract_glac.nc  ${file_extpar}_fract_lake.nc  \
-                ${file_extpar}_fract_land.nc  ${file_extpar}_fract_veg.nc   \
+${cdo} -O merge ${file_extpar}_fract_lake.nc  ${file_extpar}_fract_land.nc  \
                 ${file_extpar}_land.nc        ${file_extpar}_lake.nc        \
-                ${file_extpar}_glac.nc        ${file_extpar}_sea.nc         \
-                ${file_extpar}_notsea.nc      ${file_extpar}_new.nc
-${cdo} replace ${file_bc_frac}_glac0.nc ${file_extpar}_new.nc  ${file_bc_frac}_extpar.tmp
+                ${file_extpar}_new.nc
+${cdo} replace ${file_bc_frac}_orig.nc ${file_extpar}_new.nc  ${file_bc_frac}_extpar.tmp
 
 ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_frac}_extpar.tmp \
        ${path_bc_new}/${file_bc_frac}.nc
@@ -195,17 +168,17 @@ ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_frac}_extpar
 echo "${prog}:     ${file_bc_frac}.nc         done"
 
 # Currently, only PFT fractions depend on the year
-for (( year = ${start_year}; year <= ${end_year}; year++ )); do
+for year in ${year_list}; do
   file_bc_frac_pfts=bc_land_frac_11pfts_${year}
-  ${cdo} mul ${path_bc}/${file_bc_frac_pfts}.nc ${file_extpar}_no-glac.nc ${file_bc_frac_pfts}_glac0.nc
-  ${cdo} replace ${file_bc_frac_pfts}_glac0.nc ${file_extpar}_new.nc  ${file_bc_frac_pfts}_extpar.tmp
+  ${cdo} replace ${path_bc}/${file_bc_frac_pfts}.nc ${file_extpar}_new.nc  ${file_bc_frac_pfts}_extpar.tmp
+
   ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_frac_pfts}_extpar.tmp \
          ${path_bc_new}/${file_bc_frac_pfts}.nc
 
   echo "${prog}:     ${file_bc_frac_pfts}.nc  done"
 
   if [[ ${clean_up} == true ]]; then
-    ${rm} ${file_bc_frac_pfts}_extpar.tmp ${file_bc_frac_pfts}_glac0.nc
+    ${rm} ${file_bc_frac_pfts}_extpar.tmp
   fi
 done
 
@@ -214,11 +187,9 @@ year=${start_year}
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
-  ${rm} ${file_extpar}_fract_glac.nc \
-        ${file_extpar}_fract_veg.nc ${file_extpar}_lake.nc ${file_extpar}_land.nc\
-        ${file_extpar}_fract_land.nc ${file_extpar}_fract_lake.nc \
-        ${file_extpar}_notsea.nc ${file_extpar}_sea.nc notsea.nc glac.tmp glac.nc
-  ${rm} ${file_bc_frac}_glac0.nc ${file_bc_frac}_extpar.tmp ${file_bc_frac}_orig.nc
+  ${rm} ${file_extpar}_new.nc  ${file_extpar}_land.nc ${file_extpar}_lake.nc \
+        ${file_extpar}_fract_land.nc ${file_extpar}_fract_lake.nc
+  ${rm} ${file_bc_frac}_extpar.tmp ${file_bc_frac}_orig.nc
 fi
 
 # ----------------------------------------------------------------------------
@@ -306,35 +277,26 @@ ${cdo} add ${file_extpar}_SUB_FR_CLAY_0.nc -mulc,-0.25 -addc,-1. ${file_extpar}_
 
 # Set soil parameters to zero in glacier areas to avoid confusion
 # ---------------------------
-${cdo} ifnotthen ${file_extpar}_glac.nc ${file_bc_soil}_orig.nc ${file_bc_soil}_no-glac.nc
+${cdo} ifnotthen glac.nc ${file_bc_soil}_orig.nc ${file_bc_soil}_no-glac.nc
 ${cdo} setmisstoc,0 ${file_bc_soil}_no-glac.nc ${file_bc_soil}_glac0.nc
-${cdo} ifthenelse ${file_extpar}_glac.nc ${file_bc_soil}_glac0.nc ${file_bc_soil}_orig.nc \
+${cdo} ifthenelse glac.nc ${file_bc_soil}_glac0.nc ${file_bc_soil}_orig.nc \
        ${file_bc_soil}_orig_glac0.nc
 
 # Root depth
 # -----------
 # Use root depth from extpar and make sure, it is smaller than (original) soil depth.
 
-# Select extpar field of root depth
-${cdo} selvar,ROOTDP ${file_extpar}.nc ${file_extpar}_ROOTDP.nc
-# Select soil depth from original bc soil file, set glacier values to 0.5
-${cdo} selvar,soil_depth ${file_bc_soil}_orig_glac0.nc ${file_bc_soil}_soil_depth.tmp
-${cdo} add ${file_bc_soil}_soil_depth.tmp -mulc,0.5 ${file_extpar}_glac.nc \
-       ${file_bc_soil}_soil_depth.nc
+# Get root depth from extpar file and extrapolate land values to ocean area
+${cdo} -setmisstodis -setmissval,0 -selvar,ROOTDP ${file_extpar}.nc ${file_extpar}_ROOTDP.nc
+
+# Select soil depth from original bc soil file
+${cdo} selvar,soil_depth ${file_bc_soil}_orig_glac0.nc ${file_bc_soil}_soil_depth.nc
 # Limit extpar root depth to soil depth
 ${cdo} min ${file_extpar}_ROOTDP.nc ${file_bc_soil}_soil_depth.nc ${file_extpar}_ROOTDP_corrected.nc
-# Set minimum root depth
-${cdo} maxc,${minimum_root_depth} ${file_extpar}_ROOTDP_corrected.nc ${file_extpar}_ROOTDP_corrected2.nc
-# Change variable name
-${cdo} chname,ROOTDP,root_depth ${file_extpar}_ROOTDP_corrected2.nc ${file_extpar}_root_depth.nc
-
-# Additionally calculate root depth from Gaussian grid data
-# (TODO: should no longer be needed once extpar data is approved)
-${cdo} selvar,root_depth ${file_bc_soil}_orig_glac0.nc ${file_bc_soil}_root_depth.nc
-# Set glacier values to 0.15 (minimum value for root depth)
-${cdo} add ${file_bc_soil}_root_depth.nc -mulc,0.15 ${file_extpar}_glac.nc \
-       ${file_extpar}_root_depth.gauss.nc
-
+# Set minimum root depth - also use this value for glacier and complete ocean cells
+${cdo} -setmisstoc,0. -sub -ifthenc,1 -gtc,0. notsea.nc glac.nc non-glac-land.nc
+${cdo} -setname,root_depth -setmisstoc,${minimum_root_depth} -ifthen non-glac-land.nc \
+        ${file_extpar}_ROOTDP_corrected.nc ${file_extpar}_root_depth.nc
 
 # Maxmoist: water content of the rootzone at field capacity
 # --------
@@ -349,40 +311,24 @@ ${cdo} selvar,soil_field_cap ${file_bc_soil}_orig_glac0.nc ${file_bc_soil}_soil_
 ${cdo} chname,soil_field_cap,maxmoist \
        -mul ${file_bc_soil}_soil_field_cap.nc ${file_extpar}_root_depth.nc \
        ${file_extpar}_maxmoist.nc
-# Additionally calculate maxmoist based on Gaussian grid root depth
-# (TODO: should no longer be needed once extpar data is approved)
-${cdo} chname,soil_field_cap,maxmoist \
-       -mul ${file_bc_soil}_soil_field_cap.nc ${file_extpar}_root_depth.gauss.nc \
-       ${file_extpar}_maxmoist.gauss.nc
 
-
-# Merge extpar soil texture data into the existing bc soil file and replace root_depth and maxmoist
+# Merge extpar data into the existing bc soil file
 #-------------------------
 ${cdo} -O merge ${file_extpar}_FR_SAND_CORRECTED.nc     \
                 ${file_extpar}_FR_SILT_CORRECTED.nc     \
                 ${file_extpar}_FR_CLAY_CORRECTED.nc     \
                 ${file_extpar}_SUB_FR_SAND_CORRECTED.nc \
                 ${file_extpar}_SUB_FR_SILT_CORRECTED.nc \
-                ${file_extpar}_SUB_FR_CLAY_CORRECTED.nc   ${file_extpar}_texture.nc
-${cdo} -O merge ${file_bc_soil}_orig_glac0.nc ${file_extpar}_texture.nc ${file_bc_soil}_extpar.tmp0
+                ${file_extpar}_SUB_FR_CLAY_CORRECTED.nc \
+                ${file_extpar}_root_depth.nc \
+                ${file_extpar}_maxmoist.nc \
+                ${file_bc_soil}_orig_glac0.nc   ${file_bc_soil}_extpar.tmp0
 ${cdo} replace  ${file_bc_soil}_extpar.tmp0 ${file_bc_soil}_soil_depth.nc ${file_bc_soil}_extpar.tmp
-${cdo} -O merge ${file_extpar}_root_depth.nc \
-                ${file_extpar}_maxmoist.nc   ${file_extpar}_new.nc
-${cdo} replace  ${file_bc_soil}_extpar.tmp ${file_extpar}_new.nc ${file_bc_soil}_extpar.tmp1
 
-${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}_extpar.tmp1 \
+${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}_extpar.tmp \
        ${path_bc_new}/${file_bc_soil}.nc
 
 echo "${prog}:     ${file_bc_soil}.nc         done"
-
-# Additionaly generate a bc_land_soil file with original root_depth (and maxmoist)
-# Todo: Check, if root depth from extpar also works with PFT usecase of jsbach
-${cdo} -O merge ${file_extpar}_root_depth.gauss.nc \
-                ${file_extpar}_maxmoist.gauss.nc   ${file_extpar}_new.gauss.nc
-${cdo} replace  ${file_bc_soil}_extpar.tmp ${file_extpar}_new.gauss.nc ${file_bc_soil}_extpar_11pfts.tmp
-${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}_extpar_11pfts.tmp \
-       ${path_bc_new}/${file_bc_soil%_*}_11pfts_${year}.nc
-echo "${prog}:     ${file_bc_soil%_*}_11pfts_${year}.nc  done"
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
@@ -393,12 +339,11 @@ if [[ ${clean_up} == true ]]; then
   ${rm} ${file_extpar}_SAND_SILT_CLAY_MASK.nc ${file_extpar}_SUB_SAND_SILT_CLAY_MASK.nc
   ${rm} ${file_extpar}_FR_????_0.nc ${file_extpar}_SUB_FR_????_0.nc ${file_extpar}_FR_????_CORRECTED.nc \
         ${file_extpar}_SUB_FR_????_CORRECTED.nc
-  ${rm} ${file_extpar}_ROOTDP.nc ${file_extpar}_ROOTDP_corrected.nc ${file_bc_soil}_root_depth.nc \
-        ${file_extpar}_ROOTDP_corrected2.nc ${file_extpar}_root_depth.nc ${file_bc_soil}_soil_field_cap.nc \
-        ${file_extpar}_maxmoist.nc ${file_extpar}_glac.nc ${file_bc_soil}_soil_depth.tmp ${file_bc_soil}_soil_depth.nc
-  ${rm} ${file_extpar}_texture.nc ${file_extpar}_new.nc ${file_bc_soil}_extpar.tmp* ${file_bc_soil}_extpar_11pfts.tmp \
-        ${file_bc_soil}_glac0.nc ${file_bc_soil}_no-glac.nc ${file_extpar}_no-glac.nc \
-        ${file_extpar}_maxmoist.gauss.nc ${file_extpar}_root_depth.gauss.nc ${file_extpar}_new.gauss.nc
+  ${rm} ${file_extpar}_ROOTDP.nc ${file_extpar}_ROOTDP_corrected.nc \
+        ${file_extpar}_root_depth.nc ${file_bc_soil}_soil_field_cap.nc \
+        ${file_extpar}_maxmoist.nc glac.nc ${file_bc_soil}_soil_depth.nc
+  ${rm} ${file_bc_soil}_extpar.tmp* \
+        ${file_bc_soil}_glac0.nc ${file_bc_soil}_no-glac.nc notsea.nc non-glac-land.nc
   ${rm} ${file_bc_soil}_orig.nc ${file_bc_soil}_orig_glac0.nc
 fi
 
@@ -419,25 +364,19 @@ fi
 
 # Albedo
 # -------
-# Remove very high albedo of incorrect glacier points
+# Remove very high albedo of incorrect glacier points and very low albedo at the coast and in snow areas
 ${cdo} selvar,ALB ${file_extpar}.nc ${file_extpar}_ALB.nc
-${cdo} ltc,${value_albedo_max} ${file_extpar}_ALB.nc ${file_extpar}_ALB_mask_glac.nc
-${cdo} mul ${file_extpar}_ALB.nc ${file_extpar}_ALB_mask_glac.nc ${file_extpar}_ALB_glac0.nc
-${cdo} setmisstoc,${fillvalue_albedo_glac} -setctomiss,0. ${file_extpar}_ALB_glac0.nc ${file_extpar}_ALB_noglac.nc
-# Remove very low albedo at the coast
-${cdo} gtc,${value_albedo_min} ${file_extpar}_ALB_noglac.nc ${file_extpar}_ALB_noglac_mask_coast.nc
-${cdo} mul ${file_extpar}_ALB_noglac.nc ${file_extpar}_ALB_noglac_mask_coast.nc ${file_extpar}_ALB_noglac_coast0.nc
-${cdo} setmisstoc,${fillvalue_albedo_coast} -setctomiss,0. ${file_extpar}_ALB_noglac_coast0.nc ${file_extpar}_ALB_noglac_nocoast.nc
+${cdo} expr,"mask=ALB>${value_albedo_min} && ALB<${value_albedo_max}" ${file_extpar}_ALB.nc ${file_extpar}_ALB_mask.nc
+${cdo} ifthen ${file_extpar}_ALB_mask.nc ${file_extpar}_ALB.nc ${file_extpar}_ALB.tmp
+${cdo} -setmisstodis ${file_extpar}_ALB.tmp ${file_extpar}_ALB_filled.nc
+
 # Average in time (weighted by days per month) and divide by 100 ([% reflection] ==> [albedo])
-${cdo} -divc,100. -yearmonmean ${file_extpar}_ALB_noglac_nocoast.nc ${file_extpar}_ALB_noglac_nocoast_mean.nc
-# Change variable name
-${cdo} chname,ALB,albedo ${file_extpar}_ALB_noglac_nocoast_mean.nc ${file_extpar}_albedo.nc
+${cdo} -setname,albedo -divc,100. -yearmonmean ${file_extpar}_ALB_filled.nc ${file_extpar}_albedo.nc
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
-  ${rm} ${file_extpar}_ALB.nc ${file_extpar}_ALB_mask_glac.nc ${file_extpar}_ALB_glac0.nc \
-  ${file_extpar}_ALB_noglac.nc ${file_extpar}_ALB_noglac_mask_coast.nc ${file_extpar}_ALB_noglac_coast0.nc \
-  ${file_extpar}_ALB_noglac_nocoast.nc ${file_extpar}_ALB_noglac_nocoast_mean.nc
+  ${rm} ${file_extpar}_ALB.nc ${file_extpar}_ALB_mask.nc
+  ${rm} ${file_extpar}_ALB_filled.nc ${file_extpar}_ALB.tmp
 fi
 
 # Forest fraction
@@ -455,48 +394,33 @@ if [[ ${clean_up} == true ]]; then
   ${rm} ${file_extpar}_FOR_D.nc ${file_extpar}_FOR_E.nc ${file_extpar}_FOR.nc
 fi
 
-# NDVI: Vegetation fraction
-# -------------------------
+# NDVI: Vegetation fraction and LAI
+# ---------------------------------
+# TODO: The NDVI data from extpar seames to include ocean fractions - it is not relative
+#       to the land fraction, as expected by jsbach. (Dividing by FR_LAND did not work properly)
+# For that reason it alos does not make sense to extrapolate the data to ocean complete cells.
 ${cdo} selvar,NDVI ${file_extpar}.nc ${file_extpar}_NDVI.nc
+
 # NDVI ==> veg_fract
-${cdo} gtc,${lower_bound_NDVI_veg_fract} ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_l_mask.nc
-${cdo} setmisstoc,${lower_bound_NDVI_veg_fract} -setctomiss,0. \
-      -mul ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_l_mask.nc  ${file_extpar}_NDVI_l_bound.nc
-${cdo} ltc,${upper_bound_NDVI_veg_fract} ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_u_mask.nc
-${cdo} setmisstoc,${upper_bound_NDVI_veg_fract} -setctomiss,0. \
-      -mul ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_u_mask.nc  ${file_extpar}_NDVI_bound.nc
-${cdo} subc,${lower_bound_NDVI_veg_fract} ${file_extpar}_NDVI_bound.nc ${file_extpar}_NDVI_zero.nc
-${cdo} setctomiss,0. -gtc,0. ${file_extpar}_NDVI_zero.nc ${file_extpar}_NDVI_zero_mask.nc
-${cdo} setmisstoc,0. -mul ${file_extpar}_NDVI_zero.nc ${file_extpar}_NDVI_zero_mask.nc ${file_extpar}_NDVI_no_neg.nc
-${cdo} mulc,${fact_NDVI_veg_fract} ${file_extpar}_NDVI_no_neg.nc ${file_extpar}_NDVI_veg_fract.nc
-${cdo} chname,NDVI,veg_fract ${file_extpar}_NDVI_veg_fract.nc ${file_extpar}_veg_fract.nc
+${cdo} expr,"NDVI=max(min(NDVI,${upper_bound_NDVI_veg_fract}),${lower_bound_NDVI_veg_fract})" \
+      ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_bound.nc
+${cdo} expr,"veg_fract=${fact_NDVI_veg_fract}*(max(0.,NDVI-${lower_bound_NDVI_veg_fract}))" \
+      ${file_extpar}_NDVI_bound.nc ${file_extpar}_veg_fract.nc
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
-  ${rm} ${file_extpar}_NDVI_l_mask.nc ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_u_mask.nc \
-        ${file_extpar}_NDVI_bound.nc ${file_extpar}_NDVI_veg_fract.nc ${file_extpar}_NDVI_zero.nc \
-        ${file_extpar}_NDVI_zero_mask.nc ${file_extpar}_NDVI_no_neg.nc
+  ${rm} ${file_extpar}_NDVI_bound.nc
 fi
 
-# NDVI: LAI climatology
-# ---------------------
-${cdo} gtc,${lower_bound_NDVI_lai_clim} ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_l_mask.nc
-${cdo} setmisstoc,${lower_bound_NDVI_lai_clim} -setctomiss,0. \
-      -mul ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_l_mask.nc  ${file_extpar}_NDVI_l_bound.nc
-${cdo} ltc,${upper_bound_NDVI_lai_clim} ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_u_mask.nc
-${cdo} setmisstoc,${upper_bound_NDVI_lai_clim} -setctomiss,0. \
-      -mul ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_u_mask.nc  ${file_extpar}_NDVI_bound.nc
-${cdo} subc,${lower_bound_NDVI_lai_clim} ${file_extpar}_NDVI_bound.nc ${file_extpar}_NDVI_zero.nc
-${cdo} setctomiss,0. -gtc,0. ${file_extpar}_NDVI_zero.nc ${file_extpar}_NDVI_zero_mask.nc
-${cdo} setmisstoc,0. -mul ${file_extpar}_NDVI_zero.nc ${file_extpar}_NDVI_zero_mask.nc ${file_extpar}_NDVI_no_neg.nc
-${cdo} mulc,${fact_NDVI_lai_clim} ${file_extpar}_NDVI_no_neg.nc ${file_extpar}_NDVI_lai_clim.nc
-${cdo} chname,NDVI,lai_clim ${file_extpar}_NDVI_lai_clim.nc ${file_extpar}_lai_clim.nc
+# NDVI ==> lai_clim
+${cdo} expr,"NDVI=max(min(NDVI,${upper_bound_NDVI_lai_clim}),${lower_bound_NDVI_lai_clim})" \
+      ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_bound.nc
+${cdo} expr,"lai_clim=${fact_NDVI_lai_clim}*(max(0.,NDVI-${lower_bound_NDVI_lai_clim}))" \
+      ${file_extpar}_NDVI_bound.nc ${file_extpar}_lai_clim.nc
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
-  ${rm} ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_bound.nc ${file_extpar}_NDVI_lai_clim.nc \
-        ${file_extpar}_NDVI_l_bound.nc ${file_extpar}_NDVI_l_mask.nc ${file_extpar}_NDVI_no_neg.nc \
-        ${file_extpar}_NDVI_u_mask.nc ${file_extpar}_NDVI_zero_mask.nc ${file_extpar}_NDVI_zero.nc
+  ${rm} ${file_extpar}_NDVI.nc ${file_extpar}_NDVI_bound.nc
 fi
 
 # Replace new variables from extpar with original fractions in bc_frac file

@@ -17,7 +17,7 @@ MODULE mo_iq_atm2land_process
 #ifndef __NO_QUINCY__
 
   USE mo_kind,                  ONLY: wp
-  USE mo_jsb_math_constants,    ONLY: eps1, eps8
+  USE mo_jsb_math_constants,    ONLY: eps1, eps8, one_year, one_day
 
   IMPLICIT NONE
   PRIVATE

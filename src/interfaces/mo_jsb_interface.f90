@@ -754,7 +754,7 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics, seb_check_temperature_range
     USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
     USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
@@ -796,6 +796,8 @@ CONTAINS
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif
+    ! Reset all tiles (needed for tile loops in following test routines)
+    CALL model%Reset_tiles()
 
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
@@ -817,6 +819,12 @@ CONTAINS
       CALL test_carbon_conservation(tile, model%options(no_omp_thread))
     END IF
 #endif
+
+    ! Make sure temperatures are within an exceptable range
+    IF (model%processes(SEB_)%p%config%active) THEN
+      CALL seb_check_temperature_range(model_id, no_omp_thread)
+    END IF
+
 
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
