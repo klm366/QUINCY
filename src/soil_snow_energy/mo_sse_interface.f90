@@ -122,6 +122,7 @@ CONTAINS
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_abcoeff, &
       &                                  calc_snow_temperature, calc_snow_abcoeff, &
       &                                  calc_soilwater_phasechange, calc_soiltemp_old
+    USE mo_sse_util,               ONLY: reconstruct_soil_column_states
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -175,6 +176,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_fract_old
 
     ! Locally allocated vectors
     !
@@ -186,9 +188,7 @@ CONTAINS
       & hcap_grnd_snow,                &
       & hcap_grnd_soil,                &
       & grnd_hflx_snow,                &
-      & grnd_hflx_soil,                &
-      & weq_soil_withsnow,             &
-      & weq_soil_snowfree
+      & grnd_hflx_soil
     LOGICAL, DIMENSION(options%nc)  :: &
       & ldglac
     REAL(wp), ALLOCATABLE ::           &
@@ -211,7 +211,7 @@ CONTAINS
 
     LOGICAL  :: lstart, lbugfix
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, scale_wtr, scale_ice, excess
+    REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, is, nsnow, isnow
@@ -248,7 +248,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, snow_fract_old)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)             ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, dt_soil_withsnow_sl)   ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, dt_soil_snowfree_sl)   ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_withsnow_acoef) ! inout
@@ -494,6 +495,13 @@ CONTAINS
         END DO
         !$ACC END LOOP
         !$ACC END PARALLEL
+
+        ! Initialize last time steps snow fraction with actual snow fraction for lstart
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          snow_fract_old(ic) = snow_fract(ic)
+        END DO
+        !$ACC END LOOP
       END IF
 
       CALL calc_snow_temperature( &
@@ -595,7 +603,8 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! Reconstruct difference in soil water and ice content for the snow-free and snow-covered
-      ! soil column. The scaling is very simplified and does neglect that changing snow cover
+      ! soil column using last time steps snow fraction. The scaling is very simplified and does
+      ! neglect that changing snow cover
       ! also affects the amount of soil water/ice due to the area change. Instead, it ensures
       ! that the mean soil water and ice state is kept (no water balance violation) and
       ! approximates the conservation of ice volumne for both soil columns. The latter would be
@@ -609,8 +618,7 @@ CONTAINS
       !$ACC   CREATE(ice_soil_withsnow_sl, ice_soil_snowfree_sl)          &
       !$ACC   CREATE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl)      &
       !$ACC   CREATE(ice_melt_withsnow_sl, ice_melt_snowfree_sl)          &
-      !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)        &
-      !$ACC   CREATE(weq_soil_snowfree, weq_soil_withsnow)
+      !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
       !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
@@ -619,92 +627,23 @@ CONTAINS
 #endif
       DO is = 1,nsoil
         DO ic = 1, nc
-          IF ((ABS(delta_soilwtr_sl(ic,is)) > 1.0e-6_wp .OR. ABS(delta_soilice_sl(ic,is)) > 1.0e-6_wp) .AND. &
-            & snow_fract(ic) > 1.0e-6_wp) THEN
-            ! Initialize water and ice content for both soil columns, from last time steps difference
-            ! and current snow fraction
-            wtr_soil_snowfree_sl(ic,is) = wtr_soil_sl(ic,is) - snow_fract(ic) * delta_soilwtr_sl(ic,is)
-            ice_soil_snowfree_sl(ic,is) = ice_soil_sl(ic,is) - snow_fract(ic) * delta_soilice_sl(ic,is)
-            wtr_soil_withsnow_sl(ic,is) = wtr_soil_snowfree_sl(ic,is) + delta_soilwtr_sl(ic,is)
-            ice_soil_withsnow_sl(ic,is) = ice_soil_snowfree_sl(ic,is) + delta_soilice_sl(ic,is)
-            ! Check whether soil water/ice state is still within bounds and adjust it if necessary.
-            ! This is done scaling the water and ice differences such that no soil bounds are violated.
-            weq_soil_snowfree(ic) = MAX(1.0e-10_wp, wtr_soil_snowfree_sl(ic,is)) + MAX(1.0e-10_wp, ice_soil_snowfree_sl(ic,is))
-            weq_soil_withsnow(ic) = MAX(1.0e-10_wp, wtr_soil_withsnow_sl(ic,is)) + MAX(1.0e-10_wp, ice_soil_withsnow_sl(ic,is))
-
-            IF (wtr_soil_snowfree_sl(ic,is) < 0._wp      .OR. wtr_soil_withsnow_sl(ic,is) < 0._wp .OR. &
-              & ice_soil_snowfree_sl(ic,is) < 0._wp      .OR. ice_soil_withsnow_sl(ic,is) < 0._wp .OR. &
-              & weq_soil_snowfree(ic) > ws_max_sl(ic,is) + 1.0e+10_wp .OR.                             &
-              & weq_soil_withsnow(ic) > ws_max_sl(ic,is) + 1.0e+10_wp) THEN
-
-              ! Calculate scale factors for the differences in soil water and soil ice between the fractions
-              scale_wtr = 1._wp
-              scale_ice = 1._wp
-
-              IF (wtr_soil_sl(ic,is) < 1.0e-10_wp) THEN
-                ! Set scaling to zero in case the average soil water is already close to zero
-                scale_wtr = 0._wp
-              ELSE
-                ! Ensure scaled soil water doesn't fall below zero
-                IF (wtr_soil_snowfree_sl(ic,is) < 1.0e-10_wp) THEN
-                    scale_wtr = min(scale_wtr, &
-                      & 1.0_wp - ABS(wtr_soil_snowfree_sl(ic,is) - 1.0e-10_wp) / (wtr_soil_sl(ic,is) - wtr_soil_snowfree_sl(ic,is)))
-                END IF
-                IF (wtr_soil_withsnow_sl(ic,is) < 1.0e-10_wp) THEN
-                    scale_wtr = min(scale_wtr, &
-                      & 1.0_wp - ABS(wtr_soil_withsnow_sl(ic,is) - 1.0e-10_wp) / (wtr_soil_sl(ic,is) - wtr_soil_withsnow_sl(ic,is)))
-                END IF
-              END IF
-
-              IF (ice_soil_sl(ic,is) < 1.0e-10_wp) THEN
-                ! Set scaling to zero in case the average soil ice is already close to zero
-                scale_ice = 0._wp
-              ELSE
-                ! Ensure water and ice components don't drop below zero
-                IF (ice_soil_snowfree_sl(ic,is) < 1.0e-10_wp) THEN
-                    scale_ice = min(scale_ice, &
-                      & 1.0_wp - ABS(ice_soil_snowfree_sl(ic,is) - 1.0e-10_wp) / (ice_soil_sl(ic,is) - ice_soil_snowfree_sl(ic,is)))
-                END IF
-                IF (ice_soil_withsnow_sl(ic,is) < 1.0e-10_wp) THEN
-                    scale_ice = min(scale_ice, &
-                      & 1.0_wp - ABS(ice_soil_withsnow_sl(ic,is) - 1.0e-10_wp) / (ice_soil_sl(ic,is) - ice_soil_withsnow_sl(ic,is)))
-                END IF
-              END IF
-
-              ! Ensure total soil column moisture doesn't exceed ws_max
-              IF (weq_soil_snowfree(ic) > ws_max_sl(ic,is) + 1.0e-10_wp) THEN
-                  excess = weq_soil_snowfree(ic) - ws_max_sl(ic,is)
-                  scale_wtr = min(scale_wtr, max(0._wp, &
-                    & 1._wp - excess / (weq_soil_snowfree(ic) - (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)))))
-                  scale_ice = min(scale_ice, max(0._wp, &
-                    & 1._wp - excess / (weq_soil_snowfree(ic) - (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)))))
-              END IF
-              IF (weq_soil_withsnow(ic) > ws_max_sl(ic,is) + 1.0e-10_wp) THEN
-                  excess = weq_soil_withsnow(ic) - ws_max_sl(ic,is)
-                  scale_wtr = min(scale_wtr, max(0._wp, &
-                    & 1._wp - excess / (weq_soil_withsnow(ic) - (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)))))
-                  scale_ice = min(scale_ice, max(0._wp, &
-                    & 1._wp - excess / (weq_soil_withsnow(ic) - (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)))))
-              END IF
-
-              ! Recalculate with bounds-adjusted differences
-              wtr_soil_snowfree_sl(ic,is) = wtr_soil_sl(ic,is) - snow_fract(ic) * delta_soilwtr_sl(ic,is) * scale_wtr
-              ice_soil_snowfree_sl(ic,is) = ice_soil_sl(ic,is) - snow_fract(ic) * delta_soilice_sl(ic,is) * scale_ice
-              wtr_soil_withsnow_sl(ic,is) = wtr_soil_snowfree_sl(ic,is) + delta_soilwtr_sl(ic,is) * scale_wtr
-              ice_soil_withsnow_sl(ic,is) = ice_soil_snowfree_sl(ic,is) + delta_soilice_sl(ic,is) * scale_ice
-            END IF
-          ELSE
-            ! Initialize water and ice content for both soil columns equally
-            ! if snow fraction or water/ice differences are very low
-            wtr_soil_snowfree_sl(ic,is) = wtr_soil_sl(ic,is)
-            ice_soil_snowfree_sl(ic,is) = ice_soil_sl(ic,is)
-            wtr_soil_withsnow_sl(ic,is) = wtr_soil_sl(ic,is)
-            ice_soil_withsnow_sl(ic,is) = ice_soil_sl(ic,is)
-          END IF
+          CALL reconstruct_soil_column_states( &
+            ! in
+            & delta_soilwtr_sl(ic,is),     & !< Water content difference between snow covered and free soil column [m]
+            & delta_soilice_sl(ic,is),     & !< Ice content difference between snow covered and free soil column   [m]
+            & wtr_soil_sl(ic,is),          & !< Tile mean soil water content                                       [m]
+            & ice_soil_sl(ic,is),          & !< Tile mean soil ice content                                         [m]
+            & ws_max_sl(ic,is),            & !< Maximum soil moisture capacity                                     [m]
+            & snow_fract_old(ic),          & !< Snow fraction during last time step                                [-]
+            ! out
+            & wtr_soil_snowfree_sl(ic,is), & !< Water content of snow free soil column    [m]
+            & ice_soil_snowfree_sl(ic,is), & !< Ice content of snow free soil column      [m]
+            & wtr_soil_withsnow_sl(ic,is), & !< Water content of snow covered soil column [m]
+            & ice_soil_withsnow_sl(ic,is)  & !< Ice content of snow covered soil column   [m]
+          )
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC EXIT DATA DELETE(weq_soil_snowfree, weq_soil_withsnow)
 
       ! Compute soil temperatures for snow-covered fraction
       CALL calc_soil_temperature( &
@@ -732,11 +671,8 @@ CONTAINS
         & t_soil_snowfree_sl                  (:,:)  &
         & )
 
-      ! Add a routine to represent the lateral exchange of heat between the snow-free and snow-covered
-      ! soil column in dependence of soil layer depth and snow fraction. The basic idea is that with
-      ! increasing depth the insulating effect of snow should diminish and soil column temperatures
-      ! should converge. If this is done, freezing and melting for the two columns should be computed
-      ! afterwards and need an routine of its own.
+      ! ! Consider the change in snow fraction and adapt soil temperatures and water/ice content
+      ! ! accordingly.
 
       ! Compute soil water/ice phase change for snow-covered fraction
       IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
@@ -927,6 +863,19 @@ CONTAINS
         grnd_hflx(ic) = grnd_hflx_soil(ic)
         hcap_grnd(ic) = hcap_grnd_soil(ic)
       END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Store actual snow on soil fraction to reconstruct the snow free and snow covered soil column states
+    ! in the next time step
+#ifdef _CRAYFTN
+    ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+    !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+#else
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+#endif
+    DO ic = 1,nc
+      snow_fract_old(ic) = snow_fract(ic)
     END DO
     !$ACC END PARALLEL LOOP
 

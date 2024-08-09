@@ -33,7 +33,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 25
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -66,7 +66,8 @@ MODULE mo_sse_memory_class
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
-      & thaw_depth              !< Thawing depth [m]
+      & thaw_depth,           & !< Thawing depth [m]
+      & snow_fract_old          !< Soil surface snow fraction during last time step [-]
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
@@ -325,6 +326,13 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'snow_fract_old', mem%snow_fract_old,                    &
+        & hgrid, surface,                                                        &
+        & t_cf('snow_fract_old', '-', 'Snow fraction on soil at last timestep'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
   END SUBROUTINE Init_sse_memory
 
