@@ -15,12 +15,12 @@ MODULE mo_sse_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  !USE mo_exception, ONLY: finish
+  USE mo_exception, ONLY: finish, message_text
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reconstruct_soil_column_states
+  PUBLIC :: reconstruct_soil_column_states, rescale_soil_column_states
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_util'
 
@@ -139,6 +139,101 @@ CONTAINS
     END IF
 
   END SUBROUTINE reconstruct_soil_column_states
+
+  SUBROUTINE rescale_soil_column_states(      &
+    & snow_fract, snow_fract_old,             &
+    & state_withsnow, state_snowfree          &
+    )
+
+    REAL(wp), INTENT(in) ::    &
+      & snow_fract,            &      !< Snow fraction during this time step     [-]
+      & snow_fract_old                !< Snow fraction during last time step     [-]
+
+    REAL(wp), INTENT(inout) :: &
+      & state_withsnow,        &      !< Soil state for snow covered soil column [m]/[K]
+      & state_snowfree                !< Soil state for snow free soil column    [m]/[K]
+
+    REAL(wp) ::                &
+      & state_withsnow_old,    &      !< Old soil state for snow covered soil column     [m]/[K]
+      & state_snowfree_old,    &      !< Old soil state for snow free soil column        [m]/[K]
+      & state_withsnow_new,    &      !< Updated soil state for snow covered soil column [m]/[K]
+      & state_snowfree_new,    &      !< Updated Soil state for snow free soil column    [m]/[K]
+      & state_mean,            &      !< Tile mean soil state                            [m]/[K]
+      & delta_snow_fract              !< Change in snow fraction                         [-]
+
+    LOGICAL :: do_scaling             !< T: rescale soil column states
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_soil_column_states'
+    CHARACTER(len=4096) :: message_text_long
+
+    ! Initialize old states
+    state_withsnow_old = state_withsnow
+    state_snowfree_old = state_snowfree
+
+    ! Disable scaling if snow fraction almost zero or one
+    do_scaling = (snow_fract >= 1.0e-6 .AND. snow_fract <= 1._wp - 1.0e-6)
+
+    ! Calculate the tile mean state and snow fraction change
+    state_mean = snow_fract_old * state_withsnow_old + (1._wp - snow_fract_old) * state_snowfree_old
+    delta_snow_fract = snow_fract - snow_fract_old
+
+    ! Compute the state change in the increasing fraction (snow free or covered) and deduce
+    ! the change in the decreasing fraction assuming a constant mean state
+    IF (delta_snow_fract > 0._wp .AND. do_scaling) THEN
+      ! Snow covered fraction increasing
+      state_withsnow_new = MAX(0._wp, 1._wp / snow_fract * &
+        & (state_withsnow_old * snow_fract_old + state_snowfree_old * delta_snow_fract))
+      state_snowfree_new = MAX(0._wp, (state_mean - state_withsnow_new * snow_fract) / (1._wp - snow_fract))
+    ELSE IF (delta_snow_fract < 0._wp .AND. do_scaling) THEN
+      ! Snow free fraction increasing
+      state_snowfree_new = MAX(0._wp, 1._wp / (1._wp - snow_fract) * &
+        & (state_snowfree_old * (1._wp - snow_fract_old) + state_withsnow_old * ABS(delta_snow_fract)))
+      state_withsnow_new = MAX(0._wp, (state_mean - state_snowfree_new * (1._wp - snow_fract)) / snow_fract)
+    ELSE
+      ! No scaling needed
+      do_scaling         = .FALSE.
+      state_withsnow_new = state_withsnow_old
+      state_snowfree_new = state_snowfree_old
+    END IF
+
+    IF (do_scaling) THEN
+      ! Check that no physical bounds are violated
+      IF (state_snowfree_new < 0._wp .OR. state_withsnow_new < 0._wp) THEN
+        ! WRITE (message_text,*) 'New states are outside of physical bounds'
+        WRITE (message_text_long,*) 'Outside of physical bounds ', NEW_LINE('a'),   &
+          &  'Old snow fraction:  ', snow_fract_old,     NEW_LINE('a'),          &
+          &  'New snow fraction:  ', snow_fract,         NEW_LINE('a'),          &
+          &  'Old state snowfree: ', state_snowfree_old, NEW_LINE('a'),          &
+          &  'Old state withsnow: ', state_withsnow_old, NEW_LINE('a'),          &
+          &  'New state snowfree: ', state_snowfree_new, NEW_LINE('a'),          &
+          &  'New state withsnow: ', state_withsnow_new, NEW_LINE('a'),          &
+          &  'Old mean state:     ', state_mean,         NEW_LINE('a'),          &
+          &  'New mean state:     ', snow_fract * state_withsnow_new + (1._wp - snow_fract) * state_snowfree_new
+        CALL finish(TRIM(routine), message_text_long)
+      END IF
+
+      ! Check that rescaling worked as expected
+      IF (ABS(snow_fract * state_withsnow_new + (1._wp - snow_fract) * state_snowfree_new - state_mean) > 1.0E-10) THEN
+        ! WRITE (message_text,*) 'State rescaling failed with a difference of ', &
+        !   & snow_fract * state_withsnow_new + (1._wp - snow_fract) * state_snowfree_new - state_mean
+        WRITE (message_text_long,*) 'State rescaling failed! ', NEW_LINE('a'),   &
+          &  'Old snow fraction:  ', snow_fract_old,     NEW_LINE('a'),          &
+          &  'New snow fraction:  ', snow_fract,         NEW_LINE('a'),          &
+          &  'Old state snowfree: ', state_snowfree_old, NEW_LINE('a'),          &
+          &  'Old state withsnow: ', state_withsnow_old, NEW_LINE('a'),          &
+          &  'New state snowfree: ', state_snowfree_new, NEW_LINE('a'),          &
+          &  'New state withsnow: ', state_withsnow_new, NEW_LINE('a'),          &
+          &  'Old mean state:     ', state_mean,         NEW_LINE('a'),          &
+          &  'New mean state:     ', snow_fract * state_withsnow_new + (1._wp - snow_fract) * state_snowfree_new
+        CALL finish(TRIM(routine), message_text_long)
+      END IF
+    END IF
+
+    ! Update soil states
+    state_withsnow = state_withsnow_new
+    state_snowfree = state_snowfree_new
+
+  END SUBROUTINE rescale_soil_column_states
 
 #endif
 END MODULE mo_sse_util

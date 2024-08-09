@@ -19,7 +19,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: finish, message, message_text
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -122,7 +122,7 @@ CONTAINS
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_abcoeff, &
       &                                  calc_snow_temperature, calc_snow_abcoeff, &
       &                                  calc_soilwater_phasechange, calc_soiltemp_old
-    USE mo_sse_util,               ONLY: reconstruct_soil_column_states
+    USE mo_sse_util,               ONLY: reconstruct_soil_column_states, rescale_soil_column_states
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -472,11 +472,10 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! Derive soil temperatures for snow covered and snow free grid cell fraction
-
+      ! Allocate local variables for temperatures of snow coverd and snow free soil columns
       ALLOCATE(t_soil_withsnow_sl(nc,nsoil), t_soil_snowfree_sl(nc,nsoil))
-      !$ACC ENTER DATA CREATE(t_soil_withsnow_sl, t_soil_snowfree_sl)
 
+      !$ACC ENTER DATA CREATE(t_soil_withsnow_sl, t_soil_snowfree_sl)
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
       !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(1)
@@ -504,6 +503,7 @@ CONTAINS
         !$ACC END LOOP
       END IF
 
+      ! Derive soil temperatures for snow covered and snow free grid cell fraction
       CALL calc_snow_temperature( &
         ! in
         & nc,                         &
@@ -602,49 +602,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      ! Reconstruct difference in soil water and ice content for the snow-free and snow-covered
-      ! soil column using last time steps snow fraction. The scaling is very simplified and does
-      ! neglect that changing snow cover
-      ! also affects the amount of soil water/ice due to the area change. Instead, it ensures
-      ! that the mean soil water and ice state is kept (no water balance violation) and
-      ! approximates the conservation of ice volumne for both soil columns. The latter would be
-      ! ignored if only cell average soil water and ice content is assumed.
-      ALLOCATE(wtr_soil_withsnow_sl(nc,nsoil),   wtr_soil_snowfree_sl(nc,nsoil))
-      ALLOCATE(ice_soil_withsnow_sl(nc,nsoil),   ice_soil_snowfree_sl(nc,nsoil))
-      ALLOCATE(wtr_freeze_withsnow_sl(nc,nsoil), wtr_freeze_snowfree_sl(nc,nsoil))
-      ALLOCATE(ice_melt_withsnow_sl  (nc,nsoil), ice_melt_snowfree_sl  (nc,nsoil))
-      ALLOCATE(wtr_scool_withsnow_sl (nc,nsoil), wtr_scool_snowfree_sl (nc,nsoil))
-      !$ACC ENTER DATA CREATE(wtr_soil_withsnow_sl, wtr_soil_snowfree_sl) &
-      !$ACC   CREATE(ice_soil_withsnow_sl, ice_soil_snowfree_sl)          &
-      !$ACC   CREATE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl)      &
-      !$ACC   CREATE(ice_melt_withsnow_sl, ice_melt_snowfree_sl)          &
-      !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
-#ifdef _CRAYFTN
-      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
-#else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
-#endif
-      DO is = 1,nsoil
-        DO ic = 1, nc
-          CALL reconstruct_soil_column_states( &
-            ! in
-            & delta_soilwtr_sl(ic,is),     & !< Water content difference between snow covered and free soil column [m]
-            & delta_soilice_sl(ic,is),     & !< Ice content difference between snow covered and free soil column   [m]
-            & wtr_soil_sl(ic,is),          & !< Tile mean soil water content                                       [m]
-            & ice_soil_sl(ic,is),          & !< Tile mean soil ice content                                         [m]
-            & ws_max_sl(ic,is),            & !< Maximum soil moisture capacity                                     [m]
-            & snow_fract_old(ic),          & !< Snow fraction during last time step                                [-]
-            ! out
-            & wtr_soil_snowfree_sl(ic,is), & !< Water content of snow free soil column    [m]
-            & ice_soil_snowfree_sl(ic,is), & !< Ice content of snow free soil column      [m]
-            & wtr_soil_withsnow_sl(ic,is), & !< Water content of snow covered soil column [m]
-            & ice_soil_withsnow_sl(ic,is)  & !< Ice content of snow covered soil column   [m]
-          )
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
       ! Compute soil temperatures for snow-covered fraction
       CALL calc_soil_temperature( &
         ! in
@@ -671,8 +628,66 @@ CONTAINS
         & t_soil_snowfree_sl                  (:,:)  &
         & )
 
-      ! ! Consider the change in snow fraction and adapt soil temperatures and water/ice content
-      ! ! accordingly.
+      ! Allocate local variables needed for snow free and snow covered soil column
+      ! water and ice content computations
+      ALLOCATE(wtr_soil_withsnow_sl(nc,nsoil),   wtr_soil_snowfree_sl(nc,nsoil))
+      ALLOCATE(ice_soil_withsnow_sl(nc,nsoil),   ice_soil_snowfree_sl(nc,nsoil))
+      ALLOCATE(wtr_freeze_withsnow_sl(nc,nsoil), wtr_freeze_snowfree_sl(nc,nsoil))
+      ALLOCATE(ice_melt_withsnow_sl  (nc,nsoil), ice_melt_snowfree_sl  (nc,nsoil))
+      ALLOCATE(wtr_scool_withsnow_sl (nc,nsoil), wtr_scool_snowfree_sl (nc,nsoil))
+      !$ACC ENTER DATA CREATE(wtr_soil_withsnow_sl, wtr_soil_snowfree_sl) &
+      !$ACC   CREATE(ice_soil_withsnow_sl, ice_soil_snowfree_sl)          &
+      !$ACC   CREATE(wtr_freeze_withsnow_sl, wtr_freeze_snowfree_sl)      &
+      !$ACC   CREATE(ice_melt_withsnow_sl, ice_melt_snowfree_sl)          &
+      !$ACC   CREATE(wtr_scool_withsnow_sl, wtr_scool_snowfree_sl)
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
+#else
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+#endif
+      DO is = 1,nsoil
+        DO ic = 1, nc
+          ! Scale soil temperatures accounting for changes in snow fraction between
+          ! last and actual time step
+          CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
+            & t_soil_withsnow_sl(ic,is), t_soil_snowfree_sl(ic,is))
+          ! Reconstruct last time steps differences between snow free and snow covered soil column
+          ! for soil water and ice using last time steps snow fraction
+          CALL reconstruct_soil_column_states( &
+            ! in
+            & delta_soilwtr_sl(ic,is),     & !< Water content difference between snow covered and free soil column [m]
+            & delta_soilice_sl(ic,is),     & !< Ice content difference between snow covered and free soil column   [m]
+            & wtr_soil_sl(ic,is),          & !< Tile mean soil water content                                       [m]
+            & ice_soil_sl(ic,is),          & !< Tile mean soil ice content                                         [m]
+            & ws_max_sl(ic,is),            & !< Maximum soil moisture capacity                                     [m]
+            & snow_fract_old(ic),          & !< Snow fraction during last time step                                [-]
+            ! out
+            & wtr_soil_snowfree_sl(ic,is), & !< Water content of snow free soil column    [m]
+            & ice_soil_snowfree_sl(ic,is), & !< Ice content of snow free soil column      [m]
+            & wtr_soil_withsnow_sl(ic,is), & !< Water content of snow covered soil column [m]
+            & ice_soil_withsnow_sl(ic,is)  & !< Ice content of snow covered soil column   [m]
+          )
+          ! Scale soil water accounting for changes in snow fraction between
+          ! last and actual time step
+          CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
+            & wtr_soil_withsnow_sl(ic,is), wtr_soil_snowfree_sl(ic,is))
+          ! Scale soil ice accounting for changes in snow fraction between
+          ! last and actual time step
+          CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
+            & ice_soil_withsnow_sl(ic,is), ice_soil_snowfree_sl(ic,is))
+          ! Sanity check for upper soil moisture constrains
+          IF (wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) > ws_max_sl(ic,is) + EPSILON(1.0_wp) .OR. &
+            & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) > ws_max_sl(ic,is) + EPSILON(1.0_wp)) THEN
+            WRITE (message_text,*) 'Soil column moisture exceeds maximum capacity:', NEW_LINE('a'),   &
+              & 'withsnow: ', wtr_soil_withsnow_sl(ic,is), ice_soil_withsnow_sl(ic,is), ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'snowfree: ', wtr_soil_snowfree_sl(ic,is), ice_soil_snowfree_sl(ic,is), ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'both:     ', wtr_soil_sl(ic,is), ice_soil_sl(ic,is), ws_max_sl(ic,is)
+            CALL finish(TRIM(routine), message_text)
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! Compute soil water/ice phase change for snow-covered fraction
       IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
