@@ -361,19 +361,19 @@ CONTAINS
 
     IF (tile%Is_process_active(LEX_)) THEN
 
-      IF (input_file%Has_var('fract_pond_max_conti'//str_conti)  .OR. &
+      IF (input_file%Has_var('fract_pond_max_ct'//str_conti)  .OR. &
         & dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
-        pond_fract_name = 'fract_pond_max_conti'//str_conti
+        pond_fract_name = 'fract_pond_max_ct'//str_conti
       ELSE
-        CALL message(routine, 'Running lateral exchange without fract_pond_max_conti'//str_conti// &
+        CALL message(routine, 'Running lateral exchange without fract_pond_max_ct'//str_conti// &
         & '. Using fract_pond_max instead')
       END IF
 
-      IF (input_file%Has_var('depth_pond_max_conti'//str_conti) .OR. &
+      IF (input_file%Has_var('depth_pond_max_ct'//str_conti) .OR. &
         & dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
-        pond_depth_name = 'depth_pond_max_conti'//str_conti
+        pond_depth_name = 'depth_pond_max_ct'//str_conti
       ELSE
-        CALL message(routine, 'Running lateral exchange without depth_pond_max_conti'//str_conti// &
+        CALL message(routine, 'Running lateral exchange without depth_pond_max_ct'//str_conti// &
         & '. Using depth_pond_max instead')
       END IF
 
@@ -395,37 +395,37 @@ CONTAINS
     ! Read in maximum fraction and depth of local surface depressions
     ! Read characteristic area, surface height and slope of connected tiles
     IF (tile%Is_process_active(LEX_)) THEN
-      IF (input_file%Has_var('char_area_conti'//str_conti)) THEN
+      IF (input_file%Has_var('char_area_ct'//str_conti)) THEN
         ptr_2D => input_file%Read_2d(                  &
-        & variable_name='char_area_conti'//str_conti,  &
+        & variable_name='char_area_ct'//str_conti,  &
         & fill_array=hydro_init_vars%char_area(:,:))
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
       ELSE
-        CALL message(routine, 'Running lateral exchange without char_area_conti'//str_conti// &
+        CALL message(routine, 'Running lateral exchange without char_area_ct'//str_conti// &
         & '. Setting value to 10000')
         hydro_init_vars%char_area(:,:) = 10000._wp
       END IF 
-      IF (input_file%Has_var('char_h_srf_conti'//str_conti)) THEN
+      IF (input_file%Has_var('char_h_srf_ct'//str_conti)) THEN
         ptr_2D => input_file%Read_2d(                  &
-        & variable_name='char_h_srf_conti'//str_conti, &
+        & variable_name='char_h_srf_ct'//str_conti, &
         & fill_array=hydro_init_vars%char_h_srf(:,:))
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) <= 0._wp)
       ELSE
-        CALL message(routine, 'Running lateral exchange without char_h_srf_conti'//str_conti// &
+        CALL message(routine, 'Running lateral exchange without char_h_srf_ct'//str_conti// &
         & '. Setting value to 0')
         hydro_init_vars%char_h_srf(:,:) = 0._wp
       END IF         
-      IF (input_file%Has_var('char_slope_conti'//str_conti)) THEN
+      IF (input_file%Has_var('char_slope_ct'//str_conti)) THEN
         ptr_2D => input_file%Read_2d(                  &
-        & variable_name='char_slope_conti'//str_conti, &
+        & variable_name='char_slope_ct'//str_conti, &
         & fill_array=hydro_init_vars%char_slope(:,:))
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
       ELSE
         IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
-          CALL message(routine, 'Running lateral exchange without char_slope_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without char_slope_ct'//str_conti// &
             & '. Assuming a zero slope for depressions and steepness for non-depressions')
         ELSE
-          CALL message(routine, 'Running lateral exchange without char_slope_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without char_slope_ct'//str_conti// &
             & '. Using steepness instead')
         END IF
         hydro_init_vars%char_slope(:,:) = -9999._wp
@@ -485,123 +485,123 @@ CONTAINS
 
       IF (tile%Is_process_active(LEX_)) THEN
 
-        IF (input_file%Has_var('soil_depth_conti'//str_conti)) THEN
-          soil_depth_name = 'soil_depth_conti'//str_conti
+        IF (input_file%Has_var('soil_depth_ct'//str_conti)) THEN
+          soil_depth_name = 'soil_depth_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_depth_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without soil_depth_ct'//str_conti// &
           & '. Using soil_depth instead')
         END IF
 
-        IF (input_file%Has_var('soil_porosity_conti'//str_conti)) THEN
-          soil_porosity_name = 'soil_porosity_conti'//str_conti
+        IF (input_file%Has_var('soil_porosity_ct'//str_conti)) THEN
+          soil_porosity_name = 'soil_porosity_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_porosity_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without soil_porosity_ct'//str_conti// &
           & '. Using soil_porosity instead')
         END IF
 
-        IF (input_file%Has_var('hyd_cond_sat_conti'//str_conti)) THEN
-          hyd_cond_sat_name = 'hyd_cond_sat_conti'//str_conti
+        IF (input_file%Has_var('hyd_cond_sat_ct'//str_conti)) THEN
+          hyd_cond_sat_name = 'hyd_cond_sat_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without hyd_cond_sat_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without hyd_cond_sat_ct'//str_conti// &
           & '. Using hyd_cond_sat instead')
         END IF
 
-        IF (input_file%Has_var('soil_field_cap_conti'//str_conti)) THEN
-          soil_field_cap_name = 'soil_field_cap_conti'//str_conti
+        IF (input_file%Has_var('soil_field_cap_ct'//str_conti)) THEN
+          soil_field_cap_name = 'soil_field_cap_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_field_cap_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without soil_field_cap_ct'//str_conti// &
           & '. Using soil_field_cap instead')
         END IF
 
-        IF (input_file%Has_var('wilting_point_conti'//str_conti)) THEN
-          wilting_point_name = 'wilting_point_conti'//str_conti
+        IF (input_file%Has_var('wilting_point_ct'//str_conti)) THEN
+          wilting_point_name = 'wilting_point_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without wilting_point_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without wilting_point_ct'//str_conti// &
           & '. Using wilting_point instead')
         END IF
 
-        IF (input_file%Has_var('residual_water_conti'//str_conti)) THEN
-          residual_water_name = 'residual_water_conti'//str_conti
+        IF (input_file%Has_var('residual_water_ct'//str_conti)) THEN
+          residual_water_name = 'residual_water_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without residual_water_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without residual_water_ct'//str_conti// &
           & '. Using residual_water instead')
         END IF
 
-        IF (input_file%Has_var('moisture_pot_conti'//str_conti)) THEN
-          moisture_pot_name = 'moisture_pot_conti'//str_conti
+        IF (input_file%Has_var('moisture_pot_ct'//str_conti)) THEN
+          moisture_pot_name = 'moisture_pot_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without moisture_pot_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without moisture_pot_ct'//str_conti// &
           & '. Using residual_water instead')
         END IF
 
-        IF (input_file%Has_var('bclapp_conti'//str_conti)) THEN
-          bclapp_name = 'bclapp_conti'//str_conti
+        IF (input_file%Has_var('bclapp_ct'//str_conti)) THEN
+          bclapp_name = 'bclapp_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without bclapp_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without bclapp_ct'//str_conti// &
           & '. Using bclapp instead')
         END IF
 
-        IF (input_file%Has_var('pore_size_index_conti'//str_conti)) THEN
-          pore_size_index_name = 'pore_size_index_conti'//str_conti
+        IF (input_file%Has_var('pore_size_index_ct'//str_conti)) THEN
+          pore_size_index_name = 'pore_size_index_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without pore_size_index_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without pore_size_index_ct'//str_conti// &
           & '. Using pore_size_index instead')
         END IF
 
-        IF (input_file%Has_var('fract_org_sl_conti'//str_conti)) THEN
-          fract_org_sl_name = 'fract_org_sl_conti'//str_conti
+        IF (input_file%Has_var('fract_org_sl_ct'//str_conti)) THEN
+          fract_org_sl_name = 'fract_org_sl_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fract_org_sl_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without fract_org_sl_ct'//str_conti// &
           & '. Using fract_org_sl instead')
         END IF
 
-        IF (input_file%Has_var('root_depth_conti'//str_conti)) THEN
-          root_depth_name = 'root_depth_conti'//str_conti
+        IF (input_file%Has_var('root_depth_ct'//str_conti)) THEN
+          root_depth_name = 'root_depth_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without root_depth_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without root_depth_ct'//str_conti// &
           & '. Using root_depth instead')
         END IF
 
         IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
-          IF (input_file%Has_var('FR_SAND_conti'//str_conti)) THEN
-            fr_sand_name = 'FR_SAND_conti'//str_conti
+          IF (input_file%Has_var('FR_SAND_ct'//str_conti)) THEN
+            fr_sand_name = 'FR_SAND_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_sand_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without fr_sand_ct'//str_conti// &
             & '. Using fr_sand instead')
           END IF
 
-          IF (input_file%Has_var('FR_SILT_conti'//str_conti)) THEN
-            fr_silt_name = 'FR_SILT_conti'//str_conti
+          IF (input_file%Has_var('FR_SILT_ct'//str_conti)) THEN
+            fr_silt_name = 'FR_SILT_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_silt_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without fr_silt_ct'//str_conti// &
             & '. Using fr_silt instead')
           END IF
 
-          IF (input_file%Has_var('FR_CLAY_conti'//str_conti)) THEN
-            fr_clay_name = 'FR_CLAY_conti'//str_conti
+          IF (input_file%Has_var('FR_CLAY_ct'//str_conti)) THEN
+            fr_clay_name = 'FR_CLAY_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_clay_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without fr_clay_ct'//str_conti// &
             & '. Using fr_clay instead')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_SAND_conti'//str_conti)) THEN
-            fr_sand_deep_name = 'SUB_FR_SAND_conti'//str_conti
+          IF (input_file%Has_var('SUB_FR_SAND_ct'//str_conti)) THEN
+            fr_sand_deep_name = 'SUB_FR_SAND_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_sand_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without deep_fr_sand_ct'//str_conti// &
             & '. Using deep_fr_sand instead')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_SILT_conti'//str_conti)) THEN
-            fr_silt_deep_name = 'SUB_FR_SILT_conti'//str_conti
+          IF (input_file%Has_var('SUB_FR_SILT_ct'//str_conti)) THEN
+            fr_silt_deep_name = 'SUB_FR_SILT_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_silt_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without deep_fr_silt_ct'//str_conti// &
             & '. Using deep_fr_silt instead')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_CLAY_conti'//str_conti)) THEN
-            fr_clay_deep_name = 'SUB_FR_CLAY_conti'//str_conti
+          IF (input_file%Has_var('SUB_FR_CLAY_ct'//str_conti)) THEN
+            fr_clay_deep_name = 'SUB_FR_CLAY_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_clay_conti'//str_conti// &
+            CALL message(routine, 'Running lateral exchange without deep_fr_clay_ct'//str_conti// &
             & '. Using deep_fr_clay instead')
           END IF
         END IF

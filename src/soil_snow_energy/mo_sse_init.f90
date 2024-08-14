@@ -240,71 +240,71 @@ CONTAINS
     IF (tile%Is_process_active(LEX_)) THEN
 
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
-        IF (input_file%Has_var('fao_conti'//str_conti)) THEN
-          fao_name = 'fao_conti'//str_conti
+        IF (input_file%Has_var('fao_ct'//str_conti)) THEN
+          fao_name = 'fao_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fao_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without fao_ct'//str_conti// &
           & '. Using fao instead')
         END IF
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
-        IF (input_file%Has_var('heat_capacity_conti'//str_conti)) THEN
-          heat_capacity_name = 'heat_capacity_conti'//str_conti
+        IF (input_file%Has_var('heat_capacity_ct'//str_conti)) THEN
+          heat_capacity_name = 'heat_capacity_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without heat_capacity_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without heat_capacity_ct'//str_conti// &
           & '. Using heat_capacity instead')
         END IF
       END IF
       IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
-        IF (input_file%Has_var('heat_conductivity_conti'//str_conti)) THEN
-          heat_conductivity_name = 'heat_conductivity_conti'//str_conti
+        IF (input_file%Has_var('heat_conductivity_ct'//str_conti)) THEN
+          heat_conductivity_name = 'heat_conductivity_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without heat_conductivity_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without heat_conductivity_ct'//str_conti// &
           & '. Using heat_conductivity instead')
         END IF
       END IF
       
       IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
-        IF (input_file%Has_var('FR_SAND_conti'//str_conti)) THEN
-          fr_sand_name = 'FR_SAND_conti'//str_conti
+        IF (input_file%Has_var('FR_SAND_ct'//str_conti)) THEN
+          fr_sand_name = 'FR_SAND_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fr_sand_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without fr_sand_ct'//str_conti// &
           & '. Using fr_sand instead')
         END IF
 
-        IF (input_file%Has_var('FR_SILT_conti'//str_conti)) THEN
-          fr_silt_name = 'FR_SILT_conti'//str_conti
+        IF (input_file%Has_var('FR_SILT_ct'//str_conti)) THEN
+          fr_silt_name = 'FR_SILT_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fr_silt_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without fr_silt_ct'//str_conti// &
           & '. Using fr_silt instead')
         END IF
 
-        IF (input_file%Has_var('FR_CLAY_conti'//str_conti)) THEN
-          fr_clay_name = 'FR_CLAY_conti'//str_conti
+        IF (input_file%Has_var('FR_CLAY_ct'//str_conti)) THEN
+          fr_clay_name = 'FR_CLAY_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fr_clay_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without fr_clay_ct'//str_conti// &
           & '. Using fr_clay instead')
         END IF
 
-        IF (input_file%Has_var('SUB_FR_SAND_conti'//str_conti)) THEN
-          fr_sand_deep_name = 'SUB_FR_SAND_conti'//str_conti
+        IF (input_file%Has_var('SUB_FR_SAND_ct'//str_conti)) THEN
+          fr_sand_deep_name = 'SUB_FR_SAND_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without deep_fr_sand_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without deep_fr_sand_ct'//str_conti// &
           & '. Using deep_fr_sand instead')
         END IF
 
-        IF (input_file%Has_var('SUB_FR_SILT_conti'//str_conti)) THEN
-          fr_silt_deep_name = 'SUB_FR_SILT_conti'//str_conti
+        IF (input_file%Has_var('SUB_FR_SILT_ct'//str_conti)) THEN
+          fr_silt_deep_name = 'SUB_FR_SILT_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without deep_fr_silt_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without deep_fr_silt_ct'//str_conti// &
           & '. Using deep_fr_silt instead')
         END IF
 
-        IF (input_file%Has_var('SUB_FR_CLAY_conti'//str_conti)) THEN
-          fr_clay_deep_name = 'SUB_FR_CLAY_conti'//str_conti
+        IF (input_file%Has_var('SUB_FR_CLAY_ct'//str_conti)) THEN
+          fr_clay_deep_name = 'SUB_FR_CLAY_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without deep_fr_clay_conti'//str_conti// &
+          CALL message(routine, 'Running lateral exchange without deep_fr_clay_ct'//str_conti// &
           & '. Using deep_fr_clay instead')
         END IF
       END IF
