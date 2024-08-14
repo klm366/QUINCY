@@ -147,8 +147,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_withsnow_bcoef
     dsl4jsb_Real3D_onChunk :: t_soil_snowfree_acoef
     dsl4jsb_Real3D_onChunk :: t_soil_snowfree_bcoef
-    dsl4jsb_Real3D_onChunk :: delta_soilwtr_sl
-    dsl4jsb_Real3D_onChunk :: delta_soilice_sl
+    dsl4jsb_Real3D_onChunk :: ice_frac_snowfree_sl
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
     dsl4jsb_Real3D_onChunk :: heat_cond_sl
     dsl4jsb_Real3D_onChunk :: t_snow
@@ -256,8 +255,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_withsnow_bcoef) ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_snowfree_acoef) ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_snowfree_bcoef) ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, delta_soilwtr_sl)      ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, delta_soilice_sl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, ice_frac_snowfree_sl)  ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
@@ -656,18 +654,30 @@ CONTAINS
           ! for soil water and ice using last time steps snow fraction
           CALL reconstruct_soil_column_states( &
             ! in
-            & delta_soilwtr_sl(ic,is),     & !< Water content difference between snow covered and free soil column [m]
-            & delta_soilice_sl(ic,is),     & !< Ice content difference between snow covered and free soil column   [m]
-            & wtr_soil_sl(ic,is),          & !< Tile mean soil water content                                       [m]
-            & ice_soil_sl(ic,is),          & !< Tile mean soil ice content                                         [m]
-            & ws_max_sl(ic,is),            & !< Maximum soil moisture capacity                                     [m]
-            & snow_fract_old(ic),          & !< Snow fraction during last time step                                [-]
+            & ice_frac_snowfree_sl(ic,is), & !< Fraction of soil ice in snow free soil column [m]
+            & wtr_soil_sl(ic,is),          & !< Tile mean soil water content                  [m]
+            & ice_soil_sl(ic,is),          & !< Tile mean soil ice content                    [m]
+            & ws_max_sl(ic,is),            & !< Maximum soil moisture capacity                [m]
+            & snow_fract_old(ic),          & !< Snow fraction during last time step           [-]
             ! out
-            & wtr_soil_snowfree_sl(ic,is), & !< Water content of snow free soil column    [m]
-            & ice_soil_snowfree_sl(ic,is), & !< Ice content of snow free soil column      [m]
-            & wtr_soil_withsnow_sl(ic,is), & !< Water content of snow covered soil column [m]
-            & ice_soil_withsnow_sl(ic,is)  & !< Ice content of snow covered soil column   [m]
+            & wtr_soil_snowfree_sl(ic,is), & !< Water content of snow free soil column        [m]
+            & ice_soil_snowfree_sl(ic,is), & !< Ice content of snow free soil column          [m]
+            & wtr_soil_withsnow_sl(ic,is), & !< Water content of snow covered soil column     [m]
+            & ice_soil_withsnow_sl(ic,is)  & !< Ice content of snow covered soil column       [m]
           )
+          ! Sanity check for upper soil moisture constrains
+          IF (wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) > ws_max_sl(ic,is) + 1.0E-13_wp .OR. &
+            & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) > ws_max_sl(ic,is) + 1.0E-13_wp) THEN
+            WRITE (message_text,*) 'Soil column moisture exceeds maximum capacity before scaling:', NEW_LINE('a'),   &
+              & 'snow:     ', snow_fract_old(ic), snow_fract(ic), snow_fract(ic) - snow_fract_old(ic), NEW_LINE('a'), &
+              & 'withsnow: ', wtr_soil_withsnow_sl(ic,is), ice_soil_withsnow_sl(ic,is), &
+              & wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) - ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'snowfree: ', wtr_soil_snowfree_sl(ic,is), ice_soil_snowfree_sl(ic,is), &
+              & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) - ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'both:     ', wtr_soil_sl(ic,is), ice_soil_sl(ic,is), &
+              & wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) - ws_max_sl(ic,is)
+            CALL finish(TRIM(routine), message_text)
+          END IF
           ! Scale soil water accounting for changes in snow fraction between
           ! last and actual time step
           CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
@@ -677,12 +687,16 @@ CONTAINS
           CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
             & ice_soil_withsnow_sl(ic,is), ice_soil_snowfree_sl(ic,is))
           ! Sanity check for upper soil moisture constrains
-          IF (wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) > ws_max_sl(ic,is) + EPSILON(1.0_wp) .OR. &
-            & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) > ws_max_sl(ic,is) + EPSILON(1.0_wp)) THEN
-            WRITE (message_text,*) 'Soil column moisture exceeds maximum capacity:', NEW_LINE('a'),   &
-              & 'withsnow: ', wtr_soil_withsnow_sl(ic,is), ice_soil_withsnow_sl(ic,is), ws_max_sl(ic,is), NEW_LINE('a'), &
-              & 'snowfree: ', wtr_soil_snowfree_sl(ic,is), ice_soil_snowfree_sl(ic,is), ws_max_sl(ic,is), NEW_LINE('a'), &
-              & 'both:     ', wtr_soil_sl(ic,is), ice_soil_sl(ic,is), ws_max_sl(ic,is)
+          IF (wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) > ws_max_sl(ic,is) + 1.0E-13_wp .OR. &
+            & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) > ws_max_sl(ic,is) + 1.0E-13_wp) THEN
+            WRITE (message_text,*) 'Soil column moisture exceeds maximum capacity after scaling:', NEW_LINE('a'),   &
+              & 'snow:     ', snow_fract_old(ic), snow_fract(ic), snow_fract(ic) - snow_fract_old(ic), NEW_LINE('a'), &
+              & 'withsnow: ', wtr_soil_withsnow_sl(ic,is), ice_soil_withsnow_sl(ic,is), &
+              & wtr_soil_withsnow_sl(ic,is) + ice_soil_withsnow_sl(ic,is) - ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'snowfree: ', wtr_soil_snowfree_sl(ic,is), ice_soil_snowfree_sl(ic,is), &
+              & wtr_soil_snowfree_sl(ic,is) + ice_soil_snowfree_sl(ic,is) - ws_max_sl(ic,is), NEW_LINE('a'), &
+              & 'both:     ', wtr_soil_sl(ic,is), ice_soil_sl(ic,is), &
+              & wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) - ws_max_sl(ic,is)
             CALL finish(TRIM(routine), message_text)
           END IF
         END DO
@@ -842,8 +856,11 @@ CONTAINS
           ! Store differences between states
           dt_soil_withsnow_sl(ic,is)   = t_soil_withsnow_sl(ic,is) - t_soil_sl(ic,is)
           dt_soil_snowfree_sl(ic,is)   = t_soil_snowfree_sl(ic,is) - t_soil_sl(ic,is)
-          delta_soilwtr_sl(ic,is)      = wtr_soil_withsnow_sl(ic,is) - wtr_soil_snowfree_sl(ic,is)
-          delta_soilice_sl(ic,is)      = ice_soil_withsnow_sl(ic,is) - ice_soil_snowfree_sl(ic,is)
+          IF (ice_soil_sl(ic,is) > 1.0E-10_wp) THEN
+            ice_frac_snowfree_sl(ic,is) = ice_soil_snowfree_sl(ic,is) / ice_soil_sl(ic,is)
+          ELSE
+            ice_frac_snowfree_sl(ic,is) = 0._wp
+          END IF
         END DO
         !$ACC END LOOP
       END DO
@@ -939,8 +956,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   dt_soil_snowfree_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   dt_soil_withsnow_sl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   delta_soilwtr_sl,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   delta_soilice_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   ice_frac_snowfree_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,        weighted_by_fract)

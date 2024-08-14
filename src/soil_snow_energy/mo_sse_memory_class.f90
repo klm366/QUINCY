@@ -59,8 +59,7 @@ MODULE mo_sse_memory_class
       & t_snow,                & !< Temperature of snow layers [K]
       & t_snow_acoef,          & !< Snow A coefficient of Richtmeyer and Morton scheme
       & t_snow_bcoef,          & !< Snow B coefficient of Richtmeyer and Morton scheme
-      & delta_soilwtr_sl,      & !< Difference in soil water content between snow covered and snow free fraction [m weq]
-      & delta_soilice_sl         !< Difference in soil ice content between snow covered and snow free fraction [m weq]
+      & ice_frac_snowfree_sl     !< Fraction of soil ice in the snow free soil column wrt mean soil per soil layer [-]
     TYPE(t_jsb_var_real2d) :: &
       & hcap_grnd,            & !< Heat capacity of the ground (uppermost layer)        [J m-2 K-1]
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
@@ -201,19 +200,10 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'delta_soilwtr_sl', mem%delta_soilwtr_sl,              &
+    CALL mem%Add_var( 'ice_frac_snowfree_sl', mem%ice_frac_snowfree_sl,      &
       & hgrid, soil_e,                                                       &
-      & t_cf('soil_water_difference', 'm',                                   &
-      &      'Soil wtr diff. between snow-covered and snow-free fraction'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'delta_soilice_sl', mem%delta_soilice_sl,              &
-      & hgrid, soil_e,                                                       &
-      & t_cf('soil_ice_difference', 'm',                                     &
-      &      'Soil ice diff. between snow-covered and snow-free fraction'),  &
+      & t_cf('soil_ice_fraction', '-',                                       &
+      &      'Soil ice fraction in snow-free soil column'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
