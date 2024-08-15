@@ -75,8 +75,9 @@ CONTAINS
     ! Sanity checks for ...
     ! ... water conservation
     column_mean = wtr_soil_withsnow_sl * snow_fract_old + wtr_soil_snowfree_sl * (1._wp - snow_fract_old)
-    IF (ABS(wtr_soil_sl - column_mean) > EPSILON(1.0_wp)) THEN
-      WRITE (message_text,*) 'Soil water content not conserved by ', wtr_soil_sl - column_mean, ' m.'
+    IF (ABS(wtr_soil_sl - column_mean) > 1.0E-13_wp) THEN
+      WRITE (message_text,*) 'Soil water content not conserved by ', wtr_soil_sl - column_mean, ' m.', NEW_LINE('a'), &
+        & 'Snow fraction is ', snow_fract_old
       CALL finish(TRIM(routine), message_text)
     END IF
 
@@ -89,8 +90,10 @@ CONTAINS
 
     ! Sanity check for upper soil moisture constrains
     IF (wtr_soil_withsnow_sl + ice_soil_withsnow_sl > weq_wsat_soil_sl + EPSILON(1._wp) .OR. &
-      & wtr_soil_snowfree_sl + ice_soil_snowfree_sl > weq_wsat_soil_sl + EPSILON(1._wp)) THEN
-      WRITE (message_text,*) 'Soil column moisture exceeds maximum capacity:', NEW_LINE('a'),   &
+      & wtr_soil_snowfree_sl + ice_soil_snowfree_sl > weq_wsat_soil_sl + EPSILON(1._wp) .OR. &
+      & wtr_soil_withsnow_sl + ice_soil_withsnow_sl < 0._wp                             .OR. &
+      & wtr_soil_snowfree_sl + ice_soil_snowfree_sl < 0._wp) THEN
+      WRITE (message_text,*) 'Soil column moisture exceeds bounds:', NEW_LINE('a'),   &
         & 'snow:          ', snow_fract_old, NEW_LINE('a'), &
         & 'ice_fract:     ', ice_frac_snowfree_sl, NEW_LINE('a'), &
         & 'withsnow:      ', wtr_soil_withsnow_sl, ice_soil_withsnow_sl, NEW_LINE('a'), &

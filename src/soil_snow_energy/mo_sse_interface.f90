@@ -26,8 +26,8 @@ MODULE mo_sse_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -132,6 +132,7 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
@@ -210,10 +211,11 @@ CONTAINS
 
     LOGICAL  :: lstart, lbugfix
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, excess, f_red
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, is, nsnow, isnow
+    REAL(wp), POINTER          :: lat(:), lon(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
@@ -227,6 +229,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
+
     dsl4jsb_Get_config(SSE_)
 
     soil_e => Get_vgrid('soil_depth_energy')
@@ -646,6 +652,35 @@ CONTAINS
 #endif
       DO is = 1,nsoil
         DO ic = 1, nc
+          ! Check for lower soil moisture bound
+          IF (wtr_soil_sl(ic,is) < 0._wp .OR. ice_soil_sl(ic,is) < 0._wp) THEN
+            IF (wtr_soil_sl(ic,is) < -1.E-10_wp .OR. ice_soil_sl(ic,is) < -1.E-10_wp) THEN
+              WRITE (message_text,*) 'Soil content content below zero: ', NEW_LINE('a'), &
+                & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E ', &
+                & '(ic: ',ic,' layer: ',is, ')',      NEW_LINE('a'), &
+                & 'Soil water: ', wtr_soil_sl(ic,is), NEW_LINE('a'), &
+                & 'Soil ice:   ', ice_soil_sl(ic,is)
+              CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+            END IF
+            wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is))
+            ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is))
+          END IF
+          ! Check for upper soil moisture bound
+          IF (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) > ws_max_sl(ic,is)) THEN
+            IF (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) - ws_max_sl(ic,is) > EPSILON(1._wp)) THEN
+              WRITE (message_text,*) 'Soil content content above maximum: ', NEW_LINE('a'), &
+                & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E ', &
+                & '(ic: ',ic,' layer: ',is, ')',      NEW_LINE('a'), &
+                & 'Soil moisture content:  ', wtr_soil_sl(ic,is) + ice_soil_sl(ic,is), NEW_LINE('a'), &
+                & 'Soil moisture capacity: ', ws_max_sl(ic,is), NEW_LINE('a'), &
+                & 'Excess:                 ', ws_max_sl(ic,is) - (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is))
+              CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+            END IF
+            excess = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) - ws_max_sl(ic,is)
+            f_red = 1._wp - excess / (ws_max_sl(ic,is) + excess)
+            wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) * f_red)
+            ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is) * f_red)
+          END IF
           ! Scale soil temperatures accounting for changes in snow fraction between
           ! last and actual time step
           CALL rescale_soil_column_states(snow_fract(ic), snow_fract_old(ic), &
