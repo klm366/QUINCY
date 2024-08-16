@@ -1,0 +1,44 @@
+# History of icon-les/jedi2
+
+- [ ] 2ed880f5b7 2022-09-27 | [feature/jedi2] Fix in run/exec.iconrun (HEAD -> feature/jedi2, origin/feature/jedi2, mpim/m300557-jedibach-paper-2024)
+- [ ] 7911dfea60 2022-09-27 | [feature/jedi2] Modify runscript and ccpumask
+- [ ] 77c5d9ccee 2022-06-30 | [icon-les:feature/jedi2] Update for configuration on levante
+- [ ] 0a101adeda 2022-06-30 | [icon-les:feature/jedi2] Add configuration for levante
+- [ ] 83491ac610 2021-09-25 | [icon-les:feature/jedi2] New JSBACH/Jedi version jsbach:feature/jedi2@2c7d9885
+- [ ] df6c3648d6 2021-08-17 | [icon-les:feature/jedi2] New JSBACH/jedi version
+- [ ] 6f0a8cc20e 2021-06-18 | [icon-les:feature/jedi2] Correction for parallel restart writing in exp.jsbalone_jedi
+- [ ] c0cc435e61 2021-06-17 | [icon-les:icon-les-dev-staging] New JSBACH/jedi version and changes in standalone run scripts
+- [ ] 449544c56c 2021-06-16 | [icon-les:feature/jedi2] New run script exp.jsbalone_jedi
+- [ ] af9d1991fb 2021-05-27 | [icon-les:feature/jedi2] Fix for memory leaks
+- [ ] db25287106 2021-05-25 | [icon-les:feature/jedi2] New feature/jedi jsbach version and changes to atm_amip_les_jedi experiment file
+- [ ] 9c5e43f6d3 2021-05-06 | [icon-les:feature/jedi2] Correction for the case of (re-)starting a new experiment from the restart of another experiment
+- [ ] a1906e5bca 2021-04-24 | [icon-les:feature/jedi2] Implement JEDI as separate process
+- [ ] fb4016f30a 2021-04-22 | [icon-les:feature/jedi2] New JSBACH feature/jedi2 version 358702aa
+- [ ] 4b069aebdf 2021-03-09 | [icon-les:feature/jedi2] New JSBACH feature/jedi2 version 4fff8482
+- [ ] fa731ae7bd 2021-03-01 | [icon-les:feature/jedi2] New JSBACH feature/jedi2 version bdaf72ef
+- [ ] b19422217f 2021-02-22 | [icon-les:feature/jedi2] New JSBACH feature/jedi2 version b77710c6
+- [ ] ae1715d861 2021-02-22 | [icon-les:feature/jedi2] New JSBACH feature/jedi2 version de49dc1c
+- [ ] 10aa652931 2021-01-26 | [icon-les:feature/jedi2] New function get_time_experiment_start and new JSBACH version
+- [ ] 8e42a7ae52 2021-01-26 | [icon-les:feature/jedi2] Minor change in exp.atm_atmip_les_jedi
+- [ ] 4f8aa95a33 2021-01-26 | [icon-les:feature/jedi2] Move call to jsbach_setup_tiles up in mo_atmo_model.f90
+- [ ] c800e3d870 2021-01-25 | [icon-les:feature/jedi2] Minor addition to jedi experiment descriptor file
+- [ ] 106e5e4f8e 2021-01-25 | Merge remote-tracking branch 'origin/icon-les-dev-staging' into feature/jedi2
+- [ ] 22fd74a9d2 2021-01-25 | Merge remote-tracking branch 'origin/icon-les-dev-staging' into feature/jedi2
+- [ ] 3b6de81893 2020-12-18 | [icon-les:feature/jedi2] Disable cdi-pio and num_io_procs>0 for now
+- [ ] 2605e884ee 2020-12-18 | [icon-les:feature/jedi2] Various fixes for standalone JSBACH and new option for tiled output
+- [ ] 089e712a39 2020-09-28 | [icon-les:feature/jedi2] Bug fix in jsbalone_R2B4 experiment descriptor file
+- [ ] 7fe72417f5 2020-08-24 | [icon-les:feature/jedi2] Bug fix in jsbalone_R2B4 experiment descriptor file
+- [ ] 3100b4720d 2020-07-23 | [icon-les:feature/jedi2] Update of run script jsbalone_R2B4
+- [ ] 594e965d05 2020-07-23 | [icon-les:feature/jedi2] Correction in run script and increase of max number of vars
+- [ ] 7b09ca19e5 2020-07-23 | [icon-les:feature/jedi2] Update JSBACH
+- [ ] 25b00de38e 2020-07-23 | [icon-les:feature/jedi2] Set output to monthly and restart to 10 years in jsbalone_R2B4 run script
+- [ ] cb575ec9c7 2020-07-23 | [icon-les:feature/jedi2] Set output to monthly and restart to 10 years in jsbalone_R2B4 run script
+- [ ] ce32318519 2020-07-23 | [icon-les:feature/jedi2] Update JSBACH and disable groups in jsbalone_R2B4 run script (for now)
+- [ ] 952f6e5816 2020-07-23 | [icon-les:feature/jedi2] Update JSBACH
+- [ ] 2e3d09c488 2020-07-22 | [icon-les:feature/jedi2] Added jedi lctlib file
+- [ ] ab6897b32a 2020-07-21 | [icon-les:feature/jedi2] Use cdi-pio in run script and allow to set number of pfts in namelist (for jedi)
+- [ ] 22daa0c9d2 2020-07-20 | [icon-les:feature/jedi2] Update JSBACH
+- [ ] de9c78f228 2020-07-20 | [icon-les:feature/jedi2] Merge remote-tracking branch 'origin/feature/standalone' into feature/jedi2
+- [ ] 7b37c98f4a 2020-07-19 | [icon-les:feature/jedi2] Jedi configuration in run/exp.jsbalone_R2B4
+- [ ] 4bd2f018ea 2020-07-19 | [icon-les:feature/jedi2] Use JSBACH from jsbach.git:feature/jedi2
+- [ ] f85b3b2c9c 2020-07-19 | [icon-les:feature/jedi2] Increase of max_var_ml to 1500 for Jedi
