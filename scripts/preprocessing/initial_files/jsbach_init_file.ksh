@@ -76,7 +76,7 @@ fi
 
 if [[ `hostname` == levante* || `hostname` == *.lvt.dkrz.de ]]; then
   F90=nagfor
-  F90FLAGS="-colour -C=all -g -gline -nan -w=uep"
+  F90FLAGS="-colour -C=all -g -nan -w=uep -openmp"
 
   NETCDFFROOT=/sw/spack-levante/netcdf-fortran-4.5.3-5di6qe
   NETCDFROOT=/sw/spack-levante/netcdf-c-4.8.1-vbnli5
@@ -126,7 +126,7 @@ else
   #SZIP_LIBDIR="-L${SZIPROOT}/lib"
   #SZIP_LIB="-lsz -lz"
 
-  F90FLAGS="-colour -nan -gline -O0 -C=all -w=uep -Wl,-Wl,,-rpath -Wl,-Wl,,${SZIPROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${NETCDFFROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${NETCDFROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${HDF5ROOT}/lib"
+  F90FLAGS="-colour -nan -g -O0 -C=all -w=uep -openmp -Wl,-Wl,,-rpath -Wl,-Wl,,${SZIPROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${NETCDFFROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${NETCDFROOT}/lib -Wl,-Wl,,-rpath -Wl,-Wl,,${HDF5ROOT}/lib"
 fi
 
 #------------------------------------------------------------------------------
