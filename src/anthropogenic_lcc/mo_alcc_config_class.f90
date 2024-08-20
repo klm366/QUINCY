@@ -57,6 +57,7 @@ CONTAINS
     CLASS(t_alcc_config), INTENT(inout) :: config !<Configuration type of process (t_alcc_config)
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                       :: active
+    LOGICAL                       :: single_tile_output
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme

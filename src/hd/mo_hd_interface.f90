@@ -121,12 +121,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: local_wbal_error
 
     REAL(wp), POINTER :: &
-      & area(:), &
-      & tile_fract(:)
+      & area(:)
 
     REAL(wp), DIMENSION(options%nc) :: &
       & inflow,           &
-      & local_budget_old
+      & local_budget_old, &
+      & tile_fract
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -170,7 +170,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     area => grid %area (ics:ice, iblk)
-    tile_fract => tile%fract(ics:ice, iblk)
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
@@ -941,7 +941,8 @@ CONTAINS
       CALL message(routine, message_text)
     END IF
 
-    tile_fract => tile%fract
+    tile_fract => tile%Get_fract_ptr()
+
     ALLOCATE(water_flux(nproma, nblks))
     !$ACC ENTER DATA CREATE(water_flux)
 

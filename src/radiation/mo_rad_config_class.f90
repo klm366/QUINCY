@@ -82,6 +82,7 @@ CONTAINS
     CLASS(t_rad_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: use_alb_veg_simple
     LOGICAL                     :: use_alb_mineralsoil_const
@@ -93,6 +94,7 @@ CONTAINS
 
     NAMELIST /jsb_rad_nml/            &
          active,                      &
+         single_tile_output,          &
          ic_filename,                 &
          bc_filename,                 &
          use_alb_veg_simple,          &
@@ -110,6 +112,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
+    single_tile_output        = .TRUE.
     bc_filename               = 'bc_land_rad.nc'
     ic_filename               = 'ic_land_rad.nc'
     use_alb_veg_simple        = .FALSE.
@@ -130,6 +133,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                    = active
+    config%single_tile_output        = single_tile_output
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%use_alb_veg_simple        = use_alb_veg_simple

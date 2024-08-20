@@ -31,15 +31,17 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, JEDI_, VEG_
 
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(JEDI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(JEDI_)
 
   IMPLICIT NONE
   PRIVATE
@@ -162,6 +164,8 @@ CONTAINS
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
         CALL update_phenology_climatology(tile, options)
+      CASE ('jedi_phenology')
+        CALL update_phenology_jedi_phenology(tile,options)
       CASE DEFAULT
         CALL finish('Invalid scheme for phenology')
       END SELECT
@@ -732,6 +736,64 @@ CONTAINS
 
   END SUBROUTINE update_phenology_climatology
 
+  SUBROUTINE update_phenology_jedi_phenology(tile,options)
+  
+    USE mo_pheno_process, ONLY: calc_jedi_phenology
+    USE mo_jsb_time,      ONLY: t_datetime, is_newday, is_time_experiment_start,get_year_at_experiment_start, get_year
+      ! &                         get_time_experiment_start, deallocateDatetime, get_year
+    
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER                    :: iblk, ics, ice, nc
+    ! REAL(wp)                   :: dtime
+    !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
+    LOGICAL                      :: lspinup_jedi
+    INTEGER                      :: iniyear
+
+    !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(JEDI_)
+    dsl4jsb_Def_config(JEDI_)
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: c_leaves
+    
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_jedi'
+
+    ! Set local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+   ! dtime   = options%dtime
+    
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    ! Set model
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(JEDI_)
+    dsl4jsb_Get_config(JEDI_)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)        ! inout
+    dsl4jsb_Get_var2D_onChunk(JEDI_,  c_leaves)
+
+    iniyear = get_year_at_experiment_start()
+    lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
+
+    CALL calc_jedi_phenology(  dsl4jsb_Lctlib_param(JeDiSLA), &  ! in
+                               &  c_leaves,                   &  ! in
+                               &  lai                  )         ! inout
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_phenology_jedi_phenology
+
   ! ======================================================================================================= !
   !> Implementation of "aggregate" of the "phenology" task
   !>
@@ -1042,7 +1104,7 @@ CONTAINS
     grid  => Get_grid(model%grid_id)
     area         => grid%area(:,:)
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+    notsea       => tile%Get_fract_ptr()   ! fraction of the box tile: notsea
 
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')

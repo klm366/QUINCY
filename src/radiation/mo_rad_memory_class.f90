@@ -95,6 +95,7 @@ MODULE mo_rad_memory_class
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
       & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area
+      & faPAR_prev_noon,      & ! fraction of PAR absorbed by the canopy and per leaf area at previous local noon
       ! & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
       ! & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
       & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
@@ -401,6 +402,14 @@ CONTAINS
         & prefix, suffix,                                                    &
         & output_level=BASIC,                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var( 'fapar_prev_noon', mem%faPAR_prev_noon,              &
+        & hgrid, surface,                                                    &
+        & t_cf('Fraction of PAR absorbed by the canopy at previous noon', '', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & lrestart=.TRUE., initval_r=-1.0_wp )
 
       ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,          &
       !   & hgrid, surface,                                                    &

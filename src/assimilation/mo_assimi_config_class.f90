@@ -53,6 +53,7 @@ CONTAINS
     CLASS(t_assimi_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     LOGICAL                     :: init_running_means
@@ -62,6 +63,7 @@ CONTAINS
 
     NAMELIST /jsb_assimi_nml/  &
       & active,                &
+      & single_tile_output,    &
       & ic_filename,           &
       & bc_filename,           &
       & init_running_means
@@ -76,6 +78,7 @@ CONTAINS
     ! Set defaults
     ! Set namelist defaults
     active              = .TRUE.
+    single_tile_output  = .TRUE.
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
     init_running_means  = .FALSE.
@@ -90,6 +93,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means

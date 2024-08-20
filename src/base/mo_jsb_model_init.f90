@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
+    &                   FUEL_, JEDI_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
     &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   dsl4jsb_Use_config(PHENO_)
@@ -35,8 +35,8 @@ MODULE mo_jsb_model_init
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
-  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
-  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
+  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial, my_process_is_stdio
+  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start, get_time_dt
 
   IMPLICIT NONE
   PRIVATE
@@ -223,8 +223,11 @@ CONTAINS
     INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
+    LOGICAL, ALLOCATABLE                :: single_tile_output(:)
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
+
+    CHARACTER(len=21)  :: fm
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
@@ -357,7 +360,12 @@ CONTAINS
       ELSE
         CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
       END IF
-      CALL model%Queue_task(HYDRO_, "water_stress")
+      !24.07.2020 PHS: compute water stress on pft level but soil hydro on veg level
+      IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN        
+        CALL model%Queue_task(JEDI_, "water_stress")
+      ELSE
+        CALL model%Queue_task(HYDRO_, "water_stress")
+      END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
         CALL model%Queue_task(ASSIMI_, "assimilation")
@@ -367,6 +375,9 @@ CONTAINS
       ! CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+      END IF
+      IF (model%processes(JEDI_)%p%config%active) THEN
+        CALL model%Queue_task(JEDI_, "tradeoff")
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
@@ -474,6 +485,15 @@ CONTAINS
     !>
     !> 2. Iterate over tiles and call process initialization if necessary
     !>
+    ALLOCATE(single_tile_output(SIZE(model%processes)))
+    single_tile_output(:) = .TRUE.
+    DO i=1,SIZE(model%processes)
+      IF (ASSOCIATED(model%processes(i)%p)) THEN
+        IF (ASSOCIATED(model%processes(i)%p%config)) &
+          &  single_tile_output(i) = model%processes(i)%p%config%single_tile_output
+      END IF
+    END DO
+
     l_fixed_fractions = .NOT. model%Do_fractions_change()
     IF (l_fixed_fractions) THEN
       CALL message(routine, 'Tile fractions are fixed over time')
@@ -500,6 +520,7 @@ CONTAINS
       ! Initialize tile process memories and read tile fractions
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
+        & single_tile_output=single_tile_output(:), no_of_leaves=model%process_no_of_leaves(1:), &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
 #ifndef __NO_QUINCY__
@@ -515,7 +536,8 @@ CONTAINS
       CALL tile%Init_fractions(                                           &
         & TRIM(model%shortname), '', TRIM(tile%name),                     &
         & l_fixed_fractions=l_fixed_fractions,                            &
-        & l_rel_fractions=model%config%relative_fractions_in_file)
+        & l_rel_fractions=model%config%relative_fractions_in_file,        &
+        & no_of_leaves=model%process_no_of_leaves(0))
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -852,6 +874,60 @@ CONTAINS
 ! #ifdef _OPENACC
 !     IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
 ! #endif
+
+    ! Initialize some Jedi lctlib parameters which need time information (therefore not in mo_lctlib_class.f90)
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+
+      model%lctlib(:)%jedi_F_pseudo_soilM = EXP(- get_time_dt(model%id) / (model%lctlib(:)%GrowRspdMoist  * 86400._wp))
+      model%lctlib(:)%jedi_N_pseudo_soilM = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_soilM )
+      model%lctlib(:)%jedi_F_pseudo_T = EXP(- get_time_dt(model%id) / (model%lctlib(:)%GrowRspdTemp* 86400._wp ))
+      model%lctlib(:)%jedi_N_pseudo_T = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_T )
+      model%lctlib(:)%jedi_F_pseudo_npp = EXP(- get_time_dt(model_id) / (model%lctlib(:)%SenesRspdNPP * 86400._wp))
+      model%lctlib(:)%jedi_N_pseudo_npp = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_npp )
+
+      IF (my_process_is_stdio()) THEN
+
+        OPEN(35,file='Jedi_parameter.txt')
+
+        fm="(A  ,     (1x,I1))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+        WRITE(35,fm) 'LandcoverClass ',model%lctlib(:)%LandcoverClass  !PHS: write out for jedi
+
+        fm="(A  ,     (1x,I1))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+        WRITE(35,fm) 'C4flag ', MERGE(1, 0, model%lctlib(:)%c4flag)  !PHS: write out for jedi            
+
+        fm="(A  ,     (1x,F12.6))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+
+        WRITE(35,fm) 'GrowRspdMoist ',model%lctlib(:)%GrowRspdMoist
+        WRITE(35,fm) 'CritiGrowTemp ',model%lctlib(:)%CritiGrowTemp   
+        WRITE(35,fm) 'EndGrowTemp ',model%lctlib(:)%EndGrowTemp
+        WRITE(35,fm) 'GermFrac ',model%lctlib(:)%GermFrac
+        WRITE(35,fm) 'RelAllo2AbStru',model%lctlib(:)%RelAllo2Abgrd
+        WRITE(35,fm) 'RelAllo2BlStru',model%lctlib(:)%RelAllo2Blgrd
+        WRITE(35,fm) 'TurnoverStruc ',model%lctlib(:)%TurnoverStruc
+        WRITE(35,fm) 'TurnoverLeaf ',model%lctlib(:)%TurnoverLeaf  
+        WRITE(35,fm) 'SenesRspdNPP ',model%lctlib(:)%SenesRspdNPP  
+        WRITE(35,fm) 'Nitro2Vcmax ',model%lctlib(:)%Nitro2Vcmax
+        WRITE(35,fm) 'NitroStatus ',model%lctlib(:)%NitroStatus
+        WRITE(35,fm) 'Allo2Reproduc ',model%lctlib(:)%Allo2Reproduc 
+        WRITE(35,fm) 'Allo2Abground ',model%lctlib(:)%Allo2Abground 
+        WRITE(35,fm) 'Allo2Blground ',model%lctlib(:)%Allo2Blground 
+        WRITE(35,fm) 'Allo2Storage  ',model%lctlib(:)%Allo2Storage  
+        
+        WRITE(35,fm) 'JeDiCarboxRate ', model%lctlib(:)%JeDiCarboxRate * 1.e6_wp
+        WRITE(35,fm) 'JeDiETransport',model%lctlib(:)%JeDiETransport * 1.e6_wp
+        WRITE(35,fm) 'JeDiSLA ', model%lctlib(:)%JeDiSLA  
+        WRITE(35,fm) 'AlbCanopyVIS', model%lctlib(:)%AlbedoCanopyVIS
+        WRITE(35,fm) 'AlbCanopyNIR', model%lctlib(:)%AlbedoCanopyNIR
+        WRITE(35,fm) 'GrowRspdTemp ',model%lctlib(:)%GrowRspdTemp     
+
+        CLOSE(35)
+        
+      END IF
+
+    END IF
 
   END SUBROUTINE jsbach_init
 

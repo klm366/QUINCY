@@ -36,6 +36,7 @@ MODULE mo_jsb_time
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
+  PUBLIC :: get_lon_local_noon
 
   TYPE(t_datetime), POINTER, SAVE :: start_date
   TYPE(t_datetime), POINTER, SAVE :: final_date
@@ -295,6 +296,20 @@ CONTAINS
     END IF
 
   END FUNCTION timesteps_per_day
+
+  FUNCTION get_lon_local_noon(this_datetime) RESULT(lon_local_noon)
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
+    REAL(wp) :: lon_local_noon  ! Longitude at which local time is 12:00 [deg between 0 and 360]
+
+    REAL(wp) :: year_day, day_fract_gmt
+
+    year_day = get_year_day(this_datetime)
+    day_fract_gmt = year_day - REAL(INT(year_day), wp)
+    lon_local_noon = 360._wp * (0.5_wp - day_fract_gmt)
+    lon_local_noon = MOD(lon_local_noon + 360._wp, 360._wp)
+
+  END FUNCTION get_lon_local_noon
 
 #endif
 END MODULE mo_jsb_time

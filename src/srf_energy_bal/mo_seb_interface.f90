@@ -659,7 +659,7 @@ CONTAINS
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
 
-      tile_fract => tile%fract(:,:)
+      tile_fract => tile%Get_fract_ptr()
       IF (ANY(t(:,:) < 50._wp .OR. t(:,:) > 400._wp)) THEN
         DO iblk = 1, grid%nblks
           DO ic = 1, grid%nproma
@@ -732,7 +732,7 @@ CONTAINS
     grid  => Get_grid(model%grid_id)
     area         => grid%area(:,:)
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+    notsea       => tile%Get_fract_ptr()   ! fraction of the box tile: notsea
 
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')

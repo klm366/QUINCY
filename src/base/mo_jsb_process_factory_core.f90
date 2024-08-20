@@ -29,6 +29,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
+  USE mo_jedi_memory_class,    ONLY: t_jedi_memory
   USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
   USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
@@ -69,6 +70,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
   USE mo_fuel_config_class,     ONLY: t_fuel_config
+  USE mo_jedi_interface,        ONLY: Register_jedi_tasks
+  USE mo_jedi_config_class,     ONLY: t_jedi_config
   USE mo_pplcc_interface,       ONLY: Register_pplcc_tasks
   USE mo_pplcc_config_class,    ONLY: t_pplcc_config
   USE mo_fage_interface,        ONLY: Register_fage_tasks
@@ -98,7 +101,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    & JEDI_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
     & Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   IMPLICIT NONE
@@ -107,7 +110,7 @@ MODULE mo_jsb_process_factory_core
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 44
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'
 
@@ -167,6 +170,10 @@ CONTAINS
     CASE (FUEL_)
       CALL Register_fuel_tasks(return_ptr, model_id)
       ALLOCATE(t_fuel_config::return_ptr%config)
+    CASE (JEDI_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_jedi_tasks(return_ptr, model_id)
+      ALLOCATE(t_jedi_config::return_ptr%config)
     CASE (PPLCC_)
       CALL Register_pplcc_tasks(return_ptr, model_id)
       ALLOCATE(t_pplcc_config::return_ptr%config)
@@ -238,6 +245,7 @@ CONTAINS
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
+    USE mo_jedi_memory_class,    ONLY: max_no_of_jedi_vars => max_no_of_vars
     USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
     USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
@@ -298,6 +306,9 @@ CONTAINS
     CASE (FUEL_)
       ALLOCATE(t_fuel_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
+    CASE (JEDI_)
+      ALLOCATE(t_jedi_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_carbon_vars
     CASE (PPLCC_)
       ALLOCATE(t_pplcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_pplcc_vars

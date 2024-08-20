@@ -49,11 +49,13 @@ CONTAINS
     CLASS(t_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     LOGICAL                     :: l_forestRegrowth
     CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
+      & single_tile_output,   &
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
@@ -65,6 +67,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active              = .TRUE.
+    single_tile_output  = .TRUE.
     l_forestRegrowth    = .FALSE.
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
@@ -78,6 +81,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
+    config%single_tile_output         = single_tile_output
     config%l_forestRegrowth           = l_forestRegrowth
     config%scheme                     = TRIM(scheme)
     config%ic_filename                = ic_filename

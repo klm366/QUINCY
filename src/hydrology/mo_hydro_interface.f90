@@ -38,12 +38,13 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, JEDI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(JEDI_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -52,6 +53,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(JEDI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -1209,13 +1211,18 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
+    USE mo_jsb_time,      ONLY: t_datetime,get_year_at_experiment_start, get_year
+    USE mo_jedi_process,  ONLY: jedi_soil_depth_to_layers_1d
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(JEDI_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(JEDI_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
@@ -1223,10 +1230,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
 
+    dsl4jsb_Real2D_onChunk :: root_depth
+    dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real2D_onChunk :: jedi_root_depth
+
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
@@ -1238,6 +1250,9 @@ CONTAINS
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     LOGICAL :: l_fract(options%nc)
+
+    INTEGER                      :: iniyear
+    LOGICAL                      :: lspinup_jedi
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1266,6 +1281,8 @@ CONTAINS
     lat => grid%lat(ics:ice, iblk)
     lon => grid%lon(ics:ice, iblk)
 
+    soil_w => Get_vgrid('soil_depth_water')
+
     dsl4jsb_Get_config(HYDRO_)
 
     ltpe_open = .FALSE.
@@ -1278,6 +1295,27 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
+
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+
+      dsl4jsb_Get_memory(JEDI_)
+      dsl4jsb_Get_config(JEDI_)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,root_depth)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,root_depth_sl)
+      dsl4jsb_Get_var2D_onChunk(JEDI_,jedi_root_depth)
+
+      iniyear = get_year_at_experiment_start()
+      lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
+
+      !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+      ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
+      IF ((get_year(options%current_datetime) <= iniyear + 30 ) .AND. lspinup_jedi ) THEN    !  PHS: initial ROOT DEPTH
+
+      ELSE
+          root_depth     = jedi_root_depth
+          root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
+      END IF
+  END IF
 
     !$ACC DATA CREATE(l_fract, tile_fract)
 
@@ -1523,6 +1561,7 @@ CONTAINS
     ! Used variables
     USE mo_hydro_process,      ONLY: get_water_stress_factor
     USE mo_hydro_util,         ONLY: get_amount_in_rootzone
+    USE mo_jedi_constants,     ONLY: max_pipe_transpir
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1532,6 +1571,7 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_memory(JEDI_)
 
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -1551,6 +1591,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
+
+    dsl4jsb_Real2D_onChunk :: evapopot
+    dsl4jsb_Real2D_onChunk :: jedi_pot_supply_transp  !PHS
+    dsl4jsb_Real2D_onChunk :: alpha_jedi   !PHS	
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
@@ -1593,6 +1637,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
+
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_memory(JEDI_)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)
+      dsl4jsb_Get_var2D_onChunk(JEDI_,  jedi_pot_supply_transp)	
+      dsl4jsb_Get_var2D_onChunk(JEDI_,  alpha_jedi)
+    END IF
 
     ! Get water stress
 
@@ -1688,13 +1739,24 @@ CONTAINS
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      water_stress(ic) = &
-        & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      WHERE (evapopot(:) >= 0._wp)  
+        water_stress(:) = 0._wp
+      ELSEWHERE ( evapopot(:) < 0._wp )   
+        !water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
+        water_stress(:) = MIN(1._wp , ABS(evapopot(:)) / max_pipe_transpir  * &
+        &                (1._wp - exp( - jedi_pot_supply_transp(:) / ABS(evapopot(:)) ) ))
+       !water_stress(:) =  alpha_jedi(:)  
+      END WHERE
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        water_stress(ic) = &
+          & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
+              &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1756,6 +1818,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+
+    !PHS: at some point Pinhsin add this line of aggregation for root depth but the original code has no root_depth aggregation..  
+    !dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,          weighted_by_fract)
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2565,11 +2631,12 @@ CONTAINS
       & ice_soil_sl
 
     REAL(wp), POINTER :: &
-      & tile_fract(:), area(:), lat(:), lon(:)
+      & tile_fract_ptr(:,:), area(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
     REAL(wp) :: &
+      & tile_fract,   &
       & tile_area,    &
       & wb_threshold, &
       & weq_land_new
@@ -2596,7 +2663,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-    tile_fract => tile%fract(ics:ice, iblk)
+    tile_fract_ptr => tile%Get_fract_ptr()
     area       => grid%area (ics:ice, iblk)
     lat        => grid%lat(ics:ice, iblk)
     lon        => grid%lon(ics:ice, iblk)
@@ -2626,9 +2693,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_count) ! inout
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(tile_area, weq_land_new)
+    !$ACC   PRIVATE(tile_area, tile_fract, weq_land_new)
     DO ic=1,nc
-      tile_area  = tile_fract(ic) * area(ic)
+      tile_fract = tile_fract_ptr(ics+ic-1,iblk)
+      tile_area  = tile_fract * area(ic)
 
       weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
@@ -2654,7 +2722,7 @@ CONTAINS
         weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
         WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
           & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
-          & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
+          & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract,'):',                 NEW_LINE('a'), &
           & 'WB Error:           ', weq_balance_err(ic),                               NEW_LINE('a'), &
           & 'Rainfall:           ', rain(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
           & 'Snowfall:           ', snow(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
@@ -2812,7 +2880,7 @@ CONTAINS
     grid  => Get_grid(model%grid_id)
     area         => grid%area(:,:)
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+    notsea       => tile%Get_fract_ptr()   ! fraction of the box tile: notsea
 
     dsl4jsb_Get_config(HYDRO_)
 

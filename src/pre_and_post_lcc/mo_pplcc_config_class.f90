@@ -48,11 +48,13 @@ CONTAINS
     CLASS(t_pplcc_config), INTENT(inout) :: config !<Configuration type of process (t_pplcc_config)
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_pplcc_nml/      &
          active,                      &
+         single_tile_output,          &
          ic_filename,                 &
          bc_filename
 
@@ -64,6 +66,7 @@ CONTAINS
 
     ! Set defaults
     active              = .FALSE.
+    single_tile_output  = .TRUE.
     bc_filename         = 'bc_land_pplcc.nc'
     ic_filename         = 'ic_land_pplcc.nc'
 
@@ -75,6 +78,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
 

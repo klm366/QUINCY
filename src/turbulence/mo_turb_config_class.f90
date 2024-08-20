@@ -59,6 +59,7 @@ CONTAINS
     CLASS(t_turb_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
@@ -67,6 +68,7 @@ CONTAINS
 
     NAMELIST /jsb_turb_nml/           &
       &   active,                     &
+      &   single_tile_output,         &
       &   ic_filename,                &
       &   bc_filename,                &
       &   blending_height,            &
@@ -86,6 +88,7 @@ CONTAINS
 
     ! Set defaults
     active                     = .TRUE.
+    single_tile_output         = .TRUE.
     bc_filename                = 'bc_land_phys.nc'
     ic_filename                = 'ic_land_phys.nc'
     blending_height            = 100._wp
@@ -105,6 +108,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active                     = active
+    config%single_tile_output         = single_tile_output
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     config%blending_height            = blending_height

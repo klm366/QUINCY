@@ -30,9 +30,12 @@ MODULE mo_rad_interface
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_time,            ONLY: get_lon_local_noon
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB_, PHENO_, A2L_, RAD_, HYDRO_, ASSIMI_, CARBON_
@@ -415,6 +418,8 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
                                                         !    and thus has to have the same dimensions as the other out arguments.
+    REAL(wp), POINTER :: lon(:)
+    REAL(wp) :: lon_local_noon, lon_diff
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(RAD_)
@@ -424,6 +429,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
     INTEGER :: ncanopy               ! number of canopy layers
     !INTEGER, POINTER       :: acc_counter           ! counter for each delta_time step since the last variable output
     LOGICAL :: use_alb_veg_simple    !
@@ -443,6 +449,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
     ! dsl4jsb_Real2D_onChunk :: apar_nacc
     dsl4jsb_Real2D_onChunk :: faPAR
+    dsl4jsb_Real2D_onChunk :: faPAR_prev_noon
 
     dsl4jsb_Real3D_onChunk :: faPAR_cl              ! Fraction of absorbed PAR per leaf area for each canopy layer
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Absorbed PAR of canopy layer
@@ -464,6 +471,9 @@ CONTAINS
 
     ! Get pointers to process configs and memory
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+    lon => grid%lon(ics:ice,iblk)
+
     dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
@@ -501,6 +511,7 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(RAD_,   apar_nacc)             ! inout
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   faPAR)                 ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_,   faPAR_prev_noon)       ! out
 
     ! ---------------------------
     ! Go
@@ -591,6 +602,22 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    ! Save faPAR at local noon
+    lon_local_noon = get_lon_local_noon(options%current_datetime) ! Longitude at which local time is 12:00
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic=1,nc
+      lon_diff = lon(ic) - lon_local_noon
+      IF (lon_diff > 180._wp) THEN
+        lon_diff = lon_diff - 360._wp
+      ELSE IF (lon_diff <= -180._wp) THEN
+        lon_diff = lon_diff + 360._wp
+      END IF
+      IF (     faPAR_prev_noon(ic) < 0._wp &                         ! At beginning of experiment faPAR_prev_noon is -1._wp
+        & .OR.  (lon_diff > -7.5_wp .AND. lon_diff <= 7.5_wp)) THEN  ! Remember faPAR at local noon (7.5 = 15/2; 15 deg is one "time zone")
+        faPAR_prev_noon(ic) = faPAR(ic)
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
 !        ! par and fraction of absorbed PAR

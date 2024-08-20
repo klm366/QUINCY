@@ -47,6 +47,16 @@ MODULE mo_jsb_var_class
       , CONTIGUOUS &
 #endif
       :: ptr3d(:,:,:) => NULL()
+      REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr2d_t(:,:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr3d_t(:,:,:,:) => NULL()
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
@@ -60,6 +70,7 @@ MODULE mo_jsb_var_class
     INTEGER, ALLOCATABLE          :: owner_tile_path(:)        !
     INTEGER, ALLOCATABLE          :: child_idx(:)
       !< Position-numbers of the same var (as this var) on the children of the current tile (i.e. within mem%vars(:) of that child).
+    INTEGER                       :: pos_in_leaves = 0
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist
@@ -107,11 +118,12 @@ MODULE mo_jsb_var_class
   !================================================================================================================================
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), POINTER &
-#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
-     , CONTIGUOUS &
-#endif
+!#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+!     , CONTIGUOUS &
+!#endif
       :: ptr(:,:) => NULL(), &    ! associated with ptr2d(:,:)
-      &  ptrm1(:) => NULL()       ! points to ptr(ics:ice,iblk) updated each timestep with Associate_pointers
+      &  ptrm1(:) => NULL(), &    ! points to ptr(ics:ice,iblk) updated each timestep with Associate_pointers
+      &  ptr_t(:,:,:) => NULL()   ! associated with ptr2d_t(:,:,:)
   CONTAINS
     PROCEDURE               :: Associate_pointers => t_jsb_var_real2d_associate_pointers
     !! operator overload
@@ -175,6 +187,7 @@ MODULE mo_jsb_var_class
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
     REAL(wp), POINTER :: ptr(:,:,:) => NULL()     ! associated with ptr3d(:,:,:)
     REAL(wp), POINTER :: ptrm1(:,:) => NULL()     ! points to ptr(ics:ice,:,iblk) updated each timestep with Associate_pointers
+    REAL(wp), POINTER :: ptr_t(:,:,:,:) => NULL() ! associated with ptr3d_t(:,:,:)
   CONTAINS
     PROCEDURE :: Associate_pointers => t_jsb_var_real3d_associate_pointers
     !! operator overload
@@ -294,7 +307,7 @@ CONTAINS
 
     IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
     IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%ptr2d(ic_start:ic_end, iblk_start)
+      this%ptrm1 => this%ptr(ic_start:ic_end, iblk_start)
     END IF
 
   END SUBROUTINE t_jsb_var_real2d_associate_pointers
@@ -311,7 +324,7 @@ CONTAINS
 
     IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
     IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%ptr3d(ic_start:ic_end, :, iblk_start)
+      this%ptrm1 => this%ptr(ic_start:ic_end, :, iblk_start)
     END IF
 
   END SUBROUTINE t_jsb_var_real3d_associate_pointers

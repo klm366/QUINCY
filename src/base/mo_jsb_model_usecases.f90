@@ -25,7 +25,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
+    &                               FUEL_, JEDI_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
     &                               Q_PHENO_, Q_ASSIMI_, Q_RAD_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -79,6 +79,9 @@ CONTAINS
     ! QUINCY 11 PFTs
     CASE ('quincy_11_pfts')
       CALL init_usecase_quincy_11_pfts(model)
+
+    CASE ('jsbach_jedi')
+      CALL init_usecase_jedi(model)
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -673,6 +676,109 @@ CONTAINS
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
   END SUBROUTINE init_usecase_quincy_11_pfts
+
+  SUBROUTINE init_usecase_jedi(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+
+    INTEGER :: i
+
+    INTEGER :: npft
+
+    CHARACTER(len=7),  ALLOCATABLE :: pft_shortnames(:)
+    CHARACTER(len=26), ALLOCATABLE :: pft_longnames(:)
+
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+    INTEGER, ALLOCATABLE :: pft_ids(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
+
+    npft = model%config%npft
+    ALLOCATE(pft_ids(npft))
+    ALLOCATE(pft_shortnames(npft))
+    ALLOCATE(pft_longnames(npft))
+    DO i=1,npft
+      pft_ids(i) = i
+      WRITE(pft_shortnames(i), '(A3,I4.4)') 'pft', i
+      WRITE(pft_longnames(i), '(A22,I4.4)') 'Plant Growth Strategy ', i
+    END DO
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')
+    model%top => box_tile
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & fract_varname='equal')   ! Fraction = 1.
+      END IF
+
+        IF (model%config%use_glacier) THEN
+          glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & processes = (/HYDRO_, SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-    
+    ! March 22 2019
+    !PHS: THERE IS A BUG IN THE WATER LIMITED ASSIMILATION PROCESSES WHEN TAKING THE WATER STRESS FROM THR HYDRO PROCESS
+!   !PHS:    SO RAINER CHANGE THE COMPUTAION OF THE HYDRO PROCESS FROM TILE LEVEL (ON_TILE_) TO PFT (ON_LEAFS_)
+!           veg_tile => t_jsb_tile('veg', 'Veg tile', &
+!            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
+!            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+!            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+!            & fract_varname='fract_veg')
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+          veg_tile => t_jsb_tile('veg', 'Veg tile', &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & fract_varname='fract_veg')
+
+          IF (model%processes(JEDI_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(JEDI_, ON_LEAFS_, AGGREGATE_)
+          END IF
+       !   IF (model%processes(VC_)%p%config%active) THEN
+       !     CALL veg_tile%Set_process_action(VC_, ON_LEAFS_, AGGREGATE_)
+       !   END IF
+
+            DO i=1,npft
+              pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile,fract_varname='equal') 
+            END DO
+
+    NULLIFY(box_tile)
+    NULLIFY(lake_tile)
+    NULLIFY(land_tile)
+    NULLIFY(glacier_tile)
+    NULLIFY(veg_tile)
+    NULLIFY(pft_tile)
+
+    DEALLOCATE(pft_ids, pft_shortnames, pft_longnames)
+
+  END SUBROUTINE init_usecase_jedi
 
 #endif
 END MODULE mo_jsb_model_usecases

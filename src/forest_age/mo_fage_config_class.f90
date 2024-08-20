@@ -63,6 +63,7 @@ CONTAINS
     CLASS(t_fage_config), INTENT(inout) :: config !< Configuration type of process (t_fage_config)
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                       :: active
+    LOGICAL                       :: single_tile_output
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
 
     INTEGER            :: nacs, max_age
@@ -73,6 +74,7 @@ CONTAINS
 
     NAMELIST /jsb_fage_nml/         &
       & active,                     &
+      & single_tile_output,         &
       & ic_filename,                &
       & bc_filename,                &
       & max_age,                    &
@@ -95,6 +97,7 @@ CONTAINS
 
     ! Set defaults
     active            = .FALSE.
+    single_tile_output = .TRUE.
     bc_filename       = 'bc_land_fage.nc'  !JN-TODO do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !JN-TODO
     max_age           = 150
@@ -111,6 +114,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%max_age             = max_age

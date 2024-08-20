@@ -54,7 +54,16 @@ MODULE mo_jsb_tile_class
   PRIVATE
 
   PUBLIC :: t_jsb_tile_abstract
+  PUBLIC :: t_fract_memory
   PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, t_jsb_aggregator_weighted_by_fract
+
+  TYPE, EXTENDS(t_jsb_memory) :: t_fract_memory
+    TYPE(t_jsb_var_real2d) ::       &
+      & fract,         &  !< Fraction of this tile (relative to grid box)
+      & fract_old         !< Old fract
+  CONTAINS
+    PROCEDURE :: Init => Init_fract_memory
+  END TYPE t_fract_memory
 
   ! Declarations for aggregators
 
@@ -99,8 +108,7 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.       !< whether any lct of tile is one that has soil
     !
     INTEGER,                  ALLOCATABLE :: process_action(:)        !< List of `action` for all processes
-    REAL(wp),                     POINTER :: fract     (:,:)          !< Fraction of this tile (relative to grid box)
-    REAL(wp),                     POINTER :: fract_old (:,:)          !< Old fractions of this tile (relative to grid box)
+    INTEGER,                  ALLOCATABLE :: process_pos_in_leaves(:)
     CHARACTER(LEN=filename_max)           :: fract_filename           !< Name of file to read tile fractions from. The variable
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
@@ -142,8 +150,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE :: Get_fraction_1d
     PROCEDURE :: Get_fraction_2d
     GENERIC   :: Get_fraction => Get_fraction_1d, Get_fraction_2d
-    PROCEDURE :: Set_fract_ptr
-    PROCEDURE :: Set_fract_old_ptr
+    PROCEDURE :: Get_fract_ptr
+    ! PROCEDURE :: Set_fract_ptr
+    ! PROCEDURE :: Set_fract_old_ptr
     PROCEDURE :: Get_first_child_tile
     PROCEDURE :: Get_next_sibling_tile
     PROCEDURE :: Get_prev_sibling_tile
@@ -172,18 +181,21 @@ MODULE mo_jsb_tile_class
   ! The subroutines themselves are located in the jsb_tile module.
   ABSTRACT INTERFACE
     !> Interface for deferred subroutine `Init`
-    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, single_tile_output, no_of_leaves, &
+      &                       in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
       CHARACTER(len=*),           INTENT(in)    :: prefix
       CHARACTER(len=*),           INTENT(in)    :: suffix
       INTEGER,                    INTENT(in)    :: grid_id
+      LOGICAL,                    INTENT(in)    :: single_tile_output(:)
+      INTEGER,                    INTENT(in)    :: no_of_leaves(:)
       LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
 
     !> Interface for deferred subroutine `Init_fractions`
-    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, no_of_leaves)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
@@ -191,6 +203,7 @@ MODULE mo_jsb_tile_class
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: l_rel_fractions
+      INTEGER,                    INTENT(in)    :: no_of_leaves
     END SUBROUTINE Init_fractions_interface
 
     !> Interface for varous deferred subroutines
@@ -422,6 +435,56 @@ CONTAINS
 
   END SUBROUTINE Add_lct_to_parents
 
+  SUBROUTINE Init_fract_memory(mem, prefix, suffix, lct_ids, model_id)
+
+    USE mo_jsb_varlist,       ONLY: BASIC
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+
+    CLASS(t_fract_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),    INTENT(in)    :: prefix
+    CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
+
+    TYPE(t_jsb_grid),  POINTER :: hgrid             ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface           ! Vertical grids
+    INTEGER :: table, isteptype
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fract_memory'
+
+    IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
+
+    table = tables(1)
+
+    IF (mem%l_fixed_fractions) THEN
+      isteptype = TSTEP_CONSTANT
+    ELSE
+      isteptype = TSTEP_INSTANT
+    END IF
+
+    hgrid   => Get_grid(mem%grid_id)
+    surface => Get_vgrid('surface')
+
+    CALL mem%Add_var('fract', mem%fract,                                 &
+      & hgrid, surface,                                                                                         &
+      & t_cf('tile_fraction', '',                                                                          &
+      &      'fraction of grid box covered by tile '//TRIM(mem%owner_tile_name)),                                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix, lrestart=.NOT. mem%l_fixed_fractions,                                                     &
+      & initval_r=0.0_wp, isteptype=isteptype)
+
+    CALL mem%Add_var('fract_old', mem%fract_old,                                 &
+      & hgrid, surface,                                                                                         &
+      & t_cf('tile_fraction_old', '',                                                                          &
+      &      'old fraction of grid box covered by tile '//TRIM(mem%owner_tile_name)),                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix, lrestart=.FALSE., loutput=.FALSE.,                                     &
+      & initval_r=0.0_wp, isteptype=isteptype)
+
+  END SUBROUTINE Init_fract_memory
+
   SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
@@ -430,30 +493,36 @@ CONTAINS
       & fract(:),        &
       & fract_old(:)
 
+    TYPE(t_fract_memory), POINTER :: fract__mem
     INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_1d'
+
+    SELECT TYPE (mm => this%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract) /= ice-ics+1) &
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
-      this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
+      fract__mem%fract_old%ptr(ics:ice, iblk) = fract__mem%fract%ptr(ics:ice, iblk)
+      fract__mem%fract    %ptr(ics:ice, iblk) = fract(:)
+      !$ACC UPDATE DEVICE(fract__mem%fract%ptr(ics:ice,iblk), fract__mem%fract_old%ptr(ics:ice,iblk)) ASYNC(1)
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
         CLASS IS (t_jsb_tile_abstract)
-          WHERE (this%fract(ics:ice, iblk) /= this%fract_old(ics:ice, iblk))
+          WHERE (fract__mem%fract%ptr(ics:ice, iblk) /= fract__mem%fract_old%ptr(ics:ice, iblk))
             parent%l_fract_children_changed(ics:ice, iblk) = .TRUE.
           END WHERE
           IF (ANY(parent%l_fract_children_changed(ics:ice,iblk))) THEN
             DO ilct=1,SIZE(parent%lcts)
               IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
                 WHERE (parent%l_fract_children_changed(ics:ice,iblk))
-                  parent%lcts(ilct)%fract(ics:ice,iblk) = &
-                    & parent%lcts(ilct)%fract(ics:ice,iblk) - this%fract_old(ics:ice,iblk) + this%fract(ics:ice,iblk)
+                  parent%lcts(ilct)%fract(ics:ice,iblk) =  parent%lcts(ilct)%fract(ics:ice,iblk) - &
+                    & fract__mem%fract_old%ptr(ics:ice,iblk) + fract__mem%fract%ptr(ics:ice,iblk)
                 END WHERE
                 EXIT
               END IF
@@ -467,8 +536,8 @@ CONTAINS
       IF (SIZE(fract_old) /= ice-ics+1) &
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
+      fract__mem%fract_old%ptr(ics:ice, iblk) = fract_old(:)
+      !$ACC UPDATE DEVICE(fract__mem%fract_old%ptr(ics:ice,iblk)) ASYNC(1)
     END IF
 
   END SUBROUTINE Set_fraction_1d
@@ -480,31 +549,38 @@ CONTAINS
       & fract(:,:),        &
       & fract_old(:,:)
 
+    TYPE(t_fract_memory), POINTER :: fract__mem
     INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
+    SELECT TYPE (mm => this%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
+
     IF (PRESENT(fract)) THEN
-      IF (SIZE(fract,1) /= SIZE(this%fract,1) .OR. SIZE(fract,2) /= SIZE(this%fract,2)) &
+      IF (SIZE(fract,1) /= SIZE(fract__mem%fract%ptr,1) .OR. SIZE(fract,2) /= SIZE(fract__mem%fract%ptr,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      IF (ANY(fract(:,:) /= this%fract(:,:))) THEN
+      IF (ANY(fract(:,:) /= fract__mem%fract%ptr(:,:))) THEN
 
-        this%fract_old(:,:) = this%fract(:,:)
-        this%fract    (:,:) = fract(:,:)
-        !$ACC UPDATE DEVICE(this%fract, this%fract_old) ASYNC(1)
-
+        fract__mem%fract_old%ptr(:,:) = fract__mem%fract%ptr(:,:)
+        fract__mem%fract    %ptr(:,:) = fract(:,:)
+        !$ACC UPDATE DEVICE(fract__mem%fract%ptr, fract__mem%fract_old%ptr) ASYNC(1)
+  
         IF (ASSOCIATED(this%parent)) THEN
           SELECT TYPE (parent=>this%parent)
           CLASS IS (t_jsb_tile_abstract)
-            WHERE (this%fract(:,:) /= this%fract_old(:,:))
+            WHERE (fract__mem%fract%ptr(:,:) /= fract__mem%fract_old%ptr(:,:))
               parent%l_fract_children_changed(:,:) = .TRUE.
             END WHERE
             IF (ANY(parent%l_fract_children_changed(:,:))) THEN
               DO ilct=1,SIZE(parent%lcts)
                 IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
                   WHERE (parent%l_fract_children_changed(:,:))
-                    parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                    parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - &
+                      &                            fract__mem%fract_old%ptr(:,:) + fract__mem%fract%ptr(:,:)
                   END WHERE
                   EXIT
                 END IF
@@ -517,12 +593,13 @@ CONTAINS
     END IF
 
     IF (PRESENT(fract_old)) THEN
-      IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
+      IF (     SIZE(fract_old,1) /= SIZE(fract__mem%fract_old%ptr,1) &
+        & .OR. SIZE(fract_old,2) /= SIZE(fract__mem%fract_old%ptr,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
-        this%fract_old(:,:) = fract_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_old) ASYNC(1)
+      IF (ANY(fract_old(:,:) /= fract__mem%fract_old%ptr(:,:))) THEN
+        fract__mem%fract_old%ptr(:,:) = fract_old(:,:)
+        !$ACC UPDATE DEVICE(fract__mem%fract_old%ptr) ASYNC(1)
       END IF
 
     END IF
@@ -537,16 +614,23 @@ CONTAINS
       & fract(:),        &
       & fract_old(:)
 
+    TYPE(t_fract_memory), POINTER :: fract__mem
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_1d'
+
+    SELECT TYPE (mm => this%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract(:) = this%fract(ics:ice, iblk)
+      fract(:) = fract__mem%fract%ptr(ics:ice, iblk)
     END IF
 
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_old(:) = this%fract_old(ics:ice, iblk)
+      fract_old(:) = fract__mem%fract_old%ptr(ics:ice, iblk)
     END IF
 
   END SUBROUTINE Get_fraction_1d
@@ -558,21 +642,47 @@ CONTAINS
       & fract(:,:),        &
       & fract_old(:,:)
 
+    TYPE(t_fract_memory), POINTER :: fract__mem
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_2d'
 
+    SELECT TYPE (mm => this%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
+
     IF (PRESENT(fract)) THEN
-      IF (SIZE(fract,1) /= SIZE(this%fract,1) .OR. SIZE(fract,2) /= SIZE(this%fract,2)) &
+      IF (SIZE(fract,1) /= SIZE(fract__mem%fract%ptr,1) .OR. SIZE(fract,2) /= SIZE(fract__mem%fract%ptr,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract(:,:) = this%fract(:,:)
+      fract(:,:) = fract__mem%fract%ptr(:,:)
     END IF
 
     IF (PRESENT(fract_old)) THEN
-      IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
+      IF (SIZE(fract_old,1) /= SIZE(fract__mem%fract_old%ptr,1) .OR. SIZE(fract_old,2) /= SIZE(fract__mem%fract_old%ptr,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_old(:,:) = this%fract_old(:,:)
-    END IF
+        fract_old(:,:) = fract__mem%fract_old%ptr(:,:)
+      END IF
 
   END SUBROUTINE Get_fraction_2d
+
+  FUNCTION Get_fract_ptr(this) RESULT(ptr)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+    REAL(wp), POINTER                      :: ptr(:,:)
+
+    TYPE(t_fract_memory), POINTER :: fract__mem
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fract_ptr'
+
+    SELECT TYPE (mm => this%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
+
+    ptr => fract__mem%fract%ptr
+    __acc_attach(ptr)
+
+  END FUNCTION Get_fract_ptr
 
   ! ======================================================================================================= !
   !>
@@ -580,25 +690,25 @@ CONTAINS
   !>
   ! This is an example why the encapsulation within the setter is important: not only the fraction
   ! on the tile needs to be set but also the GPU pointer
-  SUBROUTINE Set_fract_ptr(this, ptr)
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
-    ! -------------------------------------------------------------------------------------------------- !
-    this%fract => ptr
-    __acc_attach(this%fract)
+  ! SUBROUTINE Set_fract_ptr(this, ptr)
+  !   ! -------------------------------------------------------------------------------------------------- !
+  !   CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+  !   REAL(wp), POINTER                         :: ptr(:,:)
+  !   ! -------------------------------------------------------------------------------------------------- !
+  !   this%fract => ptr
+  !   __acc_attach(this%fract)
 
-  END SUBROUTINE Set_fract_ptr
+  ! END SUBROUTINE Set_fract_ptr
 
-  SUBROUTINE Set_fract_old_ptr(this, ptr)
+  ! SUBROUTINE Set_fract_old_ptr(this, ptr)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
+  !   CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+  !   REAL(wp), POINTER                         :: ptr(:,:)
 
-    this%fract_old => ptr
-    __acc_attach(this%fract_old)
+  !   this%fract_old => ptr
+  !   __acc_attach(this%fract_old)
 
-  END SUBROUTINE Set_fract_old_ptr
+  ! END SUBROUTINE Set_fract_old_ptr
 
   ! ======================================================================================================= !
   !>
@@ -1314,7 +1424,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
 
-    INTEGER :: no_children, nproc, i,j,iproc, maxsize
+    INTEGER :: no_children, nproc, i,j,iproc, maxsize, pos
     INTEGER, ALLOCATABLE :: sizes(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Cache_GPU_pointers'
@@ -1322,7 +1432,7 @@ CONTAINS
     no_children = this%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should not happen')
 
-    nproc = SIZE( this%mem )
+    nproc = SIZE( this%mem ) - 1
 
     ALLOCATE(sizes(no_children,nproc))
     sizes(:,:) = 0
@@ -1357,12 +1467,17 @@ CONTAINS
                 IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p) ) THEN
 
                   IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d)) THEN
+
                     IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
                                           this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
                       ! 2d cache pointer to proc iproc, child i, 2d variable j
                       this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
                       __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
                     END IF
+                  ELSE IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d_t)) THEN
+                    pos = this%mem(iproc)%p%children(i)%p%vars(j)%p%pos_in_leaves
+                    this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d_t(:,pos,:)
+                    __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
                   END IF
 
                   IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d)) THEN

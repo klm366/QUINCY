@@ -152,6 +152,8 @@ CONTAINS
      & has_pond_storage,              &
      & tile_fract_zero
 
+    REAL(wp), POINTER :: tile_fract(:,:)
+
     REAL(wp) :: &
       & t_air_in_Celcius,             &
       & w_soil_critical_config,       &
@@ -191,6 +193,8 @@ CONTAINS
     ELSE
       cpd_or_cvd = cpd
     END IF
+
+    tile_fract => tile%Get_fract_ptr()
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
@@ -299,7 +303,7 @@ CONTAINS
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
-    tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
+    tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile_fract(ics:ice,iblk) <= 0._wp
     !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
     !$ACC WAIT(1)
 
@@ -622,7 +626,7 @@ CONTAINS
 #ifndef _OPENACC
     ! Security prints for more meaningfull error message than "lookup table overflow"
     IF (use_tmx) THEN
-      IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp .AND. tile%fract(ics:ice,iblk) > 0._wp)) THEN
+      IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp .AND. tile_fract(ics:ice,iblk) > 0._wp)) THEN
         ic = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
         WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
           & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'

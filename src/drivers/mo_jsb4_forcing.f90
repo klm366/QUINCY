@@ -2122,6 +2122,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
+    REAL(wp), POINTER :: tile_fract(:,:)
     INTEGER :: ib, ic, ics, ice
 
     IF (.NOT. forcing_options(model_id)%forcing_set_ocean_to_constants) RETURN
@@ -2129,12 +2130,14 @@ CONTAINS
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
 
+    tile_fract => tile%Get_fract_ptr()
+
 !$OMP PARALLEL DO PRIVATE(ib, ic, ics, ice)
     DO ib = startblk, endblk
       ics = startidx(ib)
       ice = endidx  (ib)
       DO ic = ics, ice
-        IF (tile%fract(ic,ib) <= 0._wp) array(ic,ib) = constant
+        IF (tile_fract(ic,ib) <= 0._wp) array(ic,ib) = constant
       END DO
     END DO
 !$OMP END PARALLEL DO

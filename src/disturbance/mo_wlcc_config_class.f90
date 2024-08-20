@@ -46,12 +46,14 @@ CONTAINS
     CLASS(t_wlcc_config), INTENT(inout) :: config !<Configuration type of process (t_wlcc_config)
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                       :: active
+    LOGICAL                       :: single_tile_output
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
     ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_wlcc_nml/           &
          active,                      &
+         single_tile_output,          &
          ic_filename,                 &
          bc_filename,                 &
          separate
@@ -65,6 +67,7 @@ CONTAINS
     ! Set defaults
     separate            = .TRUE.
     active              = .FALSE.
+    single_tile_output  = .TRUE.
     bc_filename         = 'bc_land_wlcc.nc'
     ic_filename         = 'ic_land_wlcc.nc'
 
@@ -77,6 +80,7 @@ CONTAINS
 
     config%separate            = separate
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
 

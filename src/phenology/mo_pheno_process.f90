@@ -21,7 +21,8 @@ MODULE mo_pheno_process
 
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool
+             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, &
+             calc_jedi_phenology
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
@@ -994,6 +995,20 @@ MODULE mo_pheno_process
     get_foliage_projected_cover = fpc_max * (1._wp - EXP(-lai/clumpiness))
 
   END FUNCTION get_foliage_projected_cover
+
+  ! A new phenology scheme for JeDi 
+  ELEMENTAL SUBROUTINE calc_jedi_phenology( JeDiSLA,    &  ! in
+                                            c_leaves,        &  ! in
+                                            lai              )  ! inout
+
+    REAL(wp), INTENT(IN)    ::  JeDiSLA       
+    REAL(wp), INTENT(IN)    ::  c_leaves
+                                
+    REAL(wp), INTENT(INOUT) ::   lai
+
+    lai = c_leaves * JeDiSLA
+
+  END SUBROUTINE calc_jedi_phenology
 
 #endif
 END MODULE mo_pheno_process

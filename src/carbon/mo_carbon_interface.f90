@@ -2257,7 +2257,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     grid  => Get_grid(model%grid_id)
     area         => grid%area(:,:)
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+    notsea       => tile%Get_fract_ptr()   ! fraction of the box tile: notsea
 
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')

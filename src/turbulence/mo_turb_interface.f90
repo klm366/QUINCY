@@ -208,7 +208,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp), DIMENSION(options%nc) :: &
-      & pot_temperature_srf, pot_temperature_air, qsat_srf
+      & pot_temperature_srf, pot_temperature_air, qsat_srf, tile_fract
+    REAL(wp), POINTER :: tile_fract_ptr(:,:)
     REAL(wp) :: qsat_lice
     LOGICAL :: use_tmx
 
@@ -230,6 +231,8 @@ CONTAINS
     use_tmx = model%config%use_tmx
 
     IF (.NOT. model%config%use_tmx) CALL finish(routine, 'can only be used with tmx')
+
+    tile_fract_ptr => tile%Get_fract_ptr()
 
     dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
@@ -255,13 +258,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
-    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf)
+    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf, tile_fract)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
       pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
       qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      tile_fract(ic) = tile_fract_ptr(ics+ic-1, iblk)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -291,7 +295,7 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (tile%fract(ics+ic-1,iblk) <= 0._wp) THEN
+      IF (tile_fract(ic) <= 0._wp) THEN
         km(ic) = 0._wp
         kh(ic) = 0._wp
       END IF

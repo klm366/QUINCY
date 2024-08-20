@@ -39,7 +39,7 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_
+  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_, JEDI_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -48,6 +48,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(JEDI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
@@ -458,8 +459,14 @@ CONTAINS
 
     ncanopy     = dsl4jsb_Config(ASSIMI_)%ncanopy
     C4Flag      = dsl4jsb_Lctlib_param(C4Flag)
-    CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
-    ETransport  = dsl4jsb_Lctlib_param(ETransport)
+    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      ! Using jedi's Vc,max value to compute photosynthesis
+      CarboxRate  = dsl4jsb_Lctlib_param(JeDiCarboxRate)
+      ETransport  = dsl4jsb_Lctlib_param(JeDiETransport)
+    ELSE
+      CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
+      ETransport  = dsl4jsb_Lctlib_param(ETransport)
+    END IF
 
     ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
     DO icanopy=1,ncanopy
@@ -565,6 +572,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(JEDI_)
 
     dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
     dsl4jsb_Real2D_onChunk :: canopy_cond_limited
@@ -609,7 +617,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
+    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
+      !24.07.2020 PHS: compute water stress on pft level but soil hydro on veg level
+      dsl4jsb_Get_memory(JEDI_)
+      dsl4jsb_Get_var2D_onChunk(JEDI_,    water_stress)        ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
+    END IF
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited) ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
@@ -721,6 +735,10 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
+    REAL(wp) :: &
+      & CarboxRate, &
+      & ETransport
+    LOGICAL :: C4Flag
 
     ! Declare pointers to variables in memory
 
@@ -771,6 +789,15 @@ CONTAINS
     dsl4jsb_Get_config(ASSIMI_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
+    C4Flag      = dsl4jsb_Lctlib_param(C4Flag)
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      ! Using jedi's Vc,max value to compute photosynthesis
+      CarboxRate  = dsl4jsb_Lctlib_param(JeDiCarboxRate)
+      ETransport  = dsl4jsb_Lctlib_param(JeDiETransport)
+    ELSE
+      CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
+      ETransport  = dsl4jsb_Lctlib_param(ETransport)
+    END IF
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
@@ -804,16 +831,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
+    IF (TRIM(model%config%usecase) /= 'jsbach_jedi' ) THEN        
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
+    END IF
 
     ! ---------------------------
     ! Go
 
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterlimited(    &
-        & dsl4jsb_Lctlib_param(C4Flag),       &
-        & dsl4jsb_Lctlib_param(CarboxRate),   &
-        & dsl4jsb_Lctlib_param(ETransport),   &
+        & C4Flag,                             &
+        & CarboxRate,                         &
+        & ETransport,                         &
         & t_air(:),                           & ! in
         & press_srf(:),                       & ! in
         & par_down_mol(:),                    & ! in
@@ -846,13 +875,15 @@ CONTAINS
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
-    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
-    ! update_phenology_logrop at the beginning of each day.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (TRIM(model%config%usecase) /= 'jsbach_jedi' ) THEN        
+      ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+      ! update_phenology_logrop at the beginning of each day.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

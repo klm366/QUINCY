@@ -54,6 +54,7 @@ CONTAINS
     CLASS(t_hd_config),INTENT(inout) :: config
 
     LOGICAL                       :: active                  !< hd module is active
+    LOGICAL                       :: single_tile_output
     CHARACTER(len=filename_max)   :: ic_filename             !< file with initial conditions
     CHARACTER(len=filename_max)   :: bc_filename             !< file with boundary conditions
     CHARACTER(len=filename_max)   :: fract_filename          !< file with fractions
@@ -66,6 +67,7 @@ CONTAINS
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
+      single_tile_output,          &
       ic_filename, bc_filename,    &
       fract_filename,              &
       debug_hd,                    &
@@ -85,6 +87,7 @@ CONTAINS
 
     ! Set defaults
     active                  = .FALSE.
+    single_tile_output      = .TRUE.
     ic_filename             = 'ic_land_hd.nc'
     bc_filename             = 'bc_land_hd.nc'
     fract_filename          = 'bc_land_frac.nc'
@@ -103,6 +106,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active                    = active
+    config%single_tile_output        = single_tile_output
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%fract_filename            = fract_filename

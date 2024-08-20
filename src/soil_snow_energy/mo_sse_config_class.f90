@@ -81,6 +81,7 @@ CONTAINS
     CLASS(t_sse_config), INTENT(inout) :: config
 
     LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: single_tile_output
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
@@ -89,6 +90,7 @@ CONTAINS
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
+      & single_tile_output,                     &
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
@@ -110,6 +112,7 @@ CONTAINS
 
     ! Set defaults
     active          = .TRUE.
+    single_tile_output = .TRUE.
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
@@ -134,6 +137,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active        = active
+    config%single_tile_output = single_tile_output
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
