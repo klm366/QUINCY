@@ -270,7 +270,7 @@ CONTAINS
     & diameter)                 &
     & RESULT(fpc)
 
-    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, ITREE
+    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, k_sai2lai, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in) :: nc                          !< dimensions
     INTEGER,                  INTENT(in) :: lctlib_growthform           !< lctlib paramter
@@ -297,7 +297,7 @@ CONTAINS
       lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / &
         &             crown_area(:)
       ! foliage projective cover is then the product of density and individual crown area
-      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-k_fpc * lai_ind(:)))
+      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - EXP(-k_fpc * lai_ind(:) * (1._wp + k_sai2lai)))
     ELSEWHERE
       lai_ind(:) = 0.0_wp
       fpc(:)     = 0.0_wp

@@ -97,6 +97,7 @@ MODULE mo_veg_memory_class
                                     diameter          , &            !< plant diameter [m]
                                     dens_ind          , &            !< density of individuals [# m-2]
                                     lai               , &            !< actual leaf area index [m2 m-2]
+                                    sai               , &            !< actual stem area index [m2 m-2]
                                     target_cn_leaf    , &            !< target foliar C:N ratio [mol C mol-1 N]
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
@@ -1024,6 +1025,17 @@ CONTAINS
       CALL mem%Add_var('lai', mem%lai, &
         & hgrid, surface, &
         & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & grib2_desc, &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sai', mem%sai, &
+        & hgrid, surface, &
+        & t_cf('sai', 'm2 m-2', 'actual stem area index'), &
         & t_grib1(table, 255, grib_bits), &
         & grib2_desc, &
         & prefix, suffix, &
