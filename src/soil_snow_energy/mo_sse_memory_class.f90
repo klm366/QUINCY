@@ -66,6 +66,8 @@ MODULE mo_sse_memory_class
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
+      & thaw_depth_withsnow,  & !< Thawing depth for snow-covered tile fraction [m]
+      & thaw_depth_snowfree,  & !< Thawing depth for snow-free tile fraction    [m]
       & snow_fract_old          !< Soil surface snow fraction during last time step [-]
 
   CONTAINS
@@ -314,7 +316,27 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
+      & output_level=BASIC, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_withsnow', mem%thaw_depth_withsnow,        &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_withsnow', 'm',                                     &
+      &      'Thawing depth for snow covered tile fraction'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_snowfree', mem%thaw_depth_snowfree,        &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_snowfree', 'm',                                     &
+      &      'Thawing depth for snow free tile fraction'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'snow_fract_old', mem%snow_fract_old,                    &

@@ -119,9 +119,10 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_abcoeff, &
-      &                                  calc_snow_temperature, calc_snow_abcoeff, &
-      &                                  calc_soilwater_phasechange, calc_soiltemp_old
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_abcoeff,   &
+      &                                  calc_snow_temperature, calc_snow_abcoeff,   &
+      &                                  calc_soilwater_phasechange, calc_thawdepth, &
+      &                                  calc_soiltemp_old
     USE mo_sse_util,               ONLY: reconstruct_soil_column_states, rescale_soil_column_states
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
@@ -171,6 +172,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
+    dsl4jsb_Real2D_onChunk :: thaw_depth_withsnow
+    dsl4jsb_Real2D_onChunk :: thaw_depth_snowfree
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -287,7 +290,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)          ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_withsnow) ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_snowfree) ! out
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
@@ -589,6 +594,8 @@ CONTAINS
         & )
 
       thaw_depth(:) = 0._wp
+      thaw_depth_withsnow(:) = 0._wp
+      thaw_depth_snowfree(:) = 0._wp
 
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
@@ -748,7 +755,6 @@ CONTAINS
           & dsl4jsb_Config(SSE_)%l_supercool         , &
           & dtime                                    , &
           & soil_e%dz(:)                             , &
-          & soil_e%levels(:)                         , &
           & vol_heat_cap_sl                     (:,:), &
           & ws_max_sl                           (:,:), &
           & matric_pot_sl                       (:,:), &
@@ -760,8 +766,7 @@ CONTAINS
           ! out
           & wtr_freeze_withsnow_sl              (:,:), &
           & ice_melt_withsnow_sl                (:,:), &
-          & wtr_scool_withsnow_sl               (:,:), &
-          & thaw_depth                          (:  )  &
+          & wtr_scool_withsnow_sl               (:,:)  &
           & )
 
         ! Compute soil water/ice phase change for snow-free fraction
@@ -773,7 +778,6 @@ CONTAINS
           & dsl4jsb_Config(SSE_)%l_supercool         , &
           & dtime                                    , &
           & soil_e%dz(:)                             , &
-          & soil_e%levels(:)                         , &
           & vol_heat_cap_sl                     (:,:), &
           & ws_max_sl                           (:,:), &
           & matric_pot_sl                       (:,:), &
@@ -785,8 +789,7 @@ CONTAINS
           ! out
           & wtr_freeze_snowfree_sl              (:,:), &
           & ice_melt_snowfree_sl                (:,:), &
-          & wtr_scool_snowfree_sl               (:,:), &
-          & thaw_depth                          (:  )  &
+          & wtr_scool_snowfree_sl               (:,:)  &
           & )
       ELSE
         wtr_freeze_withsnow_sl(:,:) = 0._wp
@@ -834,6 +837,27 @@ CONTAINS
         ! out
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  )  &
+        & )
+
+      CALL calc_thawdepth( &
+        ! in
+        & nc                                       , &
+        & nsoil                                    , &
+        & soil_e%levels(:)                         , &
+        & t_soil_withsnow_sl                  (:,:), &
+        ! out
+        & thaw_depth_withsnow                 (:  )  &
+        & )
+
+      ! Compute soil water/ice phase change for snow-free fraction
+      CALL calc_thawdepth( &
+        ! in
+        & nc                                       , &
+        & nsoil                                    , &
+        & soil_e%levels(:)                         , &
+        & t_soil_snowfree_sl                  (:,:), &
+        ! out
+        & thaw_depth_snowfree                 (:  )  &
         & )
 
       !$ACC WAIT(1)
@@ -915,6 +939,17 @@ CONTAINS
       DEALLOCATE(ice_melt_withsnow_sl,   ice_melt_snowfree_sl)
       DEALLOCATE(wtr_scool_withsnow_sl,  wtr_scool_snowfree_sl)
     END IF
+
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+#else
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+#endif
+    DO ic = 1,nc
+      thaw_depth(ic) = snow_fract(ic) * thaw_depth_withsnow(ic) + (1._wp - snow_fract(ic)) * thaw_depth_snowfree(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -1006,6 +1041,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_withsnow,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_snowfree,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
 
