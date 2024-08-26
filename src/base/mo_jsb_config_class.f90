@@ -37,7 +37,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: enforce_water_budget
+    INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
@@ -108,6 +108,7 @@ CONTAINS
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
     USE mo_util_string,         ONLY: tolower
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
@@ -128,7 +129,7 @@ CONTAINS
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
-    LOGICAL                       :: enforce_water_budget
+    CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     INTEGER                       :: qmodel_id
     LOGICAL                       :: l_compat401
@@ -203,7 +204,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
-    enforce_water_budget       = .FALSE.
+    enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
 #ifndef __NO_QUINCY__
     qmodel_id                  = QLAND
@@ -272,7 +273,6 @@ CONTAINS
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
-    model_config%enforce_water_budget       = enforce_water_budget
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
     model_config%l_compat401                = l_compat401
@@ -301,12 +301,22 @@ CONTAINS
       & // ' no absolute fraction files are available, please check your settings.')
     ENDIF
 
-    IF (enforce_water_budget) THEN
-      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
-        & 'Set enforce_water_budget to .False. to run the model anyway.')
-    ELSE
-      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
-    END IF
+    SELECT CASE (tolower(TRIM(enforce_water_budget)))
+    CASE ("ignore")
+      model_config%enforce_water_budget = WB_IGNORE
+      CALL message(TRIM(routine), 'WARNING: Land surface water balance will not be checked during simulation '// &
+        & '(unless set differently in hydro or hd config).')
+    CASE ("logging")
+      model_config%enforce_water_budget = WB_LOGGING
+      CALL message(TRIM(routine), 'WARNING: Simulation will not stop due to any land water balance violation '// &
+        & '(unless set differently in hydro or hd config) but information will be added to the log file')
+    CASE ("error")
+      model_config%enforce_water_budget = WB_ERROR
+      CALL message(TRIM(routine), 'WARNING: Simulation will stop due to any land water balance violation '// &
+        & '(unless set differently in hydro or hd config).')
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
+    END SELECT
 
 #ifndef __NO_QUINCY__
     ! set the model configuration id

@@ -15,6 +15,7 @@ MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_jsb_impl_constants,ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_util,              ONLY: real2string
   USE mo_util_string,       ONLY: tolower
   USE mo_io_units,          ONLY: filename_max
@@ -47,7 +48,6 @@ MODULE mo_hydro_config_class
       & l_read_initial_moist, & !< Force reading initial soil moisture for layers from `ic_moist_filename`
                                 !  even if `init_from_ifs=.TRUE.`
       & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
-      & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Calculate soil hydrological parameters depending on organic matter fractions
       & l_socmap,             & !< Read organic matter fractions from 3D map
       & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
@@ -61,10 +61,11 @@ MODULE mo_hydro_config_class
                                 !! 'upstream' (default) or 'arithmetic' mean
       & pond_dynamics,        & !< Choice of pond dynamics scheme (i.e. depth-area scaling)
                                 !! 'tanh' (default), 'quadratic'
-      & hydro_scale             !< 'semi_distributed': use the ARNO scheme assuming sub-grid scale variations in infiltration
+      & hydro_scale,          & !< 'semi_distributed': use the ARNO scheme assuming sub-grid scale variations in infiltration
                                 !! and subsurface drainage (default)
                                 !! 'uniform': assume uniform soil moisture distribution
                                 !! (e.g. for applications like HydroTiles, HighRes or sitelevel)
+      & enforce_water_budget    !< Set water balance check level: 'unset', 'ignore', 'logging', 'error'
 
 
   CONTAINS
@@ -93,7 +94,8 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
-    LOGICAL                     :: l_read_initial_moist, sanitize_restart, enforce_water_budget, l_organic, &
+    CHARACTER(len=10)           :: enforce_water_budget
+    LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
       &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
@@ -151,7 +153,7 @@ CONTAINS
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
-    enforce_water_budget   = config%model_config%enforce_water_budget
+    enforce_water_budget   = 'unset'
     l_organic              = .TRUE.
     l_socmap               = .TRUE.
     l_soil_texture         = .FALSE.
@@ -199,11 +201,23 @@ CONTAINS
       CALL message(TRIM(routine), 'Soil hydrology of the restart file is sanitized.')
     END IF
 
-    config%enforce_water_budget   = enforce_water_budget
-    IF (.NOT. enforce_water_budget) THEN
-      CALL message(TRIM(routine), 'WARNING: Model will not stop due to land surface water balance violation.')
-    END IF
-    IF (enforce_water_budget .AND. sanitize_restart) THEN
+    SELECT CASE (tolower(TRIM(enforce_water_budget)))
+    CASE ("unset")
+      config%enforce_water_budget = config%model_config%enforce_water_budget
+    CASE ("ignore")
+      config%enforce_water_budget = WB_IGNORE
+      CALL message(TRIM(routine), 'WARNING: Land surface water balance will not be checked during simulation.')
+    CASE ("logging")
+      config%enforce_water_budget = WB_LOGGING
+      CALL message(TRIM(routine), 'WARNING: Simulation will not stop due to any land surface water balance violation '// &
+        & 'but information will be added to the log file')
+    CASE ("error")
+      config%enforce_water_budget = WB_ERROR
+      CALL message(TRIM(routine), 'WARNING: Simulation will stop due to any land surface water balance violation.')
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
+    END SELECT
+    IF (config%enforce_water_budget == WB_ERROR .AND. sanitize_restart) THEN
       CALL message(TRIM(routine), 'WARNING: Sanitizing restart files causes water balance violations.' &
         &                       //' You should switch off enforce_water_budget in case sanitizing is needed.')
     END IF
