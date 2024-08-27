@@ -112,20 +112,20 @@ scratch_dir_base=/scratch/m/$USER     # levante
 
 # --------------------------------------
 # ICON grids used
-export icon_grid_rootdir=/pool/data/ICON/grids/public/mpim  # for DWD grids check  .../public/edzw
-                                                            # or /pool/data/edzw-shadow/
-export atmGridID=0043
+icon_grid_rootdir=/pool/data/ICON/grids/public   # for seamless also check /pool/data/edzw-shadow/
+
+export atmGridID=0049
 #export atmGridID=0012 # seamless
 export atmRes=R02B04
-export icon_grid_file=icon_grid_${atmGridID}_${atmRes}_G.nc
-export icon_grid=${icon_grid_rootdir}/${atmGridID}/${icon_grid_file}   # no atmGridID dir with DWD grids
+export icon_grid=${icon_grid_rootdir}/mpim/${atmGridID}/icon_grid_${atmGridID}_${atmRes}_G.nc
 
 export coupled=false       # land sea mask for coupled experiment?
 if [[ ${coupled} == true ]]; then
   export oceGridID=0035      # Required for coupled configurations
   export oceRes=R02B06
+                             # We need the global ocean grid/mask file: *_G.nc
+  export icon_grid_oce=${icon_grid_rootdir}/mpim/${oceGridID}/icon_mask_${oceGridID}_${oceRes}_G.nc
   export grid_label=$atmGridID-$oceGridID
-  export icon_grid_rootdir_oce=/pool/data/ICON/grids/public/mpim  # directory with ocean grids
 else
   export grid_label=$atmGridID
 fi
@@ -158,7 +158,7 @@ if [[ ${run_extpar4jsbach_mpim_icon} == false ]]; then
   # Use an already existing file and don't run extpar
   # -----
   export extpar_dir=/pool/data/JSBACH/icon/extpar4jsbach/mpim           # Check in 'mpim' and 'dwd' directories
-  export extpar_file=icon_extpar4jsbach_${atmGridID}_20240801_tiles.nc  #   for the grid ID and corresponding date tag
+  export extpar_file=icon_extpar4jsbach_${atmGridID}_20240827_tiles.nc  #   for the grid ID and corresponding date tag
   # -----
   #export extpar_dir=/pool/data/JSBACH/icon/extpar4jsbach/dwd            # seamless
   #export extpar_file=icon_extpar4jsbach_${atmGridID}_20240801_tiles.nc  # seamless
@@ -192,8 +192,8 @@ fi
 
 # --------------------------------------
 # NWP Extpar file:  Only used in setups with NWP atmosphere  - compare above "Notes on the extpar files"
-export nwp_extpar_file=${icon_grid_rootdir}/${grid_label}/icon_extpar_oceLSM_a0012_R02B04_o0035_R02B06_20161124_tiles.nc # seamless
-#export nwp_extpar_file=${extpar_dir}/${extpar_file}       # Use extpar file defind above (to be generated or existing)
+#export nwp_extpar_file=${icon_grid_rootdir}/${grid_label}/icon_extpar_oceLSM_a0012_R02B04_o0035_R02B06_20161124_tiles.nc
+export nwp_extpar_file=${extpar_dir}/${extpar_file}       # Use extpar file defind above (to be generated or existing)
 
 # --------------------------------------
 # Initial Extpar file:  Used in jsbach4_ini_files_from_gauss.sh  - compare above "Notes on the extpar files"
@@ -209,7 +209,7 @@ if [[ ${coupled} == true ]]; then
     export fractional_mask=${output_root_dir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
   else
     # Needs to exist
-    export fractional_mask=${icon_grid_rootdir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
+    export fractional_mask=${icon_grid_rootdir}/mpim/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
   fi
 else
   export fractional_mask=${initial_extpar_file}

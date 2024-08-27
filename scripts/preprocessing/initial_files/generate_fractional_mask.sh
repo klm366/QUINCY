@@ -25,8 +25,8 @@ set -e
 # atmGridID=0043
 #atmRes=R02B04
 
-atmGridPath=${icon_grid_rootdir}/${atmGridID}
-oceMaskPath=${icon_grid_rootdir_oce}/${oceGridID}
+atmGridFile=${icon_grid}
+oceMaskFile=${icon_grid_oce}
 outputPath=${output_root_dir}/${grid_label}/fractional_mask
 
 wrkdir=${work_dir}
@@ -42,8 +42,8 @@ echo '------------------------------------------------------------------'
 echo "$0: Working directory: $(pwd)"
 echo "$0: Output  directory: ${outputPath}"
 
-ln -s ${oceMaskPath}/icon_mask_${oceGridID}_${oceRes}_G.nc .
-ln -s ${atmGridPath}/icon_grid_${atmGridID}_${atmRes}_G.nc .
+ln -s ${oceMaskFile}  ./icon_mask_${oceGridID}_${oceRes}_G.nc
+ln -s ${atmGridFile}  ./icon_grid_${atmGridID}_${atmRes}_G.nc
 
 $cdo -b F64 -gtc,0 -selvar,cell_sea_land_mask icon_mask_${oceGridID}_${oceRes}_G.nc cell_sea_land_mask.nc
 $cdo setmisstoc,1 -remapycon,icon_grid_${atmGridID}_${atmRes}_G.nc cell_sea_land_mask.nc fractional_lsm_${atmGridID}_${oceGridID}.nc
