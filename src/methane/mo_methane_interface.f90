@@ -222,15 +222,11 @@ CONTAINS
 
     src = MIN(source,3) ! Different file specifications are already converted
     nc  = SIZE(dst)
-    lstart   = is_time_experiment_start(options%current_datetime)
-    lrestart = is_time_restart(options%current_datetime)
-    lyear    = is_newyear(options%current_datetime,options%dtime)
-    CALL get_date_components(options%current_datetime, year=year)
 
     lupdate = .FALSE.
     SELECT CASE (src)
       CASE (1) ! Constant from namelist - just copy if not already done
-        IF (lrestart .OR. lstart) THEN
+        IF (ABS(dst(1)-nml_conc) > 1.e-10_wp) THEN ! Only need to do this once
           DO ic = 1, nc
             dst(ic) = nml_conc
           ENDDO
@@ -241,7 +237,11 @@ CONTAINS
           dst(ic) = concentration_mmr_2_mol_m3(GAS,atm_conc(ic))
         ENDDO
       CASE (3) ! From timeseries file - update at year start
+        lstart   = is_time_experiment_start(options%current_datetime)
+        lrestart = is_time_restart(options%current_datetime)
+        lyear    = is_newyear(options%current_datetime,options%dtime)
         IF (lrestart .OR. lstart .OR. lyear) THEN
+          CALL get_date_components(options%current_datetime, year=year)
           iy = MAX(1,MIN(SIZE(GHG_atm%atm_vmr),year - GHG_atm%atm_year_min + 1))
           dst(1) = concentration_vmr_2_mol_m3(GAS,GHG_atm%atm_vmr(iy))
           DO ic = 2, nc
@@ -271,6 +271,7 @@ CONTAINS
                                     soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm,  &
                                     reaction_diffusion, ebullition, init_gas_pools
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg
+    USE mo_jsb_time,          ONLY: get_time_experiment_start, get_time_start
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -393,31 +394,50 @@ CONTAINS
     dsl4jsb_Get_Config(TOP_)
     dsl4jsb_Get_Config(SSE_)
     dsl4jsb_Get_Config(NLCC_)
+    dsl4jsb_Get_memory(CH4_)
+    dsl4jsb_Get_memory(TOP_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(NLCC_)
 
+    lstart = is_time_experiment_start(options%current_datetime)
+    lrestart = is_time_restart(options%current_datetime)
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
     dt    = 86400._wp / REAL(dsl4jsb_Config(CH4_)%nstep_per_day,wp)
+    tspd  = timesteps_per_day(dt)
+    dbg   = dsl4jsb_Config(CH4_)%dbg_process .AND. .NOT. ASSOCIATED(tile%get_prev_sibling_tile()) .AND. (iblk==1)
+
+    ! Atmospheric trace gase concentration needs to be updated here, since restarts doesn't start at a methane time step
+
+    ! A2L_ variables
+    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+    ! CH4_ variables
+    dsl4jsb_Get_var2D_onChunk(CH4_, CH4_conc)
+    dsl4jsb_Get_var2D_onChunk(CH4_, CO2_conc)
+    dsl4jsb_Get_var2D_onChunk(CH4_, O2_conc)
+    CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
+                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
+    CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
+                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,dbg)
+    CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
+                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
     CALL get_date_components(options%current_datetime, year=year, hour=hour, minute=minute, second=sec)
     sec = sec + minute*60 + hour*3600
     IF (MOD(sec,INT(dt)) /= 0) RETURN ! Not a methane time step
 
+    ! TODO: Could this test be safely done somewhere in the init module?
     IF (dsl4jsb_Config(CH4_)%do_termite .AND. .NOT. dsl4jsb_Config(NLCC_)%active) THEN
       IF (iblk==1) &
         CALL message(routine,'Termite methane can only be calculated when the NLCC process is active. Termites are switched off')
       dsl4jsb_Config(CH4_)%do_termite = .FALSE.
     ENDIF
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-    tspd  = timesteps_per_day(dt)
-    dbg   = dsl4jsb_Config(CH4_)%dbg_process .AND. .NOT. ASSOCIATED(tile%get_prev_sibling_tile()) .AND. (iblk==1)
-
-    lstart = is_time_experiment_start(options%current_datetime)
-    lrestart = is_time_restart(options%current_datetime)
-
-    IF ((debug_on() .OR. (dbg .AND. lstart)) .AND. iblk == 1) &
-      CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model  => Get_model(tile%owner_model_id)
     grid   => Get_grid(model%grid_id)
@@ -485,15 +505,9 @@ CONTAINS
     ! TODO: $acc stuff
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(CH4_)
-    dsl4jsb_Get_memory(TOP_)
-    dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(NLCC_)
-
+    ! A2L_ variables
+    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     ! SSE_ variables
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     ! HYDRO_ variables
@@ -507,9 +521,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_pre)
     dsl4jsb_Get_var2D_onChunk(TOP_, wt_inun)
     dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_table)
-    ! A2L_ variables
-    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     ! dsl4jsb_Get_var2D_onChunk(A2L_, CH4)
     ! CARBON_ variables
     dsl4jsb_Get_var2D_onChunk(CARBON_, soil_respiration_oxic_ta)
@@ -666,12 +677,6 @@ CONTAINS
     CALL reset_chem_specie( O2_dry,nc,nsoil,dbg)
 
     IF (lstart .AND. dbg .AND. (iblk==1)) CALL message(routine,'First instance of update_methane')
-    CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
-                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
-    CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
-                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,dbg)
-    CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
-                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
     ! determine carbon input during time step for oxic and anoxic conditions
     ! convert respiration flux, respiration is defined NEGATIVE
