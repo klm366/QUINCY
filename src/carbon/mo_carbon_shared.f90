@@ -28,7 +28,10 @@ MODULE mo_carbon_shared
 CONTAINS
 
   ! Calculations to allocate NPP to the plant C pools as well as various respiration and litter pools.
-  ELEMENTAL PURE SUBROUTINE calc_plant_c( &
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif 
+  SUBROUTINE calc_plant_c( &
     ! Inputs
     & dt, is_crop,                &
     & LAI,                        &
@@ -391,9 +394,12 @@ CONTAINS
 
   END SUBROUTINE calc_plant_c
 
-  PURE SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
-                         c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
-                         A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
+                    c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
+                    A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
     !! DSG: 11.03.2013
     !! modified Yasso soil C model using an Euler scheme and readable coding style
     !! AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
@@ -899,8 +905,11 @@ CONTAINS
   !
   !> Distributes incomming litter to yasso pools (i.e. proportional to litter coefficients and passed factors)
   !
-  PURE SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
-    &                          litter, fraction, coefficients)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
+    &                                litter, fraction, coefficients)
     USE mo_carbon_constants, ONLY: & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol,    &
                                    & i_lctlib_nonsoluble, i_lctlib_humus
     IMPLICIT NONE
@@ -927,7 +936,10 @@ CONTAINS
   !
   !> Adds incomming litter share (i.e. proportional to litter coefficient and factor)
   !
-  ELEMENTAL SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool
@@ -943,21 +955,26 @@ CONTAINS
   !
   ! calculate per tile density from density per canopy m2
   !
-  ELEMENTAL SUBROUTINE get_per_tile(  &
+  SUBROUTINE get_per_tile(  &
     & Cpool_per_tile,                 & ! out
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
 
-    !$claw model-data
-    REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
-    REAL(wp), INTENT(IN) ::  Cpool_per_canopy
-    REAL(wp), INTENT(OUT)::  Cpool_per_tile
-    !$claw end model-data
+    REAL(wp), INTENT(IN), DIMENSION(:) :: &
+      & Cpool_per_canopy, &
+      & fract_fpc_max,    &
+      & veg_fract_correction
+    REAL(wp), INTENT(OUT), DIMENSION(:) :: &
+      & Cpool_per_tile
 
-    !$claw sca
+    INTEGER :: ic
 
-    Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, SIZE(fract_fpc_max)
+      Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE get_per_tile
 

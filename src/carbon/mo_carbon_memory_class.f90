@@ -42,13 +42,6 @@ MODULE mo_carbon_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
-    ! 1d reals:
-    !REAL(wp) ::            &
-    TYPE(t_jsb_var_real2d) ::     &
-       N_pseudo_temp,       & ! Constants used for updating the pseudo-15-day mean temperature
-       F_pseudo_temp,       & ! Constants used for updating the pseudo-15-day mean temperature
-       N_pseudo_precip,     & ! Constants used for updating the pseudo-15-day mean precipitation
-       F_pseudo_precip        ! Constants used for updating the pseudo-15-day mean precipitation
 
     ! cbalance_type variables
     TYPE(t_jsb_var_real2d) ::     &

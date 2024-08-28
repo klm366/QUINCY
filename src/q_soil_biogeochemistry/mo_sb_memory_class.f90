@@ -289,7 +289,17 @@ MODULE mo_sb_memory_class
                             dom_cn, &                             !< dom CN ratio
                             dom_cp, &                             !< dom CP ratio
                             dom_cn_mavg, &                        !< time-averaged dom CN ratio
-                            dom_cp_mavg                           !< time-averaged dom CP ratio
+                            dom_cp_mavg, &                        !< time-averaged dom CP ratio
+                            residue_som_c_form_mavg_sl, &         !< time-averaged residual som C formation rate [micro-mol m-3 s-1]
+                            residue_som_c14_form_mavg_sl, &       !< time-averaged residual som C14 formation rate [micro-mol m-3 s-1]
+                            residue_assoc_som_c_form_mavg_sl, &   !< time-averaged associated residual som C formation rate [micro-mol m-3 s-1]
+                            residue_assoc_som_c14_form_mavg_sl, & !< time-averaged associated residual som C formation rate [micro-mol m-3 s-1]
+                            assoc_dom_c_form_mavg_sl, &           !< time-averaged associated dom C formation rate [micro-mol m-3 s-1]
+                            assoc_dom_c14_form_mavg_sl, &         !< time-averaged associated dom C formation rate [micro-mol m-3 s-1]
+                            residue_som_c_loss_mavg_sl, &         !< time-averaged residual som C loss rate [micro-mol m-3 s-1]
+                            residue_assoc_som_c_loss_mavg_sl, &   !< time-averaged residual associated som C loss rate [micro-mol m-3 s-1]
+                            assoc_dom_c_loss_mavg_sl              !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
+
 
 
     !------------------------------------------------------------------------------------------------------ !
@@ -2628,6 +2638,108 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+
+      IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+        CALL mem%Add_var('residue_som_c_form_mavg_sl', mem%residue_som_c_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_som_c_form_mavg_sl', '', 'time-averaged residual som C formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('residue_som_c14_form_mavg_sl', mem%residue_som_c14_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_som_c14_form_mavg_sl', '', 'time-averaged residual som C14 formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('residue_assoc_som_c_form_mavg_sl', mem%residue_assoc_som_c_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_assoc_som_c_form_mavg_sl', '', 'time-averaged assoicated residual som C formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('residue_assoc_som_c14_form_mavg_sl', mem%residue_assoc_som_c14_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_assoc_som_c14_form_mavg_sl', '', &
+          &      'time-averaged assoicated residual som C14 formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('assoc_dom_c_form_mavg_sl', mem%assoc_dom_c_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('assoc_dom_c_form_mavg_sl', '', 'time-averaged assoicated dom C formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('assoc_dom_c14_form_mavg_sl', mem%assoc_dom_c14_form_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('assoc_dom_c14_form_mavg_sl', '', 'time-averaged assoicated dom C14 formation rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('residue_som_c_loss_mavg_sl', mem%residue_som_c_loss_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_som_c_loss_mavg_sl', '', 'time-averaged residual som C loss rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('residue_assoc_som_c_loss_mavg_sl', mem%residue_assoc_som_c_loss_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('residue_assoc_som_c_loss_mavg_sl', '', 'time-averaged assoicated residual som C loss rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('assoc_dom_c_loss_mavg_sl', mem%assoc_dom_c_loss_mavg_sl, &
+          & hgrid, vgrid_soil_sb, &
+          & t_cf('assoc_dom_c_loss_mavg_sl', '', 'time-averaged assoicated dom C loss rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      END IF
 
       CALL mem%Add_var('ph_sl', mem%ph_sl, &
         & hgrid, vgrid_soil_sb, &

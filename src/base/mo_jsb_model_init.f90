@@ -612,9 +612,6 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(CARBON_)) THEN
-          CALL carbon_init(tile)
-        END IF
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init(tile)
         END IF

@@ -344,34 +344,64 @@ CONTAINS
       !>
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         ! Volumetric soil porosity
-        ptr_2D => input_file%Read_2d(                  &
-          & fill_array = hydro_init_vars%vol_porosity, &
-          & variable_name='soil_porosity')
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & fill_array = hydro_init_vars%vol_porosity, &
+            & variable_name='soil_porosity_mineral')
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & fill_array = hydro_init_vars%vol_porosity, &
+            & variable_name='soil_porosity')
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Saturated hydraulic conductivity
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='hyd_cond_sat',              &
-          & fill_array = hydro_init_vars%hyd_cond_sat)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='hyd_cond_sat_mineral',      &
+            & fill_array = hydro_init_vars%hyd_cond_sat)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='hyd_cond_sat',              &
+            & fill_array = hydro_init_vars%hyd_cond_sat)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric field capacity [m/m]
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='soil_field_cap',            &
-          & fill_array = hydro_init_vars%vol_field_cap)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='soil_field_cap_mineral',    &
+            & fill_array = hydro_init_vars%vol_field_cap)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='soil_field_cap',            &
+            & fill_array = hydro_init_vars%vol_field_cap)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric permanent wilting point
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='wilting_point',             &
-          & fill_array=hydro_init_vars%vol_p_wilt)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='wilting_point_mineral',     &
+            & fill_array=hydro_init_vars%vol_p_wilt)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='wilting_point',             &
+            & fill_array=hydro_init_vars%vol_p_wilt)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric residual water content (if missing deduce from porosity)
         IF (input_file%Has_var('residual_water')) THEN
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='residual_water',             &
-            & fill_array=hydro_init_vars%vol_wres)
+          IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+            ptr_2D => input_file%Read_2d(                &
+              & variable_name='residual_water_mineral',  &
+              & fill_array=hydro_init_vars%vol_wres)
+          ELSE
+            ptr_2D => input_file%Read_2d(                &
+              & variable_name='residual_water',          &
+              & fill_array=hydro_init_vars%vol_wres)
+          END IF
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
           WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
@@ -380,9 +410,15 @@ CONTAINS
         END IF
 
         ! Soil matric potential
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='moisture_pot',              &
-          & fill_array = hydro_init_vars%matric_pot)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='moisture_pot_mineral',      &
+            & fill_array = hydro_init_vars%matric_pot)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='moisture_pot',              &
+            & fill_array = hydro_init_vars%matric_pot)
+        END IF
         ! @todo There is still old bc data around where the matric potential is given with a positiv sign while
         !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
         !       routines. Until this bc data is not used anymore, the following check is required to ensure the
@@ -411,15 +447,27 @@ CONTAINS
         END IF
 
         ! Exponent B in Clapp and Hornberger
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='bclapp',                    &
-          & fill_array = hydro_init_vars%bclapp)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='bclapp_mineral',            &
+            & fill_array = hydro_init_vars%bclapp)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='bclapp',                    &
+            & fill_array = hydro_init_vars%bclapp)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 6._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Pore size distribution index
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='pore_size_index',           &
-          & fill_array = hydro_init_vars%pore_size_index)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='pore_size_index_mineral',   &
+            & fill_array = hydro_init_vars%pore_size_index)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='pore_size_index',           &
+            & fill_array = hydro_init_vars%pore_size_index)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0.05_wp)
 
       ELSE   ! l_soil_texture

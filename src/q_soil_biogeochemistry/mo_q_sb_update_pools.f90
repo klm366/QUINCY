@@ -21,7 +21,8 @@ MODULE mo_q_sb_update_pools
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
-  USE mo_jsb_math_constants,      ONLY: eps8
+  USE mo_jsb_math_constants,      ONLY: eps8, one_day, one_year
+  USE mo_jsb_physical_constants,  ONLY: lambda_C14
 
   USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
 
@@ -55,21 +56,19 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_quincy_model_config,    ONLY: QSOIL
+    USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
-    USE mo_jsb_math_constants,     ONLY: eps8
-    USE mo_jsb_physical_constants, ONLY: lambda_C14
+    USE mo_jsb_math_constants,     ONLY: eps1, eps8
     USE mo_sb_constants
     USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
                                          calc_qmax_bulk_density_correction
     USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_spq_util,               ONLY: calc_qmax_texture
-
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
 
@@ -134,6 +133,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
+    dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
@@ -282,6 +282,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_desorption
     dsl4jsb_Real3D_onChunk :: rmm_sorption
     dsl4jsb_Real3D_onChunk :: rmm_desorption
+    dsl4jsb_Real3D_onChunk :: residue_som_c_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: residue_som_c14_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: residue_assoc_som_c_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: residue_assoc_som_c14_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: assoc_dom_c_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: assoc_dom_c14_form_mavg_sl
+    dsl4jsb_Real3D_onChunk :: residue_som_c_loss_mavg_sl
+    dsl4jsb_Real3D_onChunk :: residue_assoc_som_c_loss_mavg_sl
+    dsl4jsb_Real3D_onChunk :: assoc_dom_c_loss_mavg_sl
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: qmax_fast_po4
@@ -390,6 +399,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+      dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
+    ENDIF
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                           ! in
@@ -538,6 +550,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! in
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_som_c_form_mavg_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_som_c14_form_mavg_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_assoc_som_c_form_mavg_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_assoc_som_c14_form_mavg_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       assoc_dom_c_form_mavg_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       assoc_dom_c14_form_mavg_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_som_c_loss_mavg_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       residue_assoc_som_c_loss_mavg_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(SB_,       assoc_dom_c_loss_mavg_sl)           ! in
+    END IF
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_fast_po4)
@@ -1091,6 +1114,44 @@ CONTAINS
     biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
+    !> 15.0 spin-up accelerator
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+      SELECT CASE(model%config%qmodel_id)
+      ! only execute spin-up accelerator when running in LAND or SOIL mode
+      CASE(QLAND, QSOIL)
+        DO ic = 1,nc
+          ! Determine if running a spin-up with acceleration
+          IF (slow_sb_pool_accelerator_execute(ic) == 1.0_wp) THEN
+            IF (debug_on() .AND. iblk == 1 .AND. ic == 1) &
+              & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...')
+
+            ! fasten the spinup for residual pool
+            CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:),&
+                                                      & model%config%slow_sb_pool_spinup_accelerator_length, &
+                                                      & residue_som_c_form_mavg_sl(ic,:), &
+                                                      & residue_som_c14_form_mavg_sl(ic,:), &
+                                                      & residue_som_c_loss_mavg_sl(ic,:), &
+                                                      & sb_pool_mt(ix_residue,:,ic,:))
+            IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              ! fasten the spinup for the associated residual pool
+              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:), &
+                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
+                                                        & residue_assoc_som_c_form_mavg_sl(ic,:), &
+                                                        & residue_assoc_som_c14_form_mavg_sl(ic,:), &
+                                                        & residue_assoc_som_c_loss_mavg_sl(ic,:), &
+                                                        & sb_pool_mt(ix_residue_assoc,:,ic,:))
+              ! fasten the spinup for the associated dom pool
+              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:), &
+                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
+                                                        & assoc_dom_c_form_mavg_sl(ic,:), &
+                                                        & assoc_dom_c14_form_mavg_sl(ic,:), &
+                                                        & assoc_dom_c_loss_mavg_sl(ic,:), &
+                                                        & sb_pool_mt(ix_dom_assoc,:,ic,:))
+            END IF ! simple soil or jsm
+          END IF
+        END DO
+      END SELECT
+    END IF
     !------------------------------------------------------------------------------------------------------ !
     DEALLOCATE(sb_particle_transport_hlp_mt, sb_pool_prev_timestep_hlp_mt)
 
@@ -1414,6 +1475,86 @@ CONTAINS
     ENDIF  ! IF (PRESENT(assoc_slow))
 
   END SUBROUTINE calc_langmuir_kinetics
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to update_sb_pools
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Subroutine to fasten the spinup by separately balancing slow soil pools
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, &
+                                                  & soil_depth_sl, &
+                                                  & spinup_accelerator_length, &
+                                                  & formation_c_mavg_sl, &
+                                                  & formation_c14_mavg_sl, &
+                                                  & loss_c_mavg_sl, &
+                                                  & pool_slow_sl)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! 0.1 inout
+    INTEGER,  INTENT(in)    :: nsoil_sb                  !> dimensions
+    REAL(wp), INTENT(in)    :: dtime                     !> timestep length [s]
+    REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !> soil depth at each layer[m]
+    INTEGER,  INTENT(in)    :: spinup_accelerator_length !> loop times of acceleration, read from namelist
+    REAL(wp), INTENT(in)    :: formation_c_mavg_sl(:)    !> averaged slow soil C pool formation rate [mol m-3 timestep-1]
+    REAL(wp), INTENT(in)    :: formation_c14_mavg_sl(:)  !> averaged slow soil C14 pool formation rate [mol m-3 timestep-1]
+    REAL(wp), INTENT(in)    :: loss_c_mavg_sl(:)         !> averaged slow soil C pool loss rate [mol m-3timestep-1]
+    REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !> slow soil pool with all elements [mol m-3]
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! 0.2 Local
+    REAL, DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !> stiochiometry factors [mol / mol]
+    REAL, DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !> slow soil pool distributions across all soil layers[unitless]
+    REAL                      :: tau_slow !> slow soil pool turnover rate [timestep]
+    REAL                      :: pool_c_slow, pool_c14_slow !> the total slow soil pool [mol m-2]
+    REAL                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
+    INTEGER                   :: ilength, ic !counter for loops
+    ! ------------------------------------------------------------------------------------------------------------
+    !> accelerating the spin-up of slow pool
+    !!
+
+    !> 1.0 record current stoichiometry, apparent turnover rate of slow pool and slow pool distribution across all soil layers
+    !!
+    !> 1.1 record current stoichiometry
+    c13c_slow_sl(:) = pool_slow_sl(ixC13,:) / pool_slow_sl(ixC,:)
+    nc_slow_sl(:)   = pool_slow_sl(ixN,:) / pool_slow_sl(ixC,:)
+    n15n_slow_sl(:) = pool_slow_sl(ixN15,:) / pool_slow_sl(ixN,:)
+    pn_slow_sl(:)   = pool_slow_sl(ixP,:) / pool_slow_sl(ixN,:)
+
+    !> 1.2 calculate the total turnover rate across all soil layers
+    pool_c_slow = SUM(pool_slow_sl(ixC,:) * soil_depth_sl(:))
+    pool_c14_slow = SUM(pool_slow_sl(ixC14,:) * soil_depth_sl(:))
+    formation_c_mavg = SUM(formation_c_mavg_sl(:) * soil_depth_sl(:))
+    formation_c14_mavg = SUM(formation_c14_mavg_sl(:) * soil_depth_sl(:))
+    loss_c_mavg = SUM(loss_c_mavg_sl(:) * soil_depth_sl(:))
+
+    tau_slow  = pool_c_slow / loss_c_mavg
+
+    !> 1.3 get the current slow soil pool profile
+    ratio_sl(:) = pool_slow_sl(ixC,:) / pool_c_slow
+    ratio_c14_sl(:) = pool_slow_sl(ixC14,:) / pool_c14_slow
+
+    !> 2.0 do the spin-up acceleration
+    DO ilength = 1, spinup_accelerator_length
+       pool_c_slow   = pool_c_slow + &
+                          & ((-(pool_c_slow / tau_slow) + formation_c_mavg) / &
+                          & dtime * one_day * one_year)
+       !> C14 has the additional decay rate
+       pool_c14_slow = pool_c14_slow + &
+                          & ((-(pool_c14_slow / tau_slow) - (pool_c14_slow * lambda_C14 * dtime) + formation_c14_mavg) / &
+                          & dtime * one_day * one_year)
+    ENDDO
+
+    !> 2.1 re-distribute the slow soil pool at each soil layer
+    pool_slow_sl(ixC,:) = pool_c_slow * ratio_sl(:)
+    pool_slow_sl(ixC14,:) = pool_c14_slow * ratio_c14_sl(:)
+
+    !> 3.0 update other element pools
+    pool_slow_sl(ixC13,:) = pool_slow_sl(ixC,:) * c13c_slow_sl(:)
+    pool_slow_sl(ixN,:)   = pool_slow_sl(ixC,:) * nc_slow_sl(:)
+    pool_slow_sl(ixN15,:) = pool_slow_sl(ixN,:) * n15n_slow_sl(:)
+    pool_slow_sl(ixP,:)   = pool_slow_sl(ixN,:) * pn_slow_sl(:)
+
+  END SUBROUTINE calc_accelerated_slow_soil_pool_spinup
 
   ! ======================================================================================================= !
   !>

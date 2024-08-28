@@ -176,11 +176,12 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
-      loutput_loc = .TRUE.
-    ELSE
-      no_groups = 0
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)
+        loutput_loc = .TRUE.
+      END IF
     END IF
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3 + no_groups))
@@ -189,7 +190,7 @@ CONTAINS
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -332,11 +333,12 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
-      loutput_loc = .TRUE.
-    ELSE
-      no_groups = 0
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)
+        loutput_loc = .TRUE.
+      END IF
     END IF
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3 + no_groups))
@@ -345,7 +347,7 @@ CONTAINS
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -503,11 +505,12 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
-      loutput_loc = .TRUE.
-    ELSE
-      no_groups = 0
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)
+        loutput_loc = .TRUE.
+      END IF
     END IF
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3 + no_groups))
@@ -516,7 +519,7 @@ CONTAINS
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -844,6 +847,9 @@ CONTAINS
     INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_position'
+
+    ! Return in case this tile's memory is empty
+    IF (this%no_of_vars == 0) RETURN
 
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
