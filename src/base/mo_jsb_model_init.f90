@@ -204,7 +204,7 @@ CONTAINS
     USE mo_top_init,            ONLY: topmodel_init
     USE mo_methane_init,        ONLY: methane_init
     USE mo_megan_init,          ONLY: megan_init
-    USE mo_carbon_init,         ONLY: carbon_init
+!    USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fage_init,           ONLY: fage_init
 
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc

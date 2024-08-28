@@ -183,7 +183,6 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
-    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
     REAL(wp), POINTER            :: lat(:)
     REAL(wp), allocatable        :: precip_total(:)
@@ -667,8 +666,7 @@ CONTAINS
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-<<<<<<< HEAD
-      is_crop = dsl4jsb_Lctlib_param(PhenologyType) == 5
+      is_crop = lctlib_PhenologyType == 5
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -680,16 +678,16 @@ CONTAINS
           &  MaxLai(ic),                                        & ! in
           &  NPP_pot_yDayMean(ic),                              & ! in
           !
-          &  lctlib_fract_npp_2_woodPool(ic),                   & ! in
-          &  lctlib_fract_NPP_2_reservePool(ic),                & ! in
-          &  lctlib_fract_NPP_2_exudates(ic),                   & ! in
-          &  lctlib_fract_green_2_herbivory(ic),                & ! in
-          &  lctlib_tau_c_woods(ic),                            & ! in
-          &  lctlib_LAI_shed_constant(ic),                      & ! in
-          &  lctlib_Max_C_content_woods(ic),                    & ! in
-          &  lctlib_specificLeafArea_C(ic),                     & ! in
-          &  lctlib_reserveC2leafC(ic),                         & ! in
-          &  lctlib_PhenologyType(ic),                          & ! in
+          &  lctlib_fract_npp_2_woodPool,                       & ! in
+          &  lctlib_fract_NPP_2_reservePool,                    & ! in
+          &  lctlib_fract_NPP_2_exudates,                       & ! in
+          &  lctlib_fract_green_2_herbivory,                    & ! in
+          &  lctlib_tau_c_woods,                                & ! in
+          &  lctlib_LAI_shed_constant,                          & ! in
+          &  lctlib_Max_C_content_woods,                        & ! in
+          &  lctlib_specificLeafArea_C,                         & ! in
+          &  lctlib_reserveC2leafC,                             & ! in
+!          &  lctlib_PhenologyType,                              & ! in
           !
           &  c_green(ic),                                       & ! inout
           &  c_woods(ic),                                       & ! inout

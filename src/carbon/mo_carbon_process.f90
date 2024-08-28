@@ -383,7 +383,7 @@ CONTAINS
         & ) * burned_fract(ic) * bfe * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
-      fraction(:) = 1._wp - bfe(:)
+      fraction = 1._wp - bfe
       c_acid_ag1      (ic) = fraction * c_acid_ag1       (ic)
       c_water_ag1     (ic) = fraction * c_water_ag1      (ic)
       c_ethanol_ag1   (ic) = fraction * c_ethanol_ag1    (ic)
