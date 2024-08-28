@@ -398,7 +398,7 @@ fi
 # ---------------------------------
 # TODO: The NDVI data from extpar seames to include ocean fractions - it is not relative
 #       to the land fraction, as expected by jsbach. (Dividing by FR_LAND did not work properly)
-# For that reason it alos does not make sense to extrapolate the data to ocean complete cells.
+# For that reason it also does not make sense to extrapolate the data to complete ocean cells.
 ${cdo} selvar,NDVI ${file_extpar}.nc ${file_extpar}_NDVI.nc
 
 # NDVI ==> veg_fract

@@ -29,6 +29,7 @@ extpar_jsb=${bc_file_dir}/${extpar_name%.nc}_jsb.nc
 bc_frac=${bc_file_dir}/bc_land_frac.nc
 bc_phys=${bc_file_dir}/bc_land_phys.nc
 bc_sso=${bc_file_dir}/bc_land_sso.nc
+bc_soil=${bc_file_dir}/bc_land_soil.nc
 
 icon_grid=${icon_grid}
 
@@ -69,6 +70,9 @@ for var in SSO_GAMMA SSO_OROMAX SSO_OROMIN SSO_SIGMA SSO_STDH SSO_THETA topograp
   fi
 done
 
+# Variables from bc_land_soil
+$cdo setvar,ROOTDP    -selvar,root_depth   ${bc_soil}     new_ROOTDP.nc
+
 # Adaptation of FAO soil types
 if [[ $(cdo showvar ${extparfile} | grep 'SOILTYP' ) != "" ]]; then
   # soiltyp 9 (sea water) and 10 (sea ice): all land points must not have 9 or 10
@@ -83,13 +87,21 @@ fi
 $cdo -O merge new_*.nc new_vars.nc
 $cdo setgrid,${icon_grid} -replace ${extparfile} new_vars.nc ${extpar_jsb}
 
-# Remove variable cell_sea_land_mask in case it exists, because its existence
-# triggers mask corrections in the NWP atmosphere at run time - which we do not
-# want after the adaptations done here.
-if [[ $(cdo showvar ${extpar_jsb} | grep cell_sea_land_mask) != "" ]]; then
-  $cdo delname,cell_sea_land_mask  ${extpar_jsb} ${extpar_jsb}.tmp
-  mv ${extpar_jsb}.tmp ${extpar_jsb}
-fi
+# Remove variables that should not be included to avoid incorrect usage or confusion
+# - Remove cell_sea_land_mask in case it exists, because its existence
+#   triggers mask corrections in the NWP atmosphere at run time - which we do not
+#   want after the adaptations done here.
+# - ALB, ALNID, ALUVD not used with 'albedo_type == MODIS'; would need corrections
+# - BULK_DENS, SUB_BULK_DENS - currently not used at all; would need adaptation
+# - EMISS, EMIS_RAD - not used in current setups (itype_lwemiss = 0); re-check if needed
+# - NDVI: not used; would need corrections
+# - W_SNOW: currently not used, IFS analysis data
+for var in cell_sea_land_mask ALB ALNID ALUVD BULK_DENS NDVI SUB_BULK_DENS W_SNOW; do
+  if [[ $(cdo showvar ${extpar_jsb} | grep -w $var) != "" ]]; then
+    $cdo delname,$var ${extpar_jsb} ${extpar_jsb}.tmp
+    mv ${extpar_jsb}.tmp ${extpar_jsb}
+  fi
+done
 
 echo "-------------------------------------------------------------------"
 echo "$prog: Modified extpar file:"

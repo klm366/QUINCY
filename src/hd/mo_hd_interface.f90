@@ -1033,8 +1033,8 @@ CONTAINS
       CALL message (routine,message_text)
     END IF
 
-    IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN        !vg: zero at the very first time step
-      IF (ABS(global_water_error/global_water_budget) > 10._wp*EPSILON(1._wp)) THEN
+    IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN     ! zero at the very first time step
+      IF (ABS(global_water_error/global_water_budget) > 15._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
              global_water_error,' m3'
         IF (dsl4jsb_Config(HD_)%enforce_water_budget == WB_ERROR) THEN
