@@ -48,13 +48,13 @@ MODULE mo_sse_init
   REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp
   REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp
   REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
+  REAL(wp), PARAMETER ::  heat_cap_oc   = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
 
   ! heat conductivity (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
   REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp
   REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp
   REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp
-  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp ! see hcond_org in mo_sse_constants.f90
+  REAL(wp), PARAMETER ::  heat_cond_oc   = 0.25_wp ! see hcond_org in mo_sse_constants.f90
 
   TYPE t_sse_init_vars
     REAL(wp), POINTER ::     &
