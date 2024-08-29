@@ -75,6 +75,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
+    dsl4jsb_Real2D_onChunk      :: root_phenology_type
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
     ! VEG_ 2D
@@ -114,6 +115,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)               ! inout
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                          ! inout
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)                  ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, root_phenology_type)          ! inout
     ! Q_ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg)     ! in
     ! VEG_ 2D
@@ -154,7 +156,8 @@ CONTAINS
       & growth_req_n_tlabile_mavg(:)       , &
       & growth_req_p_tlabile_mavg(:)       , &
       & nd_dormance(:)                     , &
-      & gdd(:)                             )    ! inout
+      & gdd(:)                             , &
+      & root_phenology_type(:)             )    ! inout
   END SUBROUTINE update_q_phenology
 
   ! ======================================================================================================= !
@@ -184,12 +187,15 @@ CONTAINS
     & growth_req_n_tlabile_mavg       , &
     & growth_req_p_tlabile_mavg       , &
     & nd_dormance                     , &
-    & gdd )
+    & gdd                             , &
+    & root_phenology_type)
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+      &                                   ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, &
+      &                                   ipheno_type_cbalance_deciduous
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp),     INTENT(in)    :: dtime                            !< timestep length
@@ -216,6 +222,7 @@ CONTAINS
     REAL(wp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
     REAL(wp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
     REAL(wp),     INTENT(inout) :: gdd                              !< growing degree days
+    REAL(wp),     INTENT(inout) :: root_phenology_type              !< category for trigger of end of growing season in grasses
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                    :: hlp1                             !< helper variable for tmp values
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
@@ -274,8 +281,21 @@ CONTAINS
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
         IF((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
-          & gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. mean_leaf_age > min_leaf_age) THEN
+            & gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. mean_leaf_age > min_leaf_age) THEN
           growing_season = false
+          ! Determine the specific trigger for the end of growing season. Needed for root turnover.
+          IF(t_air_tphen_mavg < t_air_senescence) THEN
+            ! end of growing season triggered by low temperature
+            root_phenology_type = ipheno_type_cold_deciduous
+          ELSE
+            ! end of growing season triggered by low soil moisture
+            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence) THEN
+              root_phenology_type = ipheno_type_drought_deciduous
+            ELSE
+              ! end of growing season triggered by negative C balance
+              root_phenology_type = ipheno_type_cbalance_deciduous
+            ENDIF
+          ENDIF
         ENDIF
       END SELECT
     ENDIF
