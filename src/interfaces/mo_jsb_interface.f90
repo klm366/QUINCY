@@ -317,6 +317,11 @@ CONTAINS
         & )
 #ifndef __NO_QUINCY__
     ELSE
+      IF(.NOT. model%config%usecase == 'quincy_11_pfts_for_coupling') THEN
+        CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
+          &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
+      ENDIF
+
       CALL update_atm2land_quincy(                    &
         & tile,                                       &
         & model%options(no_omp_thread),               &

@@ -80,9 +80,6 @@ MODULE mo_q_rad_memory_class
                                 !<   is calculated at runtime
 
     TYPE(t_jsb_var_real2d)  :: &
-      & net_radiation                   !< surface net radiation [W m-2]
-
-    TYPE(t_jsb_var_real2d)  :: &
       & albedo,                &        !< total surface albedo [unitless]
       & albedo_noon                     !< albedo at local solar noon, value is modified only every 24h [unitless]
 
@@ -324,17 +321,6 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('net_radiation', mem%net_radiation, &
-        & hgrid, surface, &
-        & t_cf('net_radiation', 'W m-2', 'surface net radiation'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp )
 
       CALL mem%Add_var('albedo', mem%albedo, &
         & hgrid, surface, &

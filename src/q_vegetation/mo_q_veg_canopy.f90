@@ -73,7 +73,7 @@ CONTAINS
     & t_acclim, &
     & press_srf, &
     & co2_mixing_ratio, &
-    & ga, &
+    & aerodyn_cond, &
     & beta_air, &
     & beta_soa, &
     & beta_soil_ps, &
@@ -124,7 +124,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: t_acclim              !< acclimation temperature (avg)
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: press_srf             !< air pressure (avg)
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: co2_mixing_ratio      !< CO2 concentration (avg)
-    REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: ga                    !< aerodynamic conductance (avg)
+    REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: aerodyn_cond          !< aerodynamic conductance (avg)
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: beta_air              !< beta air (avg)
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: beta_soa              !< beta soa (avg)
     REAL(wp), DIMENSION(nc),                INTENT(in),   OPTIONAL  :: beta_soil_ps          !< beta soil ps (avg)
@@ -176,7 +176,7 @@ CONTAINS
     !>
     IF(optimise_n_fractions)THEN
        IF(.NOT.PRESENT(t_air)            .OR..NOT.PRESENT(t_acclim)         .OR..NOT.PRESENT(press_srf)    .OR. &
-          .NOT.PRESENT(co2_mixing_ratio) .OR..NOT.PRESENT(ga)               .OR. &
+          .NOT.PRESENT(co2_mixing_ratio) .OR..NOT.PRESENT(aerodyn_cond)     .OR. &
           .NOT.PRESENT(beta_air)         .OR..NOT.PRESENT(beta_soa)         .OR. &
           .NOT.PRESENT(beta_soil_ps)     .OR..NOT.PRESENT(beta_sinklim_ps)  .OR..NOT.PRESENT(beta_soil_gs) .OR. &
           .NOT.PRESENT(t_jmax_opt)) THEN
@@ -398,7 +398,7 @@ CONTAINS
                                                t_acclim(:)                , &
                                                press_srf(:)               , &
                                                co2_mixing_ratio(:)        , &
-                                               ga(:)                      , &
+                                               aerodyn_cond(:)            , &
                                                beta_air(:)                , &
                                                beta_soa(:)                , &
                                                beta_soil_ps(:)            , &
@@ -442,7 +442,7 @@ CONTAINS
                                     t_acclim                  , &
                                     press_srf                 , &
                                     co2_mixing_ratio          , &
-                                    ga                        , &
+                                    aerodyn_cond              , &
                                     beta_air                  , &
                                     beta_soa                  , &
                                     beta_soil_ps              , &
@@ -480,7 +480,7 @@ CONTAINS
                                                t_acclim,         &    !< ..
                                                press_srf,        &    !< air pressure (day-time running mean, Pa)
                                                co2_mixing_ratio, &    !< CO2 mixing ratio (day-time running mean, ppm)
-                                               ga,               &    !< aerodynamic conductance (day-time running mean, m/s)
+                                               aerodyn_cond,     &    !< ga -- aerodynamic conductance (day-time running mean, m/s)
                                                beta_air,         &    !< beta air (day-time running mean, --)
                                                beta_soa,         &    !< beta soa (day-time running mean, --)
                                                beta_soil_ps,     &    !< beta soil for PS (day-time running mean, --)
@@ -536,7 +536,7 @@ CONTAINS
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
-                                 ga                            , &
+                                 aerodyn_cond                  , &
                                  t_acclim                      , &
                                  ppfd_sunlit_cl                , &
                                  ppfd_shaded_cl                , &
@@ -582,15 +582,15 @@ CONTAINS
       CALL calc_photosynthesis( &
                gmin, g0, g1, t_jmax_omega, ps_pathway, &
                canopy_cond_scheme, &  ! Q_ASSIMI_ config (medlyn/ballberry)
-               t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
-               ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
-               beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
-               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), &
+               t_air, press_srf, co2_mixing_ratio, aerodyn_cond, t_acclim, &
+               ppfd_sunlit_cl, ppfd_shaded_cl, fleaf_sunlit_cl, &
+               beta_air, beta_soa,beta_soil_ps, beta_sinklim_ps, beta_soil_gs, &
+               fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
                fn_pepc_cl*(1._wp-fn_oth_cl),&
                lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                leaf_nitrogen_cl, &
                t_jmax_opt, &
-               ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3, &
+               ag_cl, an_cl, r_cl, gs_cl, ci_cl, hlp1, hlp2, hlp3, &
                hlp4  )
 
 
@@ -618,15 +618,15 @@ CONTAINS
         CALL calc_photosynthesis( &
                  gmin, g0, g1, t_jmax_omega, ps_pathway, &
                  canopy_cond_scheme, &  ! Q_ASSIMI_ config (medlyn/ballberry)
-                 t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
-                 ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
-                 beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
+                 t_air, press_srf, co2_mixing_ratio, aerodyn_cond, t_acclim, &
+                 ppfd_sunlit_cl, ppfd_shaded_cl, fleaf_sunlit_cl,&
+                 beta_air, beta_soa,beta_soil_ps, beta_sinklim_ps,beta_soil_gs, &
                  fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
                  fn_pepc_cl*(1._wp-fn_oth_cl),&
                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                  leaf_nitrogen_cl, &
                  t_jmax_opt, &
-                 ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3, &
+                 ag_cl, an_cl, r_cl, gs_cl, ci_cl, hlp1, hlp2, hlp3, &
                  hlp4 )
 
         ! if photosyntheis has still not increased, do not change fn_chl_cl
@@ -852,7 +852,7 @@ CONTAINS
                                                   press_srf               , &
                                                   q_air                   , &
                                                   co2_mixing_ratio        , &
-                                                  ga                      , &
+                                                  aerodyn_cond            , &
                                                   net_assimilation        , &
                                                   canopy_cond             , &
                                                   beta_air                , &
@@ -910,7 +910,7 @@ CONTAINS
                                                           press_srf               , &   !< air pressure (Pa)
                                                           q_air                   , &   !< air specific humidity (--)
                                                           co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
-                                                          ga                      , &   !< air temperature (K)
+                                                          aerodyn_cond            , &   !< ga -- aerodynamic conductance (day-time running mean, m/s)
                                                           net_assimilation        , &   !< net assimilation rate (micro-mol CO2 / m2 / s)
                                                           canopy_cond             , &   !< canopy conductance (m/s)
                                                           beta_air                , &   !< air humidity limiting factor for photosynthesis
@@ -1058,7 +1058,7 @@ CONTAINS
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
-                                    ga(:)                           , &
+                                    aerodyn_cond(:)                 , &
                                     t_air_tacclim_mavg(:)           , &
                                     loc_ppfd_sunlit_cl(:,icanopy)   , &
                                     loc_ppfd_shaded_cl(:,icanopy)   , &
@@ -1101,12 +1101,12 @@ CONTAINS
     q_sat(:) = calc_spec_humidity_sat(t_air(:), press_srf(:))
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / ga(:) ) - &
+                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) ) - &
                                 press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(:) + 1._wp / ga(:) )
+                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(:) + 1._wp / aerodyn_cond(:) )
     ELSEWHERE (canopy_cond_new(:) > eps8) ! this might cover only the points in the vector that are not true in the above where statement
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / ga(:) )
+                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) )
     ELSEWHERE
       unit_transpiration(:) = 0.0_wp
     END WHERE

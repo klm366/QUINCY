@@ -313,18 +313,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_pool_total_c13
     dsl4jsb_Real3D_onChunk :: sb_pool_total_c14
     dsl4jsb_Real3D_onChunk :: sb_pool_total_n15
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_p
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c13
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c14
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n15
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_p
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c13
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c14
-    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n15
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_c
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_n
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_p
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_c13
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_c14
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_n15
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_c
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_n
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_p
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_c13
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_c14
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_ag_litter_n15
     dsl4jsb_Real3D_onChunk :: sb_pool_woody_litter_c
     dsl4jsb_Real3D_onChunk :: total_soil_n
     dsl4jsb_Real3D_onChunk :: total_soil_inorg_n
@@ -583,18 +583,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_c13)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_c14)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_n15)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_p)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c13)       ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c14)       ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n15)       ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_p)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c13)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c14)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n15)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_n)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_p)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c13)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c14)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_n15)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_c)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_n)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_p)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_c13) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_c14) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_ag_litter_n15) ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_n)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_n)          ! out
@@ -1073,19 +1073,19 @@ CONTAINS
 
     sb_pool_woody_litter_c(:,:)   = sb_pool_mt(ix_woody_litter, ixC, :, :)
 
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC, sb_pool_total_som_c)
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixN, sb_pool_total_som_n)
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixP, sb_pool_total_som_p)
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC13, sb_pool_total_som_c13)
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC14, sb_pool_total_som_c14)
-    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixN15, sb_pool_total_som_n15)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC, sb_pool_total_bg_soil_c)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixN, sb_pool_total_bg_soil_n)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixP, sb_pool_total_bg_soil_p)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC13, sb_pool_total_bg_soil_c13)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC14, sb_pool_total_bg_soil_c14)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixN15, sb_pool_total_bg_soil_n15)
 
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC, sb_pool_total_litter_c)
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixN, sb_pool_total_litter_n)
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixP, sb_pool_total_litter_p)
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC13, sb_pool_total_litter_c13)
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC14, sb_pool_total_litter_c14)
-    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixN15, sb_pool_total_litter_n15)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixC, sb_pool_total_ag_litter_c)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixN, sb_pool_total_ag_litter_n)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixP, sb_pool_total_ag_litter_p)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixC13, sb_pool_total_ag_litter_c13)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixC14, sb_pool_total_ag_litter_c14)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ixN15, sb_pool_total_ag_litter_n15)
 
     !> 14.0 biosphere-level diagnostics (SB_ process)
     !>
@@ -1098,7 +1098,7 @@ CONTAINS
       & + SUM(lateral_loss_dom_nitrogen_sl(:,:) * soil_depth_sl(:,:), DIM=2) &
       & + SUM(lateral_loss_nh4_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2) &
       & + SUM(lateral_loss_no3_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2)
-    total_soil_n(:,:)         = sb_pool_total_som_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
+    total_soil_n(:,:)         = sb_pool_total_bg_soil_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
 
     !> 14.2 across multiple processes
@@ -1558,35 +1558,47 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Small helper routine to calculate total SOM in sb_pool for a given element
+  !> Small helper routine to sum up total sb pool below ground soil (SOM and below ground litter) for a given element
   !>
-  SUBROUTINE calculate_sb_pool_som_for_element(sb_pool_mt, ix_elem, sb_pool_total_som_elem)
+  SUBROUTINE calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ix_elem, sb_pool_total_bg_soil_elem)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(IN)       :: sb_pool_mt(:,:,:,:)         !< sb pool for which the SOM is to be calculated
-    INTEGER,  INTENT(IN)       :: ix_elem                     !< index of the queried element in the sp pool
-    REAL(wp), INTENT(INOUT)    :: sb_pool_total_som_elem(:,:) !< total SOM for given element
+    REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the total BG soil is to be calculated
+    INTEGER,  INTENT(IN)    :: nsoil_sb                        !< number of soil layers
+    INTEGER,  INTENT(IN)    :: ix_elem                         !< index of the queried element in the sb pool
+    REAL(wp), INTENT(INOUT) :: sb_pool_total_bg_soil_elem(:,:) !< total sb pool SOM + BG litter for given element
     ! ----------------------------------------------------------------------------------------------------- !
-    sb_pool_total_som_elem(:,:) &
-      & =  sb_pool_mt(ix_dom, ix_elem, :, :)       + sb_pool_mt(ix_dom_assoc, ix_elem, :, :)   &
-      &  + sb_pool_mt(ix_fungi, ix_elem, :, :)     + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :)  &
-      &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :)     &
+    INTEGER :: isoil
+    ! ----------------------------------------------------------------------------------------------------- !
+    sb_pool_total_bg_soil_elem(:,:) &
+      & =  sb_pool_mt(ix_dom, ix_elem, :, :)       + sb_pool_mt(ix_dom_assoc, ix_elem, :, :)  &
+      &  + sb_pool_mt(ix_fungi, ix_elem, :, :)     + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
+      &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :)    &
       &  + sb_pool_mt(ix_residue_assoc, ix_elem, :, :)
-  END SUBROUTINE calculate_sb_pool_som_for_element
+
+    DO isoil = 2,nsoil_sb
+      sb_pool_total_bg_soil_elem(:,isoil) = sb_pool_total_bg_soil_elem(:,isoil) &
+        & + sb_pool_mt(ix_soluable_litter, ix_elem, :, isoil)                   &
+        & + sb_pool_mt(ix_polymeric_litter, ix_elem, :, isoil)                  &
+        & + sb_pool_mt(ix_woody_litter, ix_elem, :, isoil)
+    END DO
+
+  END SUBROUTINE calculate_sb_pool_bg_soil_for_element
 
   ! ======================================================================================================= !
   !>
-  !> Small helper routine to calculate total litter in sb_pool for a given element
+  !> Small helper routine to calculate total above ground litter in sb_pool for a given element
   !>
-  SUBROUTINE calculate_sb_pool_litter_for_element(sb_pool_mt, ix_elem, sb_pool_total_litter_elem)
+  SUBROUTINE calculate_sb_pool_ag_litter_for_element(sb_pool_mt, ix_elem, sb_pool_total_ag_litter_elem)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(IN)       :: sb_pool_mt(:,:,:,:)         !< sb pool for which the SOM is to be calculated
-    INTEGER,  INTENT(IN)       :: ix_elem                     !< index of the queried element in the sp pool
-    REAL(wp), INTENT(INOUT)    :: sb_pool_total_litter_elem(:,:) !< total SOM for given element
+    REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)               !< sb pool for which the above ground litter is to be calculated
+    INTEGER,  INTENT(IN)    :: ix_elem                           !< index of the queried element in the sb pool
+    REAL(wp), INTENT(INOUT) :: sb_pool_total_ag_litter_elem(:,:) !< total above ground litter for given element
     ! ----------------------------------------------------------------------------------------------------- !
-    sb_pool_total_litter_elem(:,:) =  sb_pool_mt(ix_soluable_litter, ix_elem, :, :)   &
-      &                             + sb_pool_mt(ix_polymeric_litter, ix_elem, :, :) &
-      &                             + sb_pool_mt(ix_woody_litter, ix_elem, :, :)
-  END SUBROUTINE calculate_sb_pool_litter_for_element
+    sb_pool_total_ag_litter_elem(:,:) = 0.0_wp
+    sb_pool_total_ag_litter_elem(:,1) = sb_pool_mt(ix_soluable_litter, ix_elem, :, 1)    &
+      &                                 + sb_pool_mt(ix_polymeric_litter, ix_elem, :, 1) &
+      &                                 + sb_pool_mt(ix_woody_litter, ix_elem, :, 1)
+  END SUBROUTINE calculate_sb_pool_ag_litter_for_element
 
 #endif
 END MODULE mo_q_sb_update_pools

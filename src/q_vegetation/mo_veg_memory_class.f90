@@ -96,6 +96,8 @@ MODULE mo_veg_memory_class
                                     target_cn_leaf    , &            !< target foliar C:N ratio [mol C mol-1 N]
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
+                                    fract_fpc         , &            !< foliage projected cover fraction of the tile
+                                    blended_height    , &            !< foliage weighted height of the tile for turbulence calculations [m]
                                     cohort_age        , &            !< age of the cohort in years, used with veg_dynamics_scheme cohort [years]
                                     f_n_demand        , &            !< relative plant demand for N
                                     f_p_demand        , &            !< relative plant demand for P
@@ -312,7 +314,8 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &
                                     t_air_week_mavg                , &  !< air temperature time-averaged [K]
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
-                                    t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
+                                    t_jmax_opt_mavg                , &  !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
+                                    t_soil_root                         !< Temperature of fine roots in the soil [K]
 
     ! 1.11 helper variables for L2A_ process
     !      these var are used at PFT tiles and aggregated to box tile
@@ -931,6 +934,28 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fract_fpc', mem%fract_fpc, &
+        & hgrid, surface, &
+        & t_cf('fract_fpc', '', 'foliage projected cover fraction'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('blended_height ', mem%blended_height, &
+        & hgrid, surface, &
+        & t_cf('blended_height', '', 'foliage weighted height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2595,6 +2620,17 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
+        & hgrid, surface, &
+        & t_cf('t_soil_root', 'K', 'Temperature of fine roots in the soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 273.15_wp)
 
       CALL mem%Add_var('t_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
         & hgrid, surface, &

@@ -201,7 +201,6 @@ CONTAINS
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: press_srf
-    dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: daytime_counter
@@ -210,6 +209,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real2D_onChunk      :: aerodyn_cond
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! VEG_ 2D
@@ -310,6 +310,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
@@ -320,7 +321,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: w_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -357,7 +357,6 @@ CONTAINS
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
@@ -366,6 +365,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation_boc)
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, aerodyn_cond)
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     ! VEG_ 2D
@@ -466,6 +466,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -476,7 +477,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -503,7 +503,7 @@ CONTAINS
         t_air_daytime_dacc(ic)            = t_air_daytime_dacc(ic)            + t_air(ic)
         press_srf_daytime_dacc(ic)        = press_srf_daytime_dacc(ic)        + press_srf(ic)
         co2_mixing_ratio_daytime_dacc(ic) = co2_mixing_ratio_daytime_dacc(ic) + co2_mixing_ratio(ic)
-        ga_daytime_dacc(ic)               = ga_daytime_dacc(ic)               + ga(ic)
+        ga_daytime_dacc(ic)               = ga_daytime_dacc(ic)               + aerodyn_cond(ic)
         beta_sinklim_ps_daytime_dacc(ic)  = beta_sinklim_ps_daytime_dacc(ic)  + beta_sinklim_ps(ic)
         t_jmax_opt_daytime_dacc(ic)       = t_jmax_opt_daytime_dacc(ic)       + t_jmax_opt(ic)
         ! 2D var - add values
@@ -613,7 +613,7 @@ CONTAINS
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
     co2_mixing_ratio_tcnl_mavg(:)    = calc_time_mavg(dtime, co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio(:), &
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
-    ga_tcnl_mavg(:)                  = calc_time_mavg(dtime, ga_tcnl_mavg(:), ga(:), &
+    ga_tcnl_mavg(:)                  = calc_time_mavg(dtime, ga_tcnl_mavg(:), aerodyn_cond(:), &
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
     uptake_n_tcnl_mavg               = calc_time_mavg(dtime, uptake_n_tcnl_mavg,                                 &
       &                                  unit_uptake_n_pot(:) * veg_pool_mt(ix_fine_root,ixC,:) + n_fixation(:), &
