@@ -212,7 +212,7 @@ CONTAINS
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
-    LOGICAL  :: lstart, lbugfix
+    LOGICAL  :: lstart, l_uniform_snow
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime, excess, f_red
 
@@ -300,7 +300,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
-    lbugfix = dsl4jsb_Config(SSE_)%l_tempbugfix
+    l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
 
     !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_withsnow_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old) &
@@ -425,7 +425,7 @@ CONTAINS
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
         IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
-          IF (.NOT. lbugfix) THEN
+          IF (.NOT. l_uniform_snow) THEN
             snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
           END IF
         ELSE
@@ -940,16 +940,17 @@ CONTAINS
       DEALLOCATE(wtr_scool_withsnow_sl,  wtr_scool_snowfree_sl)
     END IF
 
+    IF (.NOT. tile%is_glacier) THEN
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
       !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 #endif
-    DO ic = 1,nc
-      thaw_depth(ic) = snow_fract(ic) * thaw_depth_withsnow(ic) + (1._wp - snow_fract(ic)) * thaw_depth_snowfree(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+      DO ic = 1,nc
+        thaw_depth(ic) = snow_fract(ic) * thaw_depth_withsnow(ic) + (1._wp - snow_fract(ic)) * thaw_depth_snowfree(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -957,29 +958,30 @@ CONTAINS
 #else
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 #endif
-    DO ic = 1,nc
-      IF (snow_depth_sl(ic,nsnow) > 0._wp) THEN
-        grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._wp - snow_fract(ic)) * grnd_hflx_soil(ic)
-        hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._wp - snow_fract(ic)) * hcap_grnd_soil(ic)
-      ELSE
-        grnd_hflx(ic) = grnd_hflx_soil(ic)
-        hcap_grnd(ic) = hcap_grnd_soil(ic)
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
+      DO ic = 1,nc
+        IF (snow_depth_sl(ic,nsnow) > 0._wp) THEN
+          grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._wp - snow_fract(ic)) * grnd_hflx_soil(ic)
+          hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._wp - snow_fract(ic)) * hcap_grnd_soil(ic)
+        ELSE
+          grnd_hflx(ic) = grnd_hflx_soil(ic)
+          hcap_grnd(ic) = hcap_grnd_soil(ic)
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
 
-    ! Store actual snow on soil fraction to reconstruct the snow free and snow covered soil column states
-    ! in the next time step
+      ! Store actual snow on soil fraction to reconstruct the snow free and snow covered soil column states
+      ! in the next time step
 #ifdef _CRAYFTN
-    ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-    !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
 #else
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
 #endif
-    DO ic = 1,nc
-      snow_fract_old(ic) = snow_fract(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+      DO ic = 1,nc
+        snow_fract_old(ic) = snow_fract(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     !$ACC WAIT(1)
     !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_withsnow_top, hcap_grnd_snow) &

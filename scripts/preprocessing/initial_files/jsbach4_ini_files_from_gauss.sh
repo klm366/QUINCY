@@ -40,7 +40,6 @@ year_list=${year_list}
 
 ggrids=""                    # disable Gaussian grids
 
-rootdir=${icon_grid_rootdir}
 extpar_file=${initial_extpar_file}
 icon_grid_file=${icon_grid}
 lsm_file=${fractional_mask} # file containing fractional land sea mask
@@ -84,7 +83,6 @@ workdir=${work_dir}
 hd_file=""
 
 pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
-grid_path=${rootdir}/$atmGridID
 
 declare -A source_res_dict
 source_res_dict[0]=T31

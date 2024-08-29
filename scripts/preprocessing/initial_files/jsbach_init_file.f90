@@ -3326,26 +3326,33 @@ SUBROUTINE extrap(nlon, nlat, lon, lat, mask, missval, method, val)
   REAL(dp), PARAMETER :: deg2rad = 1.74532925199432957692e-2  ! Degree to rad: 2pi/360
 
   INTEGER  :: i, j                    ! looping index of global grid
-  INTEGER  :: ip, im, jp, jm, ii, jj
-  INTEGER  :: ni, nj                  ! looping index on neighbors array
-  INTEGER  :: m                       ! iteration counter
-  INTEGER  :: mmax                    ! maximum number of iterations
+  INTEGER  :: ii, jj, dist, nn, dir, ii1, ii2
+  INTEGER  :: ni                      ! looping index on neighbors array
   INTEGER  :: mini, maxi              ! minimum, maximum value
-  INTEGER  :: nval                    ! number of different values
-  INTEGER  :: loc(2)                  ! location of nearest neighbor
-  LOGICAL  :: filled                  ! flag to indicate if gap is filled
+  INTEGER  :: loc                     ! location of nearest neighbor
   REAL(dp) :: x1, y1, z1, x2, y2, z2  ! x,y,z-coordinates
   REAL(dp) :: dx                      ! distance
   REAL(dp) :: lon_ctl, lat_ctl        ! coordinates of missing cell
   REAL(dp) :: lon_nbr, lat_nbr        ! coordinates of neighboring cell
   REAL(dp) :: sum_dist                ! sum of distances of the neighbors
   REAL(dp) :: val_new(nlon,nlat)      ! filled array (no missing values on land)
-  REAL(dp), ALLOCATABLE :: neighbours_val(:,:)  ! value on neighbors array
-  REAL(dp), ALLOCATABLE :: neighbours_lon(:,:)  ! corresponding longitude
-  REAL(dp), ALLOCATABLE :: neighbours_lat(:,:)  ! corresponding latitude
-  REAL(dp), ALLOCATABLE :: neighbours_dist(:,:) ! distance of the neighbor
-  REAL(dp), ALLOCATABLE :: count_values(:)      ! array to count different values
+  REAL(dp), ALLOCATABLE :: neighbours_val(:)  ! value on neighbors array
+  REAL(dp), ALLOCATABLE :: neighbours_lon(:)  ! corresponding longitude
+  REAL(dp), ALLOCATABLE :: neighbours_lat(:)  ! corresponding latitude
+  REAL(dp), ALLOCATABLE :: neighbours_dist(:) ! distance of the neighbor
+  REAL(dp), ALLOCATABLE :: count_values(:)    ! array to count different values
 
+  !$OMP PARALLEL PRIVATE(neighbours_val, neighbours_lon, neighbours_lat, neighbours_dist)
+  ALLOCATE( &
+      & neighbours_val(4*MIN(nlon,nlat)), &
+      & neighbours_lon(4*MIN(nlon,nlat)), &
+      & neighbours_lat(4*MIN(nlon,nlat)), &
+      & neighbours_dist(4*MIN(nlon,nlat)) &
+    )
+
+  !$OMP DO COLLAPSE(2) &
+  !$OMP   PRIVATE(i, j, nn, ii, jj, ii1, ii2, dir, ni, mini, maxi, count_values, lon_ctl) &
+  !$OMP   PRIVATE(lat_ctl, lon_nbr, lat_nbr, sum_dist, x1, y1, z1, x2, y2, z2, dx, loc)
   DO i = 1, nlon
      DO j = 1, nlat
 
@@ -3353,121 +3360,112 @@ SUBROUTINE extrap(nlon, nlat, lon, lat, mask, missval, method, val)
         IF (mask(i,j) > 0._dp .AND. val(i,j) == missval) THEN
 
            ! check neighboring grid cells
+           DO dist = 1, MAX(nlon-1, nlat-1)
+              nn = 0
 
-           ! initializations
-           ip = i
-           im = i
-           jp = j
-           jm = j
-
-           m=1
-           mmax = nlat  ! maximum number of iterations
-           filled = .FALSE.
-
-           sum_dist = 0._dp
-
-           DO WHILE (.NOT. filled)
-
-              ip = ip+1
-              im = im-1
-              jp = MIN(jp+1, nlat)
-              jm = MAX(jm-1, 1)
-
-              ALLOCATE(neighbours_val(ip-im+1,jp-jm+1))
-              ALLOCATE(neighbours_lon(ip-im+1,jp-jm+1))
-              ALLOCATE(neighbours_lat(ip-im+1,jp-jm+1))
-              ALLOCATE(neighbours_dist(ip-im+1,jp-jm+1))
-
-              DO ni = 1, ip-im+1   ! index on neighbors array
-              DO nj = 1, jp-jm+1
-                 ii = im + ni - 1   ! index on global grid
-                 jj = jm + nj - 1
-
-                 IF (ii <= 0)   ii = ii + nlon
-                 IF (ii > nlon) ii = ii - nlon
-
-                 neighbours_lon(ni,nj) = lon(ii)
-                 neighbours_lat(ni,nj) = lat(jj)
-                 neighbours_val(ni,nj) = val(ii,jj)
-              END DO
-              END DO
-
-              IF ( ANY(neighbours_val(:,:) /= missval) ) THEN
-                 SELECT CASE (method)
-                 CASE ('modal')
-                    mini = NINT(MINVAL(neighbours_val(:,:), MASK=neighbours_val(:,:)/=missval))
-                    maxi = NINT(MAXVAL(neighbours_val(:,:), MASK=neighbours_val(:,:)/=missval))
-                    ALLOCATE (count_values(maxi-mini+1))
-                    count_values(:) = 0
-                    DO nval = mini, maxi
-                       DO ni = 1, ip-im+1
-                       DO nj = 1, jp-jm+1   ! index on neighbors array
-                          IF (NINT(neighbours_val(ni,nj)) == nval) &
-                               count_values(nval-mini+1) = count_values(nval-mini+1) + 1
-                       END DO
-                       END DO
-                    END DO
-                    val_new(i,j) =  MAXLOC(count_values(:), DIM=1) + mini - 1
-                    DEALLOCATE (count_values)
-
-                 CASE ('nneigh', 'mean')
-                    lon_ctl = lon(i) * deg2rad     ! central longitude [rad]
-                    lat_ctl = lat(j) * deg2rad     ! central latitude [rad]
-
-                    DO nj = 1, jp-jm+1   ! index on neighbors array
-                    DO ni = 1, ip-im+1
-
-                       IF (neighbours_val(ni,nj) /= missval) THEN
-
-                          lon_nbr = neighbours_lon(ni,nj) * deg2rad  ! lon of neighbor [rad]
-                          lat_nbr = neighbours_lat(ni,nj) * deg2rad  ! lat of neighbor [rad]
-
-                          ! Transformation to x,y,z-coordinates
-
-                          x1 = cos(lat_ctl)*cos(lon_ctl)
-                          y1 = cos(lat_ctl)*sin(lon_ctl)
-                          z1 = sin(lat_ctl)
-
-                          x2 = cos(lat_nbr)*cos(lon_nbr)
-                          y2 = cos(lat_nbr)*sin(lon_nbr)
-                          z2 = sin(lat_nbr)
-
-                          ! direct distance
-                          dx = SQRT((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-
-                          ! distance along the surface
-                          dx = 2*ASIN(dx/2)
-
-                          neighbours_dist(ni,nj) = dx
-                          sum_dist = sum_dist + neighbours_dist(ni,nj)
+              ! upper and lower boundaries
+              DO dir = -1, +1, 2
+                 IF (j + dir * dist > 0 .AND. j + dir * dist <= nlat) THEN
+                    jj = j + dir * dist
+                    DO ni = i - dist, i + dist
+                       IF (ni <= 0) THEN
+                          ii = ni + nlon
+                       ELSE IF (ni > nlon) THEN
+                          ii = ni - nlon
                        ELSE
-                          neighbours_dist(ni,nj) = 0._dp
+                          ii = ni
+                       END IF
+
+                       IF (val(ii, jj) /= missval) THEN
+                          nn = nn + 1
+                          neighbours_val(nn) = val(ii, jj)
+                          neighbours_lon(nn) = lon(ii)
+                          neighbours_lat(nn) = lat(jj)
                        END IF
                     END DO
-                    END DO
-                    IF (method ==  'nneigh') THEN
-                       loc(:) = MINLOC(neighbours_dist(:,:), MASK=neighbours_dist(:,:) /= 0._dp)
-                       val_new(i,j) = neighbours_val(loc(1),loc(2))
-                    ELSE IF (method ==  'mean') THEN
-                       val_new(i,j) = SUM(neighbours_val(:,:) * neighbours_dist(:,:)/sum_dist)
-                    END IF
+                 END IF
+              END DO
 
-                 CASE default
-                    CALL hdlerr(1, "extrapolation method not supported")
-                 END SELECT
-                 filled = .TRUE.
+              ! Left and right boundaries.
+              ii1 = i - dist
+              IF (ii1 <= 0) ii1 = ii1 + nlon
 
-              ELSE
-                 IF (m >= mmax) CALL hdlerr(1, "Not enough iterations for extrapolation")
-                 m = m + 1
+              ii2 = i + dist
+              IF (ii2 > nlon) ii2 = ii2 - nlon
+
+              DO jj = MAX(2, j - dist + 1), MIN(nlat - 1, j + dist - 1)
+                 IF (val(ii1, jj) /= missval) THEN
+                    nn = nn + 1
+                    neighbours_val(nn) = val(ii1, jj)
+                    neighbours_lon(nn) = lon(ii1)
+                    neighbours_lat(nn) = lat(jj)
+                 END IF
+
+                 IF (val(ii2, jj) /= missval) THEN
+                    nn = nn + 1
+                    neighbours_val(nn) = val(ii2, jj)
+                    neighbours_lon(nn) = lon(ii2)
+                    neighbours_lat(nn) = lat(jj)
+                 END IF
+              END DO
+
+              IF (nn > 0) EXIT
+           END DO
+
+           IF (nn == 0) CALL hdlerr(1, "no valid neighbour cells found")
+
+           SELECT CASE (method)
+           CASE ('modal')
+              mini = NINT(MINVAL(neighbours_val(1:nn)))
+              maxi = NINT(MAXVAL(neighbours_val(1:nn)))
+              ALLOCATE (count_values(mini:maxi))
+              count_values(:) = 0
+              DO ni = 1, nn
+                 count_values(NINT(neighbours_val(ni))) = count_values(NINT(neighbours_val(ni))) + 1
+              END DO
+              val_new(i,j) = MAXLOC(count_values(:), DIM=1) + mini - 1
+              DEALLOCATE (count_values)
+
+           CASE ('nneigh', 'mean')
+              lon_ctl = lon(i) * deg2rad     ! central longitude [rad]
+              lat_ctl = lat(j) * deg2rad     ! central latitude [rad]
+
+              x1 = cos(lat_ctl)*cos(lon_ctl)
+              y1 = cos(lat_ctl)*sin(lon_ctl)
+              z1 = sin(lat_ctl)
+
+              sum_dist = 0._dp
+
+              DO ni = 1, nn
+                 lon_nbr = neighbours_lon(ni) * deg2rad  ! lon of neighbor [rad]
+                 lat_nbr = neighbours_lat(ni) * deg2rad  ! lat of neighbor [rad]
+
+                 ! Transformation to x,y,z-coordinates
+                 x2 = cos(lat_nbr)*cos(lon_nbr)
+                 y2 = cos(lat_nbr)*sin(lon_nbr)
+                 z2 = sin(lat_nbr)
+
+                 ! direct distance
+                 dx = SQRT((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+
+                 ! distance along the surface
+                 dx = 2*ASIN(dx/2)
+
+                 neighbours_dist(ni) = dx
+                 sum_dist = sum_dist + dx
+              END DO
+
+              IF (method ==  'nneigh') THEN
+                 loc = MINLOC(neighbours_dist(1:nn), DIM=1)
+                 val_new(i,j) = neighbours_val(loc)
+              ELSE IF (method ==  'mean') THEN
+                 val_new(i,j) = SUM(neighbours_val(1:nn) * neighbours_dist(1:nn)/sum_dist)
               END IF
 
-              DEALLOCATE(neighbours_val)
-              DEALLOCATE(neighbours_lon)
-              DEALLOCATE(neighbours_lat)
-              DEALLOCATE(neighbours_dist)
+           CASE default
+              CALL hdlerr(1, "extrapolation method not supported")
+           END SELECT
 
-           END DO
         ELSE
            IF (mask(i,j) == 0._dp) THEN
               val_new(i,j) = 0._dp
@@ -3477,7 +3475,11 @@ SUBROUTINE extrap(nlon, nlat, lon, lat, mask, missval, method, val)
         END IF
      END DO
   END DO
-  val(:,:)=val_new(:,:)
+
+  !$OMP WORKSHARE
+  val(:,:) = val_new(:,:)
+  !$OMP END WORKSHARE
+  !$OMP END PARALLEL
 
 END SUBROUTINE extrap
 

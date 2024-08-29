@@ -29,18 +29,9 @@ MODULE mo_sse_process
 
 CONTAINS
 
-  !!
-  ! !>      Calculates the volumetric heat capacity of soil (de Vries, 1963)
-  !
-  ! @param [in]  vol_heat_cap_soil_dry_mineral  Heat capacity of dry mineral soil solid
-  ! @param [in]  porosity                       Volumetric soil porosity
-  ! @param [in]  fract_organic                  Volume fraction (rel. to 1-porosity) of organic soil
-  ! @param [in]  fract_water                    Volume fraction of liquid water
-  ! @param [in]  fract_ice                      Volume fraction of frozen water
-  ! @param [in]  layer_depth                    (dynamic) Layer depth above bedrock
-  ! @param [in]  dz                             (fixed) soil layer depth
-  !
-  ! @return     The volumetric heat capacity of soil.
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the volumetric heat capacity of soil (de Vries, 1963)
   !!
 #ifndef _OPENACC
   ELEMENTAL PURE &
@@ -80,19 +71,9 @@ CONTAINS
 
   END FUNCTION calc_vol_heat_capacity
 
-  !!
-  ! !>      Calculates the soil thermal conductivity after Johansen 1977.
-  !
-  ! @param      heat_cond_soil_mineral  The heat condition soil mineral
-  ! @param      water                   The water
-  ! @param      ice                     The ice
-  ! @param      porosity                Volumentric porosity of soil, including soil mineral and organic part
-  ! @param      fract_organic           The fract organic
-  ! @param      layer_depth             The layer depth
-  ! @param      dz                      { parameter_description }
-  ! @param      heat_cond               The heat condition
-  !
-  ! @return     The thermal conductivity.
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the soil thermal conductivity after Johansen 1977.
   !!
 #ifndef _OPENACC
   ELEMENTAL PURE &
@@ -217,6 +198,10 @@ CONTAINS
 
   END FUNCTION calc_thermal_conductivity
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the relative soil humidity wrt field capacity
+  !!
   REAL(wp) FUNCTION relative_humidity_soil(ws, fc)
 
     !$ACC ROUTINE SEQ
@@ -239,31 +224,20 @@ CONTAINS
 
   END FUNCTION relative_humidity_soil
 
+  ! --------------------------------------------------------------------------------------------------------- !
   !>
-  !
-  ! Initialize soil and surface temperature
-  !
-  ! Method:
-  !
-  ! Starting from the tslclim field temperatures are set in relation
-  ! to the depth of the soil layer and position of the initial
-  ! day in the annual cycle.
-  !
-  ! tsl is at 0.07 m
-  ! thickness of layers 0.065, 0.254, 0.913, 2.902, 5.700 m (s. soiltemp)
-  !
-  ! Authors:
-  !
-  ! U. Schlese, DKRZ, April 2000, original source
-  ! L. Dumenil, MPI, June 1989, original source of *initemp*
-  !             which is now part of this routine
-  ! I. Kirchner, MPI, November 2000, date/time control
-  ! U. Schulzweida, MPI, May 2002, blocking (nproma)
-  ! E. Roeckner, MPI, Sep 2002, initialization of mixed layer ocean
-  ! T. Raddatz, MPI, Mai 2005, adaption to JSBACH
-  !
+  !! Initialize soil and surface temperature
+  !!
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil)
-
+    ! Method:
+    !
+    ! Starting from the tslclim field temperatures are set in relation
+    ! to the depth of the soil layer and position of the initial
+    ! day in the annual cycle.
+    !
+    ! tsl is at 0.07 m
+    ! thickness of layers 0.065, 0.254, 0.913, 2.902, 5.700 m (s. soiltemp)
+    !
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_jsb_math_constants, ONLY: pi
@@ -333,97 +307,16 @@ CONTAINS
 
   END SUBROUTINE init_soil_temperature
 
-  !
-  ! !>      Calculates the soil temperature.
-  !
-  ! @param      nc            The nc
-  ! @param      nsoil         The nsoil
-  ! @param      dz            { parameter_description }
-  ! @param      mids          The cmid
-  ! @param      delta_time    The delta time
-  ! @param      lstart        The lstart
-  ! @param      is_glacier
-  ! @param [in] l_freeze
-  ! @param [in] l_supercool
-  ! @param      t_unfilt      The t srf unfilt
-  ! @param      vol_heat_cap  The volume heat capability
-  ! @param      heat_cond     The heat condition
-  ! @param [in]      ws_max
-  ! @param [in]      matric_pot
-  ! @param [in]      bclapp
-  ! @param [in,out]  t_soil_sl     The t soil across layers
-  ! @param [in,out]  t_soil_acoef  The t soil acoef
-  ! @param [in,out]  t_soil_bcoef  The t soil bcoef
-  ! @param [in,out]  ws
-  ! @param [in,out]  ice
-  ! @param [out]     hcap_grnd     The hcap grnd
-  ! @param [out]     grnd_hflx     The grnd hflx
-  ! @param [out]     frozen
-  ! @param [out]     melt
-  ! @param [out]     thaw_depth
-  !
-  ! @return     { description_of_the_return_value } !
-  !
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the soil layer temperatures, a/b coefficients, ground heat flux and ground heat capacity.
+  !!
   SUBROUTINE calc_soil_temperature(       &
     & nc, nsoil, lstart,                  &
     & t_soil_top,                         &
     & t_soil_acoef, t_soil_bcoef,         &
     & t_soil_sl                           &
     & )
-    !
-    !
-    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
-    !
-    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
-    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
-    !
-    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
-    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
-    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
-    !               ECHAM4 GCM.
-    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
-    !            U.Schlese DKRZ - February 2000  new soil temperatures
-    !            L Kornblueh, MPI, January 2003, removed MERGE
-    !
-    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
-    !
-    !   OBJECTIVE:  COMPUTATION OF:
-    !               THE GROUND TEMPERATURE EVOLUTION
-    !               THE GROUND SPECIFIC HEAT "CAPCAL"
-    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
-    !
-    !
-    !   METHOD:  IMPLICIT TIME INTEGRATION
-    !
-    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
-    !           T(K+1) = C(K) + D(K)*T(K)  (1)
-    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
-    !   T-DT TIME-STEP.
-    !   ROUTINE STRUCTURE:
-    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
-    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
-    !     PROFILE FOR THE T+DT TIME-STEP
-    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
-    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
-    !            FDIFF = A + B TS(T+DT)
-    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
-    !            WITH F0 = A + B (TS(T))
-    !                 CAPCAL = B*DT
-    !
-    !
-    !     ------------------------------------------------------------------
-    !
-    !     MODIFIED BY ALTUG EKICI
-    !
-    !     INCLUDED:
-    !     -PHASE CHANGE
-    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
-    !     -SUPERCOOLED WATER EQUATION
-    !     -THAW DEPTH CALCULATION
-    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
-    !     -ORGANIC LAYER ABOVE THE SOIL
-    !
-    !----------------------------------------------------------------------------------------------
 
     IMPLICIT NONE
 
@@ -826,7 +719,10 @@ CONTAINS
 
   END SUBROUTINE calc_soil_abcoeff
 
-
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the snow layer temperatures.
+  !!
   SUBROUTINE calc_snow_temperature(         &
     & nc, nsnow,                            &
     & lstart,                               &
@@ -834,60 +730,6 @@ CONTAINS
     & t_unfilt, t_soil_acoef, t_soil_bcoef, &
     & t_snow, t_snow_acoef, t_snow_bcoef,   &
     & t_soil_top)
-    !
-    !
-    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
-    !
-    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
-    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
-    !
-    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
-    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
-    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
-    !               ECHAM4 GCM.
-    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
-    !            U.Schlese DKRZ - February 2000  new soil temperatures
-    !            L Kornblueh, MPI, January 2003, removed MERGE
-    !
-    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
-    !
-    !   OBJECTIVE:  COMPUTATION OF:
-    !               THE GROUND TEMPERATURE EVOLUTION
-    !               THE GROUND SPECIFIC HEAT "CAPCAL"
-    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
-    !
-    !
-    !   METHOD:  IMPLICIT TIME INTEGRATION
-    !
-    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
-    !           T(K+1) = C(K) + D(K)*T(K)  (1)
-    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
-    !   T-DT TIME-STEP.
-    !   ROUTINE STRUCTURE:
-    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
-    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
-    !     PROFILE FOR THE T+DT TIME-STEP
-    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
-    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
-    !            FDIFF = A + B TS(T+DT)
-    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
-    !            WITH F0 = A + B (TS(T))
-    !                 CAPCAL = B*DT
-    !
-    !
-    !     ------------------------------------------------------------------
-    !
-    !     MODIFIED BY ALTUG EKICI
-    !
-    !     INCLUDED:
-    !     -PHASE CHANGE
-    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
-    !     -SUPERCOOLED WATER EQUATION
-    !     -THAW DEPTH CALCULATION
-    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
-    !     -ORGANIC LAYER ABOVE THE SOIL
-    !
-    !----------------------------------------------------------------------------------------------
 
     IMPLICIT NONE
 
@@ -913,6 +755,7 @@ CONTAINS
 
     INTEGER  :: ic, is
 
+    ! Initialize snow layer temperatures with surface temperature
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ic=1,nc
       DO is=1,nsnow
@@ -926,6 +769,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !
     IF (.NOT. lstart) THEN
+      ! Initialize a/b coefficients for snow layers which did not exists in the last time step
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ic=1,nc
         DO is=1,nsnow
@@ -940,6 +784,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! Compute snow layer temperatures from a/b coefficients, except for the top snow layer which
+      ! retains the surface temperature
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
       DO ic=1,nc
@@ -954,9 +800,9 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
+      ! Compute new temperature for top soil layer ( or use the surface temperature where there was or is no snow)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        ! New temperature for top soil layer (t_unfilt where there was or is no snow)
         IF (MAX(itop(ic), itop_old(ic)) <= nsnow) THEN
           t_soil_top(ic) = t_snow_acoef(ic,nsnow) + t_snow_bcoef(ic,nsnow) * t_snow(ic,nsnow)
         ELSE
@@ -976,6 +822,10 @@ CONTAINS
 
   END SUBROUTINE calc_snow_temperature
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calculates the snow layer a/b coefficients, its ground heat flux, and heat capacity.
+  !!
   SUBROUTINE calc_snow_abcoeff(           &
     & nc, nsnow,                          &
     & dz_soil,                            &
@@ -987,60 +837,6 @@ CONTAINS
     & t_soil_acoef, t_soil_bcoef,         &
     & t_snow, t_snow_acoef, t_snow_bcoef, &
     & hcap_grnd, grnd_hflx)
-    !
-    !
-    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
-    !
-    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
-    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
-    !
-    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
-    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
-    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
-    !               ECHAM4 GCM.
-    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
-    !            U.Schlese DKRZ - February 2000  new soil temperatures
-    !            L Kornblueh, MPI, January 2003, removed MERGE
-    !
-    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
-    !
-    !   OBJECTIVE:  COMPUTATION OF:
-    !               THE GROUND TEMPERATURE EVOLUTION
-    !               THE GROUND SPECIFIC HEAT "CAPCAL"
-    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
-    !
-    !
-    !   METHOD:  IMPLICIT TIME INTEGRATION
-    !
-    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
-    !           T(K+1) = C(K) + D(K)*T(K)  (1)
-    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
-    !   T-DT TIME-STEP.
-    !   ROUTINE STRUCTURE:
-    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
-    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
-    !     PROFILE FOR THE T+DT TIME-STEP
-    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
-    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
-    !            FDIFF = A + B TS(T+DT)
-    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
-    !            WITH F0 = A + B (TS(T))
-    !                 CAPCAL = B*DT
-    !
-    !
-    !     ------------------------------------------------------------------
-    !
-    !     MODIFIED BY ALTUG EKICI
-    !
-    !     INCLUDED:
-    !     -PHASE CHANGE
-    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
-    !     -SUPERCOOLED WATER EQUATION
-    !     -THAW DEPTH CALCULATION
-    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
-    !     -ORGANIC LAYER ABOVE THE SOIL
-    !
-    !----------------------------------------------------------------------------------------------
 
     IMPLICIT NONE
 
@@ -1202,6 +998,10 @@ CONTAINS
 
   END SUBROUTINE calc_snow_abcoeff
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Legacy routine to calculate soil temperatures, a/b coefficient, ground heat flux, and ground heat capacity
+  !!
   SUBROUTINE calc_soiltemp_old( &
     & nc,nsoil,cdel,cmid,     &
     & delta_time,               &
@@ -1472,6 +1272,10 @@ CONTAINS
 
   END SUBROUTINE calc_soiltemp_old
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Calulates potentially supercooled water within soil layers
+  !!
 #ifndef _OPENACC
   ELEMENTAL PURE &
 #endif
