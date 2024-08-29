@@ -87,10 +87,10 @@ MODULE mo_spq_memory_class
 
     TYPE(t_jsb_var_real2d)          :: &
       spq_drag_srf           , &          !< surface_drag
-      spq_t_acoef            , &          !< temperature_acoef (Richtmeyer-Morton coefficient for explicit coupling)
-      spq_t_bcoef            , &          !< temperature_bcoef (Richtmeyer-Morton coefficient for explicit coupling)
-      spq_q_acoef            , &          !< specific_humidity_acoef (Richtmeyer-Morton coefficient for explicit coupling)
-      spq_q_bcoef            , &          !< specific_humidity_bcoef (Richtmeyer-Morton coefficient for explicit coupling)
+      spq_t_acoef            , &          !< temperature_acoef (Richtmyer-Morton coefficient)
+      spq_t_bcoef            , &          !< temperature_bcoef (Richtmyer-Morton coefficient)
+      spq_q_acoef            , &          !< specific_humidity_acoef (Richtmyer-Morton coefficient)
+      spq_q_bcoef            , &          !< specific_humidity_bcoef (Richtmyer-Morton coefficient)
       spq_pch
 
     ! Additional variables for spq
@@ -1076,7 +1076,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('spq_pch', mem%spq_pch,                                 &
@@ -1085,7 +1085,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('spq_t_acoef', mem%spq_t_acoef,                         &
@@ -1094,7 +1094,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('spq_t_bcoef', mem%spq_t_bcoef,                         &
@@ -1103,7 +1103,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('spq_q_acoef', mem%spq_q_acoef,                         &
@@ -1112,7 +1112,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('spq_q_bcoef', mem%spq_q_bcoef,                         &
@@ -1121,7 +1121,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                  &
         & initval_r=0.0_wp )
 
     END IF ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)

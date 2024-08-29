@@ -497,11 +497,11 @@ CONTAINS
     LOGICAL,                                          INTENT(in)    :: is_standalone          !< standalone run?
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rad_srf_net, &         !< surface net radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
-                                                                       t_acoef, &             !< Richtmeyer-Morton Coefficient Ta
-                                                                       t_bcoef, &             !< Richtmeyer-Morton Coefficient Tb
+                                                                       t_acoef, &             !< Richtmyer-Morton Coefficient Ta
+                                                                       t_bcoef, &             !< Richtmyer-Morton Coefficient Tb
                                                                        q_air, &               !< air specific humidity [g/g]
-                                                                       q_acoef, &             !< Richtmeyer-Morton Coefficient Qa
-                                                                       q_bcoef, &             !< Richtmeyer-Morton Coefficient Qb
+                                                                       q_acoef, &             !< Richtmyer-Morton Coefficient Qa
+                                                                       q_bcoef, &             !< Richtmyer-Morton Coefficient Qb
                                                                        press_srf, &           !< surface pressure [Pa]
                                                                        wind_10m, &            !< wind speed [m/2]
                                                                        height, &              !< height

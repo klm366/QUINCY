@@ -256,16 +256,16 @@ CONTAINS
     ftranspiration_sl(:,:) = 0.0_wp
     DO ic = 1, nc
       DO isoil = 1, nsoil_sb
-        IF((w_soil_fc_sl(ic,isoil) - w_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
+        IF ((w_soil_fc_sl(ic,isoil) - w_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
           hlp1(ic) = calc_soil_moisture_stress(w_soil_pot_sl(ic, isoil), lctlib%phi_leaf_min)
           ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp1(ic)
         END IF
       END DO
-      IF(SUM(ftranspiration_sl(ic,:)) > eps8) THEN
+      IF (SUM(ftranspiration_sl(ic,:)) > eps8) THEN
         ftranspiration_sl(ic,:) = ftranspiration_sl(ic,:) / SUM(ftranspiration_sl(ic,:))
       ELSE
         ftranspiration_sl(ic,:) = 0.0_wp
-      ENDIF
+      END IF
     END DO
 
     !> 1.2 determine aerodynamic conductance

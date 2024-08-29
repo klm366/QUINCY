@@ -77,7 +77,7 @@ CONTAINS
     REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
     INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
-    INTEGER                                 :: nsoil_sb
+    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
     REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
@@ -456,27 +456,26 @@ CONTAINS
     ENDSELECT
 
     !> 2.0 root fraction
-    !>    root_fraction_sl(:,:,:) depends on the init of root_depth(:,:) -- SPQ!
     !>
-    ! by default use: fixed roots for QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    !                 because these models are not growing roots, suffering water limitations with dyn roots
-    ! and for QSOIL because else only the first soil layer would be initialised
+
+    ! QSOIL, QCANOPY, Q_TEST_CANOPY and Q_TEST_RADIATION need fixed roots.
+    ! (QSOIL cannot be properly initialised with dyn roots and
+    ! the other modes would be subject to water limitations with dyn roots.)
+    ! We thus switch off dynamic roots for these modes.
     SELECT CASE(model%config%qmodel_id)
     CASE(QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
       dsl4jsb_Config(VEG_)%flag_dynamic_roots = .FALSE.
       CALL message(TRIM(routine), ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
-      print*,      TRIM(routine), ' set "flag_dynamic_roots = .FALSE."', &
-        &                         ' (which is the default for the canopy, soil only, test_canopy or test_radiation models)'
     END SELECT
 
     ! init root fraction
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
-      !>     - dynamic root fractions across soil layers (see mo_q_veg_growth)
+      !>     - dynamic root fractions (see mo_q_veg_growth)
       !>
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
     ELSE
-      !>     - fixed root fractions across soil layers (no changes after init)
+      !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
       !>
       ! root fractions assuming an exponential distribution of roots \n
       !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n

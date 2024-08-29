@@ -195,7 +195,7 @@ CONTAINS
                                   spq_drag_srf(ic), spq_pch(ic))  ! out
       END DO
 
-      ! Richtmeyer-Morton coefficient for explicit coupling
+      ! The explicit coupling used in the standalone case requires the acoef coefficients to be zero
       spq_t_acoef(:) = 0.0_wp
       spq_t_bcoef(:) = t_air(:) * cpd * (1._wp + cpvd1 * q_air(:)) + zgh
       spq_q_acoef(:) = 0.0_wp

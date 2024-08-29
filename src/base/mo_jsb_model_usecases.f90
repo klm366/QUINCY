@@ -80,8 +80,8 @@ CONTAINS
     CASE ('quincy_11_pfts')
       CALL init_usecase_quincy_11_pfts(model)
 
-    ! QUINCY 11 PFTs
     CASE ('quincy_11_pfts_for_coupling')
+      ! QUINCY 11 pfts but with SPQ running on the box tile
       CALL init_usecase_quincy_11_pfts_for_coupling(model)
 
     ! catch wrong usecase setting
