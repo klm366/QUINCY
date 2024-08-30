@@ -53,6 +53,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
     LOGICAL                        :: include_carbon14      !< If bgc materials contain C14 as element
     LOGICAL                        :: include_nitrogen15    !< If bgc materials contain C15 as element
+    INTEGER                        :: nr_of_elements        !< for bookkeeping: number of elements
     INTEGER                        :: nr_of_used_elements   !< for bookkeeping: number of actually used elements
     INTEGER, ALLOCATABLE           :: elements_index_map(:) !< vector for ID -> IDX mapping of the elements
     LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< vector(ID) == .TRUE. if "element with ID" is used
@@ -361,11 +362,12 @@ CONTAINS
     CHARACTER(len=*),            INTENT(IN) :: caller  !< calling routine
     ! -------------------------------------------------------------------------------------------------- !
     ! allocate map with size "number of element IDs defined in mo_lnd_bgcm_class"
-    ALLOCATE(config%elements_index_map(LAST_ELEM_ID))
+    config%nr_of_elements = LAST_ELEM_ID
+    ALLOCATE(config%elements_index_map(config%nr_of_elements))
     config%elements_index_map(:) = -1  ! set all IND to '-1' by default, -1 for "element not used"
     config%nr_of_used_elements = 0     ! init for use in setup_element
     ! allocate vector with info about whether the element is used
-    ALLOCATE(config%is_element_used(LAST_ELEM_ID))
+    ALLOCATE(config%is_element_used(config%nr_of_elements))
     config%is_element_used(:) = .FALSE. ! set all elements to "not used" by default
     ! information for logfile
     CALL message(TRIM(caller), 'Mapping of element ID -> IND:')

@@ -34,7 +34,7 @@ MODULE mo_veg_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reset_veg_fluxes, calculate_time_average_vegetation
+  PUBLIC :: reset_veg_fluxes, calculate_time_average_vegetation, test_carbon_conservation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
@@ -794,6 +794,84 @@ CONTAINS
     t_jmax_opt_mavg(:)  = calc_time_mavg(dtime, t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
 
   END SUBROUTINE calculate_time_average_vegetation
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Determine if carbon is conserved
+  !>
+  SUBROUTINE test_carbon_conservation(tile, options)
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: VEG_, SB_, SPQ_, L2A_
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_memory(L2A_)
+    dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),        POINTER :: model                  !< the model
+    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(wp), DIMENSION(options%nc)   :: new_total_c            !< helper variable
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(L2A_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real2D_onChunk :: veg_pool_total_c
+    dsl4jsb_Real2D_onChunk :: veg_products_total_c
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk :: q_c_conservation_test
+    dsl4jsb_Real2D_onChunk :: q_total_c
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_c
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(L2A_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+    dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
+    dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)
+    ! ----------------------------------------------------------------------------------------------------- !
+    new_total_c(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+    IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
+      new_total_c(:) = new_total_c(:) + veg_products_total_c(:)
+    END IF
+
+    q_c_conservation_test(:) = new_total_c - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
+    q_total_c(:) = new_total_c(:)
+
+  END SUBROUTINE test_carbon_conservation
 
 #endif
 END MODULE mo_veg_util

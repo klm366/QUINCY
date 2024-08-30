@@ -1104,12 +1104,8 @@ CONTAINS
     !> 14.2 across multiple processes
     !>
     !>   see also 'update_veg_pools()'
-    !>
-    !>   TODO calculation may include 'fFire' and 'fLUC' (land-use change) once available
-    !>
-    ! could also be calc as: 'NPP - het_resp - fFire - fLUC'
     net_biosphere_production(:) = net_biosphere_production(:) &
-      &                                     - SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM = 2)
+      &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)

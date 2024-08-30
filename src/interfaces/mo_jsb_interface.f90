@@ -30,6 +30,7 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
   USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
+  USE mo_quincy_model_config, ONLY: QLAND
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
@@ -762,6 +763,9 @@ CONTAINS
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+#ifndef __NO_QUINCY__
+    USE mo_veg_util,           ONLY: test_carbon_conservation
+#endif
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_processes HYDRO_
     dsl4jsb_Use_processes PHENO_
@@ -800,7 +804,7 @@ CONTAINS
 
     dtime = model%options(no_omp_thread)%dtime
 
-    ! Carbon conservation test
+    ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
     IF (model%processes(CARBON_)%p%config%active) THEN
       IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
@@ -808,10 +812,19 @@ CONTAINS
       END IF
     END IF
 
+#ifndef __NO_QUINCY__
+    ! Carbon conservation test Quincy
+    CALL model%Get_top_tile(tile)
+    IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
+      CALL test_carbon_conservation(tile, model%options(no_omp_thread))
+    END IF
+#endif
+
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
       CALL seb_check_temperature_range(model_id, no_omp_thread)
     END IF
+
 
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
