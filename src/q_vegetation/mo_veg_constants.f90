@@ -330,9 +330,9 @@ CONTAINS
       k2_mort_greff               = 0.3_wp
       k3_mort_greff               = 25.0_wp
       min_greff                   = 1.0_wp
-      max_crown_area              = 15._wp
+      max_crown_area              = 100._wp ! adjusted to conform with observations by Pretsch et al. 2015; but cutting off extremes
       min_diameter                = 0.01_wp
-      k_crown_area                = 100._wp
+      k_crown_area                = 175._wp ! adjusted to medium size trees analysed by Pretch et al. 2015; https://doi.org/10.1016/j.ufug.2015.04.006
       k_rp                        = 1.6_wp
       k_fpc                       = 0.5_wp
       fpc_max                     = 0.95_wp
@@ -340,7 +340,7 @@ CONTAINS
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp
       min_height                  = 0.1_wp
-      k_sai2lai                   = 0.05_wp ! calibratted to get fapar < 0.2 when no leaves at canopy closure
+      k_sai2lai                   = 0.05_wp ! calibrated to get fapar < 0.2 when no leaves at canopy closure
       sm2lm_grass                 = 0.05_wp
       lambda_fruit_alloc          = 10.0_wp
       k1_fruit_alloc              = 0.01_wp
