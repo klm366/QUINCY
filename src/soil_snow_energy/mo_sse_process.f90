@@ -325,7 +325,7 @@ CONTAINS
     & ice, frozen, melt, liquid_max       &
     & )
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
+    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o ! , rhoi
 
     IMPLICIT NONE
 
@@ -367,6 +367,16 @@ CONTAINS
     REAL(wp) :: zd1(nsoil-1)
     REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
     REAL(wp) :: heat_cap(nc,nsoil)
+    REAL(wp) :: rhoi
+
+    !------------------------------------------------------------------
+    ! Consistency fix: The melt flux computation using ice density is physically correct but inconsistent
+    !   with our soil hydrology formulations. Currently, both ice and water are treated as water equivalents
+    !   with no volume change due to phase change. Using ice density for melt flux, while ignoring the larger
+    !   ice volume elsewhere, leads to an energy balance violation. More energy is released during freezing
+    !   than during melting of the same ice mass. Until this is addressed in soil hydrology, ice density should
+    !   be set to liquid water density.
+    rhoi = rhoh2o
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
