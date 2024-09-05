@@ -49,20 +49,28 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_air, vol_hcap_bedrock
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
 
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, vol_heat_cap_soil_dry_organic, fract_organic, &
                          &  fract_water, fract_ice, layer_depth, dz
-    REAL(wp)             :: vol_heat_cap
+    REAL(wp)             :: vol_heat_cap, fract_ice_scaled, fract_air
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
+      IF (fract_ice > 0._wp) THEN
+        ! Soil ice is represented as water equivalent but would - due to its lower density - occupy
+        ! more space than the same mass of liquid water.
+        fract_ice_scaled = MIN(porosity - fract_water, fract_ice * (rhoh2o / rhoi))
+      ELSE
+        fract_ice_scaled = 0._wp
+      END IF
+      fract_air = MAX((porosity - fract_water - fract_ice_scaled), 0._wp)            ! vol. fraction of free pore space
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
         &              * ( (1._wp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
         &                  +        fract_organic  * vol_heat_cap_soil_dry_organic & ! heat cap of organic soil
         &                )                                                         &
-        &            + fract_water * vol_hcap_water                                & ! heat cap of liquid water
-        &            + fract_ice   * vol_hcap_ice                                  & ! heat cap of frozen water
-        ! @todo : porosity - fract_water - fract_ice should not become lower than zero.
-        &            + MAX((porosity - fract_water - fract_ice),0._wp) * vol_hcap_air  ! heat cap of remaining free pores
+        &            + fract_water      * vol_hcap_water                           & ! heat cap of liquid water
+        &            + fract_ice_scaled * vol_hcap_ice                             & ! heat cap of frozen water
+        &            + fract_air        * vol_hcap_air                               ! heat cap of remaining free pores
       vol_heat_cap = ( vol_heat_cap * layer_depth + vol_hcap_bedrock * (dz - layer_depth) ) / dz ! soil and bedrock mixture
     ELSE
       vol_heat_cap = vol_hcap_bedrock
@@ -87,7 +95,7 @@ CONTAINS
     & dz                                             &
     & ) RESULT(heat_cond)
 
-    USE mo_jsb_physical_constants, ONLY: dens_soil
+    USE mo_jsb_physical_constants, ONLY: dens_soil, rhoh2o, rhoi
     USE mo_sse_constants,          ONLY: hcond_water, hcond_ice, hcond_bedrock
 
 
@@ -105,6 +113,7 @@ CONTAINS
       & kersten,          & !< Kersten number
       & hcond_soil,       & !< Thermal conductivity of soil solids (mineral and organic)
       & hcond_sat,        & !< Thermal conductivity for saturated soil
+      & ice_scaled,       & !< Soil ice content accounting for real ice volume due to lower density
       & fract_water,      & !< Effective fractional water volume for saturated soil computation
       & fract_ice           !< Effective fractional ice volume for saturated soil computation
 
@@ -117,7 +126,15 @@ CONTAINS
       hcond_dry_min = (0.135_wp * dens_bulk + 64.7_wp) / (dens_soil - 0.947_wp * dens_bulk)
       hcond_dry = (1._wp - fract_organic) * hcond_dry_min + fract_organic * hcond_dry_org
 
-      IF (water + ice <= EPSILON(1._wp)) THEN
+      IF (ice > 0._wp) THEN
+        ! Soil ice is represented as water equivalent but would - due to its lower density - occupy
+        ! more space than the same mass of liquid water.
+        ice_scaled = MIN(porosity * layer_depth - water, ice * (rhoh2o / rhoi))
+      ELSE
+        ice_scaled = 0._wp
+      END IF
+
+      IF (water + ice_scaled <= EPSILON(1._wp)) THEN
         heat_cond = hcond_dry
       ELSE
 
@@ -126,7 +143,7 @@ CONTAINS
         hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
 
         ! Thermal conductivity of saturated soil
-        saturation = (water + ice) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
+        saturation = (water + ice_scaled) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
 
         ! ! --- Alternate formulation ---
         ! ! @todo: in jsbach3, frozen soil is checked by t_soil_sl1 <= tmelt, however, the computations in calc_soil_temperature
@@ -158,9 +175,9 @@ CONTAINS
 
         ! @todo: in jsbach3, frozen soil is checked by t_soil_sl1 <= tmelt, however, the computations in calc_soil_temperature
         ! are such that some ice can remain in a layer even if t_soil_sl1 > tmelt.
-        IF (ice > 0._wp) THEN  ! Frozen case
+        IF (ice_scaled > 0._wp) THEN ! Frozen case
           kersten = saturation
-        ELSE                   ! Unfrozen case
+        ELSE                         ! Unfrozen case
           ! This is the case for fine unfrozen soil
           IF (saturation > 0.1_wp) THEN
             kersten = LOG10(saturation) + 1._wp
@@ -177,9 +194,9 @@ CONTAINS
         ! The scaling is changed compared to earlier versions. The current implementation interpretes the fractions
         ! of the individual components such that fract_water + fract_ice equals porosity, which is also supported by
         ! Nikoosokhan et al (2016), equation 4
-        sat_fact    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
-        fract_water = (water / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
-        fract_ice   = (  ice / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
+        sat_fact = MAX(0._wp, porosity / ((water + ice_scaled) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
+        fract_water = (water      / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
+        fract_ice   = (ice_scaled / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
         hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice
