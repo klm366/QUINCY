@@ -321,7 +321,7 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matric_pot, bclapp, ws,     &
+    & ws_max, matric_pot, bclapp, wtr,    &
     & ice, frozen, melt, liquid_max       &
     & )
 
@@ -353,7 +353,7 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
-    REAL(wp), INTENT(inout), OPTIONAL ::  ws(:,:)           !! Water storage [m]
+    REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
@@ -433,7 +433,7 @@ CONTAINS
       !$ACC END PARALLEL
 
       ! Phase change calculations
-      IF (l_freeze .AND. PRESENT(ws)) THEN
+      IF (l_freeze .AND. PRESENT(wtr)) THEN
 
         IF (l_supercool) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -461,8 +461,8 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ic=1,nc
           DO is=1,nsoil
-            IF (t_soil_sl(ic,is) < tmelt .AND. ws(ic,is) > liquid_max(ic,is)) THEN
-              frozen(ic,is) = MIN(ws(ic,is) - liquid_max(ic,is), &
+            IF (t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
+              frozen(ic,is) = MIN(wtr(ic,is) - liquid_max(ic,is), &
                 &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
                 &              )
             ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
@@ -476,7 +476,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is=1,nsoil
           DO ic=1,nc
-            ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
+            wtr(ic,is) = wtr(ic,is) - frozen(ic,is) + melt(ic,is)
             ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
             t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
               & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
@@ -512,7 +512,7 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE ! lstart
-      IF (l_freeze .AND. PRESENT(ws)) THEN
+      IF (l_freeze .AND. PRESENT(wtr)) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is = 1, nsoil
           DO ic=1,nc
