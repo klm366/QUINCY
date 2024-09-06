@@ -2530,7 +2530,7 @@ CONTAINS
 
   SUBROUTINE update_water_balance( tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -2575,7 +2575,7 @@ CONTAINS
       & weq_land_new
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, ice2weq
     LOGICAL  :: is_experiment_start, tile_contains_soil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -2602,6 +2602,9 @@ CONTAINS
     lon        => grid%lon(ics:ice, iblk)
 
     tile_contains_soil = tile%contains_soil
+
+    ! Scaling factor to convert ice column into water equivalent
+    ice2weq = (rhoi / rhoh2o)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -2634,8 +2637,9 @@ CONTAINS
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
-          &              * tile_area          ! m -> m^3
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) &
+          &            + SUM(ice_soil_sl(ic,:)) * ice2weq)                                  &
+          &          * tile_area ! m -> m^3
       ELSE
         weq_land_new = 0._wp
       END IF
@@ -2671,7 +2675,7 @@ CONTAINS
           END IF
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
-            & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
+            & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * ice2weq * tile_area,    NEW_LINE('a'), &
             & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
             & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
         END IF
