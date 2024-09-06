@@ -73,6 +73,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
+    dsl4jsb_Real2D_onChunk      :: root_phenology_type
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_lai
@@ -114,7 +115,8 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)           ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)            ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, root_phenology_type)       ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
@@ -170,6 +172,7 @@ CONTAINS
       & lctlib%tau_fruit                      , &
       & lctlib%tau_seed_litter                , &
       & growing_season(:)                     , & ! in
+      & root_phenology_type(:)                , & ! in
       & lai(:)                                , & ! in
       & target_lai(:)                         , & ! in
       & veg_pool_mt(:,:,:)                    , & ! in
@@ -327,6 +330,7 @@ CONTAINS
     & lctlib_tau_fruit            , &
     & lctlib_tau_seed_litter      , &
     & growing_season              , &
+    & root_phenology_type         , &
     & lai                         , &
     & target_lai                  , &
     & veg_pool_mt                 , &
@@ -341,7 +345,8 @@ CONTAINS
     & net_growth                  )
 
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+      &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
@@ -358,6 +363,7 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: lctlib_tau_fruit             !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_litter       !< lctlib parameter
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: root_phenology_type          !< category for trigger of end of growing season in grasses
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai                          !< the plant's LAI
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: target_lai                   !< the plant's annual maximum LAI
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)           !< bgcm veg_pool: current state of vegetation pools
@@ -371,6 +377,7 @@ CONTAINS
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< bgcm flux: current litter fall from vegetation pools
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: net_growth                   !< current net growth [mumol C / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                     :: ic                               !< loop over chunk
     INTEGER                     :: ielem                            !< loop over bgcm elements
     INTEGER                     :: ix_elem                          !< index of element in bgcm, used for looping
     REAL(wp), DIMENSION(nc)     :: fturn_leaf                       !< fraction of leaves turning over
@@ -446,11 +453,21 @@ CONTAINS
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
     CASE (igrass)
-      WHERE(growing_season(:) > test_false_true)
-        fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
-      ELSEWHERE
-        fturn(:) = fturn_leaf(:)
-      END WHERE
+      DO ic = 1,nc
+        ! during growing season, constant turnover
+        IF (growing_season(ic) > test_false_true) THEN
+          fturn(ic) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
+        ! outside growing season
+        ELSE
+          ! In cold, perennial grasslands, continous fine root turnover with roots living outside the growing season
+          IF (ABS(root_phenology_type(ic) - ipheno_type_cold_deciduous) < eps8) THEN
+            fturn(ic) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
+          ! In warm, annual grasslands, shed fine roots at the end of the growing season with the same rate as leaves
+          ELSE
+            fturn(ic) = fturn_leaf(ic)
+          END IF
+        END IF
+      END DO
     END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
