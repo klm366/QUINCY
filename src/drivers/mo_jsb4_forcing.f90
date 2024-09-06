@@ -47,7 +47,7 @@ MODULE mo_jsb4_forcing
   PRIVATE
 
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
-    &       forcing_options, forcing_options_quincy
+    &       forcing_options
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -154,24 +154,6 @@ MODULE mo_jsb4_forcing
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
-
-  ! ======================================================================================================= !
-  !>
-  !> this TYPE is NOT used with QUINCY in ICON-Land
-  !> implemented here for compatibility with QS (the quincy standalone model)
-  !>
-  !  QUINCY model
-  TYPE t_q_forcing_options
-    ! namelist
-    ! ..
-    ! calculated
-    ! ..
-    ! read from forcing files
-    INTEGER  :: forcing_year = 0
-    INTEGER  :: forcing_doy  = 0
-    REAL(wp) :: forcing_hour = 0.0_wp
-  END TYPE t_q_forcing_options
-  TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
 
   ! ======================================================================================================= !
   !>
