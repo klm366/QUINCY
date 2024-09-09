@@ -33,28 +33,15 @@ MODULE mo_alcc_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_alcc_memory, max_no_of_vars
-
-  INTEGER, PARAMETER :: max_no_of_vars = 5
-
-  TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
-
-    TYPE(t_jsb_var_real3d) :: cf_current_year 
-    !< this years target cfs derived from annually read land use data file. [-]
-
-  CONTAINS
-    PROCEDURE :: Init => Init_alcc_memory
-  END TYPE t_alcc_memory
-
   ! Mingyue Zhang: define TransMtrx start
-  type MatrixPtr
+  TYPE MatrixPtr
     real(dp), pointer :: ptr(:,:)
-  end type MatrixPtr
+  end TYPE MatrixPtr
   
   real(dp), pointer :: TransMtrx(:)
   
   ! Mingyue Zhang: Set the number of matrices dynamically
-  integer, parameter :: numMatrices = 8 ! Adjust as needed according to the size of transition matrix
+  INTEGER, PARAMETER :: numMatrices = 8 ! Adjust as needed according to the size of transition matrix
   
   allocate(TransMtrx(numMatrices))
   
@@ -65,6 +52,19 @@ MODULE mo_alcc_memory_class
   ! Accessing elements of the matrices
   TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment
   ! Mingyue Zhang: define TransMtrx finsih 
+
+  PUBLIC :: t_alcc_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 5
+
+  TYPE, EXTENDS(t_jsb_memory) :: 
+
+    TYPE(t_jsb_var_real3d) :: cf_current_year 
+    !< this years target cfs derived from annually read land use data file. [-]
+
+  CONTAINS
+    PROCEDURE :: Init => Init_alcc_memory
+  END TYPE t_alcc_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_memory_class'
 
@@ -116,13 +116,13 @@ CONTAINS
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
 
-  ! Mingyue Zhang: add variables for transitions  
+  ! Mingyue Zhang: add variables for transitions  start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
       & hgrid, pft_vgrid,                                                                            &
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-    
+  ! Mingyue Zhang: add variables for transitions  finish
   END SUBROUTINE Init_alcc_memory
 
 #endif
