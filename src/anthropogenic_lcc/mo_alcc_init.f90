@@ -184,6 +184,16 @@ CONTAINS
 
         ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
         cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
+      
+      
+        !Mingyue Zhang added for reading in transition data start
+      CASE ('transitions')
+        IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+        ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
+        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * TransMtrx(:i_tile,:)
+      !Mingyue Zhang added for reading in transition data end
+      
+      
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
       END SELECT
