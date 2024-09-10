@@ -270,6 +270,8 @@ CONTAINS
       END IF
     END IF
 
+    dsl4jsb_Aggregate_onChunk(SEB_, le_phase_change, weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_energy
@@ -373,28 +375,11 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
 
-          ! Correction for snowmelt and pond melting/freezing
-          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
-          IF (.NOT. tile%is_glacier) THEN
-            t_unfilt(ic) = t_unfilt(ic) - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-            t_unfilt(ic) = t_unfilt(ic) + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
-
-            IF (l_freeze_config) THEN
-              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
-              IF (l_snow_config) THEN
-                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-                  ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-                END IF
-              ELSE   ! No snow layers present
-                IF (heat_cap(ic) > 0._wp) THEN
-                  ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-                END IF
-              END IF
-            END IF
+          IF (tile%is_glacier) THEN
+          ! Correction for snowmelt
+            t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          ELSE
+            t_unfilt(ic) = t_unfilt(ic)
           END IF
 
         END DO

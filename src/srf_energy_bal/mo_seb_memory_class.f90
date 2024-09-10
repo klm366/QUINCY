@@ -57,6 +57,7 @@ MODULE mo_seb_memory_class
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
+      & le_phase_change,        & !< Heat flux due to phase changes at land surface                  [W m-2]
       & richardson                !< Richardson number (standalone model)                            []
     !
     ! Additional variables for LAND lct_type
@@ -186,6 +187,15 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=280.0_wp )
+
+    CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                                &
+      & hgrid, surface,                                                                      &
+      & t_cf('le_phase_change', 'W m-2', 'Heat flux due to phase changes at land surface'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+      & prefix, suffix,                                                                      &
+      & lrestart=.TRUE.,                                                                     &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
       & hgrid, surface,                                                              &

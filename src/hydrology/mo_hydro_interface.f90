@@ -400,6 +400,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: le_phase_change
     dsl4jsb_Real2D_onChunk :: q_snocpymlt
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: wind_10m
@@ -410,6 +411,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: steepness
+    dsl4jsb_Real2D_onChunk :: le_phase_change_srf
+    dsl4jsb_Real2D_onChunk :: le_phase_change_blg
     dsl4jsb_Real2D_onChunk :: fract_pond
     dsl4jsb_Real2D_onChunk :: weq_pond_max
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -586,6 +589,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff_horton)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! in
+
 
     IF (tile%is_glacier) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
@@ -609,6 +614,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotrans_soil)  ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_skin)       ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_deficit)    ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   le_phase_change_srf) ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   le_phase_change_blg) ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_pond_max)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)         ! inout
@@ -780,6 +787,7 @@ CONTAINS
         & weq_soil(:),                    & ! total column soil moisture [m]
         & hyd_cond_sat_sl(:,1),           & ! saturated hydraulic conductivity of the top soil layer [m s-1]
         & ice_impedance_sl(:,1),          & ! ice impedance factor for top soil layer [-]
+        & le_phase_change(:),             & ! Energy flux due to phase change [w m-2]
         ! inout
         & wtr_skin(:),                    & ! water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & ! snow depth at the ground [m water equivalent]
@@ -788,6 +796,8 @@ CONTAINS
         & wtr_pond(:),                    & ! pond reservoir water content [m]
         & ice_pond(:),                    & ! pond reservoir ice content [m]
         ! out
+        & le_phase_change_srf(:),         & ! Energy flux due to phase change (srf)
+        & le_phase_change_blg(:),         & ! Energy flux due to phase change (blg)
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
         & snow_accum(:),                  & ! snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & ! snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
@@ -907,6 +917,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_freeze,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pond_melt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_phase_change_srf, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_phase_change_blg, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

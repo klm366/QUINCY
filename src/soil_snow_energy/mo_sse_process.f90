@@ -321,6 +321,7 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
+    & le_phase_change,                    &
     & ws_max, matric_pot, bclapp, ws,     &
     & ice, frozen, melt, liquid_max       &
     & )
@@ -350,6 +351,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(wp), INTENT(in), OPTIONAL    ::  le_phase_change(:)!! Energy available for or required from phase change in top layer [W m-2]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
@@ -363,6 +365,8 @@ CONTAINS
     !  local Variables
 
     INTEGER  :: ic, is
+    REAL(wp) :: le_res
+    REAL(wp) :: le_phase(nc), phase_change(nc)
     REAL(wp) :: z1(nc,nsoil)
     REAL(wp) :: zd1(nsoil-1)
     REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
@@ -402,6 +406,12 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+    END IF
+
+    IF (PRESENT(le_phase_change)) THEN
+      le_phase(:) = le_phase_change(:)
+    ELSE
+      le_phase(:) = 0._wp
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -458,6 +468,27 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         END IF
 
+        ! Apply phase changes with energy calculated in SEB (only top soil layer)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          phase_change(ic) = 0._wp
+          IF (le_phase(ic) > 0._wp .AND. ice(ic,1) > 0._wp) THEN
+            phase_change(ic)   = MIN(le_phase(ic) * delta_time / (rhoh2o * alf), ice(ic,1))
+            le_res     = le_phase(ic) - phase_change(ic) * rhoh2o * alf / delta_time 
+            ws(ic,1)   = ws(ic,1)     + phase_change(ic)
+            ice(ic,1)  = ice(ic,1)    - phase_change(ic)
+            t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_res * delta_time / heat_cap(ic,1)
+          ELSE IF  (le_phase(ic) < 0._wp .AND. ws(ic,1) > liquid_max(ic,1)) THEN
+            phase_change(ic) = -MIN(ABS(le_phase(ic)) * delta_time / (rhoh2o * alf), &
+              &                         ws(ic,1) - liquid_max(ic,1))
+            le_res     = le_phase(ic) - phase_change(ic) * rhoh2o * alf / delta_time
+            ws(ic,1)   = ws(ic,1)     + phase_change(ic)
+            ice(ic,1)  = ice(ic,1)    - phase_change(ic)
+            t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_res * delta_time / heat_cap(ic,1)
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP        
+
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ic=1,nc
           DO is=1,nsoil
@@ -466,7 +497,8 @@ CONTAINS
                 &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
                 &              )
             ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
+              melt(ic,is) = MIN(ice(ic,is), &
+                &               heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoh2o))
             END IF
           END DO
         END DO
@@ -479,14 +511,26 @@ CONTAINS
             ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
             ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
             t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
-              & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
+              & melt(ic,is) * alf * rhoh2o / heat_cap(ic,is)
 
             frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
-            melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+            melt  (ic,is) = melt  (ic,is) * rhoh2o / delta_time
           END DO
         END DO
         !$ACC END PARALLEL LOOP
-      END IF
+
+        ! Adding top layer melt and freeze fluxes to (at this point) diagnostic output
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          IF (phase_change(ic) > 0._wp) THEN
+            melt(ic,1)   = melt(ic,1)   + phase_change(ic) * rhoh2o / delta_time
+          ELSE IF  (phase_change(ic) < 0._wp) THEN
+            frozen(ic,1) = frozen(ic,1) - phase_change(ic) * rhoh2o / delta_time
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP 
+
+      END IF 
 
       ! Thawing depth
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)

@@ -167,6 +167,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk :: le_phase_change_blg
 
     ! Locally allocated vectors
     !
@@ -224,6 +225,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_phase_change_blg)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -569,6 +571,7 @@ CONTAINS
         & grnd_hflx_soil                      (:  ), &
         & thaw_depth                          (:  ), &
         ! optional, in
+        & le_phase_change_blg                 (:  ), &
         & ws_max_sl                           (:,:), &
         & matric_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
