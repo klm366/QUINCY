@@ -93,7 +93,9 @@ CONTAINS
 
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
     TYPE(t_input_file)          :: input_file
+    TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
     CHARACTER(len=filename_max) :: filename_land_use_data
+    CHARACTER(len=filename_max) :: filename_land_transition_data       ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -165,6 +167,14 @@ CONTAINS
       & TRIM(dsl4jsb_Config(ALCC_)%alcc_filename_prefix), current_year, ".nc"
 
     input_file = jsb_netcdf_open_input(TRIM(filename_land_use_data), model%grid_id)
+    
+    !Mingyue Zhang define transition data name start
+    WRITE(filename_land_transition_data,'(a,I4.4,a)') &
+      & TRIM(dsl4jsb_Config(ALCC_)%alcc_transition_filename_prefix), current_year, ".nc"
+
+    input_file_trans = jsb_netcdf_open_input(TRIM(filename_land_transition_data), model%grid_id)
+    !Mingyue Zhang define transition data name end
+
 
     current_tile => tile%Get_first_child_tile()
     i_tile = 0
@@ -189,9 +199,24 @@ CONTAINS
         !Mingyue Zhang added for reading in transition data start
       CASE ('transitions')
         IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+        WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+
+        !!!!here associate the trasition matrix with the tile(or should be grid?)
+        do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+          allocate(TransMtrx(i)%ptr(rows, cols))
+        end do
+        ! Accessing elements of the matrices 
+        ! Use a do loop for the read in LUH2 transition data: 
+        ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
+        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file), &
+          & fill_array = cf_current_year(:,i_tile,:) )
+
+        !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop, read in six luh transition data and assign the grid box value to one 3*3 matrix
+
         ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
         cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * TransMtrx(:i_tile,:)
-      !Mingyue Zhang added for reading in transition data end
+
+        !Mingyue Zhang added for reading in transition data end
       
       
       CASE DEFAULT
