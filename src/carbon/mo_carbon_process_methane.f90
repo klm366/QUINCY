@@ -24,59 +24,62 @@ MODULE mo_carbon_process_methane
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE calc_methane_soil_c( &
+#ifndef _OPENACC
+  PURE ELEMENTAL &
+#endif
+  SUBROUTINE calc_methane_soil_c(             &
     ! General inputs
-    & is_peat, dt,                               &
-    ! Input coefficients (fixed)                 
-    & LeafLit_coef_acid,                         &
-    & LeafLit_coef_water,                        &
-    & LeafLit_coef_ethanol,                      &
-    & LeafLit_coef_nonsoluble,                   &
-    & LeafLit_coef_humus,                        &
-    & WoodLit_coef_acid,                         &
-    & WoodLit_coef_water,                        &
-    & WoodLit_coef_ethanol,                      &
-    & WoodLit_coef_nonsoluble,                   &
-    & WoodLit_coef_humus,                        &
-    & WoodLitterSize,                            &
-    & frac_inun_min,                             &
-    ! Variable inputs                            
-    & temp,                                      &
-    & precip,                                    &
-    & frac_inun,                                 &
-    & wt_peat,                                   &
-    & woodLitter,                                &
-    & leafLitter,                                &
-    & rootExudates,                              &
+    & is_peat, dt,                            &
+    ! Input coefficients (fixed)
+    & LeafLit_coef_acid,                      &
+    & LeafLit_coef_water,                     &
+    & LeafLit_coef_ethanol,                   &
+    & LeafLit_coef_nonsoluble,                &
+    & LeafLit_coef_humus,                     &
+    & WoodLit_coef_acid,                      &
+    & WoodLit_coef_water,                     &
+    & WoodLit_coef_ethanol,                   &
+    & WoodLit_coef_nonsoluble,                &
+    & WoodLit_coef_humus,                     &
+    & WoodLitterSize,                         &
+    & frac_inun_min,                          &
+    ! Variable inputs
+    & temp,                                   &
+    & precip,                                 &
+    & frac_inun,                              &
+    & wt_peat,                                &
+    & woodLitter,                             &
+    & leafLitter,                             &
+    & rootExudates,                           &
     ! Yasso pools. Used on input and updated on output
-    & c_acid_ag1,                                &
-    & c_water_ag1,                               &
-    & c_ethanol_ag1,                             &
-    & c_nonsoluble_ag1,                          &
-    & c_acid_bg1,                                &
-    & c_water_bg1,                               &
-    & c_ethanol_bg1,                             &
-    & c_nonsoluble_bg1,                          &
-    & c_humus_1,                                 &
-    & c_acid_ag2,                                &
-    & c_water_ag2,                               &
-    & c_ethanol_ag2,                             &
-    & c_nonsoluble_ag2,                          &
-    & c_acid_bg2,                                &
-    & c_water_bg2,                               &
-    & c_ethanol_bg2,                             &
-    & c_nonsoluble_bg2,                          &
-    & c_humus_2,                                 &
-    ! Output fluxes                              
-    & c_decomp_humus_1_sum,                      &
-    & c_decomp_humus_2_sum,                      &
-    & c_into_humus_1_sum,                        &
-    & c_into_humus_2_sum,                        &
-    & soilResp_rate,                             &
-    & soilResp_oxic,                             &
-    & soilResp_anoxic,                           &
-    & acrotelm_height_ag, acrotelm_height_bg,    &
-    & redFact_Nlim                               &
+    & c_acid_ag1,                             &
+    & c_water_ag1,                            &
+    & c_ethanol_ag1,                          &
+    & c_nonsoluble_ag1,                       &
+    & c_acid_bg1,                             &
+    & c_water_bg1,                            &
+    & c_ethanol_bg1,                          &
+    & c_nonsoluble_bg1,                       &
+    & c_humus_1,                              &
+    & c_acid_ag2,                             &
+    & c_water_ag2,                            &
+    & c_ethanol_ag2,                          &
+    & c_nonsoluble_ag2,                       &
+    & c_acid_bg2,                             &
+    & c_water_bg2,                            &
+    & c_ethanol_bg2,                          &
+    & c_nonsoluble_bg2,                       &
+    & c_humus_2,                              &
+    ! Output fluxes
+    & c_decomp_humus_1_sum,                   &
+    & c_decomp_humus_2_sum,                   &
+    & c_into_humus_1_sum,                     &
+    & c_into_humus_2_sum,                     &
+    & soilResp_rate,                          &
+    & soilResp_oxic,                          &
+    & soilResp_anoxic,                        &
+    & acrotelm_height_ag, acrotelm_height_bg, &
+    & redFact_Nlim                            &
     & )
     USE mo_carbon_constants,  ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
       &                             rho_YCpool_acro, rho_YCpool_cato, Cfrac_YCpool_acro, Cfrac_YCpool_cato, &
@@ -226,7 +229,7 @@ CONTAINS
 
         ! non-inundated area -- should be the same as in mo_carbon_process::calc_soil_c
 
-        !! call yasso for leaf litter; this time with nutrient effects
+        !! call yasso for leaf litter
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,                &
                         0._wp,          Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N)
@@ -244,7 +247,7 @@ CONTAINS
         c_decomp_humus_1_sum = c_decomp_humus_1_sum + Yasso_out_oxic(17)
         c_into_humus_1_sum   = c_into_humus_1_sum   + Yasso_out_oxic(18)
 
-        !! call yasso for woody litter; this time with nutrient effects
+        !! call yasso for woody litter
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,           &
                         WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp,        &
                         redFact_Nlimit = red_Fact_N) ! no exudates

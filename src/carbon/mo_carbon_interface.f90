@@ -183,6 +183,7 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
+    REAL(wp)                     :: frac_inun_min
     REAL(wp)                     :: dtime
     REAL(wp), POINTER            :: lat(:)
     REAL(wp), allocatable        :: precip_total(:)
@@ -352,6 +353,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -661,6 +663,7 @@ CONTAINS
       lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble))
       lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus))
       lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
+      frac_inun_min                  = dsl4jsb_Config(CH4_)%frac_inun_min
 
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
@@ -687,7 +690,6 @@ CONTAINS
           &  lctlib_Max_C_content_woods,                        & ! in
           &  lctlib_specificLeafArea_C,                         & ! in
           &  lctlib_reserveC2leafC,                             & ! in
-!          &  lctlib_PhenologyType,                              & ! in
           !
           &  c_green(ic),                                       & ! inout
           &  c_woods(ic),                                       & ! inout
@@ -711,59 +713,60 @@ CONTAINS
 
       IF (dsl4jsb_Config(CH4_)%active) THEN
         ! For now, peatlands are not included - therefore always .FALSE.
-        CALL calc_methane_soil_c(.FALSE., sec_per_day,                                              &
-          & LeafLit_coef_acid            = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
-          & LeafLit_coef_water           = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water)),      & ! in
-          & LeafLit_coef_ethanol         = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol)),    & ! in
-          & LeafLit_coef_nonsoluble      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble)), & ! in
-          & LeafLit_coef_humus           = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus)),      & ! in
-          & WoodLit_coef_acid            = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid)),       & ! in
-          & WoodLit_coef_water           = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water)),      & ! in
-          & WoodLit_coef_ethanol         = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol)),    & ! in
-          & WoodLit_coef_nonsoluble      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
-          & WoodLit_coef_humus           = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
-          & WoodLitterSize               = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
-          & frac_inun_min                = dsl4jsb_Config(CH4_)%frac_inun_min,                      & ! in
+        CALL calc_methane_soil_c(.FALSE., sec_per_day,                     &
+          & LeafLit_coef_acid            = lctlib_LeafLit_coef_acid,       & ! in
+          & LeafLit_coef_water           = lctlib_LeafLit_coef_water,      & ! in
+          & LeafLit_coef_ethanol         = lctlib_LeafLit_coef_ethanol,    & ! in
+          & LeafLit_coef_nonsoluble      = lctlib_LeafLit_coef_nonsoluble, & ! in
+          & LeafLit_coef_humus           = lctlib_LeafLit_coef_humus,      & ! in
+          & WoodLit_coef_acid            = lctlib_WoodLit_coef_acid,       & ! in
+          & WoodLit_coef_water           = lctlib_WoodLit_coef_water,      & ! in
+          & WoodLit_coef_ethanol         = lctlib_WoodLit_coef_ethanol,    & ! in
+          & WoodLit_coef_nonsoluble      = lctlib_WoodLit_coef_nonsoluble, & ! in
+          & WoodLit_coef_humus           = lctlib_WoodLit_coef_humus,      & ! in
+          & WoodLitterSize               = lctlib_WoodLitterSize,          & ! in
+          & frac_inun_min                = frac_inun_min,                  & ! in
           !                              
-          & temp                         = pseudo_temp_yDay,                                        & ! in
-          & precip                       = pseudo_precip_yDay,                                      & ! in
+          & temp                         = pseudo_temp_yDay,               & ! in
+          & precip                       = pseudo_precip_yDay,             & ! in
           !
-          & frac_inun                    = frac_inun,                                               & ! in
-          & wt_peat                      = peat_water_table,                                        & ! in
+          & frac_inun                    = frac_inun,                      & ! in
+          & wt_peat                      = peat_water_table,               & ! in
           !                              
-          & woodLitter                   = cflux_c_wood_2_litter,                                   & ! in
-          & leafLitter                   = cflux_c_green_2_litter,                                  & ! in
-          & rootExudates                 = root_exudates,                                           & ! in
+          & woodLitter                   = cflux_c_wood_2_litter,          & ! in
+          & leafLitter                   = cflux_c_green_2_litter,         & ! in
+          & rootExudates                 = root_exudates,                  & ! in
           !                              
-          & c_acid_ag1                   = c_acid_ag1,                                              & ! inout
-          & c_water_ag1                  = c_water_ag1,                                             & ! inout
-          & c_ethanol_ag1                = c_ethanol_ag1,                                           & ! inout
-          & c_nonsoluble_ag1             = c_nonsoluble_ag1,                                        & ! inout
-          & c_acid_bg1                   = c_acid_bg1,                                              & ! inout
-          & c_water_bg1                  = c_water_bg1,                                             & ! inout
-          & c_ethanol_bg1                = c_ethanol_bg1,                                           & ! inout
-          & c_nonsoluble_bg1             = c_nonsoluble_bg1,                                        & ! inout
-          & c_humus_1                    = c_humus_1,                                               & ! inout
-          & c_acid_ag2                   = c_acid_ag2,                                              & ! inout
-          & c_water_ag2                  = c_water_ag2,                                             & ! inout
-          & c_ethanol_ag2                = c_ethanol_ag2,                                           & ! inout
-          & c_nonsoluble_ag2             = c_nonsoluble_ag2,                                        & ! inout
-          & c_acid_bg2                   = c_acid_bg2,                                              & ! inout
-          & c_water_bg2                  = c_water_bg2,                                             & ! inout
-          & c_ethanol_bg2                = c_ethanol_bg2,                                           & ! inout
-          & c_nonsoluble_bg2             = c_nonsoluble_bg2,                                        & ! inout
-          & c_humus_2                    = c_humus_2,                                               & ! inout
+          & c_acid_ag1                   = c_acid_ag1,                     & ! inout
+          & c_water_ag1                  = c_water_ag1,                    & ! inout
+          & c_ethanol_ag1                = c_ethanol_ag1,                  & ! inout
+          & c_nonsoluble_ag1             = c_nonsoluble_ag1,               & ! inout
+          & c_acid_bg1                   = c_acid_bg1,                     & ! inout
+          & c_water_bg1                  = c_water_bg1,                    & ! inout
+          & c_ethanol_bg1                = c_ethanol_bg1,                  & ! inout
+          & c_nonsoluble_bg1             = c_nonsoluble_bg1,               & ! inout
+          & c_humus_1                    = c_humus_1,                      & ! inout
+          & c_acid_ag2                   = c_acid_ag2,                     & ! inout
+          & c_water_ag2                  = c_water_ag2,                    & ! inout
+          & c_ethanol_ag2                = c_ethanol_ag2,                  & ! inout
+          & c_nonsoluble_ag2             = c_nonsoluble_ag2,               & ! inout
+          & c_acid_bg2                   = c_acid_bg2,                     & ! inout
+          & c_water_bg2                  = c_water_bg2,                    & ! inout
+          & c_ethanol_bg2                = c_ethanol_bg2,                  & ! inout
+          & c_nonsoluble_bg2             = c_nonsoluble_bg2,               & ! inout
+          & c_humus_2                    = c_humus_2,                      & ! inout
           !                              
-          & c_decomp_humus_1_sum         = c_decomp_humus_1_sum,                                    & ! out
-          & c_decomp_humus_2_sum         = c_decomp_humus_2_sum,                                    & ! out
-          & c_into_humus_1_sum           = c_into_humus_1_sum,                                      & ! out
-          & c_into_humus_2_sum           = c_into_humus_2_sum,                                      & ! out
-          & soilResp_rate                = soil_respiration,                                        & ! out
-          & soilResp_oxic                = soil_respiration_oxic,                                   & ! out
-          & soilResp_anoxic              = soil_respiration_anoxic,                                 & ! out
-          & acrotelm_height_ag           = acrotelm_height_ag,                                      & ! out
-          & acrotelm_height_bg           = acrotelm_height_bg                                       & ! out
+          & c_decomp_humus_1_sum         = c_decomp_humus_1_sum,           & ! out
+          & c_decomp_humus_2_sum         = c_decomp_humus_2_sum,           & ! out
+          & c_into_humus_1_sum           = c_into_humus_1_sum,             & ! out
+          & c_into_humus_2_sum           = c_into_humus_2_sum,             & ! out
+          & soilResp_rate                = soil_respiration,               & ! out
+          & soilResp_oxic                = soil_respiration_oxic,          & ! out
+          & soilResp_anoxic              = soil_respiration_anoxic,        & ! out
+          & acrotelm_height_ag           = acrotelm_height_ag,             & ! out
+          & acrotelm_height_bg           = acrotelm_height_bg              & ! out
           & )
+
           ! Test case: "manually" manipulate the anoxic fraction. polar_anoxic_fac is 1 in the standard case
           WHERE (lat(:) > dsl4jsb_Config(TOP_)%lat_const_wetland_type)
             soil_respiration_anoxic(:) = MAX(soil_respiration       (:), & ! Respiration by def < 0

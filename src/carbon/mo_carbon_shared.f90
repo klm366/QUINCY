@@ -30,7 +30,7 @@ CONTAINS
   ! Calculations to allocate NPP to the plant C pools as well as various respiration and litter pools.
 #ifndef _OPENACC
   ELEMENTAL &
-#endif 
+#endif
   SUBROUTINE calc_plant_c( &
     ! Inputs
     & dt, is_crop,                &
