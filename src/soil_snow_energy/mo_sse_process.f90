@@ -515,12 +515,6 @@ CONTAINS
           !$ACC LOOP SEQ
           DO is=2,nsoil
             IF (thaw_depth(ic) == zbot(nsoil)) THEN
-              ! Alternativly one could also go through the ground and see where there are still positive temperatures
-              !IF (       t_soil_sl(ic,is-1) > tmelt &
-              !  &  .AND. t_soil_sl(ic,is  ) > tmelt &
-              !  & ) THEN
-              !    ! in case water is present this would increase the energy required to bring temperatures above the melting point
-              !    thaw_depth(ic) = zbot(is)
               IF  (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is) == tmelt) THEN ! Lower layer is at zero degrees
                 IF (ice(ic,is) > 0._wp) THEN
                 ! in case water is present we diagnose thaw depth using ration of liquid / total water

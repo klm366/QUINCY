@@ -152,7 +152,7 @@ CONTAINS
       & wtr_pond_inflow,      & !< pond inflow [m]
       & wtr_pond_upd,         & !< pond storage including inflow [m]
       & fract_pond_infil,     & !< approximation of pond fraction for infiltration with inflow included [/]
-      & wtr_pond_infilt,      & !< pond infiltration [m]
+      & wtr_pond_infilt,      & !< pond water infiltration into the soil [m]
       & wtr_pond_overflow,    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
       & pond_change_pot         !< amount of water that could potentially be frozen or thawed [m]
 
@@ -188,6 +188,7 @@ CONTAINS
       water_to_soil(ic)     = 0._wp
       evapo_deficit(ic)     = 0._wp
       wtr_pond_net_flx(ic)  = 0._wp
+      wtr_latflow_srf(ic) = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -397,11 +398,15 @@ CONTAINS
         END IF
 
         ! Approximate an updated pond fraction for pond infiltration
-        wtr_pond_upd     = wtr_pond(ic) + wtr_pond_inflow
-        IF (weq_pond_max(ic) > 1.0e-10_wp) THEN
-          fract_pond_infil = MIN(1._wp, (wtr_pond_upd / weq_pond_max(ic))**0.5_wp) * fract_pond_max(ic)
-        ELSE
-          fract_pond_infil = 0._wp
+        IF (hydro_scale == Semi_Distributed_) THEN
+          fract_pond_infil = fract_pond(ic)
+        ELSE IF (hydro_scale == Uniform_) THEN
+          wtr_pond_upd     = wtr_pond(ic) + wtr_pond_inflow
+          IF (weq_pond_max(ic) > 1.0e-10_wp) THEN
+            fract_pond_infil = MIN(1._wp, (wtr_pond_upd / weq_pond_max(ic))**0.5_wp) * fract_pond_max(ic)
+          ELSE
+            fract_pond_infil = 0._wp
+          END IF
         END IF
         ! As ponds form in depressions, no lateral outflow is assumed but
         ! rather infiltration into the soil. Here we use several assumptions:
@@ -449,7 +454,6 @@ CONTAINS
             &               + wtr_pond_overflow
         END IF
 
-        wtr_latflow_srf(ic) = 0._wp
         ! Compute fluxes based on ARNO scheme (semi-distributed scale approach)
         IF (hydro_scale == Semi_Distributed_) THEN
           ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
@@ -463,7 +467,7 @@ CONTAINS
             &              runoff(ic), infilt(ic))
           runoff_horton(ic) = 0._wp
 
-        ! Compute fluxes based on uniform scale approach: 
+        ! Compute fluxes based on uniform scale approach:
         ! After a short period (which is being ignored) when rates for dry soil may be higher,
         ! infiltration convereges to either precip. or saturation hydraulic conductivity.
         ! After runoff is generated a simple reservoir is used to accounting for the lag between  
@@ -694,7 +698,7 @@ CONTAINS
     !$ACC DECLARE COPYIN(ilog)
 
     !$ACC DATA &
-    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_bot)
+    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_bot, hyd_cond_bot)
 
     !
     !> Calculation of soil saturation, field capacity and wilting point
@@ -1467,35 +1471,37 @@ CONTAINS
 
     ! Additional corrections for excess soil moisture
 
-    ! Initial estimate of latera drainage are too low if soils were dry at the beginning of time step.
-    ! Hence, add water to lateral drainage according to k_sat - k_act 
-    ! In case of last soil layer only k_sat since no lateral drainage was calculated before
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
-    DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO ic = 1, nc
-        ! If saturation moisture is exceeded, add exess water to lateral drainage (according to ksat)
-        IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
-          IF (is < last_soil_layer(ic)) THEN
-            drainage_sl(ic,is) = drainage_sl(ic,is)                                                   & 
-              & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
-              & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
-            wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
-              & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
-              & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
-          ELSE
-            drainage_sl(ic,is) = drainage_sl(ic,is) & 
-              & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
-              & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
-            wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) &
-              & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
-              & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+    IF (hydro_scale == Uniform_) THEN
+      ! Initial estimate of layered drainage are too low if soils were dry at the beginning of time step.
+      ! Hence, add water to layered drainage according to k_sat - k_act
+      ! In case of last soil layer only k_sat since no layered drainage was calculated before
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          ! If saturation moisture is exceeded, add exess water to layered drainage (according to ksat)
+          IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
+            IF (is < last_soil_layer(ic)) THEN
+              drainage_sl(ic,is) = drainage_sl(ic,is)                                                   &
+                & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+              wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
+                & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+            ELSE
+              drainage_sl(ic,is) = drainage_sl(ic,is)                                                   &
+                & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+              wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
+                & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+            END IF
           END IF
-        END IF
+        END DO
       END DO
-    END DO
-    !$ACC END PARALLEL
+      !$ACC END PARALLEL
+    END IF
 
     ! In case of still over-saturation water would not have infiltrated in the first place --> pile
     ! water upwards
@@ -1504,7 +1510,7 @@ CONTAINS
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ! If saturation moisture is exceeded, add exess water to lateral drainage (according to ksat) and to next higher soil layer
+        ! If saturation moisture is exceeded, add exess water to next higher soil layer
         IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
           wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
           wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
@@ -1655,6 +1661,9 @@ CONTAINS
     REAL(wp) :: drain_bot_pot(nc)            ! potential bottom layer drainage from column [m]
     REAL(wp) :: weq_sl(nc,nsoil)             ! total water content of soil layer [m]
     REAL(wp) :: field_cap_sl(nc,nsoil)       ! field capacity of soil layer [m]
+
+    !$ACC DATA &
+    !$ACC   CREATE(drain_bot_pot, weq_sl, field_cap_sl)
     
     wtr_latflow_sl(:,:) = 0._wp
     drain_bot_act       = 0._wp
@@ -1678,7 +1687,7 @@ CONTAINS
     DO is=1,nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
-        ! Adding lateral drainage to storage reservoir and setting drainage to 0.
+        ! Adding layered drainage to storage reservoir and setting drainage to 0.
         wtr_latflow_res_sl(ic,is)     = wtr_latflow_res_sl(ic,is) + drainage_sl(ic,is)
         drainage_sl(ic,is)            = 0._wp
         ! Allowing to remoist the soil in case ws + ice < fldcap
@@ -1704,6 +1713,9 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
 
   END SUBROUTINE soilhyd_lat

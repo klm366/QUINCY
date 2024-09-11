@@ -902,7 +902,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
         & loutput=l_uniform, output_level=BASIC,                                              &
-        & lrestart=l_uniform, lrestart_cont=.TRUE.       ,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_sl', mem%wtr_latflow_sl,                                   &
@@ -910,7 +909,6 @@ CONTAINS
         & t_cf('wtr_latflow_sl', 'm timestep-1', 'Outflow from latflow res. on soil layers'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
-        & loutput=l_uniform, output_level=BASIC,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
@@ -918,7 +916,6 @@ CONTAINS
         & t_cf('wtr_latflow_res_srf', 'm', 'Water content of latflow res. srf.'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=l_uniform, output_level=BASIC,                                    &
         & lrestart=l_uniform, lrestart_cont=.TRUE.       ,                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -927,7 +924,6 @@ CONTAINS
         & t_cf('wtr_latflow_srf', 'm timestep-1', 'Outflow from latflow res. srf'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=l_uniform, output_level=BASIC,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -943,7 +939,6 @@ CONTAINS
         & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput=l_ponds, output_level=BASIC,                                         &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -952,7 +947,6 @@ CONTAINS
         & t_cf('weq_pond', 'm (water equivalent)', 'Surface pond reservoir'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput=l_ponds, output_level=BASIC,                                         &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -961,7 +955,6 @@ CONTAINS
         & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput=l_ponds, output_level=BASIC,                                         &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -970,7 +963,6 @@ CONTAINS
         & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput=l_ponds, output_level=BASIC,                                         &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
