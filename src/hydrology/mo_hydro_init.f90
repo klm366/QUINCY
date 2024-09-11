@@ -463,16 +463,28 @@ CONTAINS
       ! Determine variable names to be used for reading in
 
       soil_depth_name       = 'soil_depth'
-      soil_porosity_name    = 'soil_porosity'
-      hyd_cond_sat_name     = 'hyd_cond_sat'
-      soil_field_cap_name   = 'soil_field_cap'
-      wilting_point_name    = 'wilting_point'
-      residual_water_name   = 'residual_water'
-      moisture_pot_name     = 'moisture_pot'
-      bclapp_name           = 'bclapp'
-      pore_size_index_name  = 'pore_size_index'
       fract_org_sl_name     = 'fract_org_sl'
       root_depth_name       = 'root_depth'
+
+      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+        soil_porosity_name    = 'soil_porosity_mineral'
+        hyd_cond_sat_name     = 'hyd_cond_sat_mineral'
+        soil_field_cap_name   = 'soil_field_cap_mineral'
+        wilting_point_name    = 'wilting_point_mineral'
+        residual_water_name   = 'residual_water_mineral'
+        moisture_pot_name     = 'moisture_pot_mineral'
+        bclapp_name           = 'bclapp_mineral'
+        pore_size_index_name  = 'pore_size_index_mineral'
+      ELSE
+        soil_porosity_name    = 'soil_porosity'
+        hyd_cond_sat_name     = 'hyd_cond_sat'
+        soil_field_cap_name   = 'soil_field_cap'
+        wilting_point_name    = 'wilting_point'
+        residual_water_name   = 'residual_water'
+        moisture_pot_name     = 'moisture_pot'
+        bclapp_name           = 'bclapp'
+        pore_size_index_name  = 'pore_size_index'
+      END IF 
 
       IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         fr_sand_name        = 'FR_SAND'
@@ -485,125 +497,128 @@ CONTAINS
 
       IF (tile%Is_process_active(LEX_)) THEN
 
-        IF (input_file%Has_var('soil_depth_ct'//str_conti)) THEN
-          soil_depth_name = 'soil_depth_ct'//str_conti
+        IF (input_file%Has_var(TRIM(soil_depth_name)//'_ct'//str_conti)) THEN
+          soil_depth_name = TRIM(soil_depth_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_depth_ct'//str_conti// &
-          & '. Using soil_depth instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(soil_depth_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(soil_depth_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('soil_porosity_ct'//str_conti)) THEN
-          soil_porosity_name = 'soil_porosity_ct'//str_conti
+        IF (input_file%Has_var(TRIM(soil_porosity_name)//'_ct'//str_conti)) THEN
+          soil_porosity_name = TRIM(soil_porosity_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_porosity_ct'//str_conti// &
-          & '. Using soil_porosity instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(soil_porosity_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(soil_porosity_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('hyd_cond_sat_ct'//str_conti)) THEN
-          hyd_cond_sat_name = 'hyd_cond_sat_ct'//str_conti
+        IF (input_file%Has_var(TRIM(hyd_cond_sat_name)//'_ct'//str_conti)) THEN
+          hyd_cond_sat_name = TRIM(hyd_cond_sat_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without hyd_cond_sat_ct'//str_conti// &
-          & '. Using hyd_cond_sat instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(hyd_cond_sat_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(hyd_cond_sat_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('soil_field_cap_ct'//str_conti)) THEN
-          soil_field_cap_name = 'soil_field_cap_ct'//str_conti
+        IF (input_file%Has_var(TRIM(soil_field_cap_name)//'_ct'//str_conti)) THEN
+          soil_field_cap_name = TRIM(soil_field_cap_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without soil_field_cap_ct'//str_conti// &
-          & '. Using soil_field_cap instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(soil_field_cap_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(soil_field_cap_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('wilting_point_ct'//str_conti)) THEN
-          wilting_point_name = 'wilting_point_ct'//str_conti
+        IF (input_file%Has_var(TRIM(wilting_point_name)//'_ct'//str_conti)) THEN
+          wilting_point_name = TRIM(wilting_point_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without wilting_point_ct'//str_conti// &
-          & '. Using wilting_point instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(wilting_point_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(wilting_point_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('residual_water_ct'//str_conti)) THEN
-          residual_water_name = 'residual_water_ct'//str_conti
+        IF (input_file%Has_var(TRIM(residual_water_name)//'_ct'//str_conti)) THEN
+          residual_water_name = TRIM(residual_water_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without residual_water_ct'//str_conti// &
-          & '. Using residual_water instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(residual_water_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(residual_water_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('moisture_pot_ct'//str_conti)) THEN
-          moisture_pot_name = 'moisture_pot_ct'//str_conti
+        IF (input_file%Has_var(TRIM(moisture_pot_name)//'_ct'//str_conti)) THEN
+          moisture_pot_name = TRIM(moisture_pot_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without moisture_pot_ct'//str_conti// &
-          & '. Using residual_water instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(moisture_pot_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(moisture_pot_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('bclapp_ct'//str_conti)) THEN
-          bclapp_name = 'bclapp_ct'//str_conti
+        IF (input_file%Has_var(TRIM(bclapp_name)//'_ct'//str_conti)) THEN
+          bclapp_name = TRIM(bclapp_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without bclapp_ct'//str_conti// &
-          & '. Using bclapp instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(bclapp_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(bclapp_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('pore_size_index_ct'//str_conti)) THEN
-          pore_size_index_name = 'pore_size_index_ct'//str_conti
+        IF (input_file%Has_var(TRIM(pore_size_index_name)//'_ct'//str_conti)) THEN
+          pore_size_index_name = TRIM(pore_size_index_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without pore_size_index_ct'//str_conti// &
-          & '. Using pore_size_index instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(pore_size_index_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(pore_size_index_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('fract_org_sl_ct'//str_conti)) THEN
-          fract_org_sl_name = 'fract_org_sl_ct'//str_conti
+        IF (input_file%Has_var(TRIM(fract_org_sl_name)//'_ct'//str_conti)) THEN
+          fract_org_sl_name = TRIM(fract_org_sl_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without fract_org_sl_ct'//str_conti// &
-          & '. Using fract_org_sl instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(fract_org_sl_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(fract_org_sl_name)//' instead.')
         END IF
 
-        IF (input_file%Has_var('root_depth_ct'//str_conti)) THEN
-          root_depth_name = 'root_depth_ct'//str_conti
+         IF (input_file%Has_var(TRIM(root_depth_name)//'_ct'//str_conti)) THEN
+          root_depth_name = TRIM(root_depth_name)//'_ct'//str_conti
         ELSE
-          CALL message(routine, 'Running lateral exchange without root_depth_ct'//str_conti// &
-          & '. Using root_depth instead')
+          CALL message(routine, 'Running lateral exchange without '//TRIM(root_depth_name)//'_ct'//str_conti// &
+          & '. Using '//TRIM(root_depth_name)//' instead.')
         END IF
 
         IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
-          IF (input_file%Has_var('FR_SAND_ct'//str_conti)) THEN
-            fr_sand_name = 'FR_SAND_ct'//str_conti
+
+          IF (input_file%Has_var(TRIM(fr_sand_name)//'_ct'//str_conti)) THEN
+            fr_sand_name = TRIM(fr_sand_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_sand_ct'//str_conti// &
-            & '. Using fr_sand instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_sand_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_sand_name)//' instead.')
           END IF
 
-          IF (input_file%Has_var('FR_SILT_ct'//str_conti)) THEN
-            fr_silt_name = 'FR_SILT_ct'//str_conti
+          IF (input_file%Has_var(TRIM(fr_silt_name)//'_ct'//str_conti)) THEN
+            fr_silt_name = TRIM(fr_silt_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_silt_ct'//str_conti// &
-            & '. Using fr_silt instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_silt_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_silt_name)//' instead.')
           END IF
 
-          IF (input_file%Has_var('FR_CLAY_ct'//str_conti)) THEN
-            fr_clay_name = 'FR_CLAY_ct'//str_conti
+          IF (input_file%Has_var(TRIM(fr_clay_name)//'_ct'//str_conti)) THEN
+            fr_clay_name = TRIM(fr_clay_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without fr_clay_ct'//str_conti// &
-            & '. Using fr_clay instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_clay_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_clay_name)//' instead.')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_SAND_ct'//str_conti)) THEN
-            fr_sand_deep_name = 'SUB_FR_SAND_ct'//str_conti
+
+          IF (input_file%Has_var(TRIM(fr_sand_deep_name)//'_ct'//str_conti)) THEN
+            fr_sand_deep_name = TRIM(fr_sand_deep_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_sand_ct'//str_conti// &
-            & '. Using deep_fr_sand instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_sand_deep_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_sand_deep_name)//' instead.')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_SILT_ct'//str_conti)) THEN
-            fr_silt_deep_name = 'SUB_FR_SILT_ct'//str_conti
+          IF (input_file%Has_var(TRIM(fr_silt_deep_name)//'_ct'//str_conti)) THEN
+            fr_silt_deep_name = TRIM(fr_silt_deep_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_silt_ct'//str_conti// &
-            & '. Using deep_fr_silt instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_silt_deep_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_silt_deep_name)//' instead.')
           END IF
 
-          IF (input_file%Has_var('SUB_FR_CLAY_ct'//str_conti)) THEN
-            fr_clay_deep_name = 'SUB_FR_CLAY_ct'//str_conti
+          IF (input_file%Has_var(TRIM(fr_clay_deep_name)//'_ct'//str_conti)) THEN
+            fr_clay_deep_name = TRIM(fr_clay_deep_name)//'_ct'//str_conti
           ELSE
-            CALL message(routine, 'Running lateral exchange without deep_fr_clay_ct'//str_conti// &
-            & '. Using deep_fr_clay instead')
+            CALL message(routine, 'Running lateral exchange without '//TRIM(fr_clay_deep_name)//'_ct'//str_conti// &
+            & '. Using '//TRIM(fr_clay_deep_name)//' instead.')
           END IF
+
         END IF
       END IF
 
@@ -1097,7 +1112,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, h_surf)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_sloe)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_slope)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 
