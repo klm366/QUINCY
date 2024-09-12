@@ -470,7 +470,7 @@ CONTAINS
         ! Compute fluxes based on uniform scale approach:
         ! After a short period (which is being ignored) when rates for dry soil may be higher,
         ! infiltration convereges to either precip. or saturation hydraulic conductivity.
-        ! After runoff is generated a simple reservoir is used to accounting for the lag between  
+        ! After runoff is generated a simple reservoir is used to accounting for the lag between
         ! runoff generation and water reaching the river / downstream tile
         ELSE IF (hydro_scale == Uniform_) THEN
           infilt(ic) = MIN(water_to_soil(ic), &
@@ -691,7 +691,7 @@ CONTAINS
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
       & drain_bot(nc),                & !< drainage towards bedrock [m]
       & wtr_pond_corr(nc),            & !< correction term for ponds fluxes due to saturated soils [m]
-      & hyd_cond_bot(nc)                !< hydraulic conductivity of the bottom soil layer [m/s] 
+      & hyd_cond_bot(nc)                !< hydraulic conductivity of the bottom soil layer [m/s]
     INTEGER :: ic, is
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
@@ -795,7 +795,7 @@ CONTAINS
         runoff(ic)    = runoff(ic) + runoff_dunne(ic)
       END IF
       IF (hydro_scale == Uniform_) THEN
-        ! Adding overflow to lateral surface flow reservoir 
+        ! Adding overflow to lateral surface flow reservoir
         ! (outflow from the reservoir is claculated in update_surface_hydrology)
         wtr_latflow_res_srf(ic) = wtr_latflow_res_srf(ic) + runoff_dunne(ic)
         runoff(ic)              = runoff(ic)              - runoff_dunne(ic)
@@ -1185,7 +1185,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-    !> Compute subsurface drainage from each layer and 
+    !> Compute subsurface drainage from each layer and
     !> Compute bottom drainage from lowest layer - only for uniform scale parametrization
     ELSE IF (hydro_scale == Uniform_) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -1664,7 +1664,7 @@ CONTAINS
 
     !$ACC DATA &
     !$ACC   CREATE(drain_bot_pot, weq_sl, field_cap_sl)
-    
+
     wtr_latflow_sl(:,:) = 0._wp
     drain_bot_act       = 0._wp
     weq_sl(:,:)         = ice_soil_sl(:,:) + wtr_soil_sl(:,:)
@@ -1703,7 +1703,7 @@ CONTAINS
           drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
           wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
           drain_bot(ic)               = drain_bot(ic) + drain_bot_act
-        END IF 
+        END IF
         ! Calculating the lateral flux to downstream unit / river
           IF (wtr_latflow_res_sl(ic,is) > 0._wp) THEN
             wtr_latflow_sl(ic,is)     = wtr_latflow_res_sl(ic,is) * flowlag(ic)
@@ -1732,7 +1732,7 @@ CONTAINS
   !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(IN)            :: flowlag
-    REAL(wp), INTENT(INOUT)         :: runoff               
+    REAL(wp), INTENT(INOUT)         :: runoff
     REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_srf   ! water content in lateral flow reservoir [m]
     REAL(wp), INTENT(OUT)           :: wtr_latflow_srf       ! lateral flux to downstream unit / river [m]
 

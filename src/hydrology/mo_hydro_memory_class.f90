@@ -122,7 +122,7 @@ MODULE mo_hydro_memory_class
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
-      & wtr_latflow_res_srf,  & !< Water content of latflow res. srf.                                       [m]       
+      & wtr_latflow_res_srf,  & !< Water content of latflow res. srf.                                       [m]
       & wtr_latflow_srf         !< Outflow from latflow res. srf                                            [m timestep-1]
 
     TYPE(t_jsb_var_real3d) :: &
@@ -145,8 +145,8 @@ MODULE mo_hydro_memory_class
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
       & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice             [m]
       & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
-      & wtr_latflow_res_sl,   & !< Water content of latflow res. on soil layers                             [m]       
-      & wtr_latflow_sl          !< Outflow from latflow res. on soil layers                                 [m timestep-1]  
+      & wtr_latflow_res_sl,   & !< Water content of latflow res. on soil layers                             [m]
+      & wtr_latflow_sl          !< Outflow from latflow res. on soil layers                                 [m timestep-1]
     ! Additional variables for PFT lct_type
 
     ! Parameters

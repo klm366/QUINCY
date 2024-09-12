@@ -322,7 +322,7 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & dsoil, ws_max, matric_pot, bclapp,  & 
+    & dsoil, ws_max, matric_pot, bclapp,  &
     & ws, ice, frozen, melt, liquid_max   &
     & )
 
