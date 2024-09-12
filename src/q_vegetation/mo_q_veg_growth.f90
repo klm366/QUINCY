@@ -79,9 +79,9 @@ CONTAINS
                                          target_labile_pool_phosphorus, target_reserve_pool_carbon, &
                                          target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     REAL(wp), DIMENSION(options%nc)   :: hlp1
-    REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp)                          :: dtime                  !< timestep length
-    INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
+    REAL(wp)                          :: lctlib_g1                 !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(wp)                          :: dtime                     !< timestep length
+    INTEGER                           :: isoil, iblk, ics, ice, nc !< grid dimensions / loop counter
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -110,7 +110,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
-    dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: fract_par_diffuse
     ! Q_ASSIMI_ 2D
@@ -120,6 +119,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
     dsl4jsb_Real2D_onChunk      :: net_assimilation
+    dsl4jsb_Real2D_onChunk      :: aerodyn_cond
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
@@ -139,7 +139,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
-    dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
@@ -158,6 +157,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: t_soil_root_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
@@ -303,7 +303,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)                   ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)                  ! in
     ! Q_ASSIMI_ 2D
@@ -313,6 +312,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)                  ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)        ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation)              ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, aerodyn_cond)                  ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air_tcnl_mavg)            ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps_tcnl_mavg)        ! in
@@ -332,7 +332,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)                       ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                     ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_center_sl)          ! in
@@ -352,7 +351,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)                       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root)                        ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)                  !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                    !   inout
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)                           !   out
@@ -452,6 +452,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)             !   out
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !>0.8 calculate temperature of fine roots
+    t_soil_root(:) = 0.0_wp
+    DO isoil = 1,nsoil_sb
+      t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
+    ENDDO
+
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
     SELECT CASE(TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme))
@@ -463,7 +469,7 @@ CONTAINS
 
     !>1.0 calculate potential growth rate relative to labile pool size
     !>
-    kstar_labile(:) = calc_meristem_activity(t_air(:), t_soil_root(:), w_soil_root_theta(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
 
     !>  1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and
     !>      update N-specific maintenance respiration rate
@@ -674,7 +680,7 @@ CONTAINS
       & press_srf(:)                                            , &
       & q_air(:)                                                , &
       & co2_mixing_ratio(:)                                     , &
-      & ga(:)                                                   , &
+      & aerodyn_cond(:)                                         , &
       & net_assimilation(:)                                     , &
       & canopy_cond(:)                                          , &
       & beta_air(:)                                             , &
@@ -921,7 +927,6 @@ CONTAINS
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
-                                                 t_soil_root, &
                                                  w_soil_root_theta, &
                                                  growing_season) &
                                                  RESULT(kstar_labile)
@@ -938,7 +943,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K)
-    REAL(wp),   INTENT(in)    :: t_soil_root            !< air temperature (K)
     REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity)
     REAL(wp),   INTENT(in)    :: growing_season         !< is the plant growing?
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)

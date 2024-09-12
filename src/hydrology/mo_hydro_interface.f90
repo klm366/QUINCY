@@ -1378,6 +1378,7 @@ CONTAINS
       & nsoil, &
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
+      & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
       & l_latflow_to_streamflow,                                &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
@@ -2623,6 +2624,7 @@ CONTAINS
   SUBROUTINE update_water_balance( tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -2650,9 +2652,10 @@ CONTAINS
       & water_to_soil_lex, &
       & wtr_latflow_res_srf, &
       & wtr_lex_net_srf,  &
-      & weq_fluxes, &    ! [m3 s-1]
-      & weq_land, &      ! [m3]
-      & weq_balance_err  ! [m3/(time step)]
+      & weq_fluxes, &         ! [m3 s-1]
+      & weq_land, &           ! [m3]
+      & weq_balance_err, &    ! [m3/(time step)]
+      & weq_balance_err_count ! [time steps]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl, &
@@ -2674,7 +2677,7 @@ CONTAINS
     LOGICAL  :: is_experiment_start, tile_contains_soil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
-    CHARACTER(len=6000)         :: message_text_long
+    CHARACTER(len=5000)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2719,10 +2722,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_lex_net_srf) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_lex_net_sl)  ! in
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)              ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_count) ! inout
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(tile_area, weq_land_new)
@@ -2760,6 +2764,7 @@ CONTAINS
       wb_threshold = 1.0e-11_wp * tile_area * dtime
 
       IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
+        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
         WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
           & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
           & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
@@ -2775,7 +2780,6 @@ CONTAINS
             & 'Snow reservoir:     ', weq_snow(ic)           * tile_area,              NEW_LINE('a'), &
             & 'Lat. inflow srf : ', wtr_lex_net_srf(ic) * tile_area / rhoh2o * dtime,  NEW_LINE('a'), &
             & 'Lat. inflow sl : ', SUM(wtr_lex_net_sl(ic,:))*tile_area/rhoh2o*dtime
-
           IF (.NOT. tile%is_lake) THEN
             WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
               & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
@@ -2789,9 +2793,9 @@ CONTAINS
             & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
             & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
         END IF
-        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
+        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_ERROR) THEN
           CALL finish (TRIM(routine), message_text_long)
-        ELSE
+        ELSE IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_LOGGING) THEN
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
@@ -2854,12 +2858,14 @@ CONTAINS
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+    USE mo_jsb_impl_constants,    ONLY: WB_IGNORE
 
     ! Argument
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
 
     ! Local variables
     !
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
@@ -2874,6 +2880,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: fract_snow
     dsl4jsb_Real2D_onDomain :: weq_snow
     dsl4jsb_Real2D_onDomain :: weq_balance_err
+    dsl4jsb_Real2D_onDomain :: weq_balance_err_count
+
+    LOGICAL, SAVE           :: print_wb_warning = .TRUE.
 
     REAL(wp), POINTER       :: trans_gmean(:)
     REAL(wp), POINTER       :: evapotrans_gmean(:)
@@ -2904,6 +2913,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_snow)                   ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err)            ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err_count)      ! in
 
 
     trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
@@ -2922,6 +2932,7 @@ CONTAINS
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
     notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
 
+    dsl4jsb_Get_config(HYDRO_)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -2963,6 +2974,15 @@ CONTAINS
     ! No unit transformation [m3]: 1
     IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
       &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
+
+    IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_IGNORE .AND. print_wb_warning) THEN
+      IF (global_sum_array(weq_balance_err_count(:,:) * in_domain(:,:)) > 0.5_wp) THEN
+        CALL message (TRIM(routine), 'Water balance issues detected. '// &
+          & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
+        ! Don't repeat this warning during this simulation period
+        print_wb_warning = .FALSE.
+      END IF
+    END IF
 
     DEALLOCATE (scaling, in_domain)
 #endif

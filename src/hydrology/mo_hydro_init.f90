@@ -676,7 +676,7 @@ CONTAINS
           hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
         END IF
 
-        ! soil-matric potential
+        ! Soil matric potential
         ptr_2D => input_file%Read_2d(                  &
           & variable_name=moisture_pot_name,           &
           & fill_array = hydro_init_vars%matric_pot)

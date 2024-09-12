@@ -181,7 +181,7 @@ CONTAINS
     END IF
 
 
-    ! Get soil config
+    ! Get config parameters
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
 
