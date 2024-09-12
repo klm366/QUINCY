@@ -492,13 +492,24 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
-      ! Thawing depth
+      ! Thaw depth
+      ! The general idea of the thaw depth calculation is to not simply determine the first layer with sub-zero temperatures,
+      ! but to assume a linear temperatur gradient between two layers (either layer centers or layer bottoms) and determine
+      ! the depth at which the temperature is zero between an unfrozen and a frozen layer. The underlying assumption is thus,
+      ! that a layer with an average temperature below the melting point may contain an unfrozen part if the temperature of
+      ! the overlying layer is above the melting point. Here, the unfrozen fraction of an, on average, frozen layer is
+      ! determined by scaling the temperature excess of the overlying layer (t_lm1-tmelt) by the temperature differences
+      ! between the layer and the overlying layer (t_lm1-t_l). For layers above the bedrock boundary the ice content needs to
+      ! be accounted for since this represents an additionional energy sink. This is done including the temperature change
+      ! corresponding to the latent energy of thaw at the soils current heat capacity. For layers at the thaw front
+      ! (temperature at 0C) it is simply assumed that the unfrozen fraction of the layer is proportional to the liquid
+      ! water content, relative to the total water content.
+      ! Calculation for full layers (zbot), rather than layer centers (mids) appears more consistant with the actual energy
+      ! balance in the soil since temperatures can only increase above the melting point when the entirety of the ice in the
+      ! respective layer has completly melted. However, thaw depths are quite large, so it may become necessary to switch
+      ! back to the assumption that temepratures are valid for the center rather than the whole layer.
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
-      ! Calculation for full layers (zbot), rather than layer centers (mids) is more consistant with
-      ! the actual energy balance.
-      ! However, thaw depths are quite large, so it may become necessary to switch back to the assumption
-      ! that temepratures are valid for the center rather than the whole layer.
       DO ic=1,nc
         IF (PRESENT(ws)) THEN          ! Not under glacier
           thaw_depth(ic) = zbot(nsoil)   ! Initialize with maximum thaw depth
