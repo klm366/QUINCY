@@ -41,7 +41,7 @@ MODULE mo_alcc_memory_class
   real(dp), pointer :: TransMtrx(:)
   
   ! Mingyue Zhang: Set the number of matrices dynamically
-  INTEGER, PARAMETER :: numMatrices = 8 ! Adjust as needed according to the size of transition matrix
+  INTEGER, PARAMETER :: numMatrices = 9 ! Adjust as needed according to the size of transition matrix
   
   allocate(TransMtrx(numMatrices))
   
@@ -49,9 +49,11 @@ MODULE mo_alcc_memory_class
     allocate(TransMtrx(i)%ptr(rows, cols))
   end do
 
-  ! Accessing elements of the matrices
-  TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment
-  ! Mingyue Zhang: define TransMtrx finsih 
+  ! Accessing elements of the matrices 
+  ! Use a do loop for the read in LUH2 transition data: 
+  ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
+  TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to ini.f90 to read in data and then come back to here)
+  ! Mingyue Zhang: define TransMtrx end 
 
   PUBLIC :: t_alcc_memory, max_no_of_vars
 

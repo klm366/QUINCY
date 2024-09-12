@@ -176,54 +176,29 @@ CONTAINS
     !Mingyue Zhang define transition data name end
 
 
-    current_tile => tile%Get_first_child_tile()
-    i_tile = 0
-    DO WHILE (ASSOCIATED(current_tile))
-      i_tile = i_tile + 1
-
-      SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
-      CASE ('maps')
-        !-- start: parts from Rainer Schnecks alcc implementation
+    SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+    CASE ('maps')
+      !-- start: parts from Rainer Schnecks alcc implementation
         ! Read this years pft-fraction from map file
-        IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
-        WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+      IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
+      WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
 
-        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
-          & fill_array = cf_current_year(:,i_tile,:) )
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+        
+      ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
+        & fill_array = cf_current_year(:,i_tile,:) )
         !-- end: rewritten remainder from Rainer Schnecks alcc implementation
 
         ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
-        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
-      
-      
-        !Mingyue Zhang added for reading in transition data start
-      CASE ('transitions')
-        IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
-        WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+      cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
+        ENDDO
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
 
-        !!!!here associate the trasition matrix with the tile(or should be grid?)
-        do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-          allocate(TransMtrx(i)%ptr(rows, cols))
-        end do
-        ! Accessing elements of the matrices 
-        ! Use a do loop for the read in LUH2 transition data: 
-        ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file), &
-          & fill_array = cf_current_year(:,i_tile,:) )
-
-        !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop, read in six luh transition data and assign the grid box value to one 3*3 matrix
-
-        ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
-        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * TransMtrx(:i_tile,:)
-
-        !Mingyue Zhang added for reading in transition data end
-      
-      
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
-      END SELECT
-
-      ! Assert: fractions >= 0 and < 1
+        ! Assert: fractions >= 0 and < 1
       IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
         CALL finish(TRIM(routine), &
         & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
@@ -236,7 +211,32 @@ CONTAINS
       ENDIF
 
       current_tile => current_tile%Get_next_sibling_tile()
-    ENDDO
+          
+        !Mingyue Zhang added for reading in transition data start 
+        !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
+        !so possibly here the CASE ('transitions') should not be inside the do while loop
+    CASE ('transitions')
+      IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+      WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+
+      !!!!here associate the trasition matrix with the tile(or should be grid?)
+      do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+        allocate(TransMtrx(i)%ptr(rows, cols))
+      end do
+      ! Accessing elements of the matrices 
+      ! Use a do loop for the read in LUH2 transition data: 
+      ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
+      TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file)
+
+      !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop, read in six luh transition data and assign the grid box value to one 3*3 matrix
+
+      ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
+      cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * TransMtrx(:i_tile,:)
+
+      !Mingyue Zhang added for reading in transition data end
+    END SELECT
+
+    
 
     CALL input_file%Close()
 
