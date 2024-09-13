@@ -82,7 +82,7 @@ CONTAINS
     & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
+    & weq_rootzone, weq_rootzone_max, wtr_soil, hyd_cond_sat_sl1,   &
     & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
     & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
@@ -102,7 +102,7 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
-      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                  &
+      & weq_rootzone(:), weq_rootzone_max(:), wtr_soil(:),                  &
       & hyd_cond_sat_sl1(:), ice_impedance(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
@@ -300,10 +300,10 @@ CONTAINS
 
       ! Update evaporation required from the soil
       evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
-      IF (weq_soil(ic) + evapotrans_soil_in_m < 0._wp) THEN
+      IF (wtr_soil(ic) + evapotrans_soil_in_m < 0._wp) THEN
         ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
         evapo_pond_in_m  = MAX(-(wtr_pond(ic) + ice_pond(ic)), &
-          &                    evapo_pond_in_m + (weq_soil(ic) + evapotrans_soil_in_m))
+          &                    evapo_pond_in_m + (wtr_soil(ic) + evapotrans_soil_in_m))
         evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
       END IF
       evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m
@@ -892,8 +892,9 @@ CONTAINS
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                  &
     & ltpe_closed, ltpe_open)
 
-    USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
-    USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_, &
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
+    USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
+    USE mo_hydro_constants,        ONLY: Semi_Distributed_, Uniform_, &
       & drain_min, drain_max, drain_exp
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
@@ -943,10 +944,10 @@ CONTAINS
     INTEGER  :: last_soil_layer(nc)          ! deepest soil layer index (above the bedrock boundary)
     CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
 
-    REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
+    REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice) [weq m]
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
     REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     ! soil moisture state prior to vertical transport [m]
-    REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
+    REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil moisture
     REAL(wp) :: ice_impedance_sl(nc,nsoil)   ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
     REAL(wp) :: diffus_sl(nc,nsoil)          ! diffusivity at mid-depth of the layer[m2/s]
@@ -971,6 +972,7 @@ CONTAINS
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
     REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
+    REAL(wp) :: ice2weq, weq2ice             ! conversion factors between ice and water equivalent volumns
 
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
@@ -978,6 +980,9 @@ CONTAINS
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
     !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl)                 &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+
+    ice2weq = rhoi / rhoh2o
+    weq2ice = rhoh2o / rhoi
 
     !> Finish in case of negative soil moisture
     !
@@ -1349,7 +1354,7 @@ CONTAINS
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
-      weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
+      weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)) * ice2weq  ! water and ice within the column
 #ifndef _OPENACC
       IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
         WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
@@ -1369,8 +1374,10 @@ CONTAINS
       DO ic = 1, nc
         IF (deficit_evapotrans(ic) < 0._wp .AND. weq_soil(ic) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
-          wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) + deficit_evapotrans(ic) * wtr_soil_sl(ic,is) / weq_soil(ic))
-          ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is) + deficit_evapotrans(ic) * ice_soil_sl(ic,is) / weq_soil(ic))
+          wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) + &
+            & deficit_evapotrans(ic) * wtr_soil_sl(ic,is) / weq_soil(ic))
+          ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is) + &
+            & (deficit_evapotrans(ic) * (ice_soil_sl(ic,is) * ice2weq) / weq_soil(ic)) * weq2ice )
         END IF
       END DO
     END DO
@@ -2271,8 +2278,8 @@ CONTAINS
     INTEGER,  INTENT(in)            :: nc                 !< vector length
     INTEGER,  INTENT(in)            :: nsoil              !< number of below ground layers
     REAL(wp), INTENT(in)            :: dsoil(:,:)         !< soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)            :: wtr(:,:)           !< water content
-    REAL(wp), INTENT(in)            :: ice(:,:)           !< ice content
+    REAL(wp), INTENT(in)            :: wtr(:,:)           !< water content [m]
+    REAL(wp), INTENT(in)            :: ice(:,:)           !< ice content [m]
     REAL(wp), INTENT(in)            :: wscools(:,:)       !< potentially supercooled water
     REAL(wp), INTENT(in)            :: wsat(:,:)          !< soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: wres(:,:)          !< residual water content [m]
@@ -2386,7 +2393,7 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (wsat_vol(ic,is) > 1.0e-10_wp) THEN
-          ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is)) / wsat_vol(ic,is))
+          ice_imp(ic,is)  = 10._wp**(-6._wp * MIN(1._wp, (ice_vol(ic,is) + scool_vol(ic,is)) / wsat_vol(ic,is)))
         ELSE
           ice_imp(ic,is)  = 1._wp
         END IF

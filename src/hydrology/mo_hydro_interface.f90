@@ -460,7 +460,7 @@ CONTAINS
       & skinres_canopy_max, &
       & weq_rootzone,       &
       & weq_rootzone_max,   &
-      & weq_soil,           &
+      & wtr_soil,           &
       & trans_tmp
     REAL(wp), DIMENSION(options%nc, options%nsoil_w) :: &
       & weq_soil_sl_tmp,           &
@@ -667,7 +667,7 @@ CONTAINS
       !$ACC WAIT(1)
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
+      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil))
 
@@ -689,7 +689,7 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO  ic = 1, nc
-        weq_soil(ic) = 0._wp
+        wtr_soil(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -698,7 +698,7 @@ CONTAINS
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
         DO  ic = 1, nc
-          weq_soil(ic) = weq_soil(ic) + weq_soil_sl_tmp(ic,is)
+          wtr_soil(ic) = wtr_soil(ic) + wtr_soil_sl(ic,is)
         END DO
       END DO
       !$ACC END PARALLEL
@@ -777,7 +777,7 @@ CONTAINS
         & snow(:),                        & ! solid precipitation [kg m-2 s-1]
         & weq_rootzone(:),                & ! total rootzone water content [m]
         & weq_rootzone_max(:),            & ! maximum total rootzone water content [m]
-        & weq_soil(:),                    & ! total column soil moisture [m]
+        & wtr_soil(:),                    & ! total column soil water content [m]
         & hyd_cond_sat_sl(:,1),           & ! saturated hydraulic conductivity of the top soil layer [m s-1]
         & ice_impedance_sl(:,1),          & ! ice impedance factor for top soil layer [-]
         ! inout
