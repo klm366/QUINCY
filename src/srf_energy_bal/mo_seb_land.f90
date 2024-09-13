@@ -633,7 +633,13 @@ CONTAINS
         t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
       ELSE
         t_unfilt(ic) = ( tpfac2 * s_star(ic) + tpfac3 * s_old(ic) ) / t2s_conv(ic)
-        le_phase_change(ic) = le_phase_change(ic) * alpha + le_phase_change_old(ic) * (1._wp - alpha)
+        IF      (dsl4jsb_Config(SEB_)%le_test == 0) THEN
+          le_phase_change(ic) = le_phase_change(ic)
+        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 1) THEN
+          le_phase_change(ic) = le_phase_change(ic) * alpha + le_phase_change_old(ic) * (1._wp - alpha)
+        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 2) THEN
+          le_phase_change(ic) = le_phase_change(ic) * alpha * tpfac2 + le_phase_change_old(ic) * tpfac3
+        END IF
       END IF
 
       ! Correct new dry static energy for melting of snow on the surface, melting/freezing of surface water
