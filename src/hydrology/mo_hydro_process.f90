@@ -1672,7 +1672,7 @@ CONTAINS
 
 
     ! Determening the potential loss from the intermediate storage from the bottom of the soil column
-    !$ACC LOOP GANG VECTOR
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       IF (l_pf_soil(ic)) THEN
         drain_bot_pot(ic) = 0._wp
@@ -1680,7 +1680,6 @@ CONTAINS
         drain_bot_pot(ic) = MIN(k_brock, hyd_cond_bot(ic)) * delta_time
       END IF
     END DO
-    !$ACC END PARALLEL
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
