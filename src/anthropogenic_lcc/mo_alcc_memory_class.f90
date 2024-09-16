@@ -33,6 +33,7 @@ MODULE mo_alcc_memory_class
   IMPLICIT NONE
   PRIVATE
 
+  ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! Mingyue Zhang: define TransMtrx start
   TYPE MatrixPtr
     real(dp), pointer :: ptr(:,:)
@@ -128,4 +129,4 @@ CONTAINS
   END SUBROUTINE Init_alcc_memory
 
 #endif
-END MODULE mo_alcc_memory_class
+END MODULE mo_alcc_memory_class 
