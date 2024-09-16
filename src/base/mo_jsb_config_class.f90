@@ -34,7 +34,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
     INTEGER                        :: model_scheme        !< model_scheme as integer
-    LOGICAL                        :: use_tmx
+    LOGICAL                        :: use_tmx             !< whether to use tmx; set by the host/driver in [[mo_jsbach_model_init:jsbach_init]]
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
@@ -126,7 +126,6 @@ CONTAINS
       grid_name
 
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / quincy
-    LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     CHARACTER(len=10)             :: enforce_water_budget
@@ -156,7 +155,6 @@ CONTAINS
 
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
-      use_tmx, &
       use_lakes, &
       use_glacier, &
       enforce_water_budget, &
@@ -201,7 +199,6 @@ CONTAINS
 
     ! Set defaults
     model_scheme               = "jsbach"
-    use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     enforce_water_budget       = 'ignore'
@@ -264,13 +261,11 @@ CONTAINS
       & // ' no absolute fraction files are available, please check.')
     ENDIF
 
-    IF (model_config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
-      CALL finish(routine, 'tmx currently only implemented for JSBACH.')
-    END IF
+    ! Set default to .FALSE.; can be set by the call to [[mo_jsb_model_init:jsbach_init]] by the host/driver
+    model_config%use_tmx = .FALSE.
 
     model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
-    model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
     model_config%quincy_model               = TRIM(quincy_model)

@@ -181,7 +181,7 @@ CONTAINS
   !>
   !>   model_scheme: MODEL_JSBACH, MODEL_QUINCY
   !>
-  SUBROUTINE jsbach_init(model_id)
+  SUBROUTINE jsbach_init(model_id, use_tmx)
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model, MODEL_JSBACH, MODEL_QUINCY
@@ -218,7 +218,8 @@ CONTAINS
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
+    INTEGER, INTENT(in) :: model_id          !< ID of the model instance to be initialized
+    LOGICAL, INTENT(in), OPTIONAL :: use_tmx !< Whether to use tmx
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_grid),  POINTER          :: grid
@@ -247,6 +248,13 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
+
+    IF (PRESENT(use_tmx)) THEN
+      IF (model%config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
+        CALL finish(routine, 'tmx currently only implemented for JSBACH.')
+      END IF
+      model%config%use_tmx = use_tmx
+    END IF
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
