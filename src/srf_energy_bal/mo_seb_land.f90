@@ -639,6 +639,8 @@ CONTAINS
           le_phase_change(ic) = le_phase_change(ic) * alpha + le_phase_change_old(ic) * (1._wp - alpha)
         ELSE IF (dsl4jsb_Config(SEB_)%le_test == 2) THEN
           le_phase_change(ic) = le_phase_change(ic) * alpha * tpfac2 + le_phase_change_old(ic) * tpfac3
+        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 3) THEN
+          le_phase_change(ic) = le_phase_change(ic) * tpfac2 + le_phase_change_old(ic) * tpfac3
         END IF
       END IF
 
