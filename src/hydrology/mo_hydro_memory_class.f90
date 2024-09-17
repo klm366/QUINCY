@@ -901,7 +901,7 @@ CONTAINS
         & t_cf('wtr_latflow_res_sl', 'm', 'Water content of latflow res. on soil layers'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
-        & loutput=l_uniform, output_level=BASIC,                                              &
+        & lrestart=l_uniform, lrestart_cont=.TRUE.       ,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_sl', mem%wtr_latflow_sl,                                   &
