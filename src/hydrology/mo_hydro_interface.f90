@@ -476,7 +476,7 @@ CONTAINS
       & ice_impedance_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, hlp1
     ! Variables from configs
     REAL(wp) :: &
       & w_skin_max_config, &
@@ -687,10 +687,11 @@ CONTAINS
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
       !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc))  
 
+      hlp1 = dsl4jsb_Config(HYDRO_)%ret_macro_srf
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         slope_used(ic)   = steepness(ic)
-        flowlag_used(ic) = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_srf
+        flowlag_used(ic) = dtime / hlp1
       END DO
       !$ACC END PARALLEL LOOP
 
