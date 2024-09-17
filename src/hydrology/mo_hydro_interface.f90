@@ -483,7 +483,7 @@ CONTAINS
       & ice_impedance_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, hlp1
     ! Variables from configs
     REAL(wp) :: &
       & w_skin_max_config, &
@@ -644,19 +644,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
       END IF
-    END IF    
-
-    IF (tile%Is_process_calculated(LEX_)) THEN
-      l_latflow_to_streamflow = .FALSE.
-      dsl4jsb_Get_memory(LEX_)
-      dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)     ! in
-      dsl4jsb_Get_var2D_onChunk(LEX_, fact_lag_srf)  ! in
-      slope_used   = slope_eff
-      flowlag_used = MIN(dtime * fact_lag_srf, 0.5_wp)
-    ELSE
-      l_latflow_to_streamflow = .TRUE.
-      slope_used   = steepness
-      flowlag_used = dtime / dsl4jsb_Config(HYDRO_)%ret_macro_srf
     END IF
 
     IF (is_experiment_start) THEN ! Start of experiment
@@ -702,7 +689,31 @@ CONTAINS
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
       !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
       !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil))
+      !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
+      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc), lex_tmp(1:nc))
+
+      hlp1 = dsl4jsb_Config(HYDRO_)%ret_macro_srf
+
+      IF (tile%Is_process_calculated(LEX_)) THEN
+        l_latflow_to_streamflow = .FALSE.
+        dsl4jsb_Get_memory(LEX_)
+        dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)     ! in
+        dsl4jsb_Get_var2D_onChunk(LEX_, fact_lag_srf)  ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          slope_used(ic)   = slope_eff(ic)
+          flowlag_used(ic) = MIN(dtime * fact_lag_srf(ic), 0.5_wp)
+        END DO
+        !$ACC END PARALLEL LOOP
+      ELSE
+        l_latflow_to_streamflow = .TRUE.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          slope_used(ic)   = steepness(ic)
+          flowlag_used(ic) = dtime / hlp1
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
@@ -797,8 +808,8 @@ CONTAINS
         & l_infil_subzero_config,         & ! in
         & l_latflow_to_streamflow,        & ! in
         & snow_depth_max_config,          & ! in
-        & slope_used,                     & ! effective slope on tile or steepness for standard scheme [/]
-        & flowlag_used,                   & ! lag factor to account for retention in surface runoff fluxes [/]
+        & slope_used(:),                  & ! effective slope on tile or steepness for standard scheme    []
+        & flowlag_used(:),                & ! lag factor to account for retention in surface runoff luxes    []
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & ! Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
@@ -1344,7 +1355,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
-    !$ACC DATA CREATE(l_fract, tile_fract)
+    !$ACC DATA CREATE(l_fract, tile_fract) &
+    !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
@@ -1353,7 +1365,7 @@ CONTAINS
 
     ! Setting the depth limit until which the presence of permafrost may affect bottom drainage
     depth_thrsh(:) = MAX(SUM(dsl4jsb_var3D_onChunk(HYDRO_, soil_depth_sl), DIM=2), 1.0_wp)
-    
+
     l_pf_soil(:) = (thaw_depth_max_ym1(:) < depth_thrsh(:) .AND. &
                  &  thaw_depth_max(:)     < depth_thrsh(:))
 
@@ -1395,8 +1407,8 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & ! volumetric residual soil water content [m m-1]
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & slope_used,                                             &
-      & flowlag_used,                                           &
+      & slope_used(:),                                          &
+      & flowlag_used(:),                                        &
       & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &

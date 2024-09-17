@@ -95,7 +95,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    REAL(wp)                    :: ret_macro_blg, ret_macro_srf 
+    REAL(wp)                    :: ret_macro_blg, ret_macro_srf
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     CHARACTER(len=10)           :: enforce_water_budget
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
@@ -112,7 +112,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & ret_macro_blg,              &
-      & ret_macro_srf,              & 
+      & ret_macro_srf,              &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &

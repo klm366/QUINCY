@@ -289,17 +289,17 @@ CONTAINS
       & t_cf('thaw_depth_max', 'm', 'Maximum thaw depth'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=MEDIUM,                                                 &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
+      & output_level=MEDIUM, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
       & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'), &
+      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=MEDIUM,                                                 &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
+      & output_level=MEDIUM, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
 

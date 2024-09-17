@@ -57,22 +57,18 @@ MODULE mo_hydro_constants
     & oro_var_min = 100._wp,               & !< ARNO Scheme minimum orographic standard deviation threshold
     & oro_var_max = 1000._wp,              & !< ARNO Scheme maximum orographic standard deviation threshold
     & drain_min   = 0.001_wp / (3600._wp*1000._wp), & !< minimum (slow) subsurface drainage.
-                                                      !< For an average wsmax (50mm - 300 mm, Todini, 1996)
-                                                      !< and a ratio of wd / wsmax = 0.9 (Dümenil, 1992),
-                                                      !< this corresponds to a drainage of the water content
-                                                      !< between wd and 0. within about 1875 to 11250 days
+                                                      !! For an average wsmax (50mm - 300 mm, Todini, 1996) and a ratio of wd / wsmax = 0.9 (Duemenil, 1992),
+                                                      !! this corresponds to a drainage of the water content between wd and 0. within about 1875 to 11250 days
     & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum (fast) subsurface drainage.
-                                                      !< For an average wsmax (50mm - 300 mm, Todini, 1996)
-                                                      !< and a ratio of wd / wsmax = 0.9 (Dümenil, 1992),
-                                                      !< this corresponds to a drainage of the water content
-                                                      !< between wsmax and wd within about 2.1  to 12.5 days
+                                                      !! For an average wsmax (50mm - 300 mm, Todini, 1996) and a ratio of wd / wsmax = 0.9 (Duemenil, 1992),
+                                                      !! this corresponds to a drainage of the water content between wsmax and wd within about 2.1  to 12.5 days
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
     ! Parameters required for unifrom scale and lateral exchange between tiles
     & vel_lat_srf   = 10._wp/ 3600._wp,    &  !< Potential velocity of lateral flow through connected flow paths
-                                              !< at the surface [m s-1] (-> 10 m h-1; 10 * x_blg value)
+                                              !! at the surface [m s-1] (-> 10 m h-1; 10 * x_blg value)
     & vel_lat_blg   = 1._wp / 3600._wp,    &  !< Potential velocity of lateral flow through below-ground flow paths [m s-1]
-                                              !< (-> 1 m h-1; roughly based on macropore enhancement (Milly2014))
+                                              !! (-> 1 m h-1; roughly based on macropore enhancement (Milly2014))
 
     ! Parameters used for pond computations
     & oro_crit = 100._wp,                  & !< Reference topo standard deviation for pond scaling factor [m]
@@ -106,7 +102,7 @@ MODULE mo_hydro_constants
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc               = 0.139_wp,      & !< Parameter from percolation theory
     ! Parameters for bedrock
-    & k_brock                 = 1.E-6_wp         !< Hydrologic conductivity (fractured) bedrock
+    & k_brock                 = 1.E-6_wp         !< Hydrologic conductivity (fractured) bedrock [m/s] (Freeze & Cherry, 1979)
 
 #endif
 END MODULE mo_hydro_constants
