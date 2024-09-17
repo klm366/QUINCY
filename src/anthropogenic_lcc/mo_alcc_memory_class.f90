@@ -34,6 +34,9 @@ MODULE mo_alcc_memory_class
   PRIVATE
 
   ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
+  ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
+  ! thus you do not have to care about the block number (iblk) but only about the cells on this chunk (ic <= nc). 
+  ! So You would loop over nc which is already available in the update_all routine (nc  = options%nc).
   ! Mingyue Zhang: define TransMtrx start
   TYPE MatrixPtr
     real(dp), pointer :: ptr(:,:)
@@ -53,8 +56,21 @@ MODULE mo_alcc_memory_class
   ! Accessing elements of the matrices 
   ! Use a do loop for the read in LUH2 transition data: 
   ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-  TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to ini.f90 to read in data and then come back to here)
+  TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
   ! Mingyue Zhang: define TransMtrx end 
+
+  ! Mingyue Zhang: defeine transition types start
+  CHARACTER(len=*) :: transitions(9)
+
+    ! Initialize the array with the character strings
+    transitions = (/ 'crop2crop','crop2pasture', 'crop2natural',&
+                     'pasture2crop','pasture2pasture', 'pasture2natural',&
+                     'natural2crop', 'natural2pasture', 'natural2natural'/)
+    ! Output to verify the array
+    print *, transitions
+  ! Mingyue Zhang: defeine transition types end
+
+
 
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
@@ -119,13 +135,21 @@ CONTAINS
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
 
-  ! Mingyue Zhang: add variables for transitions  start 
+  ! Mingyue Zhang: add variables for transitions matrix start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
       & hgrid, pft_vgrid,                                                                            &
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-  ! Mingyue Zhang: add variables for transitions  finish
+  ! Mingyue Zhang: add variables for transitions matrix finish
+  ! Mingyue Zhang: add variables for transitions type start 
+      CALL mem%Add_var('transitions', mem%transitions,                 &
+      & hgrid, pft_vgrid,                                                                            &
+      & prefix, suffix,                                                                              &
+      & output_level=FULL,                                                                          &
+      & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+  ! Mingyue Zhang: add variables for transitions type finish
+
   END SUBROUTINE Init_alcc_memory
 
 #endif
