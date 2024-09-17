@@ -685,7 +685,7 @@ CONTAINS
       !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
       !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
-      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc))  
+      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc))
 
       hlp1 = dsl4jsb_Config(HYDRO_)%ret_macro_srf
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
