@@ -373,7 +373,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, zbot, heat_cap)
 
     zbot(1)=dz(1)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
