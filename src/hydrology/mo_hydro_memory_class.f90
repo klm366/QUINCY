@@ -97,7 +97,7 @@ MODULE mo_hydro_memory_class
       & fract_org_sl            !< Fractions of organic material in soil layers                        []
     TYPE(t_jsb_var_real2d) :: &
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
-      & weq_rootzone_max ,    & !< Maximum amount of water or ice in the root zone                     [m]
+      & wpi_rootzone_max ,    & !< Maximum amount of water or ice in the root zone                     [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
@@ -153,7 +153,7 @@ MODULE mo_hydro_memory_class
       & root_depth,             & !< Rooting depth [m]
       & fract_snow_can,         & !< Snow fraction on canopy                                                  []
       & weq_snow_can,           & !< Snow amount on canopy                                                    [m water equivalent]
-      & ice_rootzone,           & !< Frozen water content of the root zone                                    [m water equivalent]
+      & ice_rootzone,           & !< Frozen water content of the root zone                                    [m water column]
       & wtr_rootzone_scool_pot, & !< Potential amount of suppercooled water in the root zone                  [m]
       & wtr_rootzone_scool_act, & !< Suppercooled water content in root zone                                  [m]
       & wtr_rootzone_avail,     & !< Plant available water content in root zone                               [m]
@@ -566,9 +566,9 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      CALL mem%Add_var( 'weq_rootzone_max', mem%weq_rootzone_max,                    &
+      CALL mem%Add_var( 'wpi_rootzone_max', mem%wpi_rootzone_max,                    &
         & hgrid, surface,                                                            &
-        & t_cf('weq_rootzone_max', 'm', 'Maximum amount of water/ice in root zone'), &
+        & t_cf('wpi_rootzone_max', 'm', 'Maximum amount of water/ice in root zone'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
@@ -796,7 +796,7 @@ CONTAINS
 
       CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
         & hgrid, surface,                                                                &
-        & t_cf('ice_rootzone', 'm water equivalent', 'Ice content in the root zone'),    &
+        & t_cf('ice_rootzone', 'm', 'Ice content (column) in the root zone'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
