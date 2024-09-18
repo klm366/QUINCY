@@ -1383,16 +1383,18 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    ! Additional corrections for excess soil moisture, e.g. due to expanding ice
+    ! Additional corrections for excess soil moisture
+    ! In case of over-saturation water would not have infiltrated in the first place --> pile
+    ! water upwards
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ! If saturation moisture is exceeded, add the excess water to the drainage for the respective soil layer
+        ! If saturation moisture is exceeded, add the excess water to next higher soil layer
         IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
-          drainage_sl(ic,is) = drainage_sl(ic,is) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
-          wtr_soil_sl(ic,is) = wtr_wsat_sl(ic,is)
+          wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
+          wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
         END IF
       END DO
     END DO
