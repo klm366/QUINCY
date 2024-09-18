@@ -70,6 +70,8 @@ CONTAINS
          ic_filename,                 &
          bc_filename,                 &
          alcc_filename_prefix,        &
+         ! Mingyue Zhang: Set defaults for transition data nc file prefix
+         alcc_transition_filename_prefix    &
          scheme,                      &
          nr_of_pfts
 

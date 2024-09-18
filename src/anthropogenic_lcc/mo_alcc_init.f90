@@ -197,20 +197,6 @@ CONTAINS
         ENDDO
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
-
-        ! Assert: fractions >= 0 and < 1
-      IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
-      ENDIF
-      IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
-      ENDIF
-
-      current_tile => current_tile%Get_next_sibling_tile()
           
         !Mingyue Zhang added for reading in transition data start 
         !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
@@ -219,25 +205,44 @@ CONTAINS
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
       WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
 
-      !!!!here associate the trasition matrix with the tile(or should be grid?)
-      do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-        allocate(TransMtrx(i)%ptr(rows, cols))
-      end do
-      ! Accessing elements of the matrices 
-      ! Use a do loop for the read in LUH2 transition data: 
-      ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-      TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file)
+      !here add the loop over the cells on the chunk(ic)
+      DO WHILE (ics <= nc)
 
-      !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop, read in six luh transition data and assign the grid box value to one 3*3 matrix
+        !!!!here associate the trasition matrix with the tile(or should be grid?)
+        do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+          allocate(TransMtrx(i)%ptr(rows, cols))
+        end do
+        ! Accessing elements of the matrices 
+        ! Use a do loop for the read in LUH2 transition data: 
+        ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
+        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file)
 
+        !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop,
+        ! read in six luh transition data and assign the grid box value to one 3*3 matrix
+      END DO
+      
       ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
-      cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * TransMtrx(:i_tile,:)
+      cf_current_year(:,:,:) = cf_current_year(:,:,:) + cf_current_year(:,:,:) * TransMtrx(:,:,:)
 
       !Mingyue Zhang added for reading in transition data end
     END SELECT
 
-    
 
+        ! Assert: fractions >= 0 and < 1
+    IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+      CALL finish(TRIM(routine), &
+      & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
+      & // TRIM(current_tile%name)//'. Please check.') 
+    ENDIF
+    IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
+      CALL finish(TRIM(routine), &
+      & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
+      & // TRIM(current_tile%name)//'. Please check.') 
+    ENDIF
+
+    current_tile => current_tile%Get_next_sibling_tile()
+
+  
     CALL input_file%Close()
 
     DEALLOCATE(cf_correction)
