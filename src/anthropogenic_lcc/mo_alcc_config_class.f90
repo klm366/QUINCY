@@ -15,7 +15,7 @@
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
@@ -28,9 +28,11 @@ MODULE mo_alcc_config_class
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
-     CHARACTER(len=filename_max-7) :: alcc_filename_prefix 
+     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+       !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc) 
+     LOGICAL                       :: l_daily_alcc
+       !< determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
   END type t_alcc_config
@@ -44,10 +46,6 @@ CONTAINS
   !> Initialize alcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize alcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_alcc_config)
-  !!  
   SUBROUTINE Init_alcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -62,17 +60,17 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
+    LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     INTEGER                       :: i, nr_of_pfts
 
     NAMELIST /jsb_alcc_nml/      &
-         active,                      &
-         ic_filename,                 &
-         bc_filename,                 &
-         alcc_filename_prefix,        &
-         ! Mingyue Zhang: Set defaults for transition data nc file prefix
-         alcc_transition_filename_prefix    &
-         scheme,                      &
+         active,                 &
+         ic_filename,            &
+         bc_filename,            &
+         alcc_filename_prefix,   &
+         scheme,                 &
+         l_daily_alcc,           &
          nr_of_pfts
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -90,6 +88,7 @@ CONTAINS
     ! Mingyue Zhang: Set defaults for transition data nc file prefix 
     alcc_transition_filename_prefix = "LUH_scaled_transitions_T63_"
     nr_of_pfts           = 11
+    l_daily_alcc         = .TRUE.
     scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -106,6 +105,7 @@ CONTAINS
     ! Mingyue Zhang: add config for transition data nc file prefix 
     config%alcc_transition_filename_prefix = alcc_transition_filename_prefix
     config%scheme               = scheme
+    config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
 
     SELECT CASE (TRIM(config%scheme))
@@ -114,8 +114,14 @@ CONTAINS
     CASE ('transitions')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
     CASE DEFAULT
-      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(config%scheme))
+      CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
+
+    IF(l_daily_alcc) THEN
+      CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
+    ELSE
+      CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
+    END IF
 
     ! Create vertical axis
     ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?

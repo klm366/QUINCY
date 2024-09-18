@@ -70,8 +70,6 @@ MODULE mo_alcc_memory_class
     print *, transitions
   ! Mingyue Zhang: defeine transition types end
 
-
-
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 5
@@ -134,6 +132,14 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+
+    CALL mem%Add_var('cf_day_delta', mem%cf_day_delta,                                    &
+      & hgrid, pft_vgrid,                                                                 &
+      & t_cf('Daily change in cover fractions.'),                                         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
   ! Mingyue Zhang: add variables for transitions matrix start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &

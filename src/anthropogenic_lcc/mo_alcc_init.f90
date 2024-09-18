@@ -209,15 +209,15 @@ CONTAINS
       DO WHILE (ics <= nc)
 
         !!!!here associate the trasition matrix with the tile(or should be grid?)
-        do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+        do i = 1, numMatrices   ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
           allocate(TransMtrx(i)%ptr(rows, cols))
         end do
         ! Accessing elements of the matrices 
         ! Use a do loop for the read in LUH2 transition data: 
         ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(varname_within_file)
+        ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable?
+        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
 
-        !TransMtrx => input_file_trans%??? currently is read in from the previous lines as do loop,
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix
       END DO
       
