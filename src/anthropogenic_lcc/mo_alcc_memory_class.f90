@@ -1,4 +1,4 @@
-!> alcc (anthropogenic lcc) memory class 
+!> alcc (anthropogenic lcc) memory class
 !>
 !> ICON-Land
 !>
@@ -22,7 +22,7 @@ MODULE mo_alcc_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real3d
-  USE mo_jsb_varlist,            ONLY: FULL 
+  USE mo_jsb_varlist,            ONLY: FULL
 
   ! Use of processes in this module
   ! dsl4jsb_Use_processes ALCC_
@@ -31,8 +31,14 @@ MODULE mo_alcc_memory_class
   ! dsl4jsb_Use_config(ALCC_)
 
   IMPLICIT NONE
-  PRIVATE
+  PRIVATE 
 
+  
+  PUBLIC :: t_alcc_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 5
+
+  
   ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
   ! thus you do not have to care about the block number (iblk) but only about the cells on this chunk (ic <= nc). 
@@ -70,17 +76,15 @@ MODULE mo_alcc_memory_class
     print *, transitions
   ! Mingyue Zhang: defeine transition types end
 
-  PUBLIC :: t_alcc_memory, max_no_of_vars
-
-  INTEGER, PARAMETER :: max_no_of_vars = 5
-
   TYPE, EXTENDS(t_jsb_memory) :: 
 
     TYPE(t_jsb_var_real3d) :: cf_current_year 
     !< this years target cfs derived from annually read land use data file. [-]
-
+   
   CONTAINS
+
     PROCEDURE :: Init => Init_alcc_memory
+  
   END TYPE t_alcc_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_memory_class'
@@ -110,6 +114,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
     ! -------------------------------------------------------------------------------------------------- !
+
        
     model => Get_model(model_id)
 
@@ -149,7 +154,7 @@ CONTAINS
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
   ! Mingyue Zhang: add variables for transitions matrix finish
   ! Mingyue Zhang: add variables for transitions type start 
-      CALL mem%Add_var('transitions', mem%transitions,                 &
+    CALL mem%Add_var('transitions', mem%transitions,                 &
       & hgrid, pft_vgrid,                                                                            &
       & prefix, suffix,                                                                              &
       & output_level=FULL,                                                                          &
@@ -159,5 +164,4 @@ CONTAINS
   END SUBROUTINE Init_alcc_memory
 
 #endif
-
-END MODULE mo_alcc_memory_class 
+END MODULE mo_alcc_memory_class
