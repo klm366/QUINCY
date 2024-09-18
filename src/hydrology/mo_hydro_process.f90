@@ -1102,10 +1102,10 @@ CONTAINS
             ! Fast drainage resulting from water above the field capacity
             drain_fast_sl(ic,is) = (drain_max - drain_min) * dtime                                &
               & * (MIN(1._wp, MAX(0._wp, (                                                  &
-              &    wtr_soil_sl(ic,is) - wpi_field_cap_sl(ic,is)))) &
+              &    wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is) - wpi_field_cap_sl(ic,is)))) &
               & / (wpi_wsat_sl(ic,is) - wpi_field_cap_sl(ic,is)))**drain_exp
             drain_fast_sl(ic,is) = MAX(0._wp, MIN(drain_fast_sl(ic,is), &
-              & wtr_soil_sl(ic,is) - wpi_field_cap_sl(ic,is)))
+              & wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is) - wpi_field_cap_sl(ic,is)))
             ! Add drainage components and apply ice impedance
             drainage_sl(ic,is) = ice_impedance_sl(ic,is) * (drain_slow_sl(ic,is) + drain_fast_sl(ic,is))
           END IF
