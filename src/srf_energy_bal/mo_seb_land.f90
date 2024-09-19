@@ -56,7 +56,7 @@ CONTAINS
     USE mo_sse_process,            ONLY: Get_liquid_max
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef, &
       &                                  update_drag
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd, cvd
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd, cvd, alf
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
@@ -174,7 +174,7 @@ CONTAINS
     LOGICAL, DIMENSION(options%nc) :: &
       & l_recalc_seb
     REAL(wp), DIMENSION(options%nc):: &
-      & s_zero, phase_change_zero, le_freeze_pot, le_melt_pot
+      & s_trgt, phase_change_trgt, le_freeze_pot, le_melt_pot
 
 
 
@@ -508,41 +508,44 @@ CONTAINS
       l_recalc_seb(ic)    = .TRUE.
 
       IF ((.NOT. lstart) .AND. (.NOT. tile%is_glacier)) THEN
-        s_zero(ic) = surface_dry_static_energy( & ! dry static energy at melting/freezing point
+        s_trgt(ic) = surface_dry_static_energy( & ! dry static energy at melting/freezing point
           & tmelt,                             &
           & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, jsb_standalone)
 
-
         hlp1 = 0._wp
         hlp2 = 0._wp
-        hlp3 = 0._wp
+        hlp3 = rhoh2o * alf / (alpha * steplen)
         IF (l_freeze_config) THEN
-          hlp1 = wtr_soil_sl(ic,1)
-          hlp2 = ice_soil_sl(ic,1)
           IF (l_supercool_config) THEN
-            hlp3 = wtr_soil_pot_scool_sl(ic,1)
+            hlp1 = MAX(wtr_soil_sl(ic,1) - wtr_soil_pot_scool_sl(ic,1), 0._wp)
+          ELSE
+            hlp1 = wtr_soil_sl(ic,1)
           END IF
+          hlp2 = ice_soil_sl(ic,1)
         END IF
 
+        ! Determine potential energy sinks / sources due to phase change at the surface
+        ! for reaching a target temperature of 0. C. 
         CALL phase_change_pot(                                  & ! in
           & alpha, steplen, t2s_conv(ic),                       & ! in
           & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-          & s_zero(ic), s_old(ic),                              & ! in
+          & s_trgt(ic), s_old(ic),                              & ! in
           & qsat_srf_old(ic), dQdT(ic),                         & ! in
           & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
           & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
           & fract_snow(ic), heat_cap(ic),                       & ! in
-          & weq_snow(ic), wtr_pond(ic), hlp1,                   & ! in
-          & hlp3,                                               & ! in
-          & ice_pond(ic), hlp2,                                 & ! in
-          & phase_change_zero(ic),                              & ! out
-          & le_freeze_pot(ic), le_melt_pot(ic)                  & ! out
+          & phase_change_trgt(ic)                               & ! out
           & )
 
-        IF (phase_change_zero(ic) <= 0._wp) THEN ! Energy available for melting
-          IF (ABS(phase_change_zero(ic)) <= le_melt_pot(ic)) THEN
-            le_phase_change(ic) = -phase_change_zero(ic)
-            s_star(ic) = s_zero(ic)
+        ! Determine potential energy sinks / sources due to phase change at the surface
+        ! as limited by the avaiablity of water / ice. 
+        le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
+        le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
+
+        IF (phase_change_trgt(ic) <= 0._wp) THEN ! Energy available for melting
+          IF (ABS(phase_change_trgt(ic)) <= le_melt_pot(ic)) THEN
+            le_phase_change(ic) = -phase_change_trgt(ic)
+            s_star(ic) = s_trgt(ic)
             l_recalc_seb(ic) = .FALSE.
           ELSE
             le_phase_change(ic) = le_melt_pot(ic)
@@ -550,9 +553,9 @@ CONTAINS
             forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
           END IF
         ELSE                                     ! Energy required from freezing
-          IF (phase_change_zero(ic) <= le_freeze_pot(ic)) THEN
-            le_phase_change(ic) = -phase_change_zero(ic)
-            s_star(ic) = s_zero(ic)
+          IF (phase_change_trgt(ic) <= le_freeze_pot(ic)) THEN
+            le_phase_change(ic) = -phase_change_trgt(ic)
+            s_star(ic) = s_trgt(ic)
             l_recalc_seb(ic) = .FALSE.
           ELSE
             le_phase_change(ic) = -le_freeze_pot(ic)
@@ -629,18 +632,52 @@ CONTAINS
       END IF
 
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
+
       IF (use_tmx .OR. jsb_standalone) THEN
         t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
       ELSE
         t_unfilt(ic) = ( tpfac2 * s_star(ic) + tpfac3 * s_old(ic) ) / t2s_conv(ic)
-        IF      (dsl4jsb_Config(SEB_)%le_test == 0) THEN
-          le_phase_change(ic) = le_phase_change(ic)
-        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 1) THEN
-          le_phase_change(ic) = le_phase_change(ic) * alpha + le_phase_change_old(ic) * (1._wp - alpha)
-        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 2) THEN
-          le_phase_change(ic) = le_phase_change(ic) * alpha * tpfac2 + le_phase_change_old(ic) * tpfac3
-        ELSE IF (dsl4jsb_Config(SEB_)%le_test == 3) THEN
-          le_phase_change(ic) = le_phase_change(ic) * tpfac2 + le_phase_change_old(ic) * tpfac3
+
+        IF ((.NOT. lstart) .AND. (.NOT. tile%is_glacier)) THEN
+          IF      (dsl4jsb_Config(SEB_)%le_test == 0) THEN
+            le_phase_change(ic) = le_phase_change(ic)
+          ELSE IF (dsl4jsb_Config(SEB_)%le_test == 1) THEN
+            le_phase_change(ic) = le_phase_change(ic) * alpha + le_phase_change_old(ic) * (1._wp - alpha)
+          ELSE IF (dsl4jsb_Config(SEB_)%le_test == 2) THEN
+            le_phase_change(ic) = le_phase_change(ic) * alpha * tpfac2 + le_phase_change_old(ic) * tpfac3
+          ELSE IF (dsl4jsb_Config(SEB_)%le_test == 3) THEN
+            le_phase_change(ic) = le_phase_change(ic) * tpfac2 + le_phase_change_old(ic) * tpfac3
+          ELSE IF (dsl4jsb_Config(SEB_)%le_test == 4) THEN
+            s_trgt(ic)    = s_star(ic)
+            forc_hflx(ic) = grnd_hflx(ic)
+            CALL phase_change_pot(                                  & ! in
+              & alpha, steplen, t2s_conv(ic),                       & ! in
+              & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+              & s_trgt(ic), s_old(ic),                              & ! in
+              & qsat_srf_old(ic), dQdT(ic),                         & ! in
+              & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+              & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+              & fract_snow(ic), heat_cap(ic),                       & ! in
+              & phase_change_trgt(ic)                               & ! out
+              & )
+
+            le_phase_change(ic) = -phase_change_trgt(ic)   
+          ELSE IF (dsl4jsb_Config(SEB_)%le_test == 5) THEN
+            s_trgt(ic)    = s_star(ic)
+            forc_hflx(ic) = grnd_hflx(ic)
+            CALL phase_change_pot(                                  & ! in
+              & 1._wp, steplen, t2s_conv(ic),                       & ! in
+              & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+              & s_trgt(ic), s_old(ic),                              & ! in
+              & qsat_srf_old(ic), dQdT(ic),                         & ! in
+              & rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+              & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+              & fract_snow(ic), heat_cap(ic),                       & ! in
+              & phase_change_trgt(ic)                               & ! out
+              & )
+       
+            le_phase_change(ic) = -phase_change_trgt(ic)   
+          END IF
         END IF
       END IF
 
@@ -1114,9 +1151,7 @@ CONTAINS
     &            pqsold, pdqsold,                              &
     &            pnetrad, pgrdfl,                              &
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,         &
-    &            weq_snow, wtr_pond, wtr_soil, wtr_scool,      &
-    &            ice_pond, ice_soil,                           &
-    &            phase_change_zero, le_freeze_pot, le_melt_pot &
+    &            phase_change_zero                             &
     &            )
 
     !$ACC ROUTINE SEQ
@@ -1125,9 +1160,7 @@ CONTAINS
       & zemiss_def, &
       & stbo, &
       & alv,  &
-      & als,  &
-      & alf,  &
-      & rhoh2o
+      & als
 
     REAL(wp), INTENT(in)    :: alpha
     REAL(wp), INTENT(in)    :: steplen
@@ -1137,15 +1170,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: pcfh, pcair, pcsat, pfracsu
     REAL(wp), INTENT(in)    :: pgrdcap
 
-    REAL(wp), INTENT(in)    :: weq_snow
-    REAL(wp), INTENT(in)    :: wtr_pond
-    REAL(wp), INTENT(in)    :: wtr_soil
-    REAL(wp), INTENT(in)    :: wtr_scool
-    REAL(wp), INTENT(in)    :: ice_pond
-    REAL(wp), INTENT(in)    :: ice_soil
     REAL(wp), INTENT(out)   :: phase_change_zero
-    REAL(wp), INTENT(out)   :: le_freeze_pot
-    REAL(wp), INTENT(out)   :: le_melt_pot
         !
     REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
     REAL(wp) :: pdt
@@ -1173,12 +1198,6 @@ CONTAINS
         &    - pcfh * pfscoe                                         &
         &    - pcfh * ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) &
         &    - pgrdfl
-
-      ! Determine potential energy sinks / sources due to phase change at the surface
-      ! as limited by the avaiablity of water / ice. 
-      le_freeze_pot = (wtr_pond + MAX(wtr_soil-wtr_scool, 0._wp)) * rhoh2o * alf / pdt
-      le_melt_pot   = (weq_snow + ice_pond + ice_soil) * rhoh2o * alf / pdt
-
 
   END SUBROUTINE phase_change_pot
   !
