@@ -31,15 +31,13 @@ MODULE mo_alcc_memory_class
   ! dsl4jsb_Use_config(ALCC_)
 
   IMPLICIT NONE
-  PRIVATE 
+  PRIVATE
 
-  
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 5
 
-  
-  ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
+   ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
   ! thus you do not have to care about the block number (iblk) but only about the cells on this chunk (ic <= nc). 
   ! So You would loop over nc which is already available in the update_all routine (nc  = options%nc).
@@ -76,15 +74,15 @@ MODULE mo_alcc_memory_class
     print *, transitions
   ! Mingyue Zhang: defeine transition types end
 
-  TYPE, EXTENDS(t_jsb_memory) :: 
 
-    TYPE(t_jsb_var_real3d) :: cf_current_year 
-    !< this years target cfs derived from annually read land use data file. [-]
-   
+  TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
+
+    TYPE(t_jsb_var_real3d) :: &
+      & cf_current_year,      & !< This years cover fractions derived from annually read land use data [-].
+      & cf_day_delta            !< Daily change in cover fractions calculated from cf_current_year.
+
   CONTAINS
-
     PROCEDURE :: Init => Init_alcc_memory
-  
   END TYPE t_alcc_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_memory_class'
@@ -115,7 +113,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
     ! -------------------------------------------------------------------------------------------------- !
 
-       
     model => Get_model(model_id)
 
     table = tables(1)
@@ -124,19 +121,14 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     pft_vgrid    => Get_vgrid('pfts')
 
-    
-  !    dsl4jsb_Get_config(ALCC_)
- 
-    !JN-TODO: if changes are to be done on a daily basis maybe other field more interesting?
-    !           e.g. target_cf ? or better remember something else e.g. "required_cf_change"?
-    !         then also change out_level to BASIC and lrestart to TRUE
-    CALL mem%Add_var('cf_current_year', mem%cf_current_year,                 &
-      & hgrid, pft_vgrid,                                                                            &
-      & t_cf('This years target cfs derived from an annually read land use data file.'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                          &
-      & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+!    dsl4jsb_Get_config(ALCC_)
+
+    CALL mem%Add_var('cf_current_year', mem%cf_current_year,                              &
+      & hgrid, pft_vgrid,                                                                 &
+      & t_cf('This years cover fractions read from forcing.'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.FALSE., initval_r=-0.1_wp)
 
     CALL mem%Add_var('cf_day_delta', mem%cf_day_delta,                                    &
       & hgrid, pft_vgrid,                                                                 &
@@ -146,20 +138,21 @@ CONTAINS
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
-  ! Mingyue Zhang: add variables for transitions matrix start 
+    ! Mingyue Zhang: add variables for transitions matrix start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
-      & hgrid, pft_vgrid,                                                                            &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                          &
-      & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-  ! Mingyue Zhang: add variables for transitions matrix finish
-  ! Mingyue Zhang: add variables for transitions type start 
+    & hgrid, pft_vgrid,                                                                            &
+    & prefix, suffix,                                                                              &
+    & output_level=FULL,                                                                          &
+    & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+    ! Mingyue Zhang: add variables for transitions matrix finish
+    ! Mingyue Zhang: add variables for transitions type start 
     CALL mem%Add_var('transitions', mem%transitions,                 &
-      & hgrid, pft_vgrid,                                                                            &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                          &
-      & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-  ! Mingyue Zhang: add variables for transitions type finish
+    & hgrid, pft_vgrid,                                                                            &
+    & prefix, suffix,                                                                              &
+    & output_level=FULL,                                                                          &
+    & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+    ! Mingyue Zhang: add variables for transitions type finish
+
 
   END SUBROUTINE Init_alcc_memory
 
