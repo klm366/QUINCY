@@ -497,9 +497,11 @@ CONTAINS
               & (freeze_mass(ic,is) - melt_mass(ic,is)) * alf / heat_cap(ic,is)
             frozen(ic,is) = freeze_mass(ic,is) / (rhoh2o * delta_time)
             melt  (ic,is) = melt_mass(ic,is) / (rhoi * delta_time)
-            IF (wtr(ic,is) < -1.0E-10_wp .OR. ice(ic,is) < -1.0E-10_wp) THEN
-              WRITE (message_text_long,*) 'negative soil moisture content after phasechange', &
-                & ' at index ', ic,':',                         NEW_LINE('a'), &
+            ! Check if phase change causes negative water or ice values
+            IF ((wtr(ic,is) < -EPSILON(1._wp) .AND. frozen(ic,is) > EPSILON(1._wp)) .OR. &
+              & (ice(ic,is) < -EPSILON(1._wp) .AND. melt(ic,is) > EPSILON(1._wp))) THEN
+              WRITE (message_text_long,*) 'negative soil water or ice content due to phasechange', &
+                & ' at index ', ic,' and layer ', is,'.:',      NEW_LINE('a'), &
                 & 'Water content old [m]: ', wtr_old(ic,is),    NEW_LINE('a'), &
                 & 'Ice content old [m]:   ', ice_old(ic,is),    NEW_LINE('a'), &
                 & 'Frozen water [m]:      ', frozen(ic,is),     NEW_LINE('a'), &
