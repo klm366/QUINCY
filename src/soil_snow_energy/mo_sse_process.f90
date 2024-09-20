@@ -498,6 +498,7 @@ CONTAINS
             frozen(ic,is) = freeze_mass(ic,is) / (rhoh2o * delta_time)
             melt  (ic,is) = melt_mass(ic,is) / (rhoi * delta_time)
             ! Check if phase change causes negative water or ice values
+#ifndef _OPENACC
             IF ((wtr(ic,is) < -EPSILON(1._wp) .AND. frozen(ic,is) > EPSILON(1._wp)) .OR. &
               & (ice(ic,is) < -EPSILON(1._wp) .AND. melt(ic,is) > EPSILON(1._wp))) THEN
               WRITE (message_text_long,*) 'negative soil water or ice content due to phasechange', &
@@ -517,6 +518,7 @@ CONTAINS
             ! Correct for numerical errors
             wtr(ic,is) = MAX(0._wp, wtr(ic,is))
             ice(ic,is) = MAX(0._wp, ice(ic,is))
+#endif
           END DO
         END DO
         !$ACC END PARALLEL LOOP
