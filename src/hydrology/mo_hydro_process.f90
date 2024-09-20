@@ -972,6 +972,7 @@ CONTAINS
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
     REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
+    REAL(wp) :: drain_excess                 ! additional drainage due to soil oversaturation [m]
     REAL(wp) :: ice2weq, weq2ice             ! conversion factors between ice and water equivalent volumns
 
     !$ACC DATA &
@@ -1021,6 +1022,8 @@ CONTAINS
 
         !> Subsurface drainage, storage change term and vertical water transport initialization
         drainage_sl(ic,is)       = 0._wp
+        drain_slow_sl(ic,is)     = 0._wp
+        drain_fast_sl(ic,is)     = 0._wp
         storage_change_sl(ic,is) = 0._wp
         wtr_transp_down(ic,is)   = 0._wp
       END DO
@@ -1384,17 +1387,26 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! Additional corrections for excess soil moisture
-    ! In case of over-saturation water would not have infiltrated in the first place --> pile
-    ! water upwards
+    ! In case of over-saturation, increase layer drainage to maximum and, if needed,
+    ! pile water upwards
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ! If saturation moisture is exceeded, add the excess water to next higher soil layer
+        ! If saturation moisture is exceeded, then ...
         IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
-          wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
-          wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
+          ! first compute additional drainage as if soil was already saturated from the start
+          drain_excess = MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), MAX(0._wp, &
+            &  ((drain_max - drain_min) * dtime - drain_fast_sl(ic,is)) * ice_impedance_sl(ic,is)))
+          wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) - drain_excess
+          drainage_sl(ic,is) = drainage_sl(ic,is) + drain_excess
+          IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
+            ! and if the soil is still oversaturated, pile moisture upwards, as it should not
+            ! have percolated in the first place
+            wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
+            wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
+          END IF
         END IF
       END DO
     END DO
