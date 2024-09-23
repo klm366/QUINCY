@@ -60,7 +60,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -69,6 +69,7 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
@@ -83,6 +84,7 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
@@ -215,9 +217,11 @@ CONTAINS
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
         dsl4jsb_Get_config(FAGE_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
+        dsl4jsb_Get_config(CH4_)
 
         ! Make number of vertical layers available from the options type
         IF (model%Is_process_enabled(HYDRO_)) THEN
@@ -304,6 +308,13 @@ CONTAINS
         ELSE
           dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
         END IF
+
+        IF (model%Is_process_enabled(CH4_) .AND. dsl4jsb_Config(CH4_)%do_termite .AND. &
+            .NOT. model%Is_process_enabled(NLCC_)) THEN
+          dsl4jsb_Config(NLCC_)%active = .TRUE.
+          dsl4jsb_Config(NLCC_)%climbuf_only = .TRUE.
+          CALL message(TRIM(routine), 'Switching on nlcc process since methane process is active with do_termites')
+        ENDIF
 
         IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
           ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
