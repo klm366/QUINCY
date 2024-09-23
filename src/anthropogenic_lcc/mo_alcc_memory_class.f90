@@ -63,8 +63,7 @@ MODULE mo_alcc_memory_class
   TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
   ! Mingyue Zhang: define TransMtrx end 
 
-  ! Mingyue Zhang: defeine transition types start
-  CHARACTER(len=*) :: transitions(9)
+  ! Mingyue Zhang: defeine transition types start  CHARACTER(len=*) :: transitions(9)
 
     ! Initialize the array with the character strings
     transitions = (/ 'crop2crop','crop2pasture', 'crop2natural',&
