@@ -95,8 +95,8 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
     USE mtime,                     ONLY: datetime
     USE mo_time_config,            ONLY: time_config
-    USE mo_jsb_time,               ONLY: get_secs_of_day
-    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter
+    USE mo_jsb_time,               ONLY: get_secs_of_day, get_year, is_newyear
+    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
@@ -142,15 +142,21 @@ CONTAINS
       & q_bcoef_ice
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SPQ_)
 
     INTEGER  :: iblk, ics, ice, nc, i
-    INTEGER  :: global_seconds_day
+    INTEGER  :: global_seconds_day, current_year
     REAL(wp) :: dtime
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), POINTER :: lon(:)
     INTEGER :: model_scheme
+    LOGICAL :: run_spinup_accelerator                    !< model configuration: if running with slow sb pool spin-up accelerator
+    INTEGER :: sb_pool_spinup_accelerator_max_executions !< bookkeeping configurations for the spin-up accelerator: max number of executions
+    INTEGER :: sb_pool_spinup_accelerator_frequency      !< bookkeeping configurations for the spin-up accelerator: frequency of executions
+    INTEGER :: sb_pool_spinup_accelerator_start_year     !< bookkeeping configurations for the spin-up accelerator: start year of executions
+
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land_quincy'
@@ -201,6 +207,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: daytime_counter
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
+    dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
+    dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execution_counter
     ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -215,8 +223,14 @@ CONTAINS
     lon   => grid%lon(ics:ice, iblk)
     mtime_current => time_config%tc_current_date
     global_seconds_day = get_secs_of_day(mtime_current)
+    current_year = get_year(mtime_current)
 
     model_scheme = model%config%model_scheme
+    run_spinup_accelerator = model%config%flag_slow_sb_pool_spinup_accelerator
+    sb_pool_spinup_accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
+    sb_pool_spinup_accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
+    sb_pool_spinup_accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
+
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -224,6 +238,7 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SPQ_)
     IF (PRESENT(DEBUG_VAR)) THEN
       DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
     END IF
@@ -274,22 +289,22 @@ CONTAINS
       rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
     END IF
     IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
+      drag_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, spq_drag_srf)
     END IF
     IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
+      t_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_acoef)
     END IF
     IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
+      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_bcoef)
     END IF
     IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
+      q_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_acoef)
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
+      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_bcoef)
     END IF
     IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
+      pch_ptr               => dsl4jsb_var2D_onChunk(SPQ_, spq_pch)
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
@@ -347,7 +362,10 @@ CONTAINS
 
     daytime_counter         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
     local_time_day_seconds  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
-
+    IF (run_spinup_accelerator) THEN
+      slow_sb_pool_accelerator_execute           => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execute)
+      slow_sb_pool_accelerator_execution_counter => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execution_counter)
+    END IF
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
     IF (PRESENT(DEBUG_VAR)) THEN
@@ -607,6 +625,19 @@ CONTAINS
     CALL update_local_time_and_daytime_counter( &
       &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
 
+    ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
+    IF (run_spinup_accelerator) THEN
+      ! in most years the spin-up will not be accelerated
+      slow_sb_pool_accelerator_execute(:) = 0.0_wp
+
+      IF(is_newyear(mtime_current, dtime)) THEN
+        CALL finish(TRIM(routine), 'This functionality has so far not been tested within a coupled run, but should be!')
+
+        CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
+          & sb_pool_spinup_accelerator_max_executions, sb_pool_spinup_accelerator_frequency, sb_pool_spinup_accelerator_start_year, &
+          & slow_sb_pool_accelerator_execution_counter, slow_sb_pool_accelerator_execute)
+      ENDIF
+    END IF
   END SUBROUTINE update_atm2land_quincy
 
   SUBROUTINE update_land2atm_quincy(tile, options, &
