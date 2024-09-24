@@ -265,10 +265,12 @@ CONTAINS
        hydro_init_vars%elevation(:,:) = missval
     END IF
     IF (model%config%init_from_ifs) THEN
-      ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
-      hydro_init_vars%ifs_smi_sl(:,:,:) = missval
       ALLOCATE(hydro_init_vars%ifs_weq_snow(nproma,nblks))
       hydro_init_vars%ifs_weq_snow(:,:) = missval
+    END IF
+    IF (model%config%init_from_ifs .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+      ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
+      hydro_init_vars%ifs_smi_sl(:,:,:) = missval
     ELSE
       ALLOCATE(hydro_init_vars%wtr_soil_sl(nproma, nsoil, nblks))
       hydro_init_vars%wtr_soil_sl(:,:,:) = missval
@@ -342,34 +344,64 @@ CONTAINS
       !>
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         ! Volumetric soil porosity
-        ptr_2D => input_file%Read_2d(                  &
-          & fill_array = hydro_init_vars%vol_porosity, &
-          & variable_name='soil_porosity')
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & fill_array = hydro_init_vars%vol_porosity, &
+            & variable_name='soil_porosity_mineral')
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & fill_array = hydro_init_vars%vol_porosity, &
+            & variable_name='soil_porosity')
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Saturated hydraulic conductivity
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='hyd_cond_sat',              &
-          & fill_array = hydro_init_vars%hyd_cond_sat)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='hyd_cond_sat_mineral',      &
+            & fill_array = hydro_init_vars%hyd_cond_sat)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='hyd_cond_sat',              &
+            & fill_array = hydro_init_vars%hyd_cond_sat)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric field capacity [m/m]
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='soil_field_cap',            &
-          & fill_array = hydro_init_vars%vol_field_cap)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='soil_field_cap_mineral',    &
+            & fill_array = hydro_init_vars%vol_field_cap)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='soil_field_cap',            &
+            & fill_array = hydro_init_vars%vol_field_cap)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric permanent wilting point
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='wilting_point',             &
-          & fill_array=hydro_init_vars%vol_p_wilt)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='wilting_point_mineral',     &
+            & fill_array=hydro_init_vars%vol_p_wilt)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='wilting_point',             &
+            & fill_array=hydro_init_vars%vol_p_wilt)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Volumetric residual water content (if missing deduce from porosity)
         IF (input_file%Has_var('residual_water')) THEN
-          ptr_2D => input_file%Read_2d(                  &
-            & variable_name='residual_water',             &
-            & fill_array=hydro_init_vars%vol_wres)
+          IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+            ptr_2D => input_file%Read_2d(                &
+              & variable_name='residual_water_mineral',  &
+              & fill_array=hydro_init_vars%vol_wres)
+          ELSE
+            ptr_2D => input_file%Read_2d(                &
+              & variable_name='residual_water',          &
+              & fill_array=hydro_init_vars%vol_wres)
+          END IF
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
           WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
@@ -378,9 +410,15 @@ CONTAINS
         END IF
 
         ! Soil matric potential
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='moisture_pot',              &
-          & fill_array = hydro_init_vars%matric_pot)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='moisture_pot_mineral',      &
+            & fill_array = hydro_init_vars%matric_pot)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='moisture_pot',              &
+            & fill_array = hydro_init_vars%matric_pot)
+        END IF
         ! @todo There is still old bc data around where the matric potential is given with a positiv sign while
         !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
         !       routines. Until this bc data is not used anymore, the following check is required to ensure the
@@ -409,15 +447,27 @@ CONTAINS
         END IF
 
         ! Exponent B in Clapp and Hornberger
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='bclapp',                    &
-          & fill_array = hydro_init_vars%bclapp)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='bclapp_mineral',            &
+            & fill_array = hydro_init_vars%bclapp)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='bclapp',                    &
+            & fill_array = hydro_init_vars%bclapp)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 6._wp, ptr_2D(:,:) >= 0._wp)
 
         ! Pore size distribution index
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='pore_size_index',           &
-          & fill_array = hydro_init_vars%pore_size_index)
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='pore_size_index_mineral',   &
+            & fill_array = hydro_init_vars%pore_size_index)
+        ELSE
+          ptr_2D => input_file%Read_2d(                  &
+            & variable_name='pore_size_index',           &
+            & fill_array = hydro_init_vars%pore_size_index)
+        END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0.05_wp)
 
       ELSE   ! l_soil_texture
@@ -552,22 +602,19 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
 
+      IF (.NOT. model%config%init_from_ifs .OR. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+        input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
+      END IF
+
       ! Initialize hydrology variables from ic file
 
       IF (model%config%init_from_ifs) THEN
 
-        DO isoil=1,ifs_nsoil
-          ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
-            & variable_name='SMIL'//int2string(isoil))
-          hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
-        END DO
         ptr_3D => model%config%ifs_input_file%Read_2d_time( &
           & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
         hydro_init_vars%ifs_weq_snow(:,:) = ptr_3D(:,:,1)
 
       ELSE
-
-        input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
 
         ! Initial snow depth
         IF (input_file%Has_var('snow')) THEN
@@ -580,6 +627,18 @@ CONTAINS
           CALL message(TRIM(routine), 'Initializing snow to zero')
         END IF
 
+      END IF
+
+      IF (model%config%init_from_ifs .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+
+        DO isoil=1,ifs_nsoil
+          ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
+            & variable_name='SMIL'//int2string(isoil))
+          hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
+        END DO
+
+      ELSE
+
         DO isoil=1,nsoil
           ptr_3D => input_file%Read_2d_extdim( &
             & variable_name='layer_moist',     &
@@ -587,8 +646,10 @@ CONTAINS
           hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
 
-        CALL input_file%Close()
+      END IF
 
+      IF (.NOT. model%config%init_from_ifs .OR. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+        CALL input_file%Close()
       END IF
 
     END IF
@@ -832,7 +893,17 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
 
+      ! Initial snow depth
       IF (model%config%init_from_ifs) THEN
+        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil)(:,:) = hydro_init_vars%ifs_weq_snow(:,:)
+        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
+      ELSE
+        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil) = hydro_init_vars%weq_snow_soil
+        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
+      END IF
+
+      ! Initial soil moisture
+      IF (model%config%init_from_ifs .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
 
         CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:),        &
           &           dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:), soil_w%ubounds(:))
@@ -852,16 +923,8 @@ CONTAINS
             &        ) &
             &    )
         END WHERE
-        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil)(:,:) = hydro_init_vars%ifs_weq_snow(:,:)
-        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
 
       ELSE
-
-        ! Initialize hydrology variables from ic file
-
-        ! Initial snow depth
-        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil) = hydro_init_vars%weq_snow_soil
-        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
 
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl) (:,:,:) = hydro_init_vars%wtr_soil_sl(:,:,:)
 
