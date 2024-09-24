@@ -81,10 +81,6 @@ MODULE mo_a2l_memory_class
       q_bcoef_ice
 
 #ifndef __NO_QUINCY__
-    ! ga   ( @TODO quincy - may be moved elsewhere in the future )
-    TYPE(t_jsb_var_real2d) :: &
-      & ga                         !< aerodynamic conductance [m s-1]
-
     ! N & P deposition
     TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
@@ -521,16 +517,6 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      CALL mem%Add_var('ga', mem%ga, &
-        & hgrid, surface, &
-        & t_cf('ga', 'm s-1', 'aerodynamic conductance'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
