@@ -63,7 +63,8 @@ MODULE mo_hydro_memory_class
       & ice_pond,             & !< Frozen water content of pond reservoir                               [m water equivalent]
       & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
-      & weq_balance_err         !< Land water balance error within a time step                          [m3/(time step)]
+      & weq_balance_err,      & !< Land water balance error within a time step                          [m3/(time step)]
+      & weq_balance_err_count   !< Amount of time steps with water balance error                        [-]
 
     TYPE(t_jsb_var_real2d) :: &
       & infilt,               & !< Infiltration
@@ -413,6 +414,15 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'weq_balance_err_count', mem%weq_balance_err_count,            &
+      & hgrid, surface,                                                              &
+      & t_cf('weq_balance_err_count', 'time steps',                                  &
+      &      'Amount of time steps with water balance errors'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
