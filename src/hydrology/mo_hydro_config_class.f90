@@ -42,7 +42,8 @@ MODULE mo_hydro_config_class
       & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !  infinitely growing snow depth; -1. for no limitation
       & ret_macro_blg,        & !< Assumed retention time for below ground runoff, i.e. avg. time before water reaches tributary
-      & ret_macro_srf           !< Assumed retention time for surface runoff, i.e. avg. time before water reaches tributary
+      & ret_macro_srf,        & !< Assumed retention time for surface runoff, i.e. avg. time before water reaches tributary
+      & k_brock                 !< Hydraulic conductivity of bedrock
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -55,7 +56,10 @@ MODULE mo_hydro_config_class
       & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
-      & l_ponds                 !< Additional surface water storage
+      & l_ponds,              & !< Additional surface water storage
+      & l_ipd_wet,            & !< Create idealized jsb-setup with artificially inhibited bottom drainge within an initial permafrost domain
+      & l_ipd_wet2              !< Create idealized jsb-setup with artificially inhibited lateral drainge within an initial permafrost domain
+
     INTEGER               ::  &
       & soilhydmodel,         & !< Choice of soil hydrological model to calc soil hydraulic properties:
                                 !! 'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
@@ -67,8 +71,8 @@ MODULE mo_hydro_config_class
                                 !! and subsurface drainage (default)
                                 !! 'uniform': assume uniform soil moisture distribution
                                 !! (e.g. for applications like HydroTiles, HighRes or sitelevel)
-      & enforce_water_budget    !< Set water balance check level: 'unset', 'ignore', 'logging', 'error'
-
+      & enforce_water_budget, & !< Set water balance check level: 'unset', 'ignore', 'logging', 'error'
+      & bot_drain_mode
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -95,11 +99,14 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    REAL(wp)                    :: ret_macro_blg, ret_macro_srf
+    REAL(wp)                    :: ret_macro_blg, ret_macro_srf, k_brock
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     CHARACTER(len=10)           :: enforce_water_budget
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
-      &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
+      &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds, &
+      &                            l_ipd_wet, l_ipd_wet2
+
+    INTEGER                     :: bot_drain_mode
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -113,6 +120,7 @@ CONTAINS
       & snow_depth_max,             &
       & ret_macro_blg,              &
       & ret_macro_srf,              &
+      & k_brock,                    &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -123,10 +131,13 @@ CONTAINS
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & l_ponds,                    &
+      & l_ipd_wet,                  &
+      & l_ipd_wet2,                 &
       & soilhydmodel,               &
       & interpol_mean,              &
       & pond_dynamics,              &
-      & hydro_scale
+      & hydro_scale,                &
+      & bot_drain_mode
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -157,6 +168,7 @@ CONTAINS
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     ret_macro_blg          = 432000._wp
     ret_macro_srf          = 36000._wp
+    k_brock                = 1.E-6_wp
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -167,6 +179,9 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
+    l_ipd_wet              = .FALSE.
+    l_ipd_wet2             = .FALSE.
+    bot_drain_mode         = 1
     pond_dynamics          = "tanh"
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
@@ -201,6 +216,7 @@ CONTAINS
 
     config%ret_macro_blg       = ret_macro_blg
     config%ret_macro_srf       = ret_macro_srf
+    config%k_brock             = k_brock
 
     config%scheme_stom_cond       = scheme_stom_cond
 
@@ -268,6 +284,23 @@ CONTAINS
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thoroughly validated!!')
     ELSE
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
+    END IF
+
+    config%l_ipd_wet = l_ipd_wet
+    IF (l_ipd_wet) THEN
+      CALL message(TRIM(routine), '*** This is a WET run (PT1)***')
+    END IF
+
+    config%l_ipd_wet2 = l_ipd_wet2
+    IF (l_ipd_wet2) THEN
+      CALL message(TRIM(routine), '*** This is a WET run (PT2)***')
+    END IF
+
+    config%bot_drain_mode = bot_drain_mode
+    IF (bot_drain_mode == 1) THEN
+      CALL message(TRIM(routine), 'Bottom drainage depends on hyd cond of bedrock and lowest layer')
+    ELSE IF (bot_drain_mode == 2) THEN
+      CALL message(TRIM(routine), 'Bottom drainage depends on hyd cond of bedrock only')
     END IF
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))

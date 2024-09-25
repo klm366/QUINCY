@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 120
+  INTEGER, PARAMETER :: max_no_of_vars = 140
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -73,6 +73,7 @@ MODULE mo_hydro_memory_class
       & runoff_horton,        & !< Horton component of surface runoff (infiltration excess)
       & runoff_dunne,         & !< Dunne component of surface runoff (saturation excess)
       & drainage,             & !< Total subsurface drainage
+      & drain_bot,            & !< Bottom layer drainage
       & discharge,            & !< Discharge (local)
       & discharge_ocean,      & !< Discharge to the ocean
       & internal_drain          !< Internal drain
@@ -83,7 +84,8 @@ MODULE mo_hydro_memory_class
       & steepness,            & !< parameter defining the subgrid slope distribution [/]
       & area,                 & !< characteristic area of tile [m2]               
       & h_surf,               & !< characteristic surface elevation of tile [m]
-      & macro_slope             !< macro scale slope of tile [/]
+      & macro_slope,          & !< macro scale slope of tile [/]
+      & fract_perm_ref
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -98,7 +100,8 @@ MODULE mo_hydro_memory_class
     ! Parameters
     TYPE(t_jsb_var_real3d) :: &
       & soil_depth_sl,        & !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
-      & fract_org_sl            !< Fractions of organic material in soil layers                        []
+      & fract_org_sl,         & !< Fractions of organic material in soil layers                        []
+      & ice_impedance_ref_sl    !< Reference ice impedence factor
     TYPE(t_jsb_var_real2d) :: &
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
       & weq_rootzone_max ,    & !< Maximum amount of water or ice in the root zone                     [m]
@@ -143,6 +146,9 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
+      & wtr_soil_sl_rel,      & !< Relative water content in soil layers                                    [/]
+      & ice_soil_sl_rel,      & !< Relative ice content in soil layers                                      [/]
+      & immo_soil_sl_rel,     & !< Relative ice and immobile water content in soil layers                   [/]
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
       & drainage_sl,          & !< Subsurface drainage from soil layers                                     [kg m-2 s-1]
@@ -337,7 +343,7 @@ CONTAINS
       & t_cf('snowmelt', 'kg m-2 s-1', 'Snow melt'),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
+      & lrestart=.FALSE., output_level=BASIC,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'infilt', mem%infilt,                                          &
@@ -376,6 +382,15 @@ CONTAINS
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
       & hgrid, surface,                                                              &
       & t_cf('drainage', 'kg m-2 s-1', 'Total drainage'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'drain_bot', mem%drain_bot,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('drain_bot', 'kg m-2 s-1', 'Bottom layer drainage'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -511,6 +526,17 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+
+    CALL mem%Add_var( 'fract_perm_ref', mem%fract_perm_ref,                          &
+      & hgrid, surface,                                                              &
+      & t_cf('fract_perm_ref', '/', 'reference pf area'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
@@ -615,6 +641,15 @@ CONTAINS
           & lrestart=.TRUE.,                                                         &
           & initval_r=0.0_wp )
       END IF
+
+      CALL mem%Add_var( 'ice_impedance_ref_sl', mem%ice_impedance_ref_sl,          &
+        & hgrid, soil_w,                                                           &
+        & t_cf('ice_impedance_ref_sl', '-', 'Reference ice impedence factor'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & lrestart=.TRUE.,                                                         &
+        & loutput=.TRUE., output_level=BASIC,                                      &
+        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'weq_rootzone_max', mem%weq_rootzone_max,                    &
         & hgrid, surface,                                                            &
@@ -877,6 +912,30 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'wtr_soil_sl_rel', mem%wtr_soil_sl_rel,                &
+        & hgrid, soil_w,                                                       &
+        & t_cf('wtr_soil_sl_rel', '/', 'Rel. water content of soil layers'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'ice_soil_sl_rel', mem%ice_soil_sl_rel,                &
+        & hgrid, soil_w,                                                       &
+        & t_cf('ice_soil_sl_rel', '/', 'Rel. ice content of soil layers'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'immo_soil_sl_rel', mem%immo_soil_sl_rel,                  &
+        & hgrid, soil_w,                                                           &
+        & t_cf('immo_soil_sl_rel', '/', 'Rel. ice + immobile wtr on soil layers'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & loutput=.TRUE., output_level=BASIC,                                      &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'wtr_freeze_sl', mem%wtr_freeze_sl,                              &
         & hgrid, soil_w,                                                                 &
         & t_cf('wtr_freeze_sl', 'kg m-2 s-1', 'Freezing water flux in soil layers'),     &
@@ -899,6 +958,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
+        & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_soil_sat_sl', mem%wtr_soil_sat_sl,                          &
@@ -963,7 +1023,8 @@ CONTAINS
         & t_cf('wtr_lex_net_sl', 'kg m-2 s-1', 'Lateral exchange with connected tiles on soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & loutput=l_lex, output_level=BASIC,                                                            &
+!        & loutput=l_lex, output_level=BASIC,                                                            &
+        & output_level=BASIC,                                                                           & 
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
@@ -986,7 +1047,8 @@ CONTAINS
         & t_cf('water_to_soil_lex', 'm', 'Infiltratable water from connected tiles'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix,                                                             &
-        & loutput=l_lex, output_level=BASIC,                                          &
+!        & loutput=l_lex, output_level=BASIC,                                           &
+        & output_level=BASIC,                                                         & 
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_lex_net_srf', mem%wtr_lex_net_srf,                                         &
@@ -994,7 +1056,8 @@ CONTAINS
         & t_cf('wtr_lex_net_srf', 'kg m-2 s-1', 'Lateral exchange with connected tiles on the surface'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & loutput=l_lex, output_level=BASIC,                                                            &
+!        & loutput=l_lex, output_level=BASIC,                                                            &
+        & output_level=BASIC,                                                                           & 
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -1011,6 +1074,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & loutput=l_ponds, output_level=BASIC,                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -1019,6 +1083,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & loutput=l_ponds, output_level=BASIC,                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
@@ -1027,6 +1092,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & loutput=l_ponds, output_level=BASIC,                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -1035,6 +1101,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & loutput=l_ponds, output_level=BASIC,                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &

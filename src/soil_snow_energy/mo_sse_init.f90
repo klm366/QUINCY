@@ -225,18 +225,18 @@ CONTAINS
       fao_name       = 'fao'
     END IF
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        heat_capacity_name = 'heat_capacity_mineral'
-      ELSE
+      !IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      !  heat_capacity_name = 'heat_capacity_mineral'
+      !ELSE
         heat_capacity_name = 'heat_capacity'
-      END IF
+      !END IF
     END IF
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        heat_conductivity_name = 'heat_conductivity_mineral'
-      ELSE
+      !IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      !  heat_conductivity_name = 'heat_conductivity_mineral'
+      !ELSE
         heat_conductivity_name = 'heat_conductivity'
-      END IF
+      !END IF
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN

@@ -205,7 +205,8 @@ CONTAINS
       & t_cf('nrg_lex_net_sl', 'J m-2 s-1', 'Diffusive heat exchange with adjacent tile'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
-      & loutput=l_lex, output_level=MEDIUM,                                                  &
+!        & loutput=l_lex, output_level=BASIC,                                                            &
+        & output_level=BASIC,                                                                & 
       & lrestart=.FALSE., initval_r=0.0_wp)
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -281,7 +282,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &
@@ -290,7 +291,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
-      & output_level=MEDIUM, &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
@@ -299,7 +300,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
-      & output_level=MEDIUM, &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
 

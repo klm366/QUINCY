@@ -112,6 +112,7 @@ MODULE mo_hydro_init
       & depth_pond_max   (:,:) => NULL(), &
       & wtr_soil_sl    (:,:,:) => NULL(), &
       & fract_org_sl   (:,:,:) => NULL(), &
+      & ice_impedance_ref_sl(:,:,:) => NULL(), &
       & fr_sand          (:,:) => NULL(), &
       & fr_silt          (:,:) => NULL(), &
       & fr_clay          (:,:) => NULL(), &
@@ -122,7 +123,8 @@ MODULE mo_hydro_init
       & ifs_weq_snow     (:,:) => NULL(), &
       & char_area        (:,:) => NULL(), &
       & char_h_srf       (:,:) => NULL(), &
-      & char_slope       (:,:) => NULL()
+      & char_slope       (:,:) => NULL(), &
+      & fract_perm       (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -183,9 +185,11 @@ CONTAINS
       & hydro_init_vars%vol_wres        ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%fract_org_sl    ,       &
+      & hydro_init_vars%ice_impedance_ref_sl,   &
       & hydro_init_vars%fract_pond_max  ,       &
       & hydro_init_vars%depth_pond_max  ,       &
-      & hydro_init_vars%weq_snow_soil           &
+      & hydro_init_vars%weq_snow_soil   ,       &
+      & hydro_init_vars%fract_perm              &
       & )
 
 
@@ -281,7 +285,8 @@ CONTAINS
       & hydro_init_vars%root_depth      (nproma, nblks),       &
       & hydro_init_vars%fract_pond_max  (nproma, nblks),       &
       & hydro_init_vars%depth_pond_max  (nproma, nblks),       &
-      & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
+      & hydro_init_vars%weq_snow_soil   (nproma, nblks),       &
+      & hydro_init_vars%fract_perm      (nproma, nblks)        &
       & )
 
       hydro_init_vars%oro_stddev     (:,:)   = missval
@@ -298,9 +303,13 @@ CONTAINS
       hydro_init_vars%fract_pond_max (:,:)   = missval
       hydro_init_vars%depth_pond_max (:,:)   = missval
       hydro_init_vars%weq_snow_soil  (:,:)   = missval
+      hydro_init_vars%fract_perm     (:,:)   = missval
 
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
     hydro_init_vars%fract_org_sl(:,:,:) = missval
+    
+    ALLOCATE(hydro_init_vars%ice_impedance_ref_sl(nproma, nsoil, nblks))
+    hydro_init_vars%ice_impedance_ref_sl(:,:,:) = missval
 
     ! Setting initial vaiarables for connected tiles
     IF (tile%Is_process_active(LEX_)) THEN
@@ -354,6 +363,20 @@ CONTAINS
     END IF
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
+
+    !---- reading in reference permafrost fraction
+    IF (dsl4jsb_Config(HYDRO_)%l_ipd_wet ) THEN
+      IF (input_file%Has_var('fract_perm')) THEN
+        ptr_2D => input_file%Read_2d(  &
+          & variable_name='fract_perm',    &
+          & fill_array = hydro_init_vars%fract_perm)
+        hydro_init_vars%fract_perm = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ELSE
+        CALL finish(TRIM(routine), '*** Wet jsb-run (PT1), but no initial permafrost fraction provided ')
+      END IF
+    ELSE
+      hydro_init_vars%fract_perm = 0._wp  
+    END IF
 
     ! Determine variable names to be used for reading in
     pond_fract_name    = 'fract_pond_max'
@@ -466,16 +489,16 @@ CONTAINS
       fract_org_sl_name     = 'fract_org_sl'
       root_depth_name       = 'root_depth'
 
-      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        soil_porosity_name    = 'soil_porosity_mineral'
-        hyd_cond_sat_name     = 'hyd_cond_sat_mineral'
-        soil_field_cap_name   = 'soil_field_cap_mineral'
-        wilting_point_name    = 'wilting_point_mineral'
-        residual_water_name   = 'residual_water_mineral'
-        moisture_pot_name     = 'moisture_pot_mineral'
-        bclapp_name           = 'bclapp_mineral'
-        pore_size_index_name  = 'pore_size_index_mineral'
-      ELSE
+      !IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      !  soil_porosity_name    = 'soil_porosity_mineral'
+      !  hyd_cond_sat_name     = 'hyd_cond_sat_mineral'
+      !  soil_field_cap_name   = 'soil_field_cap_mineral'
+      !  wilting_point_name    = 'wilting_point_mineral'
+      !  residual_water_name   = 'residual_water_mineral'
+      !  moisture_pot_name     = 'moisture_pot_mineral'
+      !  bclapp_name           = 'bclapp_mineral'
+      !  pore_size_index_name  = 'pore_size_index_mineral'
+      !ELSE
         soil_porosity_name    = 'soil_porosity'
         hyd_cond_sat_name     = 'hyd_cond_sat'
         soil_field_cap_name   = 'soil_field_cap'
@@ -484,7 +507,7 @@ CONTAINS
         moisture_pot_name     = 'moisture_pot'
         bclapp_name           = 'bclapp'
         pore_size_index_name  = 'pore_size_index'
-      END IF 
+      !END IF 
 
       IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         fr_sand_name        = 'FR_SAND'
@@ -828,6 +851,22 @@ CONTAINS
         END DO
       END IF
 
+      !---- reading in reference ice impedance factor
+      IF (dsl4jsb_Config(HYDRO_)%l_ipd_wet2 ) THEN
+        IF (input_file%Has_var('ice_impedance_ref_sl')) THEN
+          DO isoil=1,nsoil
+            ptr_3D => input_file%Read_2d_extdim( &
+            & variable_name='ice_impedance_ref_sl',     &
+            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+            hydro_init_vars%ice_impedance_ref_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          END DO
+        ELSE
+          CALL finish(TRIM(routine), '*** Wet jsb-run (PT2), but no initial ice impedenace factor provided ')
+        END IF
+      ELSE
+        hydro_init_vars%ice_impedance_ref_sl = 1._wp  
+      END IF
+
       ! Root depth [m]
       ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
       ptr_2D => input_file%Read_2d(   &
@@ -963,6 +1002,11 @@ CONTAINS
         & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
         & )
     END DO
+
+    ! --- Setting reference permafrost fraction
+    dsl4jsb_var2D_onDomain(HYDRO_,fract_perm_ref) = hydro_init_vars%fract_perm
+    ! --- Setting reference ice impedence factor
+    dsl4jsb_var_ptr(HYDRO_, ice_impedance_ref_sl) = hydro_init_vars%ice_impedance_ref_sl
 
     ! Topographic features relevant for lateral exchange between connected tiles
     IF (tile%Is_process_active(LEX_)) THEN
@@ -1113,6 +1157,8 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, h_surf)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_slope)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_perm_ref)),  &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, ice_impedance_ref_sl)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 

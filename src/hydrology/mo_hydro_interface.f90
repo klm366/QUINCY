@@ -1284,6 +1284,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
+    dsl4jsb_Real2D_onChunk :: fract_perm_ref
 
     dsl4jsb_Real2D_onChunk :: thaw_depth_max
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
@@ -1354,6 +1355,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_perm_ref)   ! in
 
     !$ACC DATA CREATE(l_fract, tile_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
@@ -1366,9 +1368,14 @@ CONTAINS
     ! Setting the depth limit until which the presence of permafrost may affect bottom drainage
     depth_thrsh(:) = MAX(SUM(dsl4jsb_var3D_onChunk(HYDRO_, soil_depth_sl), DIM=2), 1.0_wp)
 
-    l_pf_soil(:) = (thaw_depth_max_ym1(:) < depth_thrsh(:) .AND. &
-                 &  thaw_depth_max(:)     < depth_thrsh(:))
-
+    IF(dsl4jsb_Config(HYDRO_)%l_ipd_wet) THEN
+      l_pf_soil(:) = ((thaw_depth_max_ym1(:) < depth_thrsh(:) .AND. &
+                   &   thaw_depth_max(:)     < depth_thrsh(:)) .OR. &
+                      fract_perm_ref(:) > 0.5_wp)
+    ELSE
+      l_pf_soil(:) = (thaw_depth_max_ym1(:) < depth_thrsh(:) .AND. &
+                   &  thaw_depth_max(:)     < depth_thrsh(:))
+    END IF
     IF (tile%Is_process_calculated(LEX_)) THEN
       l_latflow_to_streamflow = .FALSE.
       dsl4jsb_Get_memory(LEX_)
@@ -1389,12 +1396,15 @@ CONTAINS
       & lon(:), &
       & nsoil, &
       & dtime, &
+      & dsl4jsb_Config(HYDRO_)%k_brock,                         & ! Hydraulic coductivity of bedrock
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
       & l_latflow_to_streamflow,                                &
+      & dsl4jsb_Config(HYDRO_)%l_ipd_wet2,                      &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
+      & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
@@ -1407,6 +1417,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & ! volumetric residual soil water content [m m-1]
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_impedance_ref_sl ),  &
       & slope_used(:),                                          &
       & flowlag_used(:),                                        &
       & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
@@ -1426,12 +1437,16 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
       ! out
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl_rel   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl_rel   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, immo_soil_sl_rel  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_bot         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & ! lateral downards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
@@ -1494,6 +1509,9 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl_rel,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl_rel,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, immo_soil_sl_rel,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl,     weighted_by_fract)
@@ -1505,6 +1523,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_dunne,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_bot,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res,     weighted_by_fract)
