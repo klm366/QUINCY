@@ -424,11 +424,11 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     dsl4jsb_Use_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !> SB_ memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !< SB_ memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),               POINTER :: model                       !< model
     TYPE(t_jsb_grid),                POINTER :: hgrid                       !< Horizontal grid
