@@ -137,6 +137,7 @@ CONTAINS
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
+<<<<<<< HEAD
     ! Mingyue Zhang: add variables for transitions matrix start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
     & hgrid, pft_vgrid,                                                                            &
@@ -153,6 +154,8 @@ CONTAINS
     ! Mingyue Zhang: add variables for transitions type finish
 
 
+=======
+>>>>>>> origin/land4icon-mpim
   END SUBROUTINE Init_alcc_memory
 
 #endif

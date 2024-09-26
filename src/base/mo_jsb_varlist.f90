@@ -32,7 +32,7 @@ MODULE mo_jsb_varlist
 
 #ifdef _OPENACC
   use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -47,14 +47,14 @@ MODULE mo_jsb_varlist
   PUBLIC :: add_var_list_element_r2d, add_var_list_element_r3d
   PUBLIC :: jsb_add_var, Get_varlist, Get_var_group_name
   PUBLIC :: VARNAME_LEN
-  PUBLIC :: BASIC, MEDIUM, FULL
+  PUBLIC :: BASIC, MEDIUM, FULL, NONE
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d
   END INTERFACE jsb_add_var
 
   ENUM, BIND(C)
-    ENUMERATOR :: BASIC=1, MEDIUM, FULL
+    ENUMERATOR :: NONE=0, BASIC, MEDIUM, FULL
   END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist'
@@ -151,6 +151,7 @@ CONTAINS
       groups_loc(3:n_groups) = groups(:)
     END IF
 
+    ! calls the generic routine on the host model
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &

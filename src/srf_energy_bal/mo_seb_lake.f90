@@ -47,7 +47,7 @@ CONTAINS
   SUBROUTINE update_surface_energy_lake(tile, options)
 
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy, update_drag
-    USe mo_jsb_physical_constants, ONLY: cpd
+    USe mo_jsb_physical_constants, ONLY: cpd, cvd
     USE mo_jsb4_forcing,           ONLY: forcing_options
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -75,6 +75,7 @@ CONTAINS
       & s_lwtr,               &
       & s_lice,               &
       & heat_cap,             &
+      & forc_hflx,            &
       & press_srf,            &
       & snow,                 &
       & latent_hflx_wtr,      &
@@ -95,6 +96,10 @@ CONTAINS
       & t_air,                &
       & q_air,                &
       & wind_air,             &
+      & fact_q_air,           &
+      & fact_qsat_srf,        &
+      & rough_h,              &
+      & rough_m,              &
       & drag_wtr,             &
       & t_acoef_wtr,          &
       & t_bcoef_wtr,          &
@@ -111,10 +116,6 @@ CONTAINS
       & hcap_wtr,           &
       & zero,               &
       & hflx_tmp,           &
-      & fact_q_air,         &
-      & fact_qsat_srf,      &
-      & rough_h_srf,        &
-      & rough_m_srf,        &
       & pch_wtr
 
     REAL(wp), ALLOCATABLE :: &
@@ -129,6 +130,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime, steplen
     REAL(wp) ::         &
+      & cpd_or_cvd,     &
       & lhflx_tmp,      &
       & ml_depth,       & !< Depth of lake mixed layer
       & min_ice_depth,  & !< Minimum ice thickness to start ice formation
@@ -152,6 +154,12 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     use_tmx = model%config%use_tmx
+
+    IF (use_tmx) THEN
+      cpd_or_cvd = cvd
+    ELSE
+      cpd_or_cvd = cpd
+    END IF
 
     dsl4jsb_Get_config(SEB_)
 
@@ -182,6 +190,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)      ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)       ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, forc_hflx)      ! out
 
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)             ! in
@@ -192,6 +201,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
     IF (jsb_standalone) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)       ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)    ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_h)          ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_m)          ! in
       dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)          ! OUT if standalone
       dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_wtr)       ! OUT if standalone
       dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_wtr)       ! OUT if standalone
@@ -250,27 +263,21 @@ CONTAINS
         l_ice         (ic) = .FALSE.
         hflx_form_ice (ic) = 0._wp
       END IF
+      forc_hflx       (ic) = 0._wp ! Always zero for lake
     END DO
     !$ACC END PARALLEL LOOP
     !$ACC WAIT(1)
 
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
-      !TODO: Adaptation to GPUs only started. It is still very incomplete!
       !$ACC DATA &
-      !$ACC   CREATE(fact_q_air, fact_qsat_srf, rough_h_srf, rough_m_srf, pch_wtr)
-
-      ! Get surface temperature, humidity and roughness for lake tile
-      fact_q_air(:)    = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
-      fact_qsat_srf(:) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
-      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+      !$ACC   CREATE(pch_wtr)
 
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
       ! INTENT in
       & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
       & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
       & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
       ! INTENT out
@@ -279,11 +286,15 @@ CONTAINS
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
         ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-        drag_ice(:)    = drag_wtr(:)
-        t_acoef_ice(:) = t_acoef_wtr(:)
-        t_bcoef_ice(:) = t_bcoef_wtr(:)
-        q_acoef_ice(:) = q_acoef_wtr(:)
-        q_bcoef_ice(:) = q_bcoef_wtr(:)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          drag_ice(ic)    = drag_wtr(ic)
+          t_acoef_ice(ic) = t_acoef_wtr(ic)
+          t_bcoef_ice(ic) = t_bcoef_wtr(ic)
+          q_acoef_ice(ic) = q_acoef_wtr(ic)
+          q_bcoef_ice(ic) = q_bcoef_wtr(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
       !$ACC END DATA
     END IF
@@ -397,7 +408,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc
       qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
-      s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd, jsb_standalone)
+      s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd_or_cvd, jsb_standalone)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -407,7 +418,7 @@ CONTAINS
         qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
         t_unfilt(ic)  = t(ic)
-        s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd, jsb_standalone)
+        s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd_or_cvd, jsb_standalone)
         IF (use_tmx) THEN
           s_star(ic) = (1._wp - fract_lice(ic)) * s_lwtr(ic)    + fract_lice(ic) * s_lice(ic)
           t_rad4(ic) = (1._wp - fract_lice(ic)) * t_lwtr(ic)**4 + fract_lice(ic) * t_lice(ic)**4
@@ -670,7 +681,7 @@ CONTAINS
   SUBROUTINE update_surface_fluxes_lake(tile, options)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef ! q_effective, surface_dry_static_energy
-    USE mo_jsb_physical_constants, ONLY: alv, als, cpd, cvd
+    USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -779,7 +790,7 @@ CONTAINS
       IF (use_tmx) THEN
         s_air = t_bcoef(ic)  ! Old dry static energy at lowest atmospheric level
         heat_tcoef = ch(ic)  ! Transfer coefficient; TODO: distinguish between wtr and ice?
-        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic)) * cvd / cpd ! Sensible energy flux
+        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible energy flux
       ELSE
         s_air = t_acoef_wtr(ic) * s_lwtr(ic) + t_bcoef_wtr(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
         heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
@@ -800,7 +811,7 @@ CONTAINS
         IF (use_tmx) THEN
           s_air = t_bcoef(ic) ! Old dry static energy at lowest atmospheric level
           heat_tcoef = ch(ic) ! Transfer coefficient; TODO: distinguish between wtr and ice?
-          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic)) * cvd / cpd ! Sensible energy flux
+          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible energy flux
         ELSE
           s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
           heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient

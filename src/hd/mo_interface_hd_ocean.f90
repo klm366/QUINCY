@@ -24,7 +24,7 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
-  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, &
+  USE yac,                    ONLY: yac_fdef_field, yac_fput, &
        &                            yac_fdef_mask,            &
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
@@ -201,7 +201,7 @@ CONTAINS
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     !$ACC DATA CREATE(buffer)
 !$OMP PARALLEL
-    CALL init(buffer(:,:))
+    CALL init(buffer(:,:), lacc=.TRUE.)
 !$OMP END PARALLEL
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)

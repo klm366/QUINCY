@@ -141,7 +141,7 @@ CONTAINS
         & extdim_name='nneigh')
 
       IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
-        ! Number of channel river splits into 
+        ! Number of channel river splits into
         return_pointer => input_file%Read_2d(         &
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
@@ -198,9 +198,9 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask), dsl4jsb_var2D_onDomain(HD_,nsplit))               &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_overlflow), dsl4jsb_var2D_onDomain(HD_,nres_overlflow)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_riverflow), dsl4jsb_var2D_onDomain(HD_,nres_riverflow)) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_baseflow),  dsl4jsb_var2D_onDomain(HD_,nres_baseflow))  &
-      !$ACC   DEVICE(dsl4jsb_memory(HD_)%bidx_upstream%ptr(:,:,:))      &
-      !$ACC   DEVICE(dsl4jsb_memory(HD_)%nidx_upstream%ptr(:,:,:))      &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_baseflow), dsl4jsb_var2D_onDomain(HD_,nres_baseflow))   &
+      !$ACC   DEVICE(dsl4jsb_memory(HD_)%bidx_upstream%ptr(:,:,:)) &
+      !$ACC   DEVICE(dsl4jsb_memory(HD_)%nidx_upstream%ptr(:,:,:)) &
       !$ACC   ASYNC(1)
 
       !$ACC WAIT(1)
@@ -247,8 +247,8 @@ CONTAINS
       !$ACC   ASYNC(1)
 
       !$ACC WAIT(1)
-      
-    CASE ('none')      
+
+    CASE ('none')
 
     END SELECT
 
