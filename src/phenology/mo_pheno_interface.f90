@@ -653,7 +653,7 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-       LaiMax_corrected(:) = MaxLAI_param
+       LaiMax_corrected(ic) = MaxLAI_param
       END DO
       !$ACC END PARALLEL LOOP
     END IF
