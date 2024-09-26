@@ -635,15 +635,16 @@ CONTAINS
     ! END DO
 
     ! Create faPAR
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC LOOP SEQ
+      !$ACC LOOP GANG VECTOR
       DO ic=1,nc
-        faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
-                                                     ! whole canopy
+        ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
+        faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
