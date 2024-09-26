@@ -18,9 +18,7 @@ MODULE mo_jsb_memory_class
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
-#ifdef __ICON__
     &                             add_var_list_element_r1d,                           &
-#endif
     &                             add_var_list_element_r2d, add_var_list_element_r3d, &
     &                             Get_var_group_name, VARNAME_LEN
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
@@ -139,7 +137,6 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
 ! 1d list elements are not supported with ECHAM streams
-#ifdef __ICON__
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     LOGICAL           :: loutput_loc
@@ -259,8 +256,6 @@ CONTAINS
     !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
-
-#endif
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
 

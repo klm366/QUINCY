@@ -91,7 +91,6 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
-    PROCEDURE :: Associate_var_pointers
 #ifndef __NO_QUINCY__
     PROCEDURE :: Write_back_to_bgcms
 #endif
@@ -520,74 +519,6 @@ CONTAINS
     jsbach_subsets(this%id)%sub(no_omp_thread)%type = type
 
   END SUBROUTINE Set_subset
-
-  SUBROUTINE Associate_var_pointers(this, ic_start, ic_end, iblk_start, iblk_end)
-
-    USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-    USE mo_jsb_subset,        ONLY: ON_DOMAIN, ON_CHUNK
-    USE mo_jsb_process_class, ONLY: INHERIT_
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_end
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_end
-
-    CLASS(t_jsb_tile_abstract), POINTER :: tile
-
-    INTEGER :: iproc, ivar, itype, no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Associate_var_pointers'
-
-    no_omp_thread = Get_omp_thread()
-
-    IF (iblk_start == iblk_end) THEN
-      itype = ON_CHUNK
-    ELSE
-      itype = ON_DOMAIN
-    END IF
-
-    CALL this%Reset()
-    CALL this%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL this%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      DO iproc=1,SIZE(tile%mem)
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
-        IF (tile%process_action(iproc) == INHERIT_) CYCLE
-        DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
-          CLASS IS (t_jsb_var_real2d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          CLASS IS (t_jsb_var_real3d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END SELECT
-        END DO
-
-        ! mem%pools
-        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
-          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
-        ! mem%bgc_material
-        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
-          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
-
-      END DO
-
-      CALL this%Goto_next_tile(tile)
-
-    END DO
-
-  END SUBROUTINE Associate_var_pointers
-
 
 #ifndef __NO_QUINCY__
   ! ====================================================================================================== !

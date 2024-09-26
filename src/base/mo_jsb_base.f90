@@ -266,26 +266,6 @@ CONTAINS
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
-        IF (model%config%l_compat401) THEN
-          CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
-          CALL message('    ', '... using soil heat capacity from mineral soil map')
-          CALL message('    ', '... using soil heat conductivity from mineral soil map')
-          CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
-          CALL message('    ', '... not using multi-layer snow model')
-          CALL message('    ', '... not using dynamical snow density and thickness')
-          CALL message('    ', '... not using frozen ground')
-          CALL message('    ', '... not using organic soil fractions')
-          CALL message('    ', '... using canopy albedo from ini file')
-          dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_snow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
-          dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
-          dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
-        END IF
 
         IF (model%Do_fractions_change()) THEN
           IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
