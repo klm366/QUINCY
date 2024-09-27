@@ -1366,7 +1366,8 @@ CONTAINS
     !$ACC WAIT(1)
 
     ! Setting the depth limit until which the presence of permafrost may affect bottom drainage
-    depth_thrsh(:) = MAX(SUM(dsl4jsb_var3D_onChunk(HYDRO_, soil_depth_sl), DIM=2), 1.0_wp)
+    depth_thrsh(:) = MAX(SUM(dsl4jsb_var3D_onChunk(HYDRO_, soil_depth_sl), DIM=2), &
+      &                      dsl4jsb_Config(HYDRO_)%min_alt_drain)
 
     IF(dsl4jsb_Config(HYDRO_)%l_ipd_wet) THEN
       l_pf_soil(:) = ((thaw_depth_max_ym1(:) < depth_thrsh(:) .AND. &

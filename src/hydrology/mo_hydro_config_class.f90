@@ -43,7 +43,8 @@ MODULE mo_hydro_config_class
                                 !  infinitely growing snow depth; -1. for no limitation
       & ret_macro_blg,        & !< Assumed retention time for below ground runoff, i.e. avg. time before water reaches tributary
       & ret_macro_srf,        & !< Assumed retention time for surface runoff, i.e. avg. time before water reaches tributary
-      & k_brock                 !< Hydraulic conductivity of bedrock
+      & k_brock,              & !< Hydraulic conductivity of bedrock
+      & min_alt_drain           !< Minimum actuve layer for bottom drainage
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -99,7 +100,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    REAL(wp)                    :: ret_macro_blg, ret_macro_srf, k_brock
+    REAL(wp)                    :: ret_macro_blg, ret_macro_srf, k_brock, min_alt_drain
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     CHARACTER(len=10)           :: enforce_water_budget
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
@@ -121,6 +122,7 @@ CONTAINS
       & ret_macro_blg,              &
       & ret_macro_srf,              &
       & k_brock,                    &
+      & min_alt_drain,              &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -169,6 +171,7 @@ CONTAINS
     ret_macro_blg          = 432000._wp
     ret_macro_srf          = 36000._wp
     k_brock                = 1.E-6_wp
+    min_alt_drain          = 0._wp
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -217,6 +220,7 @@ CONTAINS
     config%ret_macro_blg       = ret_macro_blg
     config%ret_macro_srf       = ret_macro_srf
     config%k_brock             = k_brock
+    config%min_alt_drain       = min_alt_drain
 
     config%scheme_stom_cond       = scheme_stom_cond
 
