@@ -123,7 +123,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
-    dsl4jsb_Real3D_onChunk :: matrix_pot_sl
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: t_acoef
@@ -252,7 +252,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)   ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)       ! in
     END IF
 
@@ -384,7 +384,7 @@ CONTAINS
 
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE
@@ -425,7 +425,6 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
-        frozen_fract(ic) = fract_snow(ic)
 
         IF (lstart) THEN
           s_star(ic) = s_old(ic)
@@ -587,7 +586,7 @@ CONTAINS
           liquid_max(ic) = Get_liquid_max( &
             & t_star(ic)                                   , &
             & soil_depth_sl_vol_porosity_sl_tmp            , & ! Maximum water storage
-            & matrix_pot_sl  (ic,1)                        , &
+            & matric_pot_sl  (ic,1)                        , &
             & bclapp_sl      (ic,1)                          &
             & )
         ELSE
@@ -920,7 +919,7 @@ CONTAINS
       !
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE

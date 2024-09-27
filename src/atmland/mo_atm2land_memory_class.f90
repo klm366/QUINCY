@@ -19,6 +19,7 @@ MODULE mo_a2l_memory_class
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_control,       ONLY: jsbach_runs_standalone
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
@@ -35,14 +36,18 @@ MODULE mo_a2l_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
-    !------------------------------------------------------------------------------------------------------ !
-    !>1.0 jsbach4
-    !>
-
     TYPE(t_jsb_var_real2d) :: &
-      & DEBUG_VAR               , &  !<
-      & CO2_air                 , &  !<
-      & CO2_air_mol                  !<
+      & DEBUG_VAR           , &
+      & CO2_air             , &
+      & CO2_air_mol
+
+#ifndef __NO_QUINCY__
+    TYPE(t_jsb_var_real2d) :: &
+      & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
+      & CO2_mixing_ratio_C13, & !< surface air 13CO2 mixing ratio [ppmv]
+      & CO2_mixing_ratio_C14    !< surface air 14CO2 mixing ratio [scaled]
+#endif
+
     TYPE(t_jsb_var_real2d) :: &
       t_air              , &
       q_air              , &
@@ -79,23 +84,6 @@ MODULE mo_a2l_memory_class
       q_bcoef_ice
 
 #ifndef __NO_QUINCY__
-    !------------------------------------------------------------------------------------------------------ !
-    !>3.0 quincy
-    !>
-
-    ! CO2
-    TYPE(t_jsb_var_real2d) :: &
-      ! jsbach4 variables, in quincy routines replaced by co2_mixing_ratio  _c13  _c14
-      ! & CO2_air               , &  !< molar ratio (mass)
-      ! & CO2_air_mol           , &  !< molar ratio (volume)
-      & CO2_mixing_ratio      , &  !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
-      & CO2_mixing_ratio_C13  , &  !< surface air 13CO2 mixing ratio [ppmv]
-      & CO2_mixing_ratio_C14       !< surface air 14CO2 mixing ratio [scaled]
-
-    ! ga   ( @TODO may be moved elsewhere in the future )
-    TYPE(t_jsb_var_real2d) :: &
-      & ga                         !< aerodynamic conductance [m s-1]
-
     ! N & P deposition
     TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
@@ -109,11 +97,17 @@ MODULE mo_a2l_memory_class
       & daytime_counter       , &  !< number of timesteps of current day with light available [#]
       & local_time_day_seconds     !< seconds passed on this day (local cell time)
 
+    ! For slow soil pool spin-up accelerator
+    TYPE(t_jsb_var_real2d) ::   &
+      & slow_sb_pool_accelerator_execution_counter, & !< the number of executions of spin-up accelerator [#]
+      & slow_sb_pool_accelerator_execute              !< logical value: execute the spin-up accelerator or not (0 = FALSE, 1= True)
+#endif
+
 #ifdef __QUINCY_STANDALONE__
     ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
     TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
-      & nhy_deposition_acc, &             !< accumulate (simply add) input value of nhy_deposition [mumol m-2 sec-1]
+      & noy_deposition_acc, &             !< accumulate (simply add) input value of noy_deposition [mumol m-2 sec-1]
       & p_deposition_acc, &               !< accumulate (simply add) input value of p_deposition [mumol m-2 sec-1]
       & co2_mixing_ratio_acc, &           !< accumulate (simply add) input value of co2_mixing_ratio [ppm]
       & co2_dC13_acc, &                   !< accumulate (simply add) input value of co2_dC13 [ppm]
@@ -122,12 +116,11 @@ MODULE mo_a2l_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
-      & nhy_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhy_deposition [mumol m-2 sec-1]
+      & noy_deposition_const, &           !< constant value (avrg of 1st year of input value) of noy_deposition [mumol m-2 sec-1]
       & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
       & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
       & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
       & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
-#endif
 #endif
 
   CONTAINS
@@ -147,7 +140,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
@@ -171,11 +164,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 
-
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! default jsbach4 memory
-    !
     CALL mem%Add_var( 'DEBUG_VAR', mem%DEBUG_VAR,                            &
       & hgrid, surface,                                                      &
       & t_cf('DEBUG_VAR', '', ''),                                           &
@@ -203,11 +191,37 @@ CONTAINS
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
-    ! --------------------------------------------------------------------------------------------------- !
-    ! variables used with jsbach4 & quincy
-    ! jsbach4 settings
-    !
-    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+#ifndef __NO_QUINCY__
+    CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+#endif
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
@@ -351,7 +365,7 @@ CONTAINS
         & t_cf('surface_drag', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=jsbach_runs_standalone(),                                   &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
       CALL mem%Add_var( 'pch', mem%pch,                                        &
@@ -511,362 +525,9 @@ CONTAINS
         & initval_r=0.0_wp )
 
     END IF ! lakes
-    END IF ! IF (model%config%model_scheme == MODEL_JSBACH) THEN
 
 #ifndef __NO_QUINCY__
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! quincy
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-
-      ! ------------------------------------------------------------------------------------------------- !
-      ! variables used with jsbach4 & quincy
-      ! quincy settings
-      !
-      CALL mem%Add_var('t_air', mem%t_air, &
-        & hgrid, surface, &
-        & t_cf('t_air', 'K', '2m air temperature'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('q_air', mem%q_air, &
-        & hgrid, surface, &
-        & t_cf('q_air', 'g g-1', '2m air specific humidity'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('rain', mem%rain, &
-        & hgrid, surface, &
-        & t_cf('rain', 'kg m-2 s-1', 'liquid water precipitation'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('snow', mem%snow, &
-        & hgrid, surface, &
-        & t_cf('snow', 'kg m-2 s-1', 'solid water precipitation'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('wind_air', mem%wind_air, &
-        & hgrid, surface, &
-        & t_cf('wind_air', 'm s-1', '2m air wind speed'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('wind_10m', mem%wind_10m, &
-        & hgrid, surface, &
-        & t_cf('wind_10m', 'm s-1', '10m air wind speed'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('lw_srf_down', mem%lw_srf_down, &
-        & hgrid, surface, &
-        & t_cf('lw_srf_down', 'W m-2', 'longwave surface downward flux'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('swvis_srf_down', mem%swvis_srf_down, &
-        & hgrid, surface, &
-        & t_cf('swvis_srf_down', 'W m-2', 'shortwave surface downward flux in the visible band'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('swnir_srf_down', mem%swnir_srf_down, &
-        & hgrid, surface, &
-        & t_cf('swnir_srf_down', 'W m-2', 'shortwave surface downward flux in the near infrared band'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('swpar_srf_down', mem%swpar_srf_down, &
-        & hgrid, surface, &
-        & t_cf('swpar_srf_down', 'W m-2', 'shortwave surface downward flux in the PAR band'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('fract_par_diffuse', mem%fract_par_diffuse, &
-        & hgrid, surface, &
-        & t_cf('fract_par_diffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('press_srf', mem%press_srf, &
-        & hgrid, surface, &
-        & t_cf('press_srf', 'Pa', 'surface air pressure'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('drag_srf', mem%drag_srf, &
-        & hgrid, surface, &
-        & t_cf('drag_srf', 'unitless', 'total surface drag'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('t_acoef', mem%t_acoef, &
-        & hgrid, surface, &
-        & t_cf('t_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for temperature'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('t_bcoef', mem%t_bcoef, &
-        & hgrid, surface, &
-        & t_cf('t_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for temperature'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('q_acoef', mem%q_acoef, &
-        & hgrid, surface, &
-        & t_cf('q_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('q_bcoef', mem%q_bcoef, &
-        & hgrid, surface, &
-        & t_cf('q_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for specific humidity'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('pch', mem%pch, &
-        & hgrid, surface, &
-        & t_cf('pch', 'unitless', 'total surface drag'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('cos_zenith_angle', mem%cos_zenith_angle, &
-        & hgrid, surface, &
-        & t_cf('cos_zenith_angle', 'unitless', 'Cosine of solar zenith angle'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      ! lakes
-      IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
-
-        CALL mem%Add_var('drag_wtr', mem%drag_wtr, &
-          & hgrid, surface, &
-          & t_cf('drag_wtr', 'unitless', 'drag coefficient over water'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('drag_ice', mem%drag_ice, &
-          & hgrid, surface, &
-          & t_cf('drag_ice', 'unitless', 'drag coefficient over ice'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('t_acoef_wtr', mem%t_acoef_wtr, &
-          & hgrid, surface, &
-          & t_cf('t_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('t_bcoef_wtr', mem%t_bcoef_wtr, &
-          & hgrid, surface, &
-          & t_cf('t_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('q_acoef_wtr', mem%q_acoef_wtr, &
-          & hgrid, surface, &
-          & t_cf('q_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('q_bcoef_wtr', mem%q_bcoef_wtr, &
-          & hgrid, surface, &
-          & t_cf('q_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('t_acoef_ice', mem%t_acoef_ice, &
-          & hgrid, surface, &
-          & t_cf('t_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('t_bcoef_ice', mem%t_bcoef_ice, &
-          & hgrid, surface, &
-          & t_cf('t_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('q_acoef_ice', mem%q_acoef_ice, &
-          & hgrid, surface, &
-          & t_cf('q_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('q_bcoef_ice', mem%q_bcoef_ice, &
-          & hgrid, surface, &
-          & t_cf('q_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-      END IF ! lakes
-
-      ! ------------------------------------------------------------------------------------------------- !
-      ! variables used only with quincy
-      !
-      CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
-        & hgrid, surface, &
-        & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
-        & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
-        & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('ga', mem%ga, &
-        & hgrid, surface, &
-        & t_cf('ga', 'm s-1', 'aerodynamic conductance'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
@@ -942,141 +603,163 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+        CALL mem%Add_var('slow_sb_pool_accelerator_execution_counter', mem%slow_sb_pool_accelerator_execution_counter, &
+          & hgrid, surface, &
+          & t_cf('slow_sb_pool_accelerator_execution_counter', ' ', 'the number of executions of spin-up accelerator'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('slow_sb_pool_accelerator_execute', mem%slow_sb_pool_accelerator_execute, &
+          & hgrid, surface, &
+          & t_cf('slow_sb_pool_accelerator_execute', ' ', 'logical to determine if executing the spin-up acclerator or not'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      END IF
+    END IF ! MODEL_QUINCY
+#endif
+
 #ifdef __QUINCY_STANDALONE__
-      CALL mem%Add_var('nhx_deposition_acc', mem%nhx_deposition_acc, &
-        & hgrid, surface, &
-        & t_cf('nhx_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhx_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('nhx_deposition_acc', mem%nhx_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('nhx_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhx_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('nhy_deposition_acc', mem%nhy_deposition_acc, &
-        & hgrid, surface, &
-        & t_cf('nhy_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhy_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('noy_deposition_acc', mem%noy_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('noy_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of noy_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('p_deposition_acc', mem%p_deposition_acc, &
-        & hgrid, surface, &
-        & t_cf('p_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of p_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('p_deposition_acc', mem%p_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('p_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of p_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_mixing_ratio_acc', mem%co2_mixing_ratio_acc, &
-        & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_acc', 'ppm', 'accumulate input value of co2_mixing_ratio'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_mixing_ratio_acc', mem%co2_mixing_ratio_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_acc', 'ppm', 'accumulate input value of co2_mixing_ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_dC13_acc', mem%co2_dC13_acc, &
-        & hgrid, surface, &
-        & t_cf('co2_dC13_acc', 'ppm', 'accumulate input value of co2_dC13'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_dC13_acc', mem%co2_dC13_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_dC13_acc', 'ppm', 'accumulate input value of co2_dC13'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_DC14_acc', mem%co2_DC14_acc, &
-        & hgrid, surface, &
-        & t_cf('co2_DC14_acc', 'scaled', 'accumulate input value of co2_DC14'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_DC14_acc', mem%co2_DC14_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_DC14_acc', 'scaled', 'accumulate input value of co2_DC14'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('const_input_timestep_counter', mem%const_input_timestep_counter, &
-        & hgrid, surface, &
-        & t_cf('const_input_timestep_counter', 'unitless', 'count number of timesteps since simulation start'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('const_input_timestep_counter', mem%const_input_timestep_counter, &
+      & hgrid, surface, &
+      & t_cf('const_input_timestep_counter', 'unitless', 'count number of timesteps since simulation start'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('nhx_deposition_const', mem%nhx_deposition_const, &
-        & hgrid, surface, &
-        & t_cf('nhx_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhx_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('nhx_deposition_const', mem%nhx_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('nhx_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhx_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('nhy_deposition_const', mem%nhy_deposition_const, &
-        & hgrid, surface, &
-        & t_cf('nhy_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhy_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('noy_deposition_const', mem%noy_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('noy_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of noy_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('p_deposition_const', mem%p_deposition_const, &
-        & hgrid, surface, &
-        & t_cf('p_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of p_deposition'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('p_deposition_const', mem%p_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('p_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of p_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_mixing_ratio_const', mem%co2_mixing_ratio_const, &
-        & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_const', 'ppm', 'avrg of 1st year input of co2_mixing_ratio'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_mixing_ratio_const', mem%co2_mixing_ratio_const, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_const', 'ppm', 'avrg of 1st year input of co2_mixing_ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_dC13_const', mem%co2_dC13_const, &
-        & hgrid, surface, &
-        & t_cf('co2_dC13_const', 'ppm', 'avrg of 1st year input of co2_dC13'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_dC13_const', mem%co2_dC13_const, &
+      & hgrid, surface, &
+      & t_cf('co2_dC13_const', 'ppm', 'avrg of 1st year input of co2_dC13'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('co2_DC14_const', mem%co2_DC14_const, &
-        & hgrid, surface, &
-        & t_cf('co2_DC14_const', 'scaled', 'avrg of 1st year input of co2_DC14'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+    CALL mem%Add_var('co2_DC14_const', mem%co2_DC14_const, &
+      & hgrid, surface, &
+      & t_cf('co2_DC14_const', 'scaled', 'avrg of 1st year input of co2_DC14'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 #endif
-
-    END IF ! IF (model%config%model_scheme == MODEL_QUINCY) THEN
-#endif
-
   END SUBROUTINE Init_a2l_memory
 
 #endif

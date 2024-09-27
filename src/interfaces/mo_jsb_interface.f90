@@ -24,10 +24,14 @@ MODULE mo_jsb_interface
   USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
   USE mo_jsb_class,           ONLY: Get_model
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
+#ifndef __NO_QUINCY__
+  USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
+  USE mo_quincy_model_config, ONLY: QLAND
+#endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
@@ -226,6 +230,7 @@ CONTAINS
     INTEGER                             :: nc
     INTEGER                             :: no_omp_thread
     ! INTEGER                           :: p_pe
+    INTEGER                             :: model_scheme
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -244,6 +249,9 @@ CONTAINS
 #endif
     nc = ice - ics + 1
     model => Get_model(model_id)
+
+    model_scheme = model%config%model_scheme
+
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -270,49 +278,93 @@ CONTAINS
     !> 3.0 Put atmospheric forcing into the a2l memory
     !>
     CALL model%Get_top_tile(tile)
-    CALL update_atm2land(                           &
-      & tile,                                       &
-      & model%options(no_omp_thread),               &
-      & t_air              = t_air(:),              &
-      & q_air              = q_air(:),              &
-      & rain               = rain(:),               &
-      & snow               = snow(:),               &
-      & wind_air           = wind_air(:),           &
-      & wind_10m           = wind_10m(:),           &
-      & lw_srf_down        = lw_srf_down(:),        &
-      & swvis_srf_down     = swvis_srf_down(:),     &
-      & swnir_srf_down     = swnir_srf_down(:),     &
-      & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse   = fract_par_diffuse(:), &
-      & press_srf          = press_srf(:),          &
-      & drag_srf           = drag_srf(:),           &
-      & t_acoef            = t_acoef(:),            &
-      & t_bcoef            = t_bcoef(:),            &
-      & q_acoef            = q_acoef(:),            &
-      & q_bcoef            = q_bcoef(:),            &
-      & pch                = pch(:),                &
-      & cos_zenith_angle   = cos_zenith_angle(:),   &
-      & CO2_air            = CO2_air(:),            &
-      ! For lakes
-      & DEBUG_VAR          = DEBUG_VAR,             &
-      ! For QUINCY
-      & nhx_deposition     = nhx_deposition,        &
-      & noy_deposition     = noy_deposition,        &
-      & nhx_n15_deposition = nhx_n15_deposition,    &
-      & noy_n15_deposition = noy_n15_deposition,    &
-      & p_deposition       = p_deposition,          &
-      ! For lakes
-      & drag_wtr           = drag_wtr,              &
-      & drag_ice           = drag_ice,              &
-      & t_acoef_wtr        = t_acoef_wtr,           &
-      & t_bcoef_wtr        = t_bcoef_wtr,           &
-      & q_acoef_wtr        = q_acoef_wtr,           &
-      & q_bcoef_wtr        = q_bcoef_wtr,           &
-      & t_acoef_ice        = t_acoef_ice,           &
-      & t_bcoef_ice        = t_bcoef_ice,           &
-      & q_acoef_ice        = q_acoef_ice,           &
-      & q_bcoef_ice        = q_bcoef_ice            &
-      & )
+    IF (.NOT. model_scheme == MODEL_QUINCY) THEN
+      CALL update_atm2land(                           &
+        & tile,                                       &
+        & model%options(no_omp_thread),               &
+        & t_air              = t_air(:),              &
+        & q_air              = q_air(:),              &
+        & rain               = rain(:),               &
+        & snow               = snow(:),               &
+        & wind_air           = wind_air(:),           &
+        & wind_10m           = wind_10m(:),           &
+        & lw_srf_down        = lw_srf_down(:),        &
+        & swvis_srf_down     = swvis_srf_down(:),     &
+        & swnir_srf_down     = swnir_srf_down(:),     &
+        & swpar_srf_down     = swpar_srf_down(:),     &
+        & fract_par_diffuse   = fract_par_diffuse(:), &
+        & press_srf          = press_srf(:),          &
+        & drag_srf           = drag_srf(:),           &
+        & t_acoef            = t_acoef(:),            &
+        & t_bcoef            = t_bcoef(:),            &
+        & q_acoef            = q_acoef(:),            &
+        & q_bcoef            = q_bcoef(:),            &
+        & pch                = pch(:),                &
+        & cos_zenith_angle   = cos_zenith_angle(:),   &
+        & CO2_air            = CO2_air(:),            &
+        & DEBUG_VAR          = DEBUG_VAR,             &
+        ! For lakes
+        & drag_wtr           = drag_wtr,              &
+        & drag_ice           = drag_ice,              &
+        & t_acoef_wtr        = t_acoef_wtr,           &
+        & t_bcoef_wtr        = t_bcoef_wtr,           &
+        & q_acoef_wtr        = q_acoef_wtr,           &
+        & q_bcoef_wtr        = q_bcoef_wtr,           &
+        & t_acoef_ice        = t_acoef_ice,           &
+        & t_bcoef_ice        = t_bcoef_ice,           &
+        & q_acoef_ice        = q_acoef_ice,           &
+        & q_bcoef_ice        = q_bcoef_ice            &
+        & )
+#ifndef __NO_QUINCY__
+    ELSE
+      IF(.NOT. model%config%usecase == 'quincy_11_pfts_for_coupling') THEN
+        CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
+          &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
+      ENDIF
+
+      CALL update_atm2land_quincy(                    &
+        & tile,                                       &
+        & model%options(no_omp_thread),               &
+        & t_air              = t_air(:),              &
+        & q_air              = q_air(:),              &
+        & rain               = rain(:),               &
+        & snow               = snow(:),               &
+        & wind_air           = wind_air(:),           &
+        & wind_10m           = wind_10m(:),           &
+        & lw_srf_down        = lw_srf_down(:),        &
+        & swvis_srf_down     = swvis_srf_down(:),     &
+        & swnir_srf_down     = swnir_srf_down(:),     &
+        & swpar_srf_down     = swpar_srf_down(:),     &
+        & fract_par_diffuse   = fract_par_diffuse(:), &
+        & press_srf          = press_srf(:),          &
+        & drag_srf           = drag_srf(:),           &
+        & t_acoef            = t_acoef(:),            &
+        & t_bcoef            = t_bcoef(:),            &
+        & q_acoef            = q_acoef(:),            &
+        & q_bcoef            = q_bcoef(:),            &
+        & pch                = pch(:),                &
+        & cos_zenith_angle   = cos_zenith_angle(:),   &
+        & CO2_air            = CO2_air(:),            &
+        & DEBUG_VAR          = DEBUG_VAR,             &
+        & nhx_deposition     = nhx_deposition,        &
+        & noy_deposition     = noy_deposition,        &
+        & nhx_n15_deposition = nhx_n15_deposition,    &
+        & noy_n15_deposition = noy_n15_deposition,    &
+        & p_deposition       = p_deposition          &
+        ! For lakes
+        ! & drag_wtr           = drag_wtr,              &
+        ! & drag_ice           = drag_ice,              &
+        ! & t_acoef_wtr        = t_acoef_wtr,           &
+        ! & t_bcoef_wtr        = t_bcoef_wtr,           &
+        ! & q_acoef_wtr        = q_acoef_wtr,           &
+        ! & q_bcoef_wtr        = q_bcoef_wtr,           &
+        ! & t_acoef_ice        = t_acoef_ice,           &
+        ! & t_bcoef_ice        = t_bcoef_ice,           &
+        ! & q_acoef_ice        = q_acoef_ice,           &
+        ! & q_bcoef_ice        = q_bcoef_ice            &
+        & )
+#endif
+      ENDIF
     NULLIFY(tile)
 
 
@@ -327,45 +379,89 @@ CONTAINS
     !> 5.0 Give the required variables back to the atmosphere
     !>
     CALL model%Get_top_tile(tile)
-    CALL update_land2atm(                        &
-      & tile,                                    &
-      & model%options(no_omp_thread),            &
-      & t_srf              = t_srf,              &
-      & t_eff_srf          = t_eff_srf,          &
-      & qsat_srf           = qsat_srf,           &
-      & s_srf              = s_srf,              &
-      & fact_q_air         = fact_q_air,         &
-      & fact_qsat_srf      = fact_qsat_srf,      &
-      & evapopot           = evapopot,           &
-      & evapotrans         = evapotrans,         &
-      & latent_hflx        = latent_hflx,        &
-      & sensible_hflx      = sensible_hflx,      &
-      & grnd_hflx          = grnd_hflx,          &
-      & grnd_hcap          = grnd_hcap,          &
-      & rough_h_srf        = rough_h_srf,        &
-      & rough_m_srf        = rough_m_srf,        &
-      & q_snocpymlt        = q_snocpymlt,        &
-      & alb_vis_dir        = alb_vis_dir,        &
-      & alb_nir_dir        = alb_nir_dir,        &
-      & alb_vis_dif        = alb_vis_dif,        &
-      & alb_nir_dif        = alb_nir_dif,        &
-      & CO2_flux           = CO2_flux,           &
-      & t_lwtr             = t_lwtr,             &
-      & qsat_lwtr          = qsat_lwtr,          &
-      & s_lwtr             = s_lwtr,             &
-      & evapo_wtr          = evapo_wtr,          &
-      & latent_hflx_wtr    = latent_hflx_wtr,    &
-      & sensible_hflx_wtr  = sensible_hflx_wtr,  &
-      & t_lice             = t_lice,             &
-      & qsat_lice          = qsat_lice,          &
-      & s_lice             = s_lice,             &
-      & evapo_ice          = evapo_ice,          &
-      & latent_hflx_ice    = latent_hflx_ice,    &
-      & sensible_hflx_ice  = sensible_hflx_ice,  &
-      & ice_fract_lake     = ice_fract_lake,     &
-      & albedo_lwtr        = albedo_lwtr,        &
-      & albedo_lice        = albedo_lice         &
-      & )
+    IF (.NOT. model_scheme == MODEL_QUINCY) THEN
+      CALL update_land2atm(                        &
+        & tile,                                    &
+        & model%options(no_omp_thread),            &
+        & t_srf              = t_srf,              &
+        & t_eff_srf          = t_eff_srf,          &
+        & qsat_srf           = qsat_srf,           &
+        & s_srf              = s_srf,              &
+        & fact_q_air         = fact_q_air,         &
+        & fact_qsat_srf      = fact_qsat_srf,      &
+        & evapopot           = evapopot,           &
+        & evapotrans         = evapotrans,         &
+        & latent_hflx        = latent_hflx,        &
+        & sensible_hflx      = sensible_hflx,      &
+        & grnd_hflx          = grnd_hflx,          &
+        & grnd_hcap          = grnd_hcap,          &
+        & rough_h_srf        = rough_h_srf,        &
+        & rough_m_srf        = rough_m_srf,        &
+        & q_snocpymlt        = q_snocpymlt,        &
+        & alb_vis_dir        = alb_vis_dir,        &
+        & alb_nir_dir        = alb_nir_dir,        &
+        & alb_vis_dif        = alb_vis_dif,        &
+        & alb_nir_dif        = alb_nir_dif,        &
+        & CO2_flux           = CO2_flux,           &
+        & t_lwtr             = t_lwtr,             &
+        & qsat_lwtr          = qsat_lwtr,          &
+        & s_lwtr             = s_lwtr,             &
+        & evapo_wtr          = evapo_wtr,          &
+        & latent_hflx_wtr    = latent_hflx_wtr,    &
+        & sensible_hflx_wtr  = sensible_hflx_wtr,  &
+        & t_lice             = t_lice,             &
+        & qsat_lice          = qsat_lice,          &
+        & s_lice             = s_lice,             &
+        & evapo_ice          = evapo_ice,          &
+        & latent_hflx_ice    = latent_hflx_ice,    &
+        & sensible_hflx_ice  = sensible_hflx_ice,  &
+        & ice_fract_lake     = ice_fract_lake,     &
+        & albedo_lwtr        = albedo_lwtr,        &
+        & albedo_lice        = albedo_lice         &
+        & )
+#ifndef __NO_QUINCY__
+    ELSE
+      CALL update_land2atm_quincy(                 &
+        & tile,                                    &
+        & model%options(no_omp_thread),            &
+        & t_srf              = t_srf,              &
+        & t_eff_srf          = t_eff_srf,          &
+        & qsat_srf           = qsat_srf,           &
+        & s_srf              = s_srf,              &
+        & fact_q_air         = fact_q_air,         &
+        & fact_qsat_srf      = fact_qsat_srf,      &
+        & evapopot           = evapopot,           &
+        & evapotrans         = evapotrans,         &
+        & latent_hflx        = latent_hflx,        &
+        & sensible_hflx      = sensible_hflx,      &
+        & grnd_hflx          = grnd_hflx,          &
+        & grnd_hcap          = grnd_hcap,          &
+        & rough_h_srf        = rough_h_srf,        &
+        & rough_m_srf        = rough_m_srf,        &
+        & q_snocpymlt        = q_snocpymlt,        &
+        & alb_vis_dir        = alb_vis_dir,        &
+        & alb_nir_dir        = alb_nir_dir,        &
+        & alb_vis_dif        = alb_vis_dif,        &
+        & alb_nir_dif        = alb_nir_dif,        &
+        & CO2_flux           = CO2_flux,           &
+        & t_lwtr             = t_lwtr,             &
+        & qsat_lwtr          = qsat_lwtr,          &
+        & s_lwtr             = s_lwtr,             &
+        & evapo_wtr          = evapo_wtr,          &
+        & latent_hflx_wtr    = latent_hflx_wtr,    &
+        & sensible_hflx_wtr  = sensible_hflx_wtr,  &
+        & t_lice             = t_lice,             &
+        & qsat_lice          = qsat_lice,          &
+        & s_lice             = s_lice,             &
+        & evapo_ice          = evapo_ice,          &
+        & latent_hflx_ice    = latent_hflx_ice,    &
+        & sensible_hflx_ice  = sensible_hflx_ice,  &
+        & ice_fract_lake     = ice_fract_lake,     &
+        & albedo_lwtr        = albedo_lwtr,        &
+        & albedo_lice        = albedo_lice         &
+        & )
+#endif
+    ENDIF
     NULLIFY(tile)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -655,7 +751,7 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics, seb_check_temperature_range
     USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
     USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
@@ -663,6 +759,9 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
+#endif
+#ifndef __NO_QUINCY__
+    USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_processes HYDRO_
@@ -694,19 +793,35 @@ CONTAINS
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif
+    ! Reset all tiles (needed for tile loops in following test routines)
+    CALL model%Reset_tiles()
 
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 
     dtime = model%options(no_omp_thread)%dtime
 
-    ! Carbon conservation test
+    ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
     IF (model%processes(CARBON_)%p%config%active) THEN
       IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
         CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
+
+#ifndef __NO_QUINCY__
+    ! Carbon conservation test Quincy
+    CALL model%Get_top_tile(tile)
+    IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
+      CALL test_carbon_conservation(tile, model%options(no_omp_thread))
+    END IF
+#endif
+
+    ! Make sure temperatures are within an exceptable range
+    IF (model%processes(SEB_)%p%config%active) THEN
+      CALL seb_check_temperature_range(model_id, no_omp_thread)
+    END IF
+
 
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
@@ -763,11 +878,11 @@ CONTAINS
     & tile,                  &
     & ics, ice, iblk,        &
     & arr1d, arr2d, arr3d,   &
-    & ptr1d, ptr2d, ptr3d)
+    & ptr1d, ptr2d, ptr3d, lacc)
 
     USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
     USE mo_jsb_process_class, ONLY: Get_process_id
-    USE mo_fortran_tools,     ONLY: copy
+    USE mo_fortran_tools,     ONLY: copy, set_acc_host_or_device
 
     CHARACTER(len=*),  INTENT(in)          :: var_name
                                               !< Name of requested variable including the leading process name
@@ -782,6 +897,8 @@ CONTAINS
                                               !< Requested variable (section) is copied into these arrays
     REAL(wp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
                                               !< Pointers to the requested variable (section); must not be associated
+    LOGICAL, OPTIONAL, INTENT(in)          :: lacc
+                                              !< Switch whether the variables should be copied to GPU
 
     TYPE(t_jsb_model),           POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
@@ -792,6 +909,10 @@ CONTAINS
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
+
+    LOGICAL :: lzacc
+
+    CALL set_acc_host_or_device(lzacc, lacc)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -873,7 +994,7 @@ CONTAINS
           IF (SIZE(arr1d,1) /= nc) THEN
             CALL finish(routine, 'arr1d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:))
+            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:), lacc=lzacc)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr1d or arr1d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -885,7 +1006,7 @@ CONTAINS
           IF (SIZE(arr2d,1) /= nc .OR. SIZE(arr2d,2) /= SIZE(var_ptr%ptr3d,2)) THEN
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:))
+            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:), lacc=lzacc)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr2d or arr2d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -902,7 +1023,7 @@ CONTAINS
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:))
+            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:), lacc=lzacc)
 !$OMP END PARALLEL
           END IF
         ELSE
@@ -917,7 +1038,7 @@ CONTAINS
             CALL finish(routine, 'arr3d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:))
+            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:), lacc=lzacc)
 !$OMP END PARALLEL
           END IF
         ELSE

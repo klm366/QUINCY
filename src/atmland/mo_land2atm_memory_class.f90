@@ -48,10 +48,15 @@ MODULE mo_l2a_memory_class
       & alb_vis_dir                     , &  !< surface albedo for direct radiation in the visible band [unitless]
       & alb_nir_dir                          !< surface albedo for direct radiation in the near infrared band [unitless]
 
-    ! CARBON_
+    ! CARBON_ in jsbach
     TYPE(t_jsb_var_real2d) :: &
       & carbon_conservation_test        , &  !<
       & yday_c_state_sum                     !<
+
+    ! C in Quincy
+    TYPE(t_jsb_var_real2d) :: &
+      & q_total_c,            & !< total C, sum of all quincy carbon pools
+      & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
@@ -191,11 +196,33 @@ CONTAINS
       & lrestart = .FALSE., &
       & initval_r = 0.0_wp)
 
+#ifndef __NO_QUINCY__
+    CALL mem%Add_var('q_total_c', mem%q_total_c, &
+      & hgrid, surface, &
+      & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & output_level = BASIC, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
+      & hgrid, surface, &
+      & t_cf('q_c_conservation_test', '[mol m-2]', 'difference in change in quincy total C and nbp'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & output_level = BASIC, &
+      & loutput = .TRUE., &
+      & lrestart = .FALSE., &
+      & initval_r = 0.0_wp)
+#endif
 #ifdef __QUINCY_STANDALONE__
 #else
     ! carbon
     IF (model%processes(CARBON_)%p%config%active) THEN
-
       CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
         & hgrid, surface,                                                              &
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
@@ -211,7 +238,6 @@ CONTAINS
         & prefix, suffix,                                                                          &
         & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )
-
     END IF
 #endif
 
