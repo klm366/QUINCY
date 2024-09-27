@@ -882,6 +882,9 @@ CONTAINS
       ! update soil properties
       ! modify saturated, field capacity and permanent
       !   wilting point capacities accordingly.
+      !> - Call [[mo_hydro_init:init_soil_properties]] to update soil properties
+      !>     - distribute 2d initial fields to soil layers
+      !>     - aggregate contributions from mineral and organic content
       CALL init_soil_properties(tile)
 
       ! The following can change later depending on the organic layers and soil ice content.
@@ -913,10 +916,14 @@ CONTAINS
 
     END IF ! contains_soil
 
-    IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
-
-      ! DOCU same as above
-      ! Re-compute maximum root zone moisture based on soil parameters modified by organic fractions
+    IF (tile%contains_vegetation) THEN   ! tile contains vegetation
+      !>
+      !> If `tile` contains vegetation (i.e. soil and roots present):
+      !>
+      ! -------------------------------------------------------------------------------------------------- !
+      !>
+      !> - Re-compute maximum root zone moisture based on soil parameters modified by organic fractions
+      !
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max), 2)
           CALL get_amount_in_rootzone( &
           & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,i), &
@@ -924,8 +931,13 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max) (:,  i)  )
       END DO
+
       !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max)) ASYNC(1)
       !$ACC WAIT(1)
+      ! -------------------------------------------------------------------------------------------------- !
+      !>
+      !> - Set maximum root zone moisture to 0.2 for glacier and ocean areas
+      !>
       ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where weq_rootzone_max == 0)
       dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MERGE(       &
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), 0.2_wp, &
@@ -941,7 +953,7 @@ CONTAINS
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
 
       ! wtr_rootzone calculated here is only used to calculate relative soil moisture for phenology.
-      ! It is re-calculated in update_soil_hydrology.
+      ! It is re-calculated in [[mo_hydro_interface:update_water_stress]].
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone), 2)
           CALL get_amount_in_rootzone( &
           & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)    (:,:,i), &
@@ -961,7 +973,7 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) ASYNC(1)
 
       ! Initialization of wtr_rootzone_rel (completely ignoring ice)
-      !    It is re-calculated - considering ice - in update_water_stress.
+      !    It is re-calculated - considering ice - in [[mo_hydro_interface:update_water_stress]].
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
           & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
