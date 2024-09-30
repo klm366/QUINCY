@@ -189,75 +189,71 @@ CONTAINS
       DO WHILE (ASSOCIATED(current_tile))
         i_tile = i_tile + 1
         
-      ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
         & fill_array = cf_current_year(:,i_tile,:) )
         !-- end: rewritten remainder from Rainer Schnecks alcc implementation
 
         ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
-      cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
-        ENDDO
+        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
+         
+        ! Assert: fractions >= 0 and < 1
+        IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+        IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+    
+        current_tile => current_tile%Get_next_sibling_tile()
+      ENDDO
+        
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
           
+    CASE ('transitions')
         !Mingyue Zhang added for reading in transition data start 
         !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
         !so possibly here the CASE ('transitions') should not be inside the do while loop
-    CASE ('transitions')
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
-      WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+      WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
 
-<<<<<<< HEAD
-      !here add the loop over the cells on the chunk(ic)
-      DO WHILE (ics <= nc)
-=======
-      ! Assert: fractions >= 0 and < 1
-      IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-        & // TRIM(current_tile%name)//'. Please check.')
-      ENDIF
-      IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-        & // TRIM(current_tile%name)//'. Please check.')
-      ENDIF
->>>>>>> origin/land4icon-mpim
-
-        !!!!here associate the trasition matrix with the tile(or should be grid?)
-        do i = 1, numMatrices   ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-          allocate(TransMtrx(i)%ptr(rows, cols))
+      DO ic = 1,nc
+        !!!!here associate the trasition matrix with the grid: as the process is done on each block with a loop of the index od the cell
+        ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+        do i = 1, 3
+          do j = 1, 3  
+            ! Accessing elements of the matrices 
+            ! Use a do loop for the read in LUH2 transition data: 
+            ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
+            ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable?
+             TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
+          end do
         end do
-        ! Accessing elements of the matrices 
-        ! Use a do loop for the read in LUH2 transition data: 
-        ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-        ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable?
-        TransMtrx(1)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
+        
+        !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
+        do i = 1, npft
+          do j = 1,npft
+            !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
+            TransMtrx_pfts(ic)%ptr(i, j) = cf_current_year(:,i_tile,:)*??? characterize
+          end do
+        end do 
 
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix
-      END DO
-      
+      ENDDO
+
       ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
-      cf_current_year(:,:,:) = cf_current_year(:,:,:) + cf_current_year(:,:,:) * TransMtrx(:,:,:)
+      cf_current_year(:,:,:) = cf_current_year(:,:,:) + cf_current_year(:,:,:) * TransMtrx_pfts(:,:,:)
 
       !Mingyue Zhang added for reading in transition data end
     END SELECT
 
-
-        ! Assert: fractions >= 0 and < 1
-    IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
-      CALL finish(TRIM(routine), &
-      & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-      & // TRIM(current_tile%name)//'. Please check.') 
-    ENDIF
-    IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
-      CALL finish(TRIM(routine), &
-      & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-      & // TRIM(current_tile%name)//'. Please check.') 
-    ENDIF
-
-    current_tile => current_tile%Get_next_sibling_tile()
-
   
+
+
     CALL input_file%Close()
 
     DEALLOCATE(cf_correction)
@@ -275,3 +271,5 @@ CONTAINS
 
 #endif
 END MODULE mo_alcc_init
+
+
