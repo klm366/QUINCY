@@ -26,6 +26,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(SB_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
 #endif
@@ -231,6 +232,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(SB_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
 #endif
@@ -253,6 +255,7 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(SB_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -451,7 +454,12 @@ CONTAINS
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF(model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+          IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+             CALL model%Queue_task(SB_, "sb_jsm")           ! LAND ONLY
+          ELSE
+             CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+          ENDIF
+
         ENDIF
         CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
       ENDIF
