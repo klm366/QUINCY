@@ -46,31 +46,34 @@ MODULE mo_alcc_memory_class
     real(dp), pointer :: ptr(:,:)
   end TYPE MatrixPtr
   
-  real(dp), pointer :: TransMtrx(:)
-  
+  real(dp), pointer :: TransMtrx(:)  ! define crop_nature_pasture transition matrix
   ! Mingyue Zhang: Set the number of matrices dynamically
   INTEGER, PARAMETER :: numMatrices = 9 ! Adjust as needed according to the size of transition matrix
-  
   allocate(TransMtrx(numMatrices))
   
   do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-    allocate(TransMtrx(i)%ptr(rows, cols))
+    allocate(TransMtrx(i)%ptr(3, 3))
   end do
 
   ! Accessing elements of the matrices 
   ! Use a do loop for the read in LUH2 transition data: 
   ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-  TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
+  !TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
+  
+
+  real(dp), pointer :: TransMtrx_pfts(:) ! define pfts transition matrix
+  ! Mingyue Zhang: Set the number of matrices dynamically
+  INTEGER, PARAMETER :: numMatrices_pfts = npft*npft ! Adjust as needed according to the size of transition matrix
+  allocate(TransMtrx_pfts(numMatrices_pfts))
   ! Mingyue Zhang: define TransMtrx end 
 
   ! Mingyue Zhang: defeine transition types start  CHARACTER(len=*) :: transitions(9)
-
-    ! Initialize the array with the character strings
-    transitions = (/ 'crop2crop','crop2pasture', 'crop2natural',&
+  ! Initialize the array with the character strings
+  transitions = (/ 'crop2crop','crop2pasture', 'crop2natural',&
                      'pasture2crop','pasture2pasture', 'pasture2natural',&
                      'natural2crop', 'natural2pasture', 'natural2natural'/)
-    ! Output to verify the array
-    print *, transitions
+  ! Output to verify the array
+  print *, transitions
   ! Mingyue Zhang: defeine transition types end
 
 
@@ -137,9 +140,14 @@ CONTAINS
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
-<<<<<<< HEAD
     ! Mingyue Zhang: add variables for transitions matrix start 
     CALL mem%Add_var('TransMtrx', mem%TransMtrx,                 &
+    & hgrid, pft_vgrid,                                                                            &
+    & prefix, suffix,                                                                              &
+    & output_level=FULL,                                                                          &
+    & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+
+    CALL mem%Add_var('TransMtrx_pfts', mem%TransMtrx,                 &
     & hgrid, pft_vgrid,                                                                            &
     & prefix, suffix,                                                                              &
     & output_level=FULL,                                                                          &
@@ -154,8 +162,6 @@ CONTAINS
     ! Mingyue Zhang: add variables for transitions type finish
 
 
-=======
->>>>>>> origin/land4icon-mpim
   END SUBROUTINE Init_alcc_memory
 
 #endif
