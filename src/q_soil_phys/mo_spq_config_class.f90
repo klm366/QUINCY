@@ -85,6 +85,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     LOGICAL                     :: flag_snow
     INTEGER                     :: nsoil_energy    , &
                                    nsoil_water
@@ -123,6 +124,7 @@ CONTAINS
     NAMELIST /jsb_spq_nml/   &
 #endif
                           active                  , &
+                          lrestart_cont           , &
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
@@ -159,6 +161,7 @@ CONTAINS
 
     ! Set defaults
     active                        = .TRUE.
+    lrestart_cont                 = .FALSE.  ! TRUE: Continue although SPQ variables are missing in restart file
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
@@ -239,6 +242,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename

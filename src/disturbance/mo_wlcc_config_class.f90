@@ -45,13 +45,14 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_wlcc_config), INTENT(inout) :: config !<Configuration type of process (t_wlcc_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                       :: active
+    LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
     ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_wlcc_nml/           &
          active,                      &
+         lrestart_cont,               &
          ic_filename,                 &
          bc_filename,                 &
          separate
@@ -65,6 +66,7 @@ CONTAINS
     ! Set defaults
     separate            = .TRUE.
     active              = .FALSE.
+    lrestart_cont       = .FALSE.       ! TRUE: Continue although WLCC variables are missing in restart file
     bc_filename         = 'bc_land_wlcc.nc'
     ic_filename         = 'ic_land_wlcc.nc'
 
@@ -77,6 +79,7 @@ CONTAINS
 
     config%separate            = separate
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
 

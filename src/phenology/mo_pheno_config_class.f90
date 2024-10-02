@@ -48,12 +48,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     LOGICAL                     :: l_forestRegrowth
     CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
+      & lrestart_cont,        &
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
@@ -65,6 +66,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active              = .TRUE.
+    lrestart_cont       = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
     l_forestRegrowth    = .FALSE.
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
@@ -78,6 +80,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
+    config%lrestart_cont              = lrestart_cont
     config%l_forestRegrowth           = l_forestRegrowth
     config%scheme                     = TRIM(scheme)
     config%ic_filename                = ic_filename
