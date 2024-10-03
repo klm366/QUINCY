@@ -144,6 +144,10 @@ CONTAINS
        IF (model_idx == 1) THEN
          CALL set_bgcm_element_idx(model%config%elements_index_map)
        END IF
+#else
+      IF (model_scheme == MODEL_QUINCY) THEN
+        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
+      END IF
 #endif
 
        !> parameter init
