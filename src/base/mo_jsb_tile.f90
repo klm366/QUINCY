@@ -494,7 +494,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
@@ -506,7 +506,8 @@ CONTAINS
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                      &
+      & lrestart_cont=.TRUE.,                                                                                   &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
