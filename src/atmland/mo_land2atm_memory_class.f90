@@ -208,7 +208,7 @@ CONTAINS
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
+        & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE., lrestart_cont=.TRUE., &
         & initval_r=-999.0_wp )
 
       CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
@@ -216,7 +216,7 @@ CONTAINS
         & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & prefix, suffix,                                                                          &
-        & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
+        & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
         & initval_r=0.0_wp )
 
     END IF

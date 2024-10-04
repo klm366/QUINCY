@@ -65,6 +65,7 @@ MODULE mo_jsb_memory_class
     !
     CHARACTER(LEN=:), ALLOCATABLE  :: varlist_name            !< Name of varlist for the variables in memory instance
     LOGICAL                        :: in_var_groups = .FALSE. !< Whether variables of this memory are in any var group
+    LOGICAL                        :: lrestart_cont = .FALSE. !< TRUE: Continue although variables are missing in restart file
     !
     LOGICAL :: has_bgc_materials = .FALSE.
     CLASS(t_jsb_pool), POINTER :: pools         => NULL()
@@ -147,6 +148,7 @@ CONTAINS
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(1), gdims(1)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -167,6 +169,9 @@ CONTAINS
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
+
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
@@ -222,7 +227,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
       verbose=verbose)
@@ -301,6 +306,7 @@ CONTAINS
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -321,6 +327,9 @@ CONTAINS
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
+
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
@@ -361,7 +370,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
@@ -454,6 +463,7 @@ CONTAINS
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -475,6 +485,9 @@ CONTAINS
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
+
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
@@ -531,7 +544,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)

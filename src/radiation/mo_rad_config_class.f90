@@ -81,7 +81,7 @@ CONTAINS
 
     CLASS(t_rad_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: use_alb_veg_simple
     LOGICAL                     :: use_alb_mineralsoil_const
@@ -93,6 +93,7 @@ CONTAINS
 
     NAMELIST /jsb_rad_nml/            &
          active,                      &
+         lrestart_cont,               &
          ic_filename,                 &
          bc_filename,                 &
          use_alb_veg_simple,          &
@@ -110,6 +111,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
+    lrestart_cont             = .FALSE.  ! TRUE: Continue although RAD variables are missing in restart file
     bc_filename               = 'bc_land_rad.nc'
     ic_filename               = 'ic_land_rad.nc'
     use_alb_veg_simple        = .FALSE.
@@ -130,6 +132,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%use_alb_veg_simple        = use_alb_veg_simple

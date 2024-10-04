@@ -80,7 +80,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: active, lrestart_cont
+    LOGICAL  :: l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
@@ -89,6 +90,7 @@ CONTAINS
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
+      & lrestart_cont,                          &
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
@@ -109,7 +111,8 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 
     ! Set defaults
-    active          = .TRUE.
+    active           = .TRUE.
+    lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
@@ -134,6 +137,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active        = active
+    config%lrestart_cont = lrestart_cont
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
