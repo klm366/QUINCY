@@ -1327,6 +1327,7 @@ CONTAINS
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
         ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
+        forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
       ENDIF
 
       IF (new_year_forcing .OR. lstart .OR. lresume) THEN
@@ -1435,6 +1436,7 @@ CONTAINS
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
+      forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &
