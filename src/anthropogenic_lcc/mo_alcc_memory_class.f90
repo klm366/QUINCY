@@ -41,7 +41,15 @@ MODULE mo_alcc_memory_class
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
   ! thus you do not have to care about the block number (iblk) but only about the cells on this chunk (ic <= nc). 
   ! So You would loop over nc which is already available in the update_all routine (nc  = options%nc).
+  
+  
   ! Mingyue Zhang: define TransMtrx start
+  ! here the transition matrix including three land cover types: crop, nature, pasture
+  ! The matrix is structured as correspondse to the matrix index: 
+  !               crop(1)        pasture(2)        natural(3)
+  ! crop(1)      crop2crop       crop2pasture      crop2natural
+  ! pasture(2)   pasture2crop    pasture2pasture   pasture2natual
+  ! natural(3)   natural2crop    natural2pasture   natural2natural
   TYPE MatrixPtr
     real(dp), pointer :: ptr(:,:)
   end TYPE MatrixPtr
@@ -50,7 +58,7 @@ MODULE mo_alcc_memory_class
   ! Mingyue Zhang: Set the number of matrices dynamically
   INTEGER, PARAMETER :: numMatrices = 9 ! Adjust as needed according to the size of transition matrix
   allocate(TransMtrx(numMatrices))
-  
+
   do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
     allocate(TransMtrx(i)%ptr(3, 3))
   end do
@@ -65,6 +73,10 @@ MODULE mo_alcc_memory_class
   ! Mingyue Zhang: Set the number of matrices dynamically
   INTEGER, PARAMETER :: numMatrices_pfts = npft*npft ! Adjust as needed according to the size of transition matrix
   allocate(TransMtrx_pfts(numMatrices_pfts))
+ 
+  do i = 1, numMatrices_pfts   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
+    allocate(TransMtrx(i)%ptr(npft, npft))
+  end do
   ! Mingyue Zhang: define TransMtrx end 
 
   ! Mingyue Zhang: defeine transition types start  CHARACTER(len=*) :: transitions(9)
@@ -75,6 +87,15 @@ MODULE mo_alcc_memory_class
   ! Output to verify the array
   print *, transitions
   ! Mingyue Zhang: defeine transition types end
+
+  ! Mingyue Zhang:define land_cover mapping start (landcover class to landcover type)
+  
+  !LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                     
+  !Land cover type: see details in lctlib_nlct21.def
+  DATA LC_type2LC_class_mapping / &
+  3, 3, 3, 3, 3, 3, 3, 3, &   ! pft 1-8 (Natural)
+  2, 2, 1 /                  ! pft 9 (pasture) pft11 (Crops)
+  ! Mingyue Zhang:define land_cover mapping start
 
 
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
@@ -160,6 +181,14 @@ CONTAINS
     & output_level=FULL,                                                                          &
     & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
     ! Mingyue Zhang: add variables for transitions type finish
+    ! Mingyue Zhang: add variables for transitions mapping start 
+    CALL mem%Add_var('LC_type2LC_class_mapping', mem%LC_type2LC_class_mapping,                 &
+    & hgrid, pft_vgrid,                                                                            &
+    & prefix, suffix,                                                                              &
+    & output_level=FULL,                                                                          &
+    & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
+    ! Mingyue Zhang: add variables for transitions mapping finish
+    
 
 
   END SUBROUTINE Init_alcc_memory

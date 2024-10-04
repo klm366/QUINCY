@@ -225,7 +225,7 @@ CONTAINS
         !!!!here associate the trasition matrix with the grid: as the process is done on each block with a loop of the index od the cell
         ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
         do i = 1, 3
-          do j = 1, 3  
+          do j = 1, 3
             ! Accessing elements of the matrices 
             ! Use a do loop for the read in LUH2 transition data: 
             ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
@@ -236,9 +236,11 @@ CONTAINS
         
         !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
         do i = 1, npft
-          do j = 1,npft
+          do j = 1,npft 
+
+            transition_prob = TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
             !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
-            TransMtrx_pfts(ic)%ptr(i, j) = cf_current_year(:,i_tile,:)*??? characterize
+            TransMtrx_pfts(ic)%ptr(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
           end do
         end do 
 
@@ -246,7 +248,8 @@ CONTAINS
       ENDDO
 
       ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
-      cf_current_year(:,:,:) = cf_current_year(:,:,:) + cf_current_year(:,:,:) * TransMtrx_pfts(:,:,:)
+      !here should use minus as the matrix indicate loss (pay attention to the dimentions of the matrix)
+      cf_current_year(:,:,:) = cf_current_year(:,:,:) - cf_current_year(:,:,:) * TransMtrx_pfts(:,:,:) +  cf_current_year(:,:,:) *TRANSPOSE(TransMtrx_pfts(:,:,:))
 
       !Mingyue Zhang added for reading in transition data end
     END SELECT
@@ -271,5 +274,3 @@ CONTAINS
 
 #endif
 END MODULE mo_alcc_init
-
-
