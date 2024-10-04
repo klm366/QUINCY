@@ -47,12 +47,13 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_pplcc_config), INTENT(inout) :: config !<Configuration type of process (t_pplcc_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_pplcc_nml/      &
          active,                      &
+         lrestart_cont,               &
          ic_filename,                 &
          bc_filename
 
@@ -64,6 +65,7 @@ CONTAINS
 
     ! Set defaults
     active              = .FALSE.
+    lrestart_cont       = .FALSE.      ! TRUE: Continue although PPLCC variables are missing in restart file
     bc_filename         = 'bc_land_pplcc.nc'
     ic_filename         = 'ic_land_pplcc.nc'
 
@@ -75,6 +77,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
 

@@ -223,6 +223,7 @@ CONTAINS
     ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
+
       ! jsbach carbon
       IF (model%processes(CARBON_)%p%config%active) THEN
         CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
@@ -230,7 +231,7 @@ CONTAINS
           & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
+          & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE., lrestart_cont=.TRUE., &
           & initval_r=-999.0_wp )
 
         CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
@@ -238,11 +239,11 @@ CONTAINS
           & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
           & prefix, suffix,                                                                          &
-          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
+          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
           & initval_r=0.0_wp )
       END IF
 #endif
-  END IF
+    END IF
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
