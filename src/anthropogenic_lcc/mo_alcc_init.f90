@@ -221,6 +221,7 @@ CONTAINS
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
       WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
 
+      ! be careful with the diagonal elements(see discussion with Ann Kristin)
       DO ic = 1,nc
         !!!!here associate the trasition matrix with the grid: as the process is done on each block with a loop of the index od the cell
         ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
@@ -229,11 +230,18 @@ CONTAINS
             ! Accessing elements of the matrices 
             ! Use a do loop for the read in LUH2 transition data: 
             ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-            ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable?
-             TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
+            ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable               
+            IF (i == j) THEN
+               TransMtrx(ic)%ptr(i, j) = 0.0
+            ELSE
+               TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
           end do
         end do
-        
+
+        do i = 1,3
+          TransMtrx(ic)%ptr(i, i) = 1 - SUM(TransMtrx(ic)(i,:))
+        end do
+
         !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
         do i = 1, npft
           do j = 1,npft 
@@ -245,13 +253,26 @@ CONTAINS
         end do 
 
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix
+      
+        !calculate the transition gain of each PFTS
+        cf_transition_gain =  0.0
+        cf_transition_gain =  TRANSPOSE(TransMtrx_pfts(:,:))*cf_current_year(:,:,:)
+      
+        !calculate the transition loss of each PFTS
+        cf_transition_loss = 0.0
+        do i = 1, npft
+          do j = 1, npft
+            cf_transition_loss(i) = cf_transition_loss(i) + TransMtrx_pfts(i, j) * cf_current_year(:,j,:)
+          end do
+        end do
+      
+        ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
+        !here should use minus as the matrix indicate loss (pay attention to the dimentions of the matrix)
+        cf_current_year = cf_current_year(ic) + cf_transition_gain - cf_transition_loss
+      
       ENDDO
-
-      ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
-      !here should use minus as the matrix indicate loss (pay attention to the dimentions of the matrix)
-      cf_current_year(:,:,:) = cf_current_year(:,:,:) - cf_current_year(:,:,:) * TransMtrx_pfts(:,:,:) +  cf_current_year(:,:,:) *TRANSPOSE(TransMtrx_pfts(:,:,:))
-
       !Mingyue Zhang added for reading in transition data end
+      
     END SELECT
 
   
