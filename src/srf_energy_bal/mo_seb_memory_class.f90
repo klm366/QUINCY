@@ -490,9 +490,7 @@ CONTAINS
 
     END IF
 
-#ifdef __ICON__
     ! Diagnostic global carbon sums for experiment monitoring
-    !       (1d stream variables are not supported with echam)
     !
     IF (TRIM(suffix) == 'box') THEN
 
@@ -504,7 +502,6 @@ CONTAINS
         & lrestart=.FALSE., initval_r=280.0_wp )
 
     END IF
-#endif
 
   END SUBROUTINE Init_seb_memory
 

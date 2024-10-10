@@ -34,7 +34,7 @@ MODULE mo_veg_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reset_veg_fluxes, calculate_time_average_vegetation
+  PUBLIC :: reset_veg_fluxes, calculate_time_average_vegetation, test_carbon_conservation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
@@ -201,7 +201,6 @@ CONTAINS
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: press_srf
-    dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: daytime_counter
@@ -210,6 +209,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real2D_onChunk      :: aerodyn_cond
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! VEG_ 2D
@@ -310,6 +310,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
@@ -320,7 +321,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: w_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -357,7 +357,6 @@ CONTAINS
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
@@ -366,6 +365,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation_boc)
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, aerodyn_cond)
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     ! VEG_ 2D
@@ -466,6 +466,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -476,7 +477,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -503,7 +503,7 @@ CONTAINS
         t_air_daytime_dacc(ic)            = t_air_daytime_dacc(ic)            + t_air(ic)
         press_srf_daytime_dacc(ic)        = press_srf_daytime_dacc(ic)        + press_srf(ic)
         co2_mixing_ratio_daytime_dacc(ic) = co2_mixing_ratio_daytime_dacc(ic) + co2_mixing_ratio(ic)
-        ga_daytime_dacc(ic)               = ga_daytime_dacc(ic)               + ga(ic)
+        ga_daytime_dacc(ic)               = ga_daytime_dacc(ic)               + aerodyn_cond(ic)
         beta_sinklim_ps_daytime_dacc(ic)  = beta_sinklim_ps_daytime_dacc(ic)  + beta_sinklim_ps(ic)
         t_jmax_opt_daytime_dacc(ic)       = t_jmax_opt_daytime_dacc(ic)       + t_jmax_opt(ic)
         ! 2D var - add values
@@ -613,7 +613,7 @@ CONTAINS
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
     co2_mixing_ratio_tcnl_mavg(:)    = calc_time_mavg(dtime, co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio(:), &
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
-    ga_tcnl_mavg(:)                  = calc_time_mavg(dtime, ga_tcnl_mavg(:), ga(:), &
+    ga_tcnl_mavg(:)                  = calc_time_mavg(dtime, ga_tcnl_mavg(:), aerodyn_cond(:), &
                                                       mavg_period_tcnl,  do_calc=l_growing_season(:))
     uptake_n_tcnl_mavg               = calc_time_mavg(dtime, uptake_n_tcnl_mavg,                                 &
       &                                  unit_uptake_n_pot(:) * veg_pool_mt(ix_fine_root,ixC,:) + n_fixation(:), &
@@ -794,6 +794,84 @@ CONTAINS
     t_jmax_opt_mavg(:)  = calc_time_mavg(dtime, t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
 
   END SUBROUTINE calculate_time_average_vegetation
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Determine if carbon is conserved
+  !>
+  SUBROUTINE test_carbon_conservation(tile, options)
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: VEG_, SB_, SPQ_, L2A_
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_memory(L2A_)
+    dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),        POINTER :: model                  !< the model
+    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(wp), DIMENSION(options%nc)   :: new_total_c            !< helper variable
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(L2A_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real2D_onChunk :: veg_pool_total_c
+    dsl4jsb_Real2D_onChunk :: veg_products_total_c
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk :: q_c_conservation_test
+    dsl4jsb_Real2D_onChunk :: q_total_c
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_c
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(L2A_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_config(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+    dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
+    dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)
+    ! ----------------------------------------------------------------------------------------------------- !
+    new_total_c(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+    IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
+      new_total_c(:) = new_total_c(:) + veg_products_total_c(:)
+    END IF
+
+    q_c_conservation_test(:) = new_total_c - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
+    q_total_c(:) = new_total_c(:)
+
+  END SUBROUTINE test_carbon_conservation
 
 #endif
 END MODULE mo_veg_util

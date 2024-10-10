@@ -315,7 +315,6 @@ CONTAINS
     clumpinessFactor_param   = dsl4jsb_Lctlib_param(clumpinessFactor)
     specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
     MaxLAI_param             = dsl4jsb_Lctlib_param(MaxLAI)
-    specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
@@ -843,21 +842,13 @@ CONTAINS
     !
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
-      IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          fract_fpc(ic) = get_foliage_projected_cover(fract_fpc_max(ic), lai(ic), 1._wp)
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
-        CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
+      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
@@ -993,14 +984,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_phenology_diagnostics(tile)
 
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
-
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
@@ -1072,7 +1055,6 @@ CONTAINS
 
     DEALLOCATE (scaling, in_domain)
 
-#endif
   END SUBROUTINE global_phenology_diagnostics
 
 #endif
