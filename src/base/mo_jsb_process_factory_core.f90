@@ -33,6 +33,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
+  use mo_hlcc_memory_class,    ONLY: t_hlcc_memory ! MR-TODO : remove if after adding the reading of input, memory module is no longer needed
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -81,6 +82,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
+  USE mo_hlcc_interface,        ONLY: Register_hlcc_tasks
+  USE mo_hlcc_config_class,     ONLY: t_hlcc_config
 #ifndef __NO_QUINCY__
   USE mo_q_rad_interface,       ONLY: Register_q_rad_tasks
   USE mo_q_rad_config_class,    ONLY: t_q_rad_config
@@ -98,7 +101,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, HLCC_, VEG_, SB_, SPQ_, &
     & Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   IMPLICIT NONE
@@ -107,7 +110,7 @@ MODULE mo_jsb_process_factory_core
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 43
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'
 
@@ -192,6 +195,11 @@ CONTAINS
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_nlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_nlcc_config::return_ptr%config)
+    CASE (HLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      !return_ptr%has_memory = .FALSE. !-------------MR-TODO : uncomment if memory module deleted
+      CALL Register_hlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_hlcc_config::return_ptr%config)
 #ifndef __NO_QUINCY__
     CASE (Q_RAD_)
       CALL Register_q_rad_tasks(return_ptr, model_id)
@@ -236,12 +244,14 @@ CONTAINS
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
-    USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
+    USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars  
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
     USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
     USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
+    USE mo_hlcc_memory_class,    ONLY: max_no_of_hlcc_vars => max_no_of_vars ! MR-TODO : remove if memory module deleted(or don't?)
+
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -310,6 +320,9 @@ CONTAINS
     CASE (NLCC_)
       ALLOCATE(t_nlcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_nlcc_vars
+    CASE (HLCC_)                                        ! MR-TODO
+      ALLOCATE(t_hlcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_hlcc_vars
 #ifndef __NO_QUINCY__
     CASE (Q_ASSIMI_)
       ALLOCATE(t_q_assimi_memory::return_ptr)

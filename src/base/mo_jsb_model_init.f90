@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
+    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, HLCC_, A2L_, VEG_, SB_, SPQ_,  &
     &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
 
   dsl4jsb_Use_config(PHENO_)
@@ -208,6 +208,7 @@ CONTAINS
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
     USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
+    USE mo_hlcc_init_lcc,       ONLY: hlcc_init_lcc
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -302,6 +303,10 @@ CONTAINS
           CALL model%Queue_task(NLCC_, "nlcc")
         END IF
 
+        IF (model%processes(HLCC_)%p%config%active) THEN
+          CALL model%Queue_task(HLCC_, "hlcc")
+        END IF
+
         IF (model%processes(ALCC_)%p%config%active) THEN
           CALL model%Queue_task(ALCC_, "alcc")
         END IF
@@ -313,6 +318,12 @@ CONTAINS
       ! FLCC (which runs on the veg tile) changes the co2flux_fire_all_2_atm_ta variable on the leaves
       ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
       IF (model%processes(FLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
+        CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
+      END IF
+
+      ! MR-TODO: FOR NOW (until further developed) HLCC also changes the co2flux_fire_all_2_atm_ta variable on the leaves
+      ! ... because currently HLCC just imitates FLCC and still burns everything like flcc 
+      IF (model%processes(HLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
         CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
       END IF
 
@@ -822,6 +833,11 @@ CONTAINS
         IF (tile%Is_process_active(WLCC_)) THEN
           CALL wlcc_init_lcc(tile)
         END IF
+
+        IF (tile%Is_process_active(HLCC_)) THEN
+          CALL hlcc_init_lcc(tile)
+        END IF
+
       END SELECT
 
       CALL model%Goto_next_tile(tile)

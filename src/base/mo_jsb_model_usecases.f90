@@ -25,7 +25,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
+    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, HLCC_, PPLCC_, VEG_, SB_, SPQ_, &
     &                               Q_PHENO_, Q_ASSIMI_, Q_RAD_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -536,6 +536,9 @@ CONTAINS
               IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
 
                 CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
+
+                CALL pft_tile%Set_process_action(HLCC_, ON_TILE_, AGGREGATE_)
+
 
                 DO j=1,nacs
                   WRITE(age_class_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
