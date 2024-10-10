@@ -1730,7 +1730,7 @@ CONTAINS
           END WHERE
         END WHERE
       END WHERE
-      snow_melt_to_soil(:) = SUM(snow_melt_snl(ichunk,:) * 1000.0_wp / dtime)
+      snow_melt_to_soil(ichunk) = SUM(snow_melt_snl(ichunk,:) * 1000.0_wp / dtime)
     END DO
 
     ! 5.0 Redistribute snow in the case lower layers have melted
