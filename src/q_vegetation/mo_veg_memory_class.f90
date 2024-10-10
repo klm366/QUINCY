@@ -199,7 +199,7 @@ MODULE mo_veg_memory_class
                                     unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [micro-mol P m-2 s-1]
                                     delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
-                                    mortality_rate            , & !< background_mort_rate_tree / grass [timestep-1]
+                                    mortality_rate            , & !< mortality rate of tree/grass [fraction of population timestep-1]
                                     k1_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
                                     k2_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio [unitless]
@@ -1893,7 +1893,7 @@ CONTAINS
 
       CALL mem%Add_var('mortality_rate', mem%mortality_rate, &
         & hgrid, surface, &
-        & t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
+        & t_cf('mortality_rate', 'mortality rate of trees / grass per timestep-1', 'mortality rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
