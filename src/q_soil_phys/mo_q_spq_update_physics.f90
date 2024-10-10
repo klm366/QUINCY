@@ -1054,40 +1054,39 @@ CONTAINS
     !! a fraction of infiltration is leaked below the first layer (preferential flow)
     ! first guess
 
-    infiltration(:) = MAX( MIN((w_soil_fc_sl(:,1) - (w_soil_sl(:,1) + w_ice_sl(:,1) * water2ice_density_ratio)) &
-                      * 1000._wp / dtime, water_to_soil(:)), 0.0_wp)
+    infiltration(:) = MAX(MIN((w_soil_fc_sl(:,1) - (w_soil_sl(:,1) + w_ice_sl(:,1) * water2ice_density_ratio)) &
+      &               * 1000._wp / dtime                                                                       &
+      &               + (evaporation(:) * fevaporation(:,1) + transpiration(:) * ftranspiration_sl(:,1)),      &
+      &                water_to_soil(:)), 0.0_wp)
     srf_runoff(:)   = MAX(water_to_soil(:) - infiltration(:), 0.0_wp)
-    ! total water content (including ice volume) from the 2nd soil layer to the bottom layer
-    hlp1(:) = SUM(w_soil_sl(:,2:nsoil_sb), DIM=2) + SUM(w_ice_sl(:,2:nsoil_sb), DIM=2) * water2ice_density_ratio
-    ! total field capacity from the 2nd soil layer to the bottom layer
-    hlp2(:) = SUM(w_soil_fc_sl(:,2:nsoil_sb), DIM=2)
+
     DO ichunk = 1,nc
-      ! Check if water content (including ice volume) is above field capacity
-      IF (hlp2(ichunk) - hlp1(ichunk) <= 0.0_wp) THEN
-        fdrain_srf_runoff_mod(ichunk) = 0.0_wp
-      ELSE IF (fdrain_srf_runoff * srf_runoff(ichunk) >= hlp2(ichunk) - hlp1(ichunk)) THEN
-        fdrain_srf_runoff_mod(ichunk) = MAX(0.0_wp, (hlp2(ichunk) - hlp1(ichunk)) / srf_runoff(ichunk))
-      ELSE
-        fdrain_srf_runoff_mod(ichunk) = fdrain_srf_runoff
-      END IF
+       ! If soil is frozen, then stop draingage to deeper layers
+       IF (t_soil_sl(ichunk,1) <= Tzero) THEN
+         hlp1(ichunk) = 0.0_wp ! fraction of infiltration that is draining
+         fdrain_srf_runoff_mod(ichunk) = 0.0_wp ! fraction of surface runoff that is draining
+         drainage_sl(ichunk,1) = 0.0_wp ! drainage
+       ELSE
+         hlp1(ichunk) = drain_frac ** soil_depth_sl(ichunk,1) ! fraction of infiltration that is draining
+         fdrain_srf_runoff_mod(ichunk) = fdrain_srf_runoff    ! fraction of surface runoff that is draining
+         drainage_sl(ichunk,1) = hlp1(ichunk) * infiltration(ichunk) + fdrain_srf_runoff_mod(ichunk) * srf_runoff(ichunk)
+       END IF
+       ! update the first soil layer water content and surface runoff
+       w_soil_sl(ichunk,1) = w_soil_sl(ichunk,1)                                    &
+         &                   + ((1._wp - hlp1(ichunk)) * infiltration(ichunk)       &
+         &                   - evaporation(ichunk) * fevaporation(ichunk,1)         &
+         &                   - transpiration(ichunk) * ftranspiration_sl(ichunk,1)) &
+         &                   / 1000._wp * dtime
+       srf_runoff(ichunk)  = (1.0_wp - fdrain_srf_runoff_mod(ichunk)) * srf_runoff(ichunk)
     END DO
-    ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
-    drainage_sl(:,1) = drain_frac ** soil_depth_sl(:,1) * infiltration(:) + fdrain_srf_runoff_mod(:) * srf_runoff(:)
-    srf_runoff(:)    = (1.0_wp - fdrain_srf_runoff_mod(:)) * srf_runoff(:)
 
-    w_soil_sl(:,1)   = w_soil_sl(:,1) + &
-                       (( 1.0_wp - drain_frac ** soil_depth_sl(:,1) ) * infiltration(:) - &
-                       evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration_sl(:,1)) / &
-                       1000._wp * dtime
-
-
-    WHERE(w_soil_sl(:,1)+ w_ice_sl(:,1) * water2ice_density_ratio > w_soil_fc_sl(:,1))
-      srf_runoff(:)  = srf_runoff(:) + (w_soil_sl(:,1) + w_ice_sl(:,1) &
-        &              * water2ice_density_ratio - w_soil_fc_sl(:,1)) * 1000._wp / dtime
+    gw_runoff_sl(:,1) = 0.0_wp
+    ! Check if water content (including ice volume) is above field capacity
+    WHERE(w_soil_sl(:,1) + w_ice_sl(:,1) * water2ice_density_ratio > w_soil_fc_sl(:,1))
+      gw_runoff_sl(:,1) = (w_soil_sl(:,1) + w_ice_sl(:,1) &
+        &                  * water2ice_density_ratio - w_soil_fc_sl(:,1)) * 1000._wp / dtime
       w_soil_sl(:,1) = w_soil_fc_sl(:,1) - w_ice_sl(:,1) * water2ice_density_ratio
     END WHERE
-
-
 
     !> 2.3 update deeper soil layers given infiltration, transpiration and evaporation
     !> 2.3.1 Compute infiltration, transpiration, evaporation and drainage
@@ -1264,17 +1263,12 @@ CONTAINS
     ELSEWHERE
       percolation_sl(:,1) = 0.0_wp
     ENDWHERE
-    ! assuming no lateral loss of material (elements / nutrients) in the 1st soil layer
-    ! because: gw_runoff_sl is assumed only for 2nd layer and below, and
-    !          if 1st soil layer is saturated with water, water runoff lateral at the surface
-    !          atm there is no lateral surface runoff for nutrients
-    frac_w_lat_loss_sl(:,1) = 0.0_wp
 
-    ! layer 2 to nsoil_sb
+    ! layer 1 to nsoil_sb
     !   using the soil water content of the previous timestep here (w_soil_sl_old) because
     !   the frac_w_lat_loss_sl is applied to the material (elements / nutrients) concentration
-    !     of the previous timestep
-    DO isoil = 2,nsoil_sb
+    !   of the previous timestep
+    DO isoil = 1,nsoil_sb
       WHERE(w_soil_sl(:,isoil) > eps8)
         percolation_sl(:,isoil)     = MIN( MAX((drainage_sl(:,isoil) / 1000_wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), percolation_up_max), percolation_down_max) * 1000._wp / dtime
