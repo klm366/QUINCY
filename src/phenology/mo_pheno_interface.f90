@@ -217,7 +217,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
+    dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forest_regrowth = true
 
     ! Declare pointers for variables in memory
     !INTEGER                :: ncanopy     ! number of canopy layers
@@ -252,7 +252,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
 
-    ! JN 10.01.18 only required with l_forestRegrowth = true
+    ! JN 10.01.18 only required with l_forest_regrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
     dsl4jsb_Real2D_onChunk :: c_reserve
     dsl4jsb_Real2D_onChunk :: c_woods
@@ -330,9 +330,9 @@ CONTAINS
     lat     => grid%lat(ics:ice, iblk)
 
     !first_call_phenology_this_day  => model%processes(PHENO_)%config%first_call_phenology_this_day(ics:ice,iblk)
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
 
-      !ASSERTION: l_forestRegrowth only possible when the CARBON process is active
+      !ASSERTION: l_forest_regrowth only possible when the CARBON process is active
       IF (.NOT. tile%Has_process_memory(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
       ENDIF
@@ -424,7 +424,7 @@ CONTAINS
     END IF
 
     ! JN 10.01.18
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth .AND. ForestFlag_param) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth .AND. ForestFlag_param) THEN
       ! to represent forest regrowth LAI needs to be dependant on the available leaf carbon
       ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI
       ! from the available biomass via allometric relationships
@@ -489,7 +489,7 @@ CONTAINS
     ENDIF
 
 
-    ! JN 10.01.18: if l_forestRegrowth = true, the maxLai of forest pfts can be variable over time and space, therefore
+    ! JN 10.01.18: if l_forest_regrowth = true, the maxLai of forest pfts can be variable over time and space, therefore
     !              LaiMax_corrected is now a vector!
     ! R: laiMax_dyn was included to avoid longterm negative NPP. It is reduced if NPP is negative over a year and increased
     !    if NPP is positive (subroutine update_maximum_lai). So if NPP is negative the lai gets very small.
@@ -522,7 +522,7 @@ CONTAINS
     !        CALL finish("update_phenology","ERROR: LAI larger than maximum LAI on input")
     ! END IF
 
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
        LaiMax_corrected(ic) = maxLAI_allom(ic)
@@ -770,13 +770,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
 
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
       IF (is_newyear(options%current_datetime, options%dtime)) THEN
         dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
 
         !NOTE: despite changes, no aggregation of cpools necessary:
-        ! with l_forestRegrowth PHENO changes Cpools only once a year at the beginning of a timestep,
+        ! with l_forest_regrowth PHENO changes Cpools only once a year at the beginning of a timestep,
         ! and other processes (NPP alloc of carbon) aggregate them
       ENDIF
     ENDIF

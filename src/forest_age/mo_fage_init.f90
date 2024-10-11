@@ -97,9 +97,9 @@ CONTAINS
       CALL finish(TRIM(routine), "Currently forest age class implementation does not run with openmp!")
     END IF
 
-    ! Assert: l_forestRegrowth
-    IF (.NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      CALL finish(TRIM(routine), "Current forest age class implementation requires l_forestRegrowth to be true!")
+    ! Assert: l_forest_regrowth
+    IF (.NOT. dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
+      CALL finish(TRIM(routine), "Current forest age class implementation requires l_forest_regrowth to be true!")
     END IF
 
     ! Distribution of age fractions - needs to comply with the fractions in the age classes (mo_jsb_tile - Init_tile)

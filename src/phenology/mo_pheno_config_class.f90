@@ -28,7 +28,7 @@ MODULE mo_pheno_config_class
   !> PHENO_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
-    LOGICAL             :: l_forestRegrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
+    LOGICAL             :: l_forest_regrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
     CHARACTER(len=15)   :: scheme                     !< Phenology scheme to use ('logrop', 'climatology')
     !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and
     !                                                 !< update_phenology is called for the top tile
@@ -49,13 +49,13 @@ CONTAINS
     CLASS(t_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active, lrestart_cont
-    LOGICAL                     :: l_forestRegrowth
+    LOGICAL                     :: l_forest_regrowth
     CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
       & lrestart_cont,        &
-      & l_forestRegrowth,     &
+      & l_forest_regrowth,     &
       & scheme,               &
       & ic_filename,          &
       & bc_filename
@@ -67,7 +67,7 @@ CONTAINS
     ! Set defaults
     active              = .TRUE.
     lrestart_cont       = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
-    l_forestRegrowth    = .FALSE.
+    l_forest_regrowth    = .FALSE.
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
@@ -81,7 +81,7 @@ CONTAINS
     ! Write namelist values into config
     config%active                     = active
     config%lrestart_cont              = lrestart_cont
-    config%l_forestRegrowth           = l_forestRegrowth
+    config%l_forest_regrowth           = l_forest_regrowth
     config%scheme                     = TRIM(scheme)
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename

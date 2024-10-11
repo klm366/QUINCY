@@ -29,8 +29,8 @@ MODULE mo_carbon_memory_class
   dsl4jsb_Use_processes PHENO_, CARBON_
 
   ! Use process configurations
-  dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth
-  dsl4jsb_Use_config(CARBON_)    ! needed for l_forestRegrowth
+  dsl4jsb_Use_config(PHENO_)    ! needed for l_forest_regrowth
+  dsl4jsb_Use_config(CARBON_)    ! needed for l_forest_regrowth
 
   IMPLICIT NONE
   PRIVATE
@@ -127,7 +127,7 @@ MODULE mo_carbon_memory_class
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
 
-  !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
+  !JN: variables required when l_forest_regrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
       current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
                                     ! since last maxLAI calculation
       veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)]
@@ -252,7 +252,7 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
-    dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
+    dsl4jsb_Def_config(PHENO_)    ! needed for l_forest_regrowth
     dsl4jsb_Def_config(CARBON_)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1070,7 +1070,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix, loutput=.FALSE., lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
 
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
       CALL mem%Add_var('max_green', mem%current_max_green,                   &
         & hgrid, surface,                                                    &
         & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &

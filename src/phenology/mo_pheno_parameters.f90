@@ -164,7 +164,7 @@ MODULE mo_pheno_parameters
       & leafAlloc_fract = def_parameters      ! [-] Fraction of NPP maximally allocated to leaves during growth
   END TYPE t_crop_param
 
-  !> Parameters only required in case of l_forestRegrowth = true
+  !> Parameters only required in case of l_forest_regrowth = true
   !>
   TYPE t_forestRegrowth_param
     REAL(wp) :: &
@@ -187,7 +187,7 @@ MODULE mo_pheno_parameters
     TYPE(t_raingreen_param)      :: RG          ! Parameters applying to the raingreen (RG) phenology type only
     TYPE(t_grass_param)          :: GRS         ! Parameters applying to the grass (GRS) phenology type only
     TYPE(t_crop_param)           :: CRP         ! Parameters applying to the crop (CRP) phenology type only
-    TYPE(t_forestRegrowth_param) :: FR          ! Parameters only required in case of l_forestRegrowth = true
+    TYPE(t_forestRegrowth_param) :: FR          ! Parameters only required in case of l_forest_regrowth = true
     ! TYPE(rdata_type), POINTER     :: memory(:)  => NULL() ! pointer to serial array containing the parameter values physically
     ! logical                       :: initialized =.FALSE. ! .true. indicates that phenology parameters have been initialized.
   END TYPE t_PhenologyParameters

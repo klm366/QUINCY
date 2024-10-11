@@ -567,7 +567,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! With forest regrowth the maximum LAI depends on location and can change over time.
-      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
         dsl4jsb_Get_var2D_onChunk(PHENO_, maxLAI_allom)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc

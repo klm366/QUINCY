@@ -83,7 +83,7 @@ MODULE mo_pheno_memory_class
                                           !< at previous day, because not known for current day; updated at ..
                                           !< the beginning of each new day (stream)
 
-                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the
+                                          !! JN: variables required when l_forest_regrowth = true, i.e. when the
                                           !      maxLAI is derived from biomass via allometric relationships
       & number_of_individuals,          & !< Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,         & !< Biomass per individual according to allometric relationships [kg/tree]
@@ -109,9 +109,9 @@ MODULE mo_pheno_memory_class
       & veg_fract_correction              !< Factor representing clumpyness of vegetation (for each tile type).
                                           !< To write it in the output file we define it as 2d even when there is no change
                                           !< between gridcells as it is in fact a 1d constant for each tile.
-                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
+                                          !   JN: with l_forest_regrowth = true veg_fract_correction can change over time
                                           !       and is spatially variable
-                                          !       if l_forestRegrowth = false there is still no change between gridcells
+                                          !       if l_forest_regrowth = false there is still no change between gridcells
                                           !       and it is a 1d constant for each tile in this case.
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
@@ -336,7 +336,7 @@ CONTAINS
           & prefix, suffix,                                                    &
           & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
-        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+        IF (dsl4jsb_Config(PHENO_)%l_forest_regrowth) THEN
 
           CALL mem%Add_var('maxLAI_allom', mem%maxLAI_allom,                     &
             & hgrid, surface,                                                    &
@@ -368,7 +368,7 @@ CONTAINS
             & prefix, suffix,                                                           &
             & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-        END IF ! l_forestRegrowth
+        END IF ! l_forest_regrowth
       END IF ! logrop
 
       ! Diagnostic global carbon sums for experiment monitoring

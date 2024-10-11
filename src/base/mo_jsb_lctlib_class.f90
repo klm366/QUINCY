@@ -75,7 +75,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
     REAL(wp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
 
-    ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
+    ! ++ additional parameters required when l_forest_regrowth = true  --------------------------------------------------------
     REAL(wp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
     REAL(wp) :: beta_nr_ind           !< Parameter of self-thinning relationship
     REAL(wp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass

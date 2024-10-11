@@ -211,13 +211,13 @@ CONTAINS
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
       !             later one might think about allometric relation ships in other multi annual plants, too?
-      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+      IF ( (dsl4jsb_Config(PHENO_)%l_forest_regrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
         !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom)) ASYNC(1)
       END IF
 
-      !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
-      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+      !JN 10.01.18: with l_forest_regrowth the maxLAI can change over time for forest pfts
+      IF ( (dsl4jsb_Config(PHENO_)%l_forest_regrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
           & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
       !@todo: do not rely on the lib_id but use a flag instead?
@@ -301,7 +301,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
+      IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forest_regrowth )  THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
         DO ib=1,nblks
           DO ic=1,nc
