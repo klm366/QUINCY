@@ -16,7 +16,8 @@
 MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kinds,             ONLY: wp
+  USE mo_kinds,             ONLY: dp  
   USE mo_exception,         ONLY: message, finish
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -69,7 +70,8 @@ CONTAINS
   !> Reading of land use data
   !
   SUBROUTINE read_land_use_data(model_id, current_datetime)
-
+  
+    USE mo_kinds,               ONLY: wp
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_time_iface,      ONLY: t_datetime
@@ -89,7 +91,7 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_current_year
-    REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
 
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
@@ -211,9 +213,6 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       ENDDO
         
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
-          
     CASE ('transitions')
         !Mingyue Zhang added for reading in transition data start 
         !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
@@ -222,11 +221,11 @@ CONTAINS
       WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
 
       ! be careful with the diagonal elements(see discussion with Ann Kristin)
-      DO ic = 1,nc
+      DO WHILE ic = 1,nc
         !!!!here associate the trasition matrix with the grid: as the process is done on each block with a loop of the index od the cell
         ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-        do i = 1, 3
-          do j = 1, 3
+        DO WHILE i = 1, 3
+          DO WHILE j = 1, 3
             ! Accessing elements of the matrices 
             ! Use a do loop for the read in LUH2 transition data: 
             ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
@@ -234,49 +233,52 @@ CONTAINS
             IF (i == j) THEN
                TransMtrx(ic)%ptr(i, j) = 0.0
             ELSE
-               TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j))  
-          end do
-        end do
+               TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j)) 
+            ENDIF   
+          END DO
+        END DO
 
-        do i = 1,3
+        DO WHILE  i = 1,3
           TransMtrx(ic)%ptr(i, i) = 1 - SUM(TransMtrx(ic)(i,:))
-        end do
+        END DO
 
         !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
-        do i = 1, npft
-          do j = 1,npft 
+        DO WHILE i = 1, npft
+          DO WHILE j = 1,npft 
 
             transition_prob = TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
             !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
             TransMtrx_pfts(ic)%ptr(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
-          end do
-        end do 
-
+          END DO
+        END DO 
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix
       
         !calculate the transition gain of each PFTS
+        !if the the diagonal elements is set to 0, the the following steps should be taken to get the updated cf_current_year
         cf_transition_gain =  0.0
         cf_transition_gain =  TRANSPOSE(TransMtrx_pfts(:,:))*cf_current_year(:,:,:)
       
         !calculate the transition loss of each PFTS
         cf_transition_loss = 0.0
-        do i = 1, npft
-          do j = 1, npft
+        DO WHILE i = 1, npft
+          DO WHILE j = 1, npft
             cf_transition_loss(i) = cf_transition_loss(i) + TransMtrx_pfts(i, j) * cf_current_year(:,j,:)
-          end do
-        end do
+          END DO
+        END DO
       
-        ! use the cf_current_year from maps and multiply with the matrix to update the cf_current
+        !use the cf_current_year from maps and multiply with the matrix to update the cf_current
         !here should use minus as the matrix indicate loss (pay attention to the dimentions of the matrix)
         cf_current_year = cf_current_year(ic) + cf_transition_gain - cf_transition_loss
+        !if the the diagonal elements is set to the fraction remain unchanged, then the following steps should be taken to get the updated cf_current_year
+        cf_current_year = cf_current_year(ic)*TransMtrx_pfts(ic)
       
       ENDDO
       !Mingyue Zhang added for reading in transition data end
+    CASE DEFAULT 
+      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
       
+    
     END SELECT
-
-  
-
 
     CALL input_file%Close()
 
@@ -291,7 +293,7 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
+  
   END SUBROUTINE read_land_use_data
-
 #endif
 END MODULE mo_alcc_init
