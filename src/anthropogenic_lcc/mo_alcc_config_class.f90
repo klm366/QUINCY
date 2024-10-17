@@ -56,7 +56,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_alcc_config), INTENT(inout) :: config !<Configuration type of process (t_alcc_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                       :: active
+    LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
@@ -66,6 +66,7 @@ CONTAINS
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
+         lrestart_cont,          &
          ic_filename,            &
          bc_filename,            &
          alcc_filename_prefix,   &
@@ -82,6 +83,7 @@ CONTAINS
 
     ! Set defaults
     active               = .FALSE.
+    lrestart_cont        = .FALSE.       ! TRUE: Continue although ALCC variables are missing in restart file
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
@@ -104,6 +106,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active               = active
+    config%lrestart_cont        = lrestart_cont
     config%ic_filename          = ic_filename
     config%bc_filename          = bc_filename
     config%alcc_filename_prefix = alcc_filename_prefix

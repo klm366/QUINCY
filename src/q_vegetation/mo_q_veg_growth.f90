@@ -21,11 +21,12 @@ MODULE mo_q_veg_growth
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
+  USE mo_jsb_math_constants,      ONLY: eps8
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_FRAC_ALLOC_ID, &
-    &                                   VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
+    &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_MYCO_EXPORT_ID
 
   IMPLICIT NONE
@@ -46,6 +47,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -79,13 +81,15 @@ CONTAINS
                                          target_labile_pool_phosphorus, target_reserve_pool_carbon, &
                                          target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     REAL(wp), DIMENSION(options%nc)   :: hlp1
-    REAL(wp)                          :: lctlib_g1                 !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp)                          :: dtime                     !< timestep length
-    INTEGER                           :: isoil, iblk, ics, ice, nc !< grid dimensions / loop counter
+    REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(wp)                          :: dtime                  !< timestep length
+    INTEGER                           :: ics, ice, nc           !< grid dimensions
+    INTEGER                           :: ic, isoil, iblk        !< loop counter
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_frac_alloc_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
@@ -165,6 +169,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: unit_npp
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
     dsl4jsb_Real2D_onChunk      :: kstar_labile
+    dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: fmaint_rate_root
     dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
@@ -290,6 +295,7 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_FRAC_ALLOC_ID, veg_frac_alloc_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -358,6 +364,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)                           !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)                 !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, kstar_labile)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_root)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)                ! in
@@ -486,7 +493,7 @@ CONTAINS
 
     fmaint_rate_root(:) = fmaint_rate_base * temperature_response_respiration(t_soil_root(:), t_soil_root_tacclim_mavg(:))
 
-    !>  1.2 calculate utrient demand scalars
+    !>  1.2 calculate nutrient demand scalars
     !>
     CALL calc_nutrient_demand_scalar( &
       & lctlib%cn_leaf, &                   ! in
@@ -497,6 +504,20 @@ CONTAINS
       & veg_pool_mt(ix_labile, ixP, :), &   ! in
       & f_n_demand(:), &                    ! out
       & f_p_demand(:))                      ! out
+
+    !> 1.3 Adjust fluxes in case a stand replacing mortality event occurs
+    !>     prevent further growth, and maintenance/resource use respiration, nutrient uptake
+    !>     average individual will die at the end of this timestep
+    DO ic = 1,nc
+      IF (mortality_rate(ic) > (1.0_wp - eps8)) THEN
+        kstar_labile(ic)                 = 0.0_wp
+        maint_respiration_pot(ic)        = 0.0_wp
+        maint_respiration_leaf(ic)       = 0.0_wp
+        fmaint_rate_root(ic)             = 0.0_wp
+        demand_uptake_n_tuptake_mavg(ic) = 0.0_wp
+        demand_uptake_p_tuptake_mavg(ic) = 0.0_wp
+      END IF
+    END DO
 
     !>  1.3 calculate actual nutrient uptake and N fixation, as well as associated respiration
     !>
@@ -812,6 +833,7 @@ CONTAINS
       & target_reserve_pool_phosphorus(:), &
       & target_lai(:)                    , &
       & lai(:)                           , &
+      & veg_litterfall_mt(:,:,:)         , & ! in
       & veg_pool_mt(:,:,:)               , & ! in
       & veg_reserve_use_mt(:,:)            ) ! inout
 
@@ -2178,6 +2200,7 @@ CONTAINS
     & target_reserve_pool_phosphorus, &
     & target_lai                    , &
     & lai                           , &
+    & veg_litterfall_mt             , &
     & veg_pool_mt                   , &
     & veg_reserve_use_mt               )
     !------------------------------------------------------------------------------------------------------ !
@@ -2205,6 +2228,7 @@ CONTAINS
     REAL(wp),     INTENT(in)    :: target_reserve_pool_phosphorus(:) !< desirable size (mol P/m2) of the reserve pool
     REAL(wp),     INTENT(in)    :: target_lai(:)                     !< target LAI
     REAL(wp),     INTENT(in)    :: lai(:)                            !< current LAI
+    REAL(wp),     INTENT(in)    :: veg_litterfall_mt(:,:,:)          !< the plant's current litter fall rate (mol/time step)
     REAL(wp),     INTENT(in)    :: veg_pool_mt(:,:,:)                !< the plant's pool
     REAL(wp),     INTENT(inout) :: veg_reserve_use_mt(:,:)           !< current resource use rate (mol/time step)
     !------------------------------------------------------------------------------------------------------ !
@@ -2279,12 +2303,18 @@ CONTAINS
       phi_maintenance(ic) = phi_maintenance(ic) / tau_labile / one_day * dtime
       phi_storage(ic)     = k_labphen * phi_storage(ic) / tau_labile / one_day * dtime
       ! ..
-      veg_reserve_use_mt(ixC, ic)   = ((phi_phenology(ic) + phi_maintenance(ic)) * veg_pool_mt(ix_reserve, ixC, ic)   &
-        &                            - phi_storage(ic)   * veg_pool_mt(ix_labile, ixC, ic))
-      veg_reserve_use_mt(ixC13, ic) = ((phi_phenology(ic) + phi_maintenance(ic)) * veg_pool_mt(ix_reserve, ixC13, ic) &
-        &                            - phi_storage(ic)   * veg_pool_mt(ix_labile, ixC13, ic))
-      veg_reserve_use_mt(ixC14, ic) = ((phi_phenology(ic) + phi_maintenance(ic)) * veg_pool_mt(ix_reserve, ixC14, ic) &
-        &                            - phi_storage(ic)   * veg_pool_mt(ix_labile, ixC14, ic))
+      veg_reserve_use_mt(ixC, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
+        &                             * (veg_pool_mt(ix_reserve, ixC,ic) - veg_litterfall_mt(ix_reserve, ixC, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * (veg_pool_mt(ix_labile, ixC, ic) - veg_litterfall_mt(ix_labile, ixC, ic)))
+      veg_reserve_use_mt(ixC13, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
+        &                             * (veg_pool_mt(ix_reserve, ixC13,ic) - veg_litterfall_mt(ix_reserve, ixC13, ic)) &
+        &                             - phi_storage(ic)                                                                &
+        &                             * (veg_pool_mt(ix_labile, ixC13, ic) - veg_litterfall_mt(ix_labile, ixC13, ic)))
+      veg_reserve_use_mt(ixC14, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
+        &                             * (veg_pool_mt(ix_reserve, ixC14,ic) - veg_litterfall_mt(ix_reserve, ixC14, ic)) &
+        &                             - phi_storage(ic)                                                                &
+        &                             * (veg_pool_mt(ix_labile, ixC14, ic) - veg_litterfall_mt(ix_labile, ixC14, ic)))
 
       !> 2.0 net transfer of N from labile to reserve
       !>
@@ -2337,10 +2367,16 @@ CONTAINS
       IF (phi_storage(ic) > k_phi_interact) THEN
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
-      veg_reserve_use_mt(ixN, ic)   = ((phi_maintenance(ic) + phi_phenology(ic)) * veg_pool_mt(ix_reserve, ixN, ic) &
-        &                            - phi_storage(ic) * veg_pool_mt(ix_labile, ixN, ic)) / tau_labile / one_day * dtime
-      veg_reserve_use_mt(ixN15, ic) = ((phi_maintenance(ic) + phi_phenology(ic)) * veg_pool_mt(ix_reserve, ixN15, ic) &
-        &                            - phi_storage(ic) * veg_pool_mt(ix_labile, ixN15, ic)) / tau_labile / one_day * dtime
+      veg_reserve_use_mt(ixN, ic)   = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
+        &                             * (veg_pool_mt(ix_reserve, ixN,ic) - veg_litterfall_mt(ix_reserve, ixN, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * (veg_pool_mt(ix_labile, ixN, ic) - veg_litterfall_mt(ix_labile, ixN, ic))) &
+        &                             / tau_labile / one_day * dtime
+      veg_reserve_use_mt(ixN15, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                       &
+        &                             * (veg_pool_mt(ix_reserve, ixN15,ic) - veg_litterfall_mt(ix_reserve, ixN15, ic)) &
+        &                             - phi_storage(ic)                                                                &
+        &                             * (veg_pool_mt(ix_labile, ixN15, ic) - veg_litterfall_mt(ix_labile, ixN15, ic))) &
+        &                             / tau_labile / one_day * dtime
 
       !> 3.0 net transfer of P from labile to reserve
       !>
@@ -2391,8 +2427,11 @@ CONTAINS
       IF (phi_storage(ic) > k_phi_interact) THEN
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
-      veg_reserve_use_mt(ixP, ic) = ((phi_maintenance(ic) + phi_phenology(ic)) * veg_pool_mt(ix_reserve, ixP, ic) &
-        &                          - phi_storage(ic) * veg_pool_mt(ix_labile, ixP, ic)) / tau_labile / one_day * dtime
+      veg_reserve_use_mt(ixP, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
+        &                           * (veg_pool_mt(ix_reserve, ixP,ic) - veg_litterfall_mt(ix_reserve, ixP, ic)) &
+        &                           - phi_storage(ic)                                                            &
+        &                           * (veg_pool_mt(ix_labile, ixP, ic) - veg_litterfall_mt(ix_labile, ixP, ic))) &
+        &                           / tau_labile / one_day * dtime
     END DO ! loop over 1:nc
   END SUBROUTINE calc_reserve_useage
 
