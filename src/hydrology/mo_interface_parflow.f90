@@ -153,22 +153,22 @@ CONTAINS
         CALL finish ('mo_interface_parflow:construct_parflow_coupling', &
             & 'coupled model needs aes; remove --disable-aes and reconfigure')
 #else
-        !ICON_OMP_PARALLEL_DO PRIVATE(jb,jc) ICON_OMP_RUNTIME_SCHEDULE
+        !$OMP PARALLEL DO PRIVATE(jb,jc)
         DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
               lsmnolake(jc,jb) = grid%lsf(jc,jb)
             ENDDO
         ENDDO
-        !ICON_OMP_END_PARALLEL_DO
+        !$OMP END PARALLEL DO
 
         mask_checksum = 0
-        !ICON_OMP_PARALLEL_DO PRIVATE(jb,jc) REDUCTION(+:mask_checksum) ICON_OMP_RUNTIME_SCHEDULE
+        !$OMP PARALLEL DO PRIVATE(jb,jc) REDUCTION(+:mask_checksum)
         DO jb = 1, patch_horz%nblks_c
           DO jc = 1, nproma
             mask_checksum = mask_checksum + ABS( lsmnolake(jc,jb) )
           ENDDO
         ENDDO
-        !ICON_OMP_END_PARALLEL_DO
+        !$OMP END PARALLEL DO
 
         mask_checksum = p_sum(mask_checksum, comm=p_comm_work)
 
@@ -177,7 +177,7 @@ CONTAINS
         ! This is the standard for the coupling of atmospheric fields listed below
         !
         IF ( mask_checksum > 0 ) THEN
-          !ICON_OMP_PARALLEL_DO PRIVATE(jb, jc, nn) ICON_OMP_RUNTIME_SCHEDULE
+          !$OMP PARALLEL DO PRIVATE(jb, jc)
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
 
@@ -199,16 +199,16 @@ CONTAINS
 
             ENDDO
           ENDDO
-          !ICON_OMP_END_PARALLEL_DO
+          !$OMP END PARALLEL DO
         ELSE
-          !ICON_OMP_PARALLEL_DO PRIVATE(jb, jc, nn) ICON_OMP_RUNTIME_SCHEDULE
+          !$OMP PARALLEL DO PRIVATE(jb, jc)
           DO jb = 1, patch_horz%nblks_c
             DO jc = 1, nproma
               is_valid((jb-1)*nproma+jc) = .FALSE.
               is_valid_parflow(jc,jb) = 0
             ENDDO
           ENDDO
-          !ICON_OMP_END_PARALLEL_DO
+          !$OMP END PARALLEL DO
         ENDIF
 #endif
       CASE DEFAULT
@@ -244,6 +244,8 @@ CONTAINS
 #endif
 
   SUBROUTINE interface_parflow(tile, options)
+
+    USE mo_fortran_tools, ONLY: init
 
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
     TYPE(t_jsb_task_options),   INTENT(in) :: options
@@ -302,7 +304,11 @@ CONTAINS
     write_coupler_restart = .FALSE.
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, nsoil))
-    buffer(:,:) = 0.0_wp
+    !$OMP PARALLEL
+    CALL init(buffer(:,:))
+    !$OMP END PARALLEL
+
+    !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
       IF (iblk /= grid%nblks) THEN
@@ -314,6 +320,9 @@ CONTAINS
         buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) * 3600.0_wp / dz(1)
       END DO
     END DO
+    !$OMP END PARALLEL DO
+
+    !$OMP PARALLEL DO PRIVATE(is, iblk, nn, nlen, n)
     DO is = 2, nsoil
       DO iblk = 1, grid%nblks
         nn = (iblk - 1) * grid%nproma
@@ -327,6 +336,7 @@ CONTAINS
         END DO
       END DO
     END DO
+    !$OMP END PARALLEL DO
 
     nbr_hor_cells = grid%ntotal
 #ifdef YAC_coupling
@@ -341,12 +351,15 @@ CONTAINS
     ! Receive soil_water
     ! --------------------
 
-    buffer(:,:) = 0.0_wp
+    !$OMP PARALLEL
+    CALL init(buffer(:,:))
+    !$OMP END PARALLEL
 
 #ifdef YAC_coupling
     CALL yac_fget(field_id(2), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
 
     IF ( info > 0 ) THEN
+      !$OMP PARALLEL DO PRIVATE(is, iblk, nn, nlen, n)
       DO is = 1, nsoil
         DO iblk = 1, grid%nblks
           nn = (iblk - 1) * grid%nproma
@@ -360,6 +373,7 @@ CONTAINS
           END DO
         END DO
       END DO
+      !$OMP END PARALLEL DO
 
       is_valid_parflow = 2*is_valid_parflow
     END IF
