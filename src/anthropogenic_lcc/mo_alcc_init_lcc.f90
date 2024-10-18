@@ -32,8 +32,8 @@ MODULE mo_alcc_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'alcc'
-  
-  INTEGER, PARAMETER :: nr_of_active_cqts = 1 
+
+  INTEGER, PARAMETER :: nr_of_active_cqts = 1
   INTEGER, PARAMETER :: nr_of_passive_cqts = 4
 
 CONTAINS
@@ -55,7 +55,7 @@ CONTAINS
 
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: involved_tiles(:)
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     ! JN-TODO: reconsider what to define here and how
     IF (.NOT. tile%name .EQ. 'veg') RETURN
 
@@ -73,7 +73,7 @@ CONTAINS
       ALLOCATE(involved_tiles(1))
       involved_tiles(1) = tile%name
     END IF
-    
+
     CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_tiles)
 
     DEALLOCATE(involved_tiles)

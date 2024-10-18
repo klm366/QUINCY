@@ -3,21 +3,29 @@ title: Authors
 ---
 ## ICON-Land Authors
 
+- Cheng Gong
 - Christian Reick
 - Daniel Goll
 - Dmitry Alexeev
 - Erich Roeckner
+- Fabrice Lacroix
 - Freja Vamborg
 - Jan Engel
 - Julia Nabel
+- Karolina Slominska-Durdasiak
+- Lin Yu
 - Marvin Heidkamp
+- Melanie Thurner
 - Philipp de Vrese
 - Rainer Schneck
 - Reiner Schnur
 - Roland Wirth
+- Silvia Caldararu
 - Soenke Zaehle
 - Stefan Hagemann
 - Stiig Wilkenskjeld
+- Tea Thum
+- Thomas Kleinen
 - Thomas Raddatz
 - Tobias Stacke
 - Tom Riddick
@@ -42,9 +50,9 @@ title: Authors
 - Petri Raisanen
 - Sanna Sevanto
 - Silvia Kloster
+- Stefanie Falk
 - Suman Halder
 - Sylvia Nyawira
 - Tanja Blome
-- Tea Thum
-- Thomas Kleinen
 - Victor Brovkin
+- Yu Zhu

@@ -11,12 +11,15 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Main routine for running ICON-Land standalone
+!>
+!> `jsbach_model()` is called from the ICON program `src/drivers/icon:icon`
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_jsbach_model
 
-#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -33,6 +36,8 @@ MODULE mo_jsbach_model
     &                     timer_read_restart, timer_total
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_class,       ONLY: get_model
+
+  USE mo_mpi,       ONLY: i_am_accel_node
 
   IMPLICIT NONE
 
@@ -245,7 +250,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Set times and events
-    !> 
+    !>
     CALL compute_timestep_settings()
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
@@ -272,7 +277,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0) 
+         &                          pio_type, num_dio_procs=0)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -341,8 +346,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 10.0 Setup the information for the physical patches
     !>
-
     CALL setup_phys_patches
+
+    ! Copy needed parts of the patches to GPU
+    DO jg=1,no_models
+      !$ACC ENTER DATA &
+      !$ACC   COPYIN(p_patch(jg)%cells%decomp_info%owner_mask)
+    END DO
 
     ! Constructing data for lon-lat interpolation
     ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
@@ -450,6 +460,9 @@ CONTAINS
     !>
     ! ----------------------------------------------------------------------------------------------------- !
 
+#if defined( _OPENACC )
+    i_am_accel_node = my_process_is_work()
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 14.0 get and write out some of the initial values
@@ -457,24 +470,25 @@ CONTAINS
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics ! R: notwendig siehe Rechnertext
+      CALL update_statistics
       ! --
       IF (output_mode%l_nml) THEN
-        CALL write_name_list_output(jstep=0)
+          CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
       END IF
+
     END IF ! not isRestart()
 
     IF (ltimer) CALL timer_start(timer_total)
 
     ! calculate elapsed simulation time in seconds
-    sim_time = getElapsedSimTimeInSeconds(mtime_current) 
-  
+    sim_time = getElapsedSimTimeInSeconds(mtime_current)
+
     ! allocate temporary variable for restarting purposes
     IF (output_mode%l_nml) THEN
       ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
     ENDIF
-   
+
     mtime_old     => newDatetime(mtime_current) ! in
 
     restartDescriptor => createRestartDescriptor("jsbach")
@@ -549,7 +563,7 @@ CONTAINS
     !> 16.0 set time loop properties
     !>
     model_time_step => time_config%tc_dt_model
-  
+
     CALL message('','')
     CALL datetimeToString(mtime_current, dstring)
     WRITE(message_text,'(a,a)') 'Start date of this run: ', dstring
@@ -586,8 +600,8 @@ CONTAINS
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
-  
-      IF (lprint_timestep) THEN  
+
+      IF (lprint_timestep) THEN
         WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
               &             'Time step: ', jstep, ' model time ',                                &
               &             mtime_current%date%year,   '-', mtime_current%date%month,    '-',    &
@@ -596,7 +610,7 @@ CONTAINS
               &             mtime_current%time%ms
         CALL message('',message_text)
       ENDIF
-  
+
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
@@ -611,13 +625,13 @@ CONTAINS
           & mtime_current)          ! ..
       END DO
 
-      ! update accumlated values
+      ! update accumulated values
       CALL update_statistics
 
       IF (l_nml_output) THEN
-        CALL write_name_list_output(jstep)
+        CALL write_name_list_output(jstep, lacc=i_am_accel_node)
       ENDIF
-  
+
       ! re-initialize MAX/MIN fields with 'resetval'
       !   @NOTE must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
@@ -629,7 +643,7 @@ CONTAINS
       !>
       ! default is to assume we do not write a checkpoint/restart file
       lwrite_checkpoint = .FALSE.
-      ! if thwe model is not supposed to write output, do not write checkpoints
+      ! if the model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
         ! to clarify the decision tree we use shorter and more expressive names:
         l_isStartdate    = (time_config%tc_startdate == mtime_current)
@@ -671,6 +685,10 @@ CONTAINS
       sim_time = getElapsedSimTimeInSeconds(mtime_current)
     END DO TIME_LOOP
 
+#if defined( _OPENACC )
+    i_am_accel_node = .FALSE.
+#endif
+
     ! ----------------------------------------------------------------------------------------------------- !
     !> 18.0  ... @TODO describe
     !>
@@ -698,6 +716,10 @@ CONTAINS
     CALL destruct_comm_patterns( p_patch, p_patch_local_parent )
 
     ! Deallocate grid patches
+    DO jg=1,no_models
+      !$ACC EXIT DATA &
+      !$ACC   DELETE(p_patch(jg)%cells%decomp_info%owner_mask)
+    END DO
     CALL destruct_patches( p_patch )
 
     ! ..
@@ -743,22 +765,29 @@ CONTAINS
   !>
   SUBROUTINE run_one_timestep(model_id, nblks, dtime, datetime_new)
 
-    USE mo_jsb_control,                ONLY: jsbach_is_restarted, force_from_observations, &
-      &                                      debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
-    USE mo_jsb_time,                   ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,            ONLY: t_jsb_model
-    USE mo_jsb_class,                  ONLY: get_model
-    USE mo_jsb_grid,                   ONLY: Get_grid
-    USE mo_jsb_grid_class,             ONLY: t_jsb_grid
-    USE mo_jsb_tile_class,             ONLY: t_jsb_tile_abstract
-    USE mo_jsb_interface,              ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,               ONLY: forcing_options, get_standalone_driver
-    USE mo_orbit_solar,                ONLY: compute_cos_zenith_angle
-    USE mo_jsb_physical_constants,     ONLY: molarMassDryAir, molarMassCO2
-    USE mo_jsb_parallel,               ONLY: Get_omp_thread
-    USE mo_jsb_subset,                 ONLY: ON_CHUNK
+    USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
+      &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
+    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day, get_year, is_newyear
+    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+    USE mo_jsb_class,                 ONLY: get_model
+    USE mo_jsb_grid,                  ONLY: Get_grid
+    USE mo_jsb_grid_class,            ONLY: t_jsb_grid
+    USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
+    USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
+    USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
+    USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
+    USE mo_jsb_parallel,              ONLY: Get_omp_thread
+    USE mo_jsb_subset,                ONLY: ON_CHUNK
 
+#ifndef __NO_QUINCY__
+    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
+    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_config(SPQ_)
+#else
     dsl4jsb_Use_processes A2L_, HYDRO_
+#endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -784,6 +813,22 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Real2D_onDomain :: evapotrans
+    dsl4jsb_Real2D_onDomain :: evapopot
+    dsl4jsb_Real2D_onDomain :: co2_air
+    dsl4jsb_Real2D_onDomain :: co2_air_mol
+#ifndef __NO_QUINCY__
+    ! quincy
+    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_config(SPQ_)
+
+    dsl4jsb_Real2D_onDomain :: swpar_srf_down
+    dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: local_time_day_seconds
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
+
+#endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -793,8 +838,17 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, ics, ice
-    INTEGER :: global_seconds_day
+    INTEGER :: nc, ics, ice, ic
+    INTEGER :: global_seconds_day, current_year
+
+    LOGICAL :: save_i_am_accel_node
+
+    ! IQ spin-up accelerator model configurations
+    INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
+    INTEGER :: accelerator_frequency      !< bookkeeping configurations for the iq spin-up accelerator: frequency of executions
+    INTEGER :: accelerator_start_year     !< bookkeeping configurations for the iq spin-up accelerator: start year of executions
+    ! IQ: further configuration
+    LOGICAL :: flag_snow = .TRUE. !< quincy boolean indicating if simulations should include snow (else read snow is added to rain)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -855,28 +909,67 @@ CONTAINS
       startidx(iblk) = grid%Get_col_start(iblk)
       endidx  (iblk) = grid%Get_col_end(iblk)
     END DO
+    !$ACC DATA COPYIN(startidx, endidx) ASYNC(1)
 
     IF (use_external_forcing) THEN
 
       dsl4jsb_Get_memory(A2L_)
-      dsl4jsb_Get_memory(HYDRO_)
 
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
+      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air)
+
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
       ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      ! -> would only be required if no Qair forcing is given and qair needs to be calculated from temperature!
       ALLOCATE(evapo_act2pot(nproma, nblks))
-      IF (is_time_experiment_start(datetime_old)) THEN
-        evapo_act2pot(:,:) = 1._wp
-      ELSE
-        evapo_act2pot(:,:) =    MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapotrans), -EPSILON(1._wp)) &
-          &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
-      END IF
+      !$ACC ENTER DATA CREATE(evapo_act2pot)
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(HYDRO_)
+        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
+        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
+
+        IF (is_time_experiment_start(datetime_old)) THEN
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              evapo_act2pot(ic, iblk) = 1._wp
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+        ELSE
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
+                &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+        END IF
+      CASE (MODEL_QUINCY)
+        ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
+        !       which so far never is the case), this would need to be calculated
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            evapo_act2pot(ic, iblk) = 1._wp
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+      END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
@@ -885,34 +978,150 @@ CONTAINS
       !>   including dimensional data and data from external forcing, i.e., forcing input files
       !>   see: 'mo_jsb_interface:interface_full'
       !>
-      CALL get_standalone_driver( &
-        ! in
-        & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
-        & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
-        & sinlat, coslat, lon, evapo_act2pot,                                        &
-        & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-        ! out
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-        & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-        & dsl4jsb_var2D_onDomain(A2L_, press_srf))
+
+      ! We need to turn off i_am_accel_node for the forcing module to do host-based file reading
+      ! This does not affect the OpenACC clauses themselves in the forcing module!
+      save_i_am_accel_node = i_am_accel_node
+      i_am_accel_node = .FALSE.
+
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
+          & )
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(SPQ_)
+        dsl4jsb_Get_config(SPQ_)
+        flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
+
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                   &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
+          & dsl4jsb_var2D_onDomain(A2L_, p_deposition)                                 &
+          & )
+#endif
+      END SELECT
+
+      ! Turn it on again for the rest of the time step
+      i_am_accel_node = save_i_am_accel_node
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
-      dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
-      IF (model%config%use_quincy) &
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
+          co2_air_mol(ic, iblk) = co2_air(ic, iblk) * molarMassDryAir / molarMassCO2
+        ENDDO
+      ENDDO
+      !$ACC END PARALLEL LOOP
 
+#ifndef __NO_QUINCY__
+      ! --------------------------------------------------------------------------------------------------- !
+      !> code specific to the QUINCY model
+      !>
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+#ifdef _OPENACC
+        CALL finish(routine, 'QUINCY standalone not ported to GPU, yet. Stop.')
+#endif
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            dsl4jsb_var_ptr(A2L_, CO2_mixing_ratio)(ic, iblk) = dsl4jsb_var_ptr(A2L_, CO2_air_mol)(ic, iblk) * 1000000._wp
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+
+        ! Update local time and daytime counter
+        dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
+        dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
+        dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
+        global_seconds_day = get_secs_of_day(datetime_new)
+        CALL update_local_time_and_daytime_counter( &
+          &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+
+        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
+
+          ! in most years the spin-up will not be accelerated
+          !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+          IF(is_newyear(datetime_new, dtime)) THEN
+            current_year = get_year(datetime_new)
+            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execution_counter)
+            accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
+            accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
+            accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
+            !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+            DO iblk = 1, nblks
+              DO ic = 1, nproma
+                CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
+                  & accelerator_max_executions, accelerator_frequency, accelerator_start_year, &
+                  & slow_sb_pool_accelerator_execution_counter(ic, iblk), slow_sb_pool_accelerator_execute(ic, iblk))
+              ENDDO
+            ENDDO
+            !$ACC END PARALLEL LOOP
+          END IF
+        END IF
+      END SELECT
+#endif
+
+      !$ACC WAIT(1)
+      !$ACC EXIT DATA DELETE(evapo_act2pot)
       DEALLOCATE(evapo_act2pot)
 
     END IF ! IF (use_external_forcing) THEN
@@ -940,7 +1149,6 @@ CONTAINS
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
         &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
       ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
@@ -968,8 +1176,9 @@ CONTAINS
     CALL deallocateDatetime(datetime_old_old)
     CALL deallocateDatetime(datetime_forcing)
 
+    !$ACC END DATA
+
   END SUBROUTINE run_one_timestep
 
-#endif
 #endif
 END MODULE mo_jsbach_model

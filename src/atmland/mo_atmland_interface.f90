@@ -20,6 +20,8 @@ MODULE mo_atmland_interface
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
+  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
   !USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -70,8 +72,8 @@ CONTAINS
     & pch,                    &
     & cos_zenith_angle,       &
     & CO2_air,                &
-    & DEBUG_VAR,              &
     ! For lakes:
+    & DEBUG_VAR,              &
     & drag_wtr,               &
     & drag_ice,               &
     & t_acoef_wtr,            &
@@ -85,23 +87,32 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
-
+    USE mtime,                     ONLY: datetime
+    USE mo_time_config,            ONLY: time_config
+    USE mo_jsb_time,               ONLY: get_secs_of_day
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-      & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, &
-      & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
+      & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,   &
+      & CO2_air,                                                                                                   &
+      & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER ::  iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: global_seconds_day
+    REAL(wp) :: dtime
+    TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     TYPE(t_jsb_model), POINTER :: model
-    LOGICAL :: use_quincy
+    TYPE(t_jsb_grid),  POINTER :: grid
+    REAL(wp), POINTER :: lon(:)
+    INTEGER :: model_scheme
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
@@ -131,7 +142,6 @@ CONTAINS
       & cos_zenith_angle_ptr,  &
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
-      & CO2_mixing_ratio_ptr,  &
       & DEBUG_VAR_ptr,         &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
@@ -143,16 +153,22 @@ CONTAINS
       & t_bcoef_ice_ptr,       &
       & q_acoef_ice_ptr,       &
       & q_bcoef_ice_ptr
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
 
     model => Get_model(tile%owner_model_id)
-    use_quincy = model%config%use_quincy
+    grid  => get_grid(model%grid_id)
+    lon   => grid%lon(ics:ice, iblk)
+    mtime_current => time_config%tc_current_date
+    global_seconds_day = get_secs_of_day(mtime_current)
+
+    model_scheme = model%config%model_scheme
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -233,7 +249,6 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -413,13 +428,13 @@ CONTAINS
         CO2_air_ptr(i) = CO2_air(i)
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
-        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
-        IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
       END DO
     END IF
 
+    !> lakes
+    !>
     IF (tile_contains_lake) THEN
-
       IF (PRESENT(drag_wtr)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
@@ -648,7 +663,7 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE    ! without lakes
- 
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO i=1,nc
         fact_land(i) = 1._wp
@@ -998,7 +1013,7 @@ CONTAINS
     ELSE
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-  
+
       IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc

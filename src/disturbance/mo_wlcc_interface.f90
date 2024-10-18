@@ -20,12 +20,12 @@ MODULE mo_wlcc_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes WLCC_, DISTURB_, CARBON_
+  dsl4jsb_Use_processes WLCC_, DISTURB_, CARBON_, FAGE_
 
   IMPLICIT NONE
   PRIVATE
@@ -85,7 +85,7 @@ CONTAINS
   SUBROUTINE update_wlcc(tile, options)
 
     USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_lcc_class,     ONLY: min_cf_change, t_jsb_lcc_proc, copy_from_active_to_passive_var_onChunk
+    USE mo_jsb_lcc_class,     ONLY: min_daily_cf_change, t_jsb_lcc_proc, copy_from_active_to_passive_var_onChunk
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
     USE mo_carbon_constants,  ONLY: sec_per_day
     USE mo_fage_interface,    ONLY: recalc_fract_per_age_upon_disturbance
@@ -114,7 +114,7 @@ CONTAINS
     LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
     INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
     CLASS(t_jsb_tile_abstract), POINTER :: first_ac ! pointer to first ac (only if running with age classes)
-  
+
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_memory_tile(DISTURB_, d_tile)
     dsl4jsb_Real2D_onChunk :: damaged_fract_d_tile
@@ -156,7 +156,7 @@ CONTAINS
     !>
     dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    
+
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
@@ -238,7 +238,7 @@ CONTAINS
         dsl4jsb_Get_var2d_onChunk_tile_name(DISTURB_, damaged_fract, d_tile)
 
         lost_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
-        WHERE(lost_area(:,i_tile) < min_cf_change)
+        WHERE(lost_area(:,i_tile) < min_daily_cf_change)
           lost_area(:,i_tile) = 0.0_wp
         END WHERE
 
@@ -293,7 +293,7 @@ CONTAINS
         ELSE
           current_tile => tile%self_tile
         END IF
-        
+
         i_tile = 0
         DO WHILE (i_tile < nr_of_tiles)
 
@@ -343,23 +343,33 @@ CONTAINS
   !
   SUBROUTINE aggregate_wlcc(tile, options)
 
+    dsl4jsb_Use_memory(FAGE_)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk
+    INTEGER  :: iblk, ics, ice
     !X if necessary: REAL(wp) :: dtime, steplen
+    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
+    dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_wlcc'
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !> Currently nothing to do
+    IF(tile%Is_process_active(FAGE_)) THEN
+      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+      dsl4jsb_Get_memory(FAGE_)
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

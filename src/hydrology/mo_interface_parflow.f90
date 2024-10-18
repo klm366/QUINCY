@@ -21,7 +21,7 @@ MODULE mo_interface_parflow
   USE mo_impl_constants,      ONLY: iaes
   USE mo_mpi,                 ONLY: p_comm_work, p_sum
   USE mo_run_config,          ONLY: iforcing
-  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fdef_mask, &
+  USE yac,                    ONLY: yac_fdef_field, yac_fdef_mask, &
        &                            yac_fput, yac_fget,       &
        &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &

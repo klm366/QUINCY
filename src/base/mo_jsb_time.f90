@@ -70,18 +70,11 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      ! TODO: remove #ifdef
-#ifdef __ICON__
       IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
       !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
       ! END IF
-#else
-      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN  ! present only for standalone model
-        CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
-      END IF
-#endif
 
       IF (PRESENT(model_shortname)) THEN
         CALL configure_time_and_events(model_shortname)

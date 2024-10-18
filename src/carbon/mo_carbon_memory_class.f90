@@ -41,13 +41,6 @@ MODULE mo_carbon_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
-    ! 1d reals:
-    !REAL(wp) ::            &
-    TYPE(t_jsb_var_real2d) ::     &
-       N_pseudo_temp,       & ! Constants used for updating the pseudo-15-day mean temperature
-       F_pseudo_temp,       & ! Constants used for updating the pseudo-15-day mean temperature
-       N_pseudo_precip,     & ! Constants used for updating the pseudo-15-day mean precipitation
-       F_pseudo_precip        ! Constants used for updating the pseudo-15-day mean precipitation
 
     ! cbalance_type variables
     TYPE(t_jsb_var_real2d) ::     &
@@ -215,7 +208,7 @@ MODULE mo_carbon_memory_class
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
 
-      ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]  
+      ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]
       ! .. positive for emission to atmosphere
       ! .. negative for absorption by biosphere
       co2flux_npp_2_atm_ta,          & ! fluxes due to NPP
@@ -268,6 +261,7 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
+
     IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model => Get_model(model_id)
@@ -276,39 +270,9 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-    
+
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
-
-! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
-    CALL mem%Add_var('n_pseudo_temp', mem%N_pseudo_temp,                                             &
-      & hgrid, surface,                                                                              &
-      & t_cf('N_pseudo_temp', 'K', 'Normalization for computing pseudo-15-day mean air temperature'),    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp )
-
-    CALL mem%Add_var('f_pseudo_temp', mem%F_pseudo_temp,                                             &
-      & hgrid, surface,                                                                              &
-      & t_cf('F_pseudo_temp', '-', 'Exponential factor used for updating the pseudo-15-day mean temperature'),    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp )
-
-    CALL mem%Add_var('n_pseudo_precip', mem%N_pseudo_precip,                                         &
-      & hgrid, surface,                                                                              &
-      & t_cf('N_pseudo_precip', 'Kg m-2 s-1', 'Normalization for computing pseudo-15-day mean precipitation rate'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var('f_pseudo_precip', mem%F_pseudo_precip,                                         &
-      & hgrid, surface,                                                                              &
-      & t_cf('F_pseudo_precip', '-', 'Exponential factor used for updating the pseudo-15-day mean precip'),    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp )
-
 
     CALL mem%Add_var('pseudo_temp', mem%pseudo_temp,                                                 &
       & hgrid, surface,                                                                              &
@@ -623,7 +587,7 @@ CONTAINS
       & t_cf('NPP_pot_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
       & prefix, suffix,                                                                           &
-      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would 
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would
                                                   ! result in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('npp_act_ydaymean', mem%NPP_act_yDayMean,                                      &
@@ -631,7 +595,7 @@ CONTAINS
       & t_cf('NPP_act_yDayMean', 'mol(C) m-2(canopy) s-1', 'Actual NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
-      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would 
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would
                                                   ! result in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('gpp_ydaymean', mem%GPP_yDayMean,                                        &
@@ -1121,8 +1085,7 @@ CONTAINS
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
     ENDIF
 
-#ifdef __ICON__
-    ! Diagnostic global carbon sums for experiment monitoring 
+    ! Diagnostic global carbon sums for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
     IF ( TRIM(suffix) == 'box' ) THEN
@@ -1175,7 +1138,6 @@ CONTAINS
         & prefix, suffix,                                                                        &
         & lrestart=.FALSE., initval_r=0.0_wp )
     END IF
-#endif
 
   END SUBROUTINE Init_carbon_memory
 
