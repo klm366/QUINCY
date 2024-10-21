@@ -54,31 +54,16 @@ MODULE mo_alcc_memory_class
   ! natural(3)   natural2crop    natural2pasture   natural2natural
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
   
-    TYPE(t_jsb_var_real2d), TARGET :: MatrixPtr(:)  
-  
-    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx(:) ! define crop_nature_pasture transition matrix
-    ! Mingyue Zhang: Set the number of matrices dynamically
-    INTEGER, PARAMETER :: numMatrices = 9 ! Adjust as needed according to the size of transition matrix
-    allocate(TransMtrx(numMatrices))
-
-    do i = 1, numMatrices   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-      allocate(TransMtrx(i)%ptr(3, 3))
-    end do
+    
+    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx(3:3) ! define crop_nature_pasture transition matrix
 
     ! Accessing elements of the matrices 
     ! Use a do loop for the read in LUH2 transition data: 
     ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
     !TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
   
-
-    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx_pfts(:) ! define pfts transition matrix
-    ! Mingyue Zhang: Set the number of matrices dynamically
-    INTEGER, PARAMETER :: numMatrices_pfts = npft*npft ! Adjust as needed according to the size of transition matrix
-    allocate(TransMtrx_pfts(numMatrices_pfts))
- 
-    do i = 1, numMatrices_pfts   ! Adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-      allocate(TransMtrx_pfts(i)%ptr(npft, npft))
-    end do
+    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx_pfts(npft, npft) ! define pfts transition matrix
+  
     ! Mingyue Zhang: define TransMtrx end 
 
     ! Mingyue Zhang: defeine transition types start  CHARACTER(len=*) :: transitions(9)
@@ -110,6 +95,8 @@ MODULE mo_alcc_memory_class
       & cf_day_delta          & !< Daily change in cover fractions calculated from cf_current_year.
       & cf_transition_gain    & !< Mingyue Zhang:define transition gain 
       & cf_transition_loss    & !< Mingyue Zhang:define transition loss 
+      & cf_transition         & !< Mingyue Zhang:define transition 
+      & cf_transition_pfts    & !< Mingyue Zhang:define transition on pfts level
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
   END TYPE t_alcc_memory
