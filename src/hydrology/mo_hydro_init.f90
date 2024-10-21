@@ -196,9 +196,7 @@ CONTAINS
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
       & ptr_3D(:,:,:)
-#ifdef __ICON__
     LOGICAL,  POINTER   :: is_in_domain(:,:) ! T: cell in domain (not halo)
-#endif
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -223,9 +221,7 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
-#ifdef __ICON__
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-#endif
 
     ALLOCATE( &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
@@ -425,12 +421,10 @@ CONTAINS
         !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
         !       routines. Until this bc data is not used anymore, the following check is required to ensure the
         !       sign of the soil matric potential is (converted) correct.
-#ifdef __ICON__
         ! Exclude values outside of the domain (not available in the echam infrastructure)
         WHERE(.NOT. is_in_domain(:,:))
           ptr_2D(:,:) = 0._wp
         ENDWHERE
-#endif
         ! Exclude (standard) missing values
         WHERE(ABS(ptr_2D(:,:)) > 1.0e+20_wp)
           ptr_2D(:,:) = 0._wp

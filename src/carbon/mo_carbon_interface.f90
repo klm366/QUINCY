@@ -2189,14 +2189,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   !
   SUBROUTINE global_carbon_diagnostics(tile)
 
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_carbon_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
-
     USE mo_carbon_constants,      ONLY: molarMassC_kg, sec_per_year
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
@@ -2304,7 +2296,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     DEALLOCATE (scaling, in_domain)
 
-#endif
   END SUBROUTINE global_carbon_diagnostics
 
 #endif

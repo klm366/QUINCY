@@ -280,23 +280,23 @@ CONTAINS
       CASE (iperennial)
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
-        IF((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
+        IF ((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
             & gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. mean_leaf_age > min_leaf_age) THEN
           growing_season = false
           ! Determine the specific trigger for the end of growing season. Needed for root turnover.
-          IF(t_air_tphen_mavg < t_air_senescence) THEN
+          IF (t_air_tphen_mavg < t_air_senescence) THEN
             ! end of growing season triggered by low temperature
             root_phenology_type = ipheno_type_cold_deciduous
           ELSE
             ! end of growing season triggered by low soil moisture
-            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence) THEN
+            IF (beta_soil_gs_tphen_mavg < beta_soil_senescence) THEN
               root_phenology_type = ipheno_type_drought_deciduous
             ELSE
               ! end of growing season triggered by negative C balance
               root_phenology_type = ipheno_type_cbalance_deciduous
-            ENDIF
-          ENDIF
-        ENDIF
+            END IF
+          END IF
+        END IF
       END SELECT
     ENDIF
 

@@ -465,9 +465,9 @@ CONTAINS
           ! In warm, annual grasslands, shed fine roots at the end of the growing season with the same rate as leaves
           ELSE
             fturn(ic) = fturn_leaf(ic)
-          ENDIF
-        ENDIF
-      ENDDO
+          END IF
+        END IF
+      END DO
     END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID

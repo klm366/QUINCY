@@ -1154,9 +1154,7 @@ CONTAINS
 
     END IF
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
-    !       (1d stream variables are not supported with echam)
     !
     IF ( TRIM(suffix) == 'box' ) THEN
       CALL mem%Add_var('trans_gmean', mem%trans_gmean,                                   &
@@ -1208,7 +1206,6 @@ CONTAINS
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
     END IF
-#endif
 
     END SUBROUTINE Init_hydro_memory
 #endif

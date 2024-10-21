@@ -66,18 +66,6 @@ CONTAINS
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 
-#ifndef __ICON__
-    ! >> TODO: echam
-    USE mo_gaussgrid,            ONLY : inigau
-    USE mo_echam_convect_tables, ONLY : init_convect_tables
-    USE mo_netCDF,               ONLY: add_dim
-    ! <<
-    USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
-    USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,             ONLY: Register_grid
-#endif
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension
                                                      !< of 2-d decomposition
@@ -91,50 +79,13 @@ CONTAINS
         !< Name of model instance
     ! -------------------------------------------------------------------------------------------------- !
 
-#ifndef __ICON__
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
-    TYPE(t_patch)               :: decomposition
-
-    INTEGER :: nlon, nlat
-#endif
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
     ! ---------------------------------------------------------------------------------------------------!
 
-#ifdef __ICON__
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
-    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
-#else
-    model => Get_model(model_id)
 
-    IF (PRESENT(model_name)) THEN
-      IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
-        CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
-    END IF
-
-    CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
-    CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
-
-    CALL inigau               ! beside others required for get_area, i.e. required before new_grid
-    CALL init_convect_tables
-
-    CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
-    CALL add_dim("lat", nlat, "latitude", "degrees_north")
-
-    CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
-        ! needs to be done after the decomposition is initialised; required for get_lon and get_lat,
-        ! especially for site-level sims
-    grid => new_grid(decomposition, type='echam')
-
-    CALL register_grid(grid)
-    model%grid_id = grid%id
-
-    ! CALL init_model_common(model)
-
-    NULLIFY(model)
-#endif
+    CALL finish(TRIM(routine),'Not implemented for ICON')
 
   END SUBROUTINE setup_grid_standalone
 

@@ -62,8 +62,9 @@ MODULE mo_sb_memory_class
       & sb_pool_total_c13        , &        !< sum of all sb_pool%*%carbon13    [mol m-3]
       & sb_pool_total_c14        , &        !< sum of all sb_pool%*%carbon14    [mol m-3]
       & sb_pool_total_n15                   !< sum of all sb_pool%*%nitrogen15  [mol m-3]
-    ! som: dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
-    ! + below ground litter: soluble_litter & polymeric_litter & woody_litter
+    ! Sum of
+    ! soil organic matter (som): dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
+    ! and below ground (bg) litter: bg parts of soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d) ::  &
       & sb_pool_total_bg_soil_c,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon     [mol m-3]
       & sb_pool_total_bg_soil_n,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen   [mol m-3]
@@ -71,7 +72,7 @@ MODULE mo_sb_memory_class
       & sb_pool_total_bg_soil_c13, & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon13   [mol m-3]
       & sb_pool_total_bg_soil_c14, & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon14   [mol m-3]
       & sb_pool_total_bg_soil_n15    !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen15 [mol m-3]
-    ! ag litter: soluble_litter & polymeric_litter & woody_litter
+    ! Sum of above ground (ag) litter: ag parts of soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real2d) ::        &
       & sb_pool_total_ag_litter_c,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon     [mol m-2]
       & sb_pool_total_ag_litter_n,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen   [mol m-2]
@@ -284,8 +285,10 @@ MODULE mo_sb_memory_class
                             microbial_nue_eff_tmic_mavg, &        !< time-averaged microbial NUE given NP constraints [unitless]
                             microbial_pue_eff, &                  !< instantaneous microbial PUE given NP constraints [unitless]
                             microbial_pue_eff_tmic_mavg, &        !< time-averaged microbial PUE given NP constraints [unitless]
-                            fact_n_status_mic_c_growth, &         !< microbial N status, used to scale up/down certain microbial processes (enzyme allocation and nutrient recycling) [unitless]
-                            fact_p_status_mic_c_growth, &         !< microbial P status, used to scale up/down certain microbial processes (enzyme allocation and nutrient recycling) [unitless]
+                            fact_n_status_mic_c_growth, &         !< microbial N status, used to scale up/down certain microbial
+                                                                  !< processes (enzyme allocation and nutrient recycling) [unitless]
+                            fact_p_status_mic_c_growth, &         !< microbial P status, used to scale up/down certain microbial
+                                                                  !< processes (enzyme allocation and nutrient recycling) [unitless]
                             enzyme_frac_AP, &                     !< fraction of Acid (alkaline) phosphatase of the total enzyme [unitless]
                             dom_cn, &                             !< C:N ratio of DOM pool [mol mol-1]
                             dom_cp, &                             !< C:P ratio of DOM pool [mol mol-1]
@@ -322,28 +325,28 @@ MODULE mo_sb_memory_class
     !>3D soil properties
     !>
     TYPE(t_jsb_var_real3d)  :: &
-                            ph_sl, &                              !< pH per soil layer [unitless]
-                            vmax_weath_mineral_sl, &              !< weathering coefficient of mineral soil [mol P m-3 s-1]
-                            Qmax_AlFe_cor, &                      !< correction factor for phosphate Qmax due to the unknown Al/Fe [unitless]
-                            enzyme_frac_poly, &                   !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
-                            enzyme_frac_residue, &                !< fraction of depolymerisation enzyme which depolymerises microbial residue [unitless]
-                            enzyme_frac_poly_c, &                 !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
-                            enzyme_frac_poly_n, &                 !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by N [unitless]
-                            enzyme_frac_poly_p,&                  !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by P [unitless]
-                            enzyme_frac_poly_c_mavg, &            !< moving average of enzyme_frac_poly_c [unitless]
-                            enzyme_frac_poly_n_mavg, &            !< moving average of enzyme_frac_poly_n [unitless]
-                            enzyme_frac_poly_p_mavg               !< moving average of enzyme_frac_poly_p [unitless]
+      & ph_sl, &                   !< pH per soil layer [unitless]
+      & vmax_weath_mineral_sl, &   !< weathering coefficient of mineral soil [mol P m-3 s-1]
+      & Qmax_AlFe_cor, &           !< correction factor for phosphate Qmax due to the unknown Al/Fe [unitless]
+      & enzyme_frac_poly, &        !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
+      & enzyme_frac_residue, &     !< fraction of depolymerisation enzyme which depolymerises microbial residue [unitless]
+      & enzyme_frac_poly_c, &      !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
+      & enzyme_frac_poly_n, &      !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by N [unitless]
+      & enzyme_frac_poly_p,&       !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by P [unitless]
+      & enzyme_frac_poly_c_mavg, & !< moving average of enzyme_frac_poly_c [unitless]
+      & enzyme_frac_poly_n_mavg, & !< moving average of enzyme_frac_poly_n [unitless]
+      & enzyme_frac_poly_p_mavg    !< moving average of enzyme_frac_poly_p [unitless]
 
     !------------------------------------------------------------------------------------------------------ !
     !>2D total fluxes for mass balance checks in soil_biogeochemistry model
     !>
     TYPE(t_jsb_var_real2d)  :: &
-                            total_flux_carbon, &                  !< carbon mass balance checks in soil_biogeochemistry model [mol C m-2 s-1]
-                            total_flux_nitrogen, &                !< nitrogen mass balance checks in soil_biogeochemistry model [mol N m-2 s-1]
-                            total_flux_phosphorus, &              !< phosphorus mass balance checks in soil_biogeochemistry model [mol P m-2 s-1]
-                            total_flux_carbon13, &                !< carbon13 mass balance checks in soil_biogeochemistry model [mol C13 m-2 s-1]
-                            total_flux_carbon14, &                !< carbon14 mass balance checks in soil_biogeochemistry model [mol C14 m-2 s-1]
-                            total_flux_nitrogen15                 !< nitrogen15 mass balance checks in soil_biogeochemistry model [mol N15 m-2 s-1]
+      & total_flux_carbon, &       !< carbon mass balance checks in soil_biogeochemistry model [mol C m-2 s-1]
+      & total_flux_nitrogen, &     !< nitrogen mass balance checks in soil_biogeochemistry model [mol N m-2 s-1]
+      & total_flux_phosphorus, &   !< phosphorus mass balance checks in soil_biogeochemistry model [mol P m-2 s-1]
+      & total_flux_carbon13, &     !< carbon13 mass balance checks in soil_biogeochemistry model [mol C13 m-2 s-1]
+      & total_flux_carbon14, &     !< carbon14 mass balance checks in soil_biogeochemistry model [mol C14 m-2 s-1]
+      & total_flux_nitrogen15      !< nitrogen15 mass balance checks in soil_biogeochemistry model [mol N15 m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
     !> biosphere-level diagnostics
@@ -355,8 +358,8 @@ MODULE mo_sb_memory_class
       & total_soil_lab_pi               !< po4_assoc_fast + po4_solute [mol m-3] 	  														
 
     TYPE(t_jsb_var_real2d)  :: &
-      & ecosystem_total_n_loss          !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
-                                        !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
+      & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
+                                   !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_memory
@@ -438,11 +441,11 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     dsl4jsb_Use_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !> SB_ memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !< SB_ memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),               POINTER :: model                       !< model
     TYPE(t_jsb_grid),                POINTER :: hgrid                       !< Horizontal grid

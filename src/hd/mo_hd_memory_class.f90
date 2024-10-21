@@ -294,7 +294,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
@@ -307,7 +306,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp )
     ENDIF
-#endif
 
   END SUBROUTINE Init_hd_memory
 

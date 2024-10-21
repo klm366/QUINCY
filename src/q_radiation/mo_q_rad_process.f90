@@ -222,7 +222,7 @@ CONTAINS
     WHERE (w_snow_snl(:,1) >= w_snow_min)
       alb_vis_soil(:) = alb_vis_snow(:)
       alb_nir_soil(:) = alb_nir_snow(:)
-    ENDWHERE
+    END WHERE
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
@@ -454,15 +454,15 @@ CONTAINS
     fleaf_sunlit_cl(:,:)    = 0.0_wp
 
     DO ic = 1,nc
-      IF(lai(ic) < eps8) THEN ! case of vegetation with no leaves, condense SAI to first layer
+      IF (lai(ic) < eps8) THEN ! case of vegetation with no leaves, condense SAI to first layer
         sai_cl(ic,1)      = sai(ic)
         cumm_sai_cl(ic,1) = sai(ic) / 2.0_wp ! sai mid-point evaluation
       ELSE ! case of vegetation with leaves
         ! assign SAI that is given by current leaf area
         sai_cl(ic,:)      = lai_cl(ic,:) * sai(ic) / lai(ic)
         cumm_sai_cl(ic,:) = cumm_lai_cl(ic,:) * sai(ic) / lai(ic)
-      ENDIF
-    ENDDO
+      END IF
+    END DO
     plai(:)           = lai(:) + sai(:)
     plai_cl(:,:)      = lai_cl(:,:) + sai_cl(:,:)
     cumm_plai_cl(:,:) = cumm_lai_cl(:,:) + cumm_sai_cl(:,:)

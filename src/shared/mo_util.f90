@@ -340,7 +340,9 @@ CONTAINS
     !
   END FUNCTION logical2string
 
-  SUBROUTINE report_memory_usage()
+  SUBROUTINE report_memory_usage(msg)
+
+    CHARACTER(len=*), INTENT(in), OPTIONAL:: msg     ! Message tag to be added to the origial OOM message
 
     INTEGER           :: size=0, resident=0, share=0, text=0, lib=0, data=0, dt=0, oom_score=0
     INTEGER           :: ierr=0
@@ -355,10 +357,17 @@ CONTAINS
     IF (ierr < 0) THEN
       CALL message('', 'Problem reading /proc/self/statm')
     ELSE
-      CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
-        &                             ' resident='//TRIM(int2string(resident))// &
-        &                             ' data='//TRIM(int2string(data))// &
-        &                             ' oom_score='//TRIM(int2string(oom_score)))
+      IF (PRESENT(msg)) THEN
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score))//' - '//msg)
+      ELSE
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score)))
+      END IF
     END IF
 
   END SUBROUTINE report_memory_usage

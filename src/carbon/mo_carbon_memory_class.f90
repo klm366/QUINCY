@@ -1087,7 +1087,6 @@ CONTAINS
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
     ENDIF
 
-#ifdef __ICON__
     ! Diagnostic global carbon sums for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
@@ -1141,7 +1140,6 @@ CONTAINS
         & prefix, suffix,                                                                        &
         & lrestart=.FALSE., initval_r=0.0_wp )
     END IF
-#endif
 
   END SUBROUTINE Init_carbon_memory
 

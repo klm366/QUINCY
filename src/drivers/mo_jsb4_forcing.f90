@@ -32,6 +32,9 @@ MODULE mo_jsb4_forcing
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+#ifndef __NO_QUINCY__
+  USE mo_quincy_model_config,    ONLY: QCANOPY
+#endif
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -218,7 +221,7 @@ CONTAINS
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
-    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              &
+    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              & ! out optional
     & p_deposition                                                                         &
     & )
 
@@ -271,11 +274,16 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: help2(:,:)
     REAL(wp), ALLOCATABLE :: tmp(:,:)
     REAL(wp) :: argMin, argMax
-    LOGICAL  :: use_quincy
+    LOGICAL  :: use_quincy, read_deposition
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver'
     ! ----------------------------------------------------------------------------------------------------- !
-
+    model => Get_model(model_id)
+    read_deposition = .FALSE.
+#ifndef __NO_QUINCY__
+    read_deposition = (model%config%qmodel_id /= QCANOPY)
+#endif
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
     use_quincy = (model_scheme == MODEL_QUINCY)
@@ -310,17 +318,30 @@ CONTAINS
         swpar_srf_down(ic, iblk)    = 0._wp
         fract_par_diffuse(ic, iblk) = 0._wp
         press_srf(ic, iblk)         = 0._wp
-        IF (use_quincy) THEN
+      END DO
+    END DO
+    !$ACC END PARALLEL
+!$OMP END PARALLEL DO
+
+    IF (use_quincy) THEN
+     IF ((.NOT. PRESENT(nhx_deposition)) .OR. (.NOT. PRESENT(noy_deposition)) .OR. (.NOT. PRESENT(p_deposition)) ) THEN
+      CALL finish(routine, 'Wrong usage: all deposition vars are expected when running quincy!')
+     END IF
+!$OMP PARALLEL DO PRIVATE(iblk, ic)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR COLLAPSE(2)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
           nhx_deposition(ic, iblk)     = 0._wp
           noy_deposition(ic, iblk)     = 0._wp
           nhx_n15_deposition(ic, iblk) = 0._wp
           noy_n15_deposition(ic, iblk) = 0._wp
           p_deposition(ic, iblk)       = 0._wp
-        END IF
-      ENDDO
-    ENDDO
-    !$ACC END PARALLEL
+        END DO
+      END DO
+      !$ACC END PARALLEL
 !$OMP END PARALLEL DO
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 Temperature
@@ -745,43 +766,44 @@ CONTAINS
     !>
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
-      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-        & forcing_input(model_id)%nhx_dep, nhx_deposition)
-      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-        & forcing_input(model_id)%noy_dep, noy_deposition)
-      CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-        & forcing_input(model_id)%p_dep, p_deposition)
-      !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition)
+      IF (read_deposition) THEN
+        CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+          & forcing_input(model_id)%nhx_dep, nhx_deposition)
+        CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+          & forcing_input(model_id)%noy_dep, noy_deposition)
+        CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+          & forcing_input(model_id)%p_dep, p_deposition)
+        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition)
 
-      ! Convert from kg/m2/s -> mumol/m2/s
-      ! -- This unit should have been tested above if specified correctly using expectedUnit
-      IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
-          & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
-          & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
-        WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
-          & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
-          & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
-          & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
-        CALL finish(TRIM(routine), message_text)
-      ENDIF
+        ! Convert from kg/m2/s -> mumol/m2/s
+        ! -- This unit should have been tested above if specified correctly using expectedUnit
+        IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
+            & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
+            & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
+          WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
+            & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
+            & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
+            & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
+          CALL finish(TRIM(routine), message_text)
+        ENDIF
 
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) COPYIN(forcing_options(model_id)) ASYNC(1)
-      DO iblk = 1, nblks
-        DO ic = 1, nproma
-          ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
-          nhx_deposition(ic, iblk) = nhx_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
-          noy_deposition(ic, iblk) = noy_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
-          p_deposition  (ic, iblk) = p_deposition  (ic, iblk) * 1000._wp / molar_mass_P / 1.e-6_wp
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+            nhx_deposition(ic, iblk) = nhx_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
+            noy_deposition(ic, iblk) = noy_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
+            p_deposition  (ic, iblk) = p_deposition  (ic, iblk) * 1000._wp / molar_mass_P / 1.e-6_wp
 
-          ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
-          nhx_n15_deposition(ic, iblk) = nhx_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-          noy_n15_deposition(ic, iblk) = noy_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-        ENDDO
-      ENDDO
-      !$ACC END PARALLEL LOOP
+            ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+            nhx_n15_deposition(ic, iblk) = nhx_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+            noy_n15_deposition(ic, iblk) = noy_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
-
+      END IF ! read_deposition (i.e. if quincy scheme /= canopy)
     END SELECT
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1305,6 +1327,7 @@ CONTAINS
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
         ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
+        forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
       ENDIF
 
       IF (new_year_forcing .OR. lstart .OR. lresume) THEN
@@ -1413,6 +1436,7 @@ CONTAINS
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
+      forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &
