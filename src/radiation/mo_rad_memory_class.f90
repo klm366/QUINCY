@@ -224,7 +224,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                  &
       & output_level=MEDIUM,                                               &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-	  
+
     CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
       & hgrid, surface,                                                    &
       & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
@@ -241,7 +241,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )	  
+      & initval_r=0.0_wp )
 
 
       CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,      &
@@ -343,7 +343,7 @@ CONTAINS
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & ) THEN
-	  
+
       CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
         & hgrid, surface,                                                    &
         & t_cf('albedo_vis_canopy', '', ''),                                 &

@@ -66,7 +66,7 @@ CONTAINS
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL rad_read_init_vars(tile)
     END IF
-  
+
     CALL rad_init_bc(tile)
     CALL rad_init_ic(tile)
 

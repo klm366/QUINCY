@@ -58,11 +58,6 @@ MODULE mo_l2a_memory_class
       & q_total_c,            & !< total C, sum of all quincy carbon pools
       & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
 
-    ! C in Quincy
-    TYPE(t_jsb_var_real2d) :: &
-      & q_total_c,            & !< total C, sum of all quincy carbon pools
-      & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
-
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
       & latent_hflx_wtr                 , &  !< latent heat flux over water [W m-2]

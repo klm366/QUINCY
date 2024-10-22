@@ -760,14 +760,14 @@ CONTAINS
       ELSEWHERE
         dom_cn(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixN, :, :)
       ENDWHERE
-          
+
       WHERE (sb_pool_mt(ix_dom, ixP, :, :) < eps8)
         dom_cp(:,:)              = microbial_np
       ELSEWHERE
         dom_cp(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixP, :, :)
       ENDWHERE
 
-    
+
       sb_bgcm_pool_microbial_c(:,:)       = sb_pool_mt(ix_microbial, ixC, :, :)
       sb_bgcm_pool_microbial_n(:,:)       = sb_pool_mt(ix_microbial, ixN, :, :)
       sb_bgcm_pool_microbial_p(:,:)       = sb_pool_mt(ix_microbial, ixP, :, :)
@@ -776,7 +776,7 @@ CONTAINS
       sb_bgcm_pool_mineral_assoc_p(:,:)   = sb_pool_mt(ix_residue_assoc, ixP, :, :) + sb_pool_mt(ix_dom_assoc, ixP, :, :)
       sb_bgcm_pool_residue_c(:,:)         = sb_pool_mt(ix_residue, ixC, :, :)
       sb_bgcm_pool_residue_n(:,:)         = sb_pool_mt(ix_residue, ixN, :, :)
-      sb_bgcm_pool_residue_p(:,:)         = sb_pool_mt(ix_residue, ixP, :, :)																		 
+      sb_bgcm_pool_residue_p(:,:)         = sb_pool_mt(ix_residue, ixP, :, :)
       ! unit conversion of inorganic transport fluxes to [mumol m3 s-1] for compatibility with the simple_1d soil model
       transport_nh4_solute(:,:)           = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
       transport_nh4_assoc(:,:)            = transport_nh4_assoc(:,:)      * 1.e6_wp / dtime
@@ -1141,7 +1141,7 @@ CONTAINS
     total_soil_n(:,:)         = sb_pool_total_bg_soil_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_p(:,:)   = po4_primary(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:) + po4_solute(:,:)
-	total_soil_lab_pi(:,:)    = po4_assoc_fast(:,:) + po4_solute(:,:)															  
+    total_soil_lab_pi(:,:)    = po4_assoc_fast(:,:) + po4_solute(:,:)
 
     !> 14.2 across multiple processes
     !>

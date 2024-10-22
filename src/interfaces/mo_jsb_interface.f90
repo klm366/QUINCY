@@ -698,7 +698,7 @@ CONTAINS
     END IF
     model => Get_model(model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     ! ..
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
