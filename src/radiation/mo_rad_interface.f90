@@ -97,9 +97,8 @@ MODULE mo_rad_interface
 
 CONTAINS
 
-  ! ------------------------------------------------------------------------------------------------------- !
-  !>Constructors for tasks
-  !>
+  ! ================================================================================================================================
+  !! Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_radiation task
@@ -483,7 +482,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   swpar_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in
-    ! dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)      ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_soil)          ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par)                   ! in

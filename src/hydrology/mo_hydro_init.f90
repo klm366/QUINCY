@@ -30,10 +30,8 @@ MODULE mo_hydro_init
 
   dsl4jsb_Use_processes HYDRO_, PHENO_
   dsl4jsb_Use_config(HYDRO_)
-  ! dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
-  ! dsl4jsb_Use_memory(SSE_)
 
   IMPLICIT NONE
   PRIVATE
@@ -850,8 +848,11 @@ CONTAINS
     USE mo_util,                ONLY: ifs2soil
 
     !-----------------------------------------------------------------------
+    !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
     !-----------------------------------------------------------------------
+    !  LOCAL VARIABLES
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
@@ -860,7 +861,10 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER              :: soil_w
     INTEGER                                 :: i
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_ic'
+
     !-----------------------------------------------------------------------
+    ! CONTENT
+
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))

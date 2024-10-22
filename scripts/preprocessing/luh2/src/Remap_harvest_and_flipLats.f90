@@ -647,6 +647,7 @@ SUBROUTINE GAUAW (pa,nlat)
 
     ! Find first approximation of the roots of the
     ! Legendre polynomial of degree nlat
+
     DO jgl = 1, ins2
        z = REAL(4*jgl-1)*api/REAL(4*nlat+2)
        pa(jgl) = COS(z+1./(TAN(z)*REAL(8*nlat**2)))
@@ -659,10 +660,12 @@ SUBROUTINE GAUAW (pa,nlat)
     DO jgl = 1, ins2
 
        za = pa(jgl)
+
        DO iter = 1, itemax+1
           zk = 0.0
 
           ! Newton iteration step
+
           zkm2 = 1.0
           zkm1 = za
           zx = za

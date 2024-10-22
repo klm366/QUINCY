@@ -200,9 +200,6 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-    ! grid  => Get_grid(model%grid_id)
-    ! blks = grid%get_blk_start()
-    ! blke = grid%get_blk_end()
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)

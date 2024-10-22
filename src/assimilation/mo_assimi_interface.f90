@@ -421,7 +421,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
-    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index per canopy layer [-]
+    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
 
     ! Get local variables from options argument
@@ -450,7 +450,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      CO2_air_mol)             ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(RAD_,    lai_cl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
@@ -750,7 +750,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
-    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index per canopy layer [-]
+    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
 
     ! Set local variables from options argument
@@ -785,7 +785,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
-	
+
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in

@@ -153,7 +153,6 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
-    ! USE mo_jsb_subset,        ONLY: t_subset
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -440,11 +439,6 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-
-    ! ! dynveg a.k.a. vegetation_lcc
-    ! lstart   = is_time_experiment_start(options%current_datetime)
-    ! new_day  = is_newday(options%current_datetime, dtime)
-    ! new_year = is_newyear(options%current_datetime, dtime)
 
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &

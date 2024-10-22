@@ -51,13 +51,13 @@ MODULE mo_pheno_interface
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_phenology !< Aggregates computed task variables
   END TYPE   tsk_phenology
+
   !> Constructor interface for update_phenology task
   !>
   INTERFACE   tsk_phenology
     PROCEDURE Create_task_phenology         !< Constructor function for task
   END INTERFACE   tsk_phenology
 
-  ! ======================================================================================================= !
   !> Type definition for foliage_projected_cover task
   !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
@@ -65,6 +65,7 @@ MODULE mo_pheno_interface
     PROCEDURE, NOPASS :: Integrate => update_fpc
     PROCEDURE, NOPASS :: Aggregate => aggregate_fpc
   END TYPE tsk_foliage_projected_cover
+
   !> Constructor interface for foliage_projected_cover task
   !>
   INTERFACE tsk_foliage_projected_cover
@@ -79,22 +80,26 @@ CONTAINS
   !> Constructor for phenology task
   !>
   FUNCTION Create_task_phenology(model_id) RESULT(return_ptr)
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_phenology::return_ptr)
     CALL return_ptr%Construct(name='phenology', process_id=PHENO_, owner_model_id=model_id)
+
   END FUNCTION Create_task_phenology
 
   ! ======================================================================================================= !
   !> Constructor for foliage_projected_cover task
   !>
   FUNCTION Create_task_foliage_projected_cover(model_id) RESULT(return_ptr)
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_foliage_projected_cover::return_ptr)
     CALL return_ptr%Construct(name='foliage_projected_cover', process_id=PHENO_, owner_model_id=model_id)
+
   END FUNCTION Create_task_foliage_projected_cover
 
   ! ======================================================================================================= !
@@ -139,7 +144,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
+
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
 
@@ -731,28 +736,30 @@ CONTAINS
   !> Implementation of "aggregate" of the "phenology" task
   !>
   SUBROUTINE aggregate_phenology(tile, options)
-    ! USE mo_jsb_model_class,   ONLY: t_jsb_model
-    ! USE mo_jsb_class,         ONLY: Get_model
-    USE mo_jsb_time,          ONLY: is_newyear
-    ! ----------------------------------------------------------------------------------------------------- !
+
+    USE mo_jsb_time,             ONLY: is_newyear
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
+
+    TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
 
-    ! Local variables	
-    INTEGER                                   :: iblk, ics, ice
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
+    ! Local variables
+    INTEGER  :: iblk, ics, ice
+
+    ! Get local variables from options argument
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -833,7 +840,7 @@ CONTAINS
 
     ! Update foliage projected cover
     !
-    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+    IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
       CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)

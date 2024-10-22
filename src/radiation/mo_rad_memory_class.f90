@@ -31,9 +31,6 @@ MODULE mo_rad_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 90
 
-  ! ======================================================================================================= !
-  !>Type definition for radiation memory
-  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
     TYPE(t_jsb_var_real2d)  :: &
@@ -105,7 +102,7 @@ MODULE mo_rad_memory_class
       ! & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
-	  & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
+      & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
       & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
@@ -140,7 +137,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
-	
+
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
@@ -243,23 +240,21 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
+    CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,                    &
+      & hgrid, surface,                                                    &
+      & t_cf('albedo_vis_snow', '', ''),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=MEDIUM,                                               &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_vis_snow', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
-      CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_nir_snow', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
+    CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,                    &
+      & hgrid, surface,                                                    &
+      & t_cf('albedo_nir_snow', '', ''),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=MEDIUM,                                               &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &
@@ -362,6 +357,13 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
+        & hgrid, surface,                                                    &
+        & t_cf('snow_age', '', ''),                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract', '', ''),                                    &
@@ -375,13 +377,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
-      CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
-        & hgrid, surface,                                                    &
-        & t_cf('snow_age', '', ''),                                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL mem%Add_var( 'par', mem%par,                                      &
         & hgrid, surface,                                                    &
@@ -476,7 +471,6 @@ CONTAINS
       !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       !    & prefix, suffix,                                                                &
       !    & lrestart=.TRUE., initval_r=0.0_wp )
-
     END IF
 
     ! Additional variables for lakes

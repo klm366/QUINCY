@@ -280,6 +280,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
       LSECONDARY = .false.
       LCROP = .false.
       LPASTURE = .false.
+
       DO I = 1,NVAR
          ! 'gothr' is primary vegetation
          IF (FVARNAM(I) == 'gothr') THEN
@@ -297,6 +298,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
             IPASTURE = I
          END IF
       END DO
+
       IF (.NOT. LPRIMARY) STOP 'Variable gothr (primary) not found'
       IF (.NOT. LSECONDARY) STOP 'Variable gsecd (secondary) not found'
       IF (.NOT. LCROP) STOP 'Variable gcrop not found'
@@ -1169,6 +1171,7 @@ SUBROUTINE GAUAW (pa,nlat)
 
     ! Find first approximation of the roots of the
     ! Legendre polynomial of degree nlat
+
     DO jgl = 1, ins2
        z = REAL(4*jgl-1)*api/REAL(4*nlat+2)
        pa(jgl) = COS(z+1./(TAN(z)*REAL(8*nlat**2)))
@@ -1181,10 +1184,12 @@ SUBROUTINE GAUAW (pa,nlat)
     DO jgl = 1, ins2
 
        za = pa(jgl)
+
        DO iter = 1, itemax+1
           zk = 0.0
 
           ! Newton iteration step
+
           zkm2 = 1.0
           zkm1 = za
           zx = za

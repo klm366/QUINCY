@@ -299,35 +299,6 @@ CONTAINS
       !$ACC END DATA
     END IF
 
-    ! ! Compute surface drag and exchange coefficients for the offline model
-    ! IF (jsbach_runs_standalone()) THEN
-      ! ! Get surface temperature, humidity and roughness for lake tile
-      ! fact_q_air(:)    = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
-      ! fact_qsat_srf(:) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
-      ! rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      ! rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
-
-      ! ! Update drag and exchange coefficients for lake surface based on external forcing data
-      ! CALL update_drag( &
-      ! ! INTENT in
-      ! & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-      ! & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
-      ! & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
-      ! & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
-      ! ! INTENT out
-      ! & drag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
-
-      ! IF (config_l_ice_on_lakes) THEN
-        ! ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
-        ! ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-        ! drag_ice(:)    = drag_wtr(:)
-        ! t_acoef_ice(:) = t_acoef_wtr(:)
-        ! t_bcoef_ice(:) = t_bcoef_wtr(:)
-        ! q_acoef_ice(:) = q_acoef_wtr(:)
-        ! q_bcoef_ice(:) = q_bcoef_wtr(:)
-      ! END IF
-    ! END IF
-
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic=1,nc

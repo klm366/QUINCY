@@ -195,7 +195,7 @@ CONTAINS
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
-    sb_model_scheme             = "jsm"       ! simple_1d jsm
+    sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
     sb_adsorp_scheme            = "eca_part"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none

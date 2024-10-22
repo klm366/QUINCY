@@ -962,19 +962,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_wres_org(:,:)
 
-    ! REAL(wp) :: N_perc
-    ! REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways
-    ! REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
-    ! REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
-
-    ! REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  matrix_pot_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
-    ! REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
     iblk  = options%iblk

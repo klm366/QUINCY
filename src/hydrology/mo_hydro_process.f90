@@ -194,7 +194,6 @@ CONTAINS
       !  Budgets of snow (canopy, ground)
       !---------------------------------------------
 
-
       ! amount of snow remaining on the canopy
       new_snow_can = MIN(new_snow * InterceptionEfficiency, MAX(skinres_canopy_max(ic) - weq_snow_can(ic), 0._wp))
 
@@ -2200,7 +2199,6 @@ CONTAINS
   ! Note that P & Q refer to the inter face above a given lvl not below.
   ! Hence for j == 1, there is no P(j) and Q(j)
   ! Make sure that this is consistent with the definition of input params.
-
 
   !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
   !$ACC LOOP SEQ

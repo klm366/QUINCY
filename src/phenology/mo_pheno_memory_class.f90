@@ -170,6 +170,7 @@ CONTAINS
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
         !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
+
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(2,0,28, grib_bits)
       ELSE
@@ -191,13 +192,11 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! setting for: fract_fpc
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
         grib2_desc = t_grib2(2,0,228, grib_bits)
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
@@ -230,8 +229,6 @@ CONTAINS
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
-      ! --------------------------------------------------------------------------------------------------- !
-      ! logrop
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
@@ -339,8 +336,6 @@ CONTAINS
           & prefix, suffix,                                                    &
           & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
-        ! ------------------------------------------------------------------------------------------------- !
-        ! l_forestRegrowth
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
           CALL mem%Add_var('maxLAI_allom', mem%maxLAI_allom,                     &

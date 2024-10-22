@@ -234,6 +234,7 @@ CONTAINS
     IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
 
     no_omp_thread = Get_omp_thread()
+
     nc = ice - ics + 1
     model => Get_model(model_id)
 
@@ -666,6 +667,7 @@ CONTAINS
   !     & zm_srf   (:), &
   !     & alb_vis  (:), &
   !     & alb_nir  (:)
+
   ! END SUBROUTINE interface_inquire
 
   ! ======================================================================================================= !
@@ -677,6 +679,7 @@ CONTAINS
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
+
     USE mo_alcc_init,           ONLY : read_land_use_data
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -688,18 +691,17 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
-    ! ----------------------------------------------------------------------------------------------------- !
+
     no_omp_thread = Get_omp_thread()   ! Should always be 1
     IF (no_omp_thread /= 1) THEN
       CALL finish(routine, 'should not be called inside OMP parallel region!')
     END IF
     model => Get_model(model_id)
-    ! ----------------------------------------------------------------------------------------------------- !
 
-    ! ..
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
@@ -711,6 +713,7 @@ CONTAINS
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
+
   END SUBROUTINE jsbach_start_timestep
 
   ! ======================================================================================================= !

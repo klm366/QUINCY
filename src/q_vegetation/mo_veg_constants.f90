@@ -365,5 +365,6 @@ CONTAINS
     tau_pp_sawnwood = 49.9
 
   END SUBROUTINE init_veg_constants
+
 #endif
 END MODULE mo_veg_constants

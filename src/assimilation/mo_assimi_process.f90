@@ -734,7 +734,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,   ONLY: f_aut_leaf, cCost
+    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
     REAL(wp),  INTENT(in), DIMENSION(:) ::   &

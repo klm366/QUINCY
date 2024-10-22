@@ -14,10 +14,8 @@
 MODULE mo_carbon_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,             ONLY: wp
-  ! USE mo_exception,        ONLY: finish
-  USE mo_util,             ONLY: One_of
-  ! USE mo_jsb_utils_iface,  ONLY: assign_if_present_allocatable
+  USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -39,7 +37,7 @@ MODULE mo_carbon_memory_class
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 300
+  INTEGER, PARAMETER :: max_no_of_vars = 155
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory

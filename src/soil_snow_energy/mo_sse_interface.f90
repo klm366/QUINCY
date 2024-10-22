@@ -107,31 +107,16 @@ CONTAINS
 
   END FUNCTION Create_task_soil_and_snow_properties
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Register tasks: SSE_ process
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_sse_tasks(process, model_id)
-
-    ! USE mo_jsb_model_class,   ONLY: t_jsb_model
-    ! USE mo_jsb_class,         ONLY: Get_model
 
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
-
-    ! TYPE(t_jsb_model), POINTER :: model
-
-    ! model   => Get_model(model_id)
 
     CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
     CALL process%Register_task(tsk_soil_and_snow_properties(model_id))
 
   END SUBROUTINE Register_sse_tasks
 
-  !-----------------------------------------------------------------------------------------------------
-  !> update_soil_and_snow_temperature
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
@@ -269,8 +254,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
+
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
+
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
@@ -707,10 +694,6 @@ CONTAINS
 
   END SUBROUTINE aggregate_soil_and_snow_temperature
 
-  !-----------------------------------------------------------------------------------------------------
-  !> update_soil_and_snow_properties
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min ! , cs

@@ -67,6 +67,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(PHENO_)) THEN
       CALL pheno_finalize_init_vars()
     END IF
+
   END SUBROUTINE pheno_init
 
   SUBROUTINE pheno_finalize_init_vars
@@ -231,8 +232,8 @@ CONTAINS
 
   SUBROUTINE pheno_init_ic(tile)
 
-    USE mo_pheno_process,     ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,          ONLY: get_time_interpolation_weights
+    USE mo_pheno_process, ONLY: get_foliage_projected_cover
+    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 

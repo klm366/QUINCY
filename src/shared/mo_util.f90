@@ -56,6 +56,7 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -74,7 +75,6 @@ CONTAINS
     END DO
 
   END FUNCTION soil_depth_to_layers_2d
-
 
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
