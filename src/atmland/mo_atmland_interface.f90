@@ -45,13 +45,8 @@ MODULE mo_atmland_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
 
-
 CONTAINS
 
-
-  ! ======================================================================================================= !
-  !> update atm2land
-  !>
   SUBROUTINE update_atm2land( &
     & tile, options,          &
     & t_air,                  &
@@ -107,7 +102,7 @@ CONTAINS
       & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER  :: iblk, ics, ice, nc, i
@@ -121,7 +116,7 @@ CONTAINS
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Real2D_onChunk ::  &
       & t_air_ptr,             &
       & q_air_ptr,             &
@@ -288,7 +283,6 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !$acc parallel default(present)
     IF (PRESENT(DEBUG_VAR)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
@@ -501,6 +495,7 @@ CONTAINS
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
       END IF
+
     END IF
 
     !$ACC END PARALLEL
@@ -509,10 +504,6 @@ CONTAINS
 
   END SUBROUTINE update_atm2land
 
-
-  ! ======================================================================================================= !
-  !> update land2atm
-  !>
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_srf_rad, t_eff_srf, qsat_srf, s_srf,                                  &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &
