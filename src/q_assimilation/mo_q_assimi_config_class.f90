@@ -64,6 +64,7 @@ CONTAINS
     CLASS(t_q_assimi_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     INTEGER                     :: ncanopy
@@ -84,6 +85,7 @@ CONTAINS
     NAMELIST /q_assimi_nml/  &
 #endif
       & active,                   &
+      & lrestart_cont,            &
       & ic_filename,              &
       & bc_filename,              &
       & ncanopy,                  &
@@ -100,6 +102,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                        = .TRUE.
+    lrestart_cont                 = .FALSE.      ! TRUE: Continue although ASSIMI variables are missing in restart file
     bc_filename                   = 'bc_land_assimi.nc'
     ic_filename                   = 'ic_land_assimi.nc'
     ncanopy                       = 10           ! (default for FAPAR based canopy layers would be 10)
@@ -121,6 +124,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                       = active
+    config%lrestart_cont                = lrestart_cont
     config%ic_filename                  = ic_filename
     config%bc_filename                  = bc_filename
     config%ncanopy                      = ncanopy

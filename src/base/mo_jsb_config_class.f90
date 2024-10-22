@@ -42,7 +42,6 @@ MODULE mo_jsb_config_class
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
-    LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
 #ifndef __NO_QUINCY__
@@ -81,6 +80,7 @@ MODULE mo_jsb_config_class
   ! Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
+    LOGICAL :: lrestart_cont                    ! TRUE: Continue although process variables are missing in the restart file
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
@@ -131,7 +131,6 @@ CONTAINS
     CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     INTEGER                       :: qmodel_id
-    LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
@@ -159,7 +158,6 @@ CONTAINS
       use_glacier, &
       enforce_water_budget, &
       quincy_model, &
-      l_compat401, &
       usecase, &
       tpe_scheme, &
       hsm_mode, &
@@ -206,7 +204,6 @@ CONTAINS
 #ifndef __NO_QUINCY__
     qmodel_id                  = QLAND
 #endif
-    l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
@@ -270,7 +267,6 @@ CONTAINS
     model_config%use_glacier                = use_glacier
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
-    model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode

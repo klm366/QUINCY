@@ -91,9 +91,10 @@ CONTAINS
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
-    INTEGER                           :: ic, is, ix_c, ix_e     !< looping indices
-    INTEGER                           :: nr_of_compartments     !< number of compartments in veg bgcms
-    INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
+    INTEGER                           :: ic, is                 !< looping indices
+    INTEGER                           :: ielem, ix_elem         !< id and index of bgcm elements
+    INTEGER                           :: ix_comp                !< id and index of bgcm compartments
+    INTEGER                           :: n_veg_bgcm_comp        !< number of vegetation bgcm compartments to loop over
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -394,9 +395,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ! TODO: I am sure there is a more elegant way to acess these?
-    nr_of_compartments = SIZE(veg_pool_mt,1)
-    nr_of_elements = SIZE(veg_pool_mt,2)
+    !> 0.8 get number of bgcm compartments
+    !>
+    n_veg_bgcm_comp = SIZE(veg_pool_mt,1)
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
@@ -498,34 +499,50 @@ CONTAINS
        !>  1.7 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
        !>
       DO ic = 1, nc
-       DO ix_e = 1, nr_of_elements
-        DO ix_c = 1, nr_of_compartments
-          veg_pool_mt(ix_c,ix_e,ic) = veg_pool_mt(ix_c,ix_e,ic) - veg_litterfall_mt(ix_c,ix_e,ic)
-          veg_pool_mt(ix_c,ix_e,ic) = veg_pool_mt(ix_c,ix_e,ic) +     veg_growth_mt(ix_c,ix_e,ic)
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, n_veg_bgcm_comp
+              veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)
+              veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) + veg_growth_mt(ix_comp, ix_elem, ic)
+            END DO
+            ! set woody biomass to zero after stand replacing harvest
+            ! NOTE: the IF may never be TRUE in IQ, and it will be replaced with future work on "simple harvest"
+            IF (model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ic) > test_false_true) THEN
+              veg_pool_mt(ix_sap_wood, ix_elem, ic)   = 0.0_wp
+              veg_pool_mt(ix_heart_wood, ix_elem, ic) = 0.0_wp
+            END IF
+          END IF
         END DO
-       END DO
-      END DO
-      DO ic = 1, nc
-       DO ix_e = 1, nr_of_elements
-        veg_pool_mt(ix_labile, ix_e, ic)   = veg_pool_mt(ix_labile, ix_e, ic)   + veg_establishment_mt(ix_e,ic)
-        veg_pool_mt(ix_seed_bed, ix_e, ic) = veg_pool_mt(ix_seed_bed, ix_e, ic) - veg_establishment_mt(ix_e,ic)
-       END DO
       END DO
 
-       ! @TODO
-       !>    1.7.1 quick-fix ensure veg_pool does not become negative
-       !>          apply only with IQ as it changes results with QS
-       !>
-       !   ==> need additional debug code
-       !       to output litterfall & growth fluxes + lat/lon/PFT for grid cells where veg_pool gets negative
+      DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            veg_pool_mt(ix_labile,   ix_elem, ic) = veg_pool_mt(ix_labile,   ix_elem, ic) + veg_establishment_mt(ix_elem, ic)
+            veg_pool_mt(ix_seed_bed, ix_elem, ic) = veg_pool_mt(ix_seed_bed, ix_elem, ic) - veg_establishment_mt(ix_elem, ic)
+          END IF
+        END DO
+      END DO
+
+      ! @TODO
+      !>    1.7.1 quick-fix ensure veg_pool does not become negative
+      !>          apply only with IQ as it changes results with QS
+      !>
+      !   ==> need additional debug code
+      !       to output litterfall & growth fluxes + lat/lon/PFT for grid cells where veg_pool gets negative
 #ifdef __QUINCY_STANDALONE__
 #else
       DO ic = 1, nc
-       DO ix_e = 1, nr_of_elements
-        DO ix_c = 1, nr_of_compartments
-         veg_pool_mt(ix_c,ix_e,ic) = MAX(0.0_wp, veg_pool_mt(ix_c,ix_e,ic))
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, n_veg_bgcm_comp
+              veg_pool_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_pool_mt(ix_comp, ix_elem, ic))
+            END DO
+          END IF
         END DO
-       END DO
       END DO
 #endif
 
@@ -533,8 +550,8 @@ CONTAINS
       !>
       DO ic = 1, nc
         ! in living plant tissue
-        DO ix_c = 1, nr_of_compartments
-          veg_pool_mt(ix_c, ixC14, ic) = veg_pool_mt(ix_c, ixC14, ic) * (1._wp - lambda_C14 * dtime)
+        DO ix_comp = 1, n_veg_bgcm_comp
+          veg_pool_mt(ix_comp, ixC14, ic) = veg_pool_mt(ix_comp, ixC14, ic) * (1._wp - lambda_C14 * dtime)
         END DO
 
         ! and if simulating with product pools also within these
@@ -641,63 +658,7 @@ CONTAINS
       END DO
     END IF
 
-    !>3.0 stand/cohort harvest
-    !>
-    ! in case of complete harvest, set all pools to zero
-    ! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
-    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN
-      ! differ between cohort & population scheme
-      IF (do_cohort_harvest(ics) > test_false_true) THEN    ! -> cohort scheme
-        dens_ind(:)                     = 1.0_wp
-        veg_pool_mt(ix_reserve, ixC, :) = 1.0_wp
-      ELSE ! model%config%l_do_stand_replacing_harvest -> population scheme
-        dens_ind(:)                     = 0.1_wp
-        veg_pool_mt(ix_reserve, ixC, :) = 0.1_wp
-      ENDIF
-      IF(dsl4jsb_Config(SB_)%flag_mycorrhiza) THEN !save some additional C in case plant has to feed mycorrhizae
-        veg_pool_mt(ix_reserve, ixC, :) = veg_pool_mt(ix_reserve, ixC, :) * 2.0_wp
-      ENDIF
-      ! set zero
-      veg_pool_mt(ix_leaf, :, :)         = 0.0_wp
-      veg_pool_mt(ix_fine_root, :, :)    = 0.0_wp
-      veg_pool_mt(ix_coarse_root, :, :)  = 0.0_wp
-      veg_pool_mt(ix_sap_wood, :, :)     = 0.0_wp
-      veg_pool_mt(ix_heart_wood, :, :)   = 0.0_wp
-      veg_pool_mt(ix_fruit, :, :)        = 0.0_wp
-      veg_pool_mt(ix_labile, :, :)       = 0.0_wp
-      height(:)                          = 0.0_wp
-      diameter(:)                        = 0.0_wp
-      lai(:)                             = 0.0_wp
-      mean_leaf_age(:)                   = 0.0_wp
-      ! assume that some (10% ?) mycorrhizae will survive the harvest - most will die shortly after harvest caused by turnover
-      sb_pool_mt(ix_mycorrhiza, :, :, :) = sb_pool_mt(ix_mycorrhiza, :, :, :) * 0.1_wp
-      ! init
-      dphi(:)                       = w_soil_root_pot(:) - lctlib%phi_leaf_min
-      rfr_ratio_boc_tvegdyn_mavg(:) = rfr_ratio_toc
-      ! pool%reserve% C N P
-      veg_pool_mt(ix_reserve, ixN, :) = veg_pool_mt(ix_reserve, ixC, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-      veg_pool_mt(ix_reserve, ixP, :) = veg_pool_mt(ix_reserve, ixN, :) / lctlib%np_leaf
-      ! pool%reserve%carbon13
-      IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-      ELSE
-         hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-      ENDIF
-      veg_pool_mt(ix_reserve, ixC13, :) = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:)) &
-        &                                 * veg_pool_mt(ix_reserve, ixC, :)
-      ! pool%reserve%carbon14
-      IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-      ELSE
-         hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-      ENDIF
-      veg_pool_mt(ix_reserve, ixC14, :) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) &
-        &                                 * veg_pool_mt(ix_reserve, ixC, :)
-      ! pool%reserve%nitrogen15
-      veg_pool_mt(ix_reserve, ixN15, :) = veg_pool_mt(ix_reserve, ixN, :) / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    ENDIF
-
-    !>4.0 Given current vegetation pools, update canopy layers
+    !> 3.0 Given current vegetation pools, update canopy layers
     !>
     CALL calc_canopy_layers( nc                                                       , & ! in
                              ncanopy                                                  , &
@@ -741,11 +702,11 @@ CONTAINS
                              beta_soil_gs     = beta_soil_gs_tfrac_mavg(:), &
                              t_jmax_opt       = t_jmax_opt_mavg(:) )                      ! optional in
 
-    !> 5.0 analysis of mass conservation: sum compartments of veg_pool into veg_total_biomass
+    !> 4.0 analysis of mass conservation: sum compartments of veg_pool into veg_total_biomass
     !>
     veg_total_biomass_mt(:,:) = SUM(veg_pool_mt(:, :, :), DIM = 1)
 
-    !> 6.0 bgc_material diagnostics
+    !> 5.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element
     !>     or simply add value (of one/two/few pool variables) to a memory variable for aggregation and output
     !>
