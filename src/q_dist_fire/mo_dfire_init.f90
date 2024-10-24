@@ -70,8 +70,8 @@ CONTAINS
 !    dsl4jsb_Real2D_onChunk      :: nesterov_index
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
@@ -82,6 +82,7 @@ CONTAINS
 !    dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
     ! ----------------------------------------------------------------------------------------------------- !
 !    nesterov_index(:) = 0._wp
+    WRITE(*,*) "dfire_init..."
 
   END SUBROUTINE dfire_init
 #endif
