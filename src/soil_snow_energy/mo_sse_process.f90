@@ -520,7 +520,7 @@ CONTAINS
                 &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
                 &              )
             ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
+              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoh2o))
             END IF
           END DO
         END DO
@@ -533,10 +533,10 @@ CONTAINS
             ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
             ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
             t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
-              & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
+              & melt(ic,is) * alf * rhoh2o / heat_cap(ic,is)
 
             frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
-            melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+            melt  (ic,is) = melt  (ic,is) * rhoh2o   / delta_time
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -586,7 +586,7 @@ CONTAINS
               ELSE IF (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is  ) < tmelt) THEN
                   ! in case water is present this would increase the energy required to bring temperatures above the melting point
                   thaw_depth(ic) = zbot(is-1) + dsoil(ic,is) * (t_soil_sl(ic,is-1) - tmelt) &
-                    & / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is) + ice(ic,is) * alf * rhoi / heat_cap(ic,is))
+                    & / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is) + ice(ic,is) * alf * rhoh2o / heat_cap(ic,is))
               END IF
             END IF
           END DO
