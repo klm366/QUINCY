@@ -77,8 +77,11 @@ CONTAINS
   !> configuration routine of t_dfire_config
   !>
   SUBROUTINE Init_dfire_config(config)
-    USE mo_namelist,           ONLY: open_nml, POSITIONED, &
-      &                              position_nml, close_nml
+#ifdef __QUINCY_STANDALONE__
+    USE mo_namelist,            ONLY: open_nml, POSITIONED, position_nml, close_nml
+#else
+    USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
+#endif
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
@@ -101,7 +104,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
+#ifdef __QUINCY_STANDALONE__
     NAMELIST /dist_fire_ctl/        &
+#else
+    NAMELIST /dist_fire_nml/        &
+#endif
       & active,                     &
       & ic_filename,                &
       & bc_filename,                &
@@ -126,8 +133,13 @@ CONTAINS
     ! &DIST_FIRE_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
-    nml_unit = position_nml('DIST_FIRE_CTL', nml_handler, STATUS=istat)
+#ifdef __QUINCY_STANDALONE__
+    nml_unit = position_nml('dist_fire_ctl', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, dist_fire_ctl)
+#else
+    nml_unit = position_nml('dist_fire_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, dist_fire_nml)
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! pass values as read from file
     config%active                    = active

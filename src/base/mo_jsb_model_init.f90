@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_, DFIRE_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -28,6 +28,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(HYDRO_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
+  dsl4jsb_Use_config(DFIRE_)
 #endif
 
   USE mo_jsb_class,        ONLY: Get_model
@@ -154,6 +155,7 @@ CONTAINS
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
+    USE mo_dfire_init,          ONLY: dfire_init
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
@@ -184,6 +186,7 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(DFIRE_)
 #endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -366,6 +369,7 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
+      dsl4jsb_Get_config(DFIRE_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -384,6 +388,9 @@ CONTAINS
 
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+          CALL model%Queue_task(DFIRE_, "dfire_spitfire")         ! LAND ONLY
+        ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
       CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
@@ -551,6 +558,11 @@ CONTAINS
         IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
           IF (tile%Is_process_active(SB_)) THEN
             CALL sb_init(tile)
+          END IF
+        ENDIF
+        IF(model%config%qmodel_id == QLAND) THEN 
+          IF (tile%Is_process_active(DFIRE_)) THEN
+            CALL dfire_init(tile)
           END IF
         ENDIF
 #endif
