@@ -71,7 +71,7 @@ CONTAINS
     CALL mem%Add_var( 'fuel', mem%fuel,                                                                      &
       & hgrid, surface,                                                                                           &
       & t_cf('fuel', 'mol(C) m-2', 'Amount of carbon fuel'),                                                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 101, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & loutput=.TRUE., output_level=BASIC,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3

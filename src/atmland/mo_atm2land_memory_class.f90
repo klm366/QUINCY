@@ -193,7 +193,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  12, grib_bits), &
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
@@ -203,7 +203,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  13, grib_bits), &
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
@@ -213,7 +213,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  14, grib_bits), &
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
@@ -360,7 +360,7 @@ CONTAINS
       CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
         & hgrid, surface,                                                      &
         & t_cf('surface_drag', '', ''),                                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  15, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=jsbach_runs_standalone(),                                   &
         & output_level=BASIC,                                                  &
@@ -521,7 +521,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  16, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
@@ -532,7 +532,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('noy_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  17, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
@@ -543,7 +543,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('nhx_n15_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen-15 deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  18, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
@@ -553,7 +553,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('noy_n15_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen-15 deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  19, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
@@ -563,7 +563,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  20, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
@@ -574,7 +574,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  21, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
@@ -585,7 +585,7 @@ CONTAINS
         & hgrid, surface, &
         & t_cf('local_time_day_seconds', 's', 'local time of this grid-cell'), &
         & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
+        & t_grib2(  2, 198,  22, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
@@ -597,7 +597,7 @@ CONTAINS
           & hgrid, surface, &
           & t_cf('slow_sb_pool_accelerator_execution_counter', ' ', 'the number of executions of spin-up accelerator'), &
           & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
+          & t_grib2(  2, 198,  23, grib_bits), &
           & prefix, suffix, &
           & output_level = FULL, &
           & loutput = .TRUE., &
@@ -608,7 +608,7 @@ CONTAINS
           & hgrid, surface, &
           & t_cf('slow_sb_pool_accelerator_execute', ' ', 'logical to determine if executing the spin-up acclerator or not'), &
           & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
+          & t_grib2(  2, 198,  24, grib_bits), &
           & prefix, suffix, &
           & output_level = FULL, &
           & loutput = .TRUE., &
@@ -623,7 +623,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('nhx_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhx_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  25, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -633,7 +633,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('noy_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of noy_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  26, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -643,7 +643,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('p_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of p_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  27, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -653,7 +653,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_mixing_ratio_acc', 'ppm', 'accumulate input value of co2_mixing_ratio'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  28, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -663,7 +663,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_dC13_acc', 'ppm', 'accumulate input value of co2_dC13'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  29, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -673,7 +673,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_DC14_acc', 'scaled', 'accumulate input value of co2_DC14'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  30, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -683,7 +683,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('const_input_timestep_counter', 'unitless', 'count number of timesteps since simulation start'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  31, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -693,7 +693,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('nhx_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhx_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  32, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -703,7 +703,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('noy_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of noy_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  33, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -713,7 +713,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('p_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of p_deposition'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  34, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -723,7 +723,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_mixing_ratio_const', 'ppm', 'avrg of 1st year input of co2_mixing_ratio'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  35, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -733,7 +733,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_dC13_const', 'ppm', 'avrg of 1st year input of co2_dC13'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  36, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
@@ -743,7 +743,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('co2_DC14_const', 'scaled', 'avrg of 1st year input of co2_DC14'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  37, grib_bits), &
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &

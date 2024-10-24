@@ -86,7 +86,7 @@ CONTAINS
     CALL mem%Add_var( 'burned_fract', mem%burned_fract,                                 &
       & hgrid, surface,                                                                 &
       & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 102, grib_bits),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  96, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &
       & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -94,7 +94,7 @@ CONTAINS
     CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
       & hgrid, surface,                                                                  &
       & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 103, grib_bits),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  97, grib_bits),               &
       & prefix, suffix,                                                                  &
       & output_level=BASIC,                                                              &
       & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -102,7 +102,7 @@ CONTAINS
     CALL mem%Add_var( 'q_air_clim', mem%q_rel_air_climbuf,                                            &
       & hgrid, surface,                                                                               &
       & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 104, grib_bits),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  98, grib_bits),                            &
       & prefix, suffix,                                                                               &
       & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JS3; lrestart=true only necessary if we restart within a day
 
@@ -125,14 +125,14 @@ CONTAINS
     CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                                &
       & hgrid, surface,                                                                                &
       & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 105, grib_bits),                             &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  99, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,             &
       & hgrid, surface,                                                     &
       & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 106, grib_bits),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 100, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart=.TRUE., initval_r=0.0_wp )
 

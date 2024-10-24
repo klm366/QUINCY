@@ -110,7 +110,7 @@ CONTAINS
       CALL mem%Add_var('fract_per_age', mem%fract_per_age,                     &
         & hgrid, forest_age,                                                   &
         & t_cf('fract_per_age', '-', 'Area fraction per age'),                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 102, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )

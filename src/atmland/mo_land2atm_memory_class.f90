@@ -201,7 +201,7 @@ CONTAINS
       & hgrid, surface, &
       & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
       & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
+      & t_grib2(  2, 198,  38, grib_bits), &
       & prefix, suffix, &
       & output_level = BASIC, &
       & loutput = .TRUE., &
@@ -226,7 +226,7 @@ CONTAINS
       CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
         & hgrid, surface,                                                              &
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  47, grib_bits),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  39, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
         & initval_r=-999.0_wp )
@@ -234,7 +234,7 @@ CONTAINS
       CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
         & hgrid, surface,                                                                          &
         & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  48, grib_bits),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  40, grib_bits),                       &
         & prefix, suffix,                                                                          &
         & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )

@@ -515,7 +515,7 @@ CONTAINS
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   2, grib_bits),                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   1, grib_bits),                                     &
       & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'],    &
       & grib_id=grib_id)
@@ -626,7 +626,7 @@ CONTAINS
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   4, grib_bits),                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   2, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
         & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'],     &
         & grib_id=grib_id)

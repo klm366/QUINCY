@@ -188,7 +188,7 @@ CONTAINS
     CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
       & hgrid, surface,                                                                   &
       & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   5, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   4, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -196,7 +196,7 @@ CONTAINS
     CALL mem%Add_var('seconds_year', mem%seconds_year,                                    &
       & hgrid, surface,                                                                   &
       & t_cf('seconds_year', 'sum of seconds in year', 'time sum year'),                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   5, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -204,7 +204,7 @@ CONTAINS
     CALL mem%Add_var('npp_sum_year', mem%NPP_sum_year,                                    &
       & hgrid, surface,                                                                   &
       & t_cf('NPP_sum_year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_sum_year'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 199,  31, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   6, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=1.0_wp, l_aggregate_all=.TRUE. )
@@ -212,7 +212,7 @@ CONTAINS
     CALL mem%Add_var('npp_mean_5year', mem%NPP_mean_5year,                                &
       & hgrid, surface,                                                                   &
       & t_cf('NPP_mean_5year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_mean_5year'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 199,  32, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   7, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=-1000.0_wp, l_aggregate_all=.TRUE. )
@@ -220,7 +220,7 @@ CONTAINS
     CALL mem%Add_var('land_cover_class', mem%land_cover_class,                            &
       & hgrid, surface,                                                                   &
       & t_cf('land_cover_class', '', 'land_cover_class'),                                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 199,  33, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   8, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -342,21 +342,21 @@ CONTAINS
     CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
       & hgrid, surface,                                                        &
       & t_cf('canopy_conductance_unlimited', '', ''),                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   6, grib_bits),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   9, grib_bits),     &
       & prefix, suffix,                                                        &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,           &
       & hgrid, surface,                                                        &
       & t_cf('canopy_conductance_limited', '', ''),                            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  10, grib_bits),     &
       & prefix, suffix,                                                        &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,               &
       & hgrid, surface,                                                    &
       & t_cf('cover_fract_pot', 'fract', ''),                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,  11, grib_bits), &
       & prefix, suffix,                                                    &
       & initval_r=0.1_wp ) ! initval chosen freely
 

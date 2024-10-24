@@ -95,7 +95,7 @@ CONTAINS
     CALL mem%Add_var('cf_day_delta', mem%cf_day_delta,                                    &
       & hgrid, pft_vgrid,                                                                 &
       & t_cf('Daily change in cover fractions.'),                                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   3, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
