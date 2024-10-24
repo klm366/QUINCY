@@ -67,10 +67,10 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_dfire_constants,   ONLY: df_sf_vgrid_fuel_class_name, &
-                                      df_sf_vgrid_species_name, &
-                                      df_sf_vgrid_live_fuel_pools_name, &
-                                      df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_fuel_moisture_name
+!    USE mo_dfire_constants,   ONLY: df_sf_vgrid_fuel_class_name, &
+!                                      df_sf_vgrid_species_name, &
+!                                      df_sf_vgrid_live_fuel_pools_name, &
+!                                      df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_fuel_moisture_name
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_dfire_memory), INTENT(inout), TARGET  :: mem           !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
@@ -81,11 +81,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                            !> Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                    !> Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_class                 !> Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_species
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools
+!    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_class                 !> Vertical grid
+!    TYPE(t_jsb_vgrid), POINTER :: vgrid_species
+!    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture
+!    TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools
+!    TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !

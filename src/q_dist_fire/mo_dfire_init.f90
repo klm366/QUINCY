@@ -44,19 +44,17 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_init(tile, options)
+  SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    USE mo_dfire_constants,         ONLY: live_frac_allocation
+!    USE mo_dfire_constants,         ONLY: live_frac_allocation
     dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib !< land-cover-type library - parameter across pfts
@@ -74,11 +72,6 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
@@ -86,7 +79,7 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)
+!    dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
     ! ----------------------------------------------------------------------------------------------------- !
 !    nesterov_index(:) = 0._wp
 
