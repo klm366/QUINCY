@@ -70,10 +70,12 @@ cf_pattern = re.compile(r'''(?ix)
     t_cf\(
         \s*
         '(?P<standard_name>[^']*)'
-        \s*,\s*
-        '(?P<units>[^']*)'
-        \s*,\s*
-        '(?P<long_name>[^']*)'
+        (?:
+            \s*,\s*
+            '(?P<units>[^']*)'
+            \s*,\s*
+            '(?P<long_name>[^']*)'
+        )?
         [^)]*
     \)
     ''')
