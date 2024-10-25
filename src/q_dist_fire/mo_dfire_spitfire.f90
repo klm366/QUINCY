@@ -66,7 +66,7 @@ MODULE mo_dfire_spitfire
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
-  !USE mo_lnd_bgcm_store_class,  ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LOSS_ID, VEG_BGCM_LITTERFALL_ID
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID
 
   IMPLICIT NONE
 
@@ -99,7 +99,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(DFIRE_)
     !dsl4jsb_Use_memory(SPQ_)
-    !dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(VEG_)
     !dsl4jsb_Use_memory(SB_)
     !dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -112,15 +112,18 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
+    REAL(wp), ALLOCATABLE  :: fract_fpc(:,:)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L3D :: sb_loss_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_)
-    !dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(VEG_)
     !dsl4jsb_Def_memory(SB_)
     !dsl4jsb_Def_memory(SPQ_)
     !dsl4jsb_Def_memory(A2L_)
@@ -140,12 +143,13 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
+!!    model  => Get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
+!    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
-    !dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(VEG_)
     !dsl4jsb_Get_memory(SB_)
     !dsl4jsb_Get_memory(SPQ_)
     !dsl4jsb_Get_memory(A2L_)
@@ -153,16 +157,23 @@ CONTAINS
 
     !dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)                 ! out
     ! ----------------------------------------------------------------------------------------------------- !
-    !bgcm_store => tile%bgcm_store
+    bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
+!    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+
+    no_children = tile%Get_no_of_children()
 
     !< Init variables
+    !  calculate fract_fpc and hand it back to child tiles (pft tiles)
+    ALLOCATE(fract_fpc(nc,no_children))
+    fract_fpc(:,:) = 0._wp !SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
+    CALL veg__mem%HandDown_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc, fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
-    write(*,*) "I am burning..."
+    write(*,*) "I am burning..., fract_fpc=", fract_fpc(1,:)
 
   END SUBROUTINE update_dfire_spitfire
 
