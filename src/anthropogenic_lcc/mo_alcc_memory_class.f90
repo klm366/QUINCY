@@ -16,8 +16,8 @@
 MODULE mo_alcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kinds, ONLY: wp
-  USE mo_kinds, ONLY: dp
+  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: dp
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -95,8 +95,8 @@ MODULE mo_alcc_memory_class
       & cf_day_delta          & !< Daily change in cover fractions calculated from cf_current_year.
       & cf_transition_gain    & !< Mingyue Zhang:define transition gain 
       & cf_transition_loss    & !< Mingyue Zhang:define transition loss 
-      & cf_transition         & !< Mingyue Zhang:define transition 
-      & cf_transition_pfts    & !< Mingyue Zhang:define transition on pfts level
+      & cf_transition         & !< Mingyue Zhang:define transition matrix 3*3
+      & cf_transition_pfts    & !< Mingyue Zhang:define transition matrix npft*npft
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
   END TYPE t_alcc_memory

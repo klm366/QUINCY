@@ -16,8 +16,7 @@
 MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kinds,             ONLY: wp
-  USE mo_kinds,             ONLY: dp  
+  USE mo_kind,             ONLY: wp, dp
   USE mo_exception,         ONLY: message, finish
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -231,24 +230,24 @@ CONTAINS
             ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
             ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable               
             IF (i == j) THEN
-               TransMtrx(ic)%ptr(i, j) = 0.0
+              cf_transition(ic)%TransMtrx(i, j) = 0.0 
             ELSE
-               TransMtrx(ic)%ptr(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j)) 
+              cf_transition(ic)%TransMtrx(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j)) 
             ENDIF   
           END DO
         END DO
 
         DO WHILE  i = 1,3
-          TransMtrx(ic)%ptr(i, i) = 1 - SUM(TransMtrx(ic)(i,:))
+          cf_transition(ic)%TransMtrx(i, i) = 1 - SUM(cf_transition(ic)(i,:))
         END DO
 
         !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
         DO WHILE i = 1, npft
           DO WHILE j = 1,npft 
 
-            transition_prob = TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
+            transition_prob = cf_transition(ic)%TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
             !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
-            TransMtrx_pfts(ic)%ptr(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
+            cf_transition_pfts(ic)%ptr(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
           END DO
         END DO 
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix
@@ -256,13 +255,13 @@ CONTAINS
         !calculate the transition gain of each PFTS
         !if the the diagonal elements is set to 0, the the following steps should be taken to get the updated cf_current_year
         cf_transition_gain =  0.0
-        cf_transition_gain =  TRANSPOSE(TransMtrx_pfts(:,:))*cf_current_year(:,:,:)
+        cf_transition_gain =  TRANSPOSE(cf_transition(ic)%(TransMtrx_pfts(:,:))*cf_current_year(ic,:,:))
       
         !calculate the transition loss of each PFTS
-        cf_transition_loss = 0.0
+        cf_transition_loss= 0.0
         DO WHILE i = 1, npft
           DO WHILE j = 1, npft
-            cf_transition_loss(i) = cf_transition_loss(i) + TransMtrx_pfts(i, j) * cf_current_year(:,j,:)
+            cf_transition_loss(i) = cf_transition_loss(i) + cf_transition(ic)%TransMtrx_pfts(i, j) * cf_current_year(ic,j,:)
           END DO
         END DO
       
