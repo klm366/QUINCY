@@ -656,7 +656,7 @@ CONTAINS
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_,      DFIRE_   /), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
