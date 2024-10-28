@@ -67,6 +67,7 @@ MODULE mo_dfire_spitfire
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID
+  USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
   USE mo_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
 
@@ -78,6 +79,11 @@ MODULE mo_dfire_spitfire
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_spitfire'
 
+
+  TYPE t_sf_bgcm_2L3D_p
+    REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
+  END TYPE t_sf_bgcm_2L3D_p
+
 CONTAINS
 
 
@@ -88,7 +94,6 @@ CONTAINS
   !>
   SUBROUTINE update_dfire_spitfire(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
@@ -116,13 +121,17 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
-    REAL(wp), ALLOCATABLE                 :: fract_fpc(:,:)
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+
+    REAL(wp), POINTER                     :: fract_fpc(:,:) ! in
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
     REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
+
+    INTEGER                               :: nr_of_children
+    TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: sb_loss_stores(:) !< Reference to each sb_loss pft pools (#npfts)
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -173,12 +182,15 @@ CONTAINS
     no_children = tile%Get_no_of_children()
 
     !< Init variables
-    !  calculate fract_fpc and hand it back to child tiles (pft tiles)
-    ALLOCATE(fract_fpc(nc,no_children))
-    fract_fpc(:,:) = 0._wp !SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
-    CALL veg__mem%HandDown_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc, fract_fpc)
+    fract_fpc => veg__mem%collect_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc)
+
+    ! gather children's bgcm stores from specific flux pool
+    sb_loss_stores = Get_childrens_bgcm_stores_2l_3d(SB_BGCM_LOSS_ID, ics, ice, iblk, tile)
+
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
+
+    write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -198,10 +210,36 @@ CONTAINS
       END IF
     ENDDO
 
-    write(*,*) "I am burning..., fract_fpc=", fract_fpc(1,:)
+    write(*,*) "I am burning..., iblk=", iblk 
 
   END SUBROUTINE update_dfire_spitfire
 
+
+  ! ======================================================================================================= !
+  !>
+  !> Gather children's bgcm stores from specific flux pool
+  !>
+  FUNCTION Get_childrens_bgcm_stores_2l_3d(pool_id, ics, ice, iblk, tile) RESULT (bgcm_stores)
+    INTEGER, INTENT(in) :: pool_id
+    INTEGER, INTENT(in) :: ics, ice, iblk
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
+    TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: bgcm_stores(:) ! output
+
+    INTEGER :: i_tile, no_children
+    CLASS(t_jsb_tile_abstract),  POINTER  :: current_tile
+
+    no_children = tile%Get_no_of_children()
+    ! gather children's bgcm stores from specific flux pool
+    ALLOCATE(bgcm_stores(no_children)) !< move to spitfire_init, own function
+    current_tile => tile%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      !write(*,*) "update_spitfire:: name tile=", current_tile%name
+      bgcm_stores(i_tile)%p => current_tile%bgcm_store%Get_matrix_from_store_2l_3d(pool_id, ics, ice, iblk, current_tile%name)
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+  END FUNCTION Get_childrens_bgcm_stores_2l_3d
 
 #endif
 END MODULE mo_dfire_spitfire
