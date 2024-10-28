@@ -88,15 +88,10 @@ CONTAINS
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     ! Mingyue Zhang: Set defaults for transition data nc file prefix 
-    alcc_transition_filename_prefix = "LUH_scaled_transitions_T63_"
+    alcc_transition_filename_prefix = 'LUH_scaled_transitions_T63_'
     nr_of_pfts           = 11
-<<<<<<< HEAD
     l_daily_alcc         = .TRUE.
     scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
-=======
-    scheme               = 'maps'
-    l_daily_alcc         = .TRUE.
->>>>>>> origin/land4icon-mpim
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
