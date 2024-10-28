@@ -29,6 +29,7 @@ MODULE mo_alcc_config_class
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+     CHARACTER(len=filename_max-7) :: alcc_transition_filename_prefix   !mingyue
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
      LOGICAL                       :: l_daily_alcc
