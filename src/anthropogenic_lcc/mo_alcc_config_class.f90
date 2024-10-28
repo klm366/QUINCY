@@ -59,6 +59,7 @@ CONTAINS
     LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+    CHARACTER(len=filename_max-11) :: alcc_transition_filename_prefix   !Mingyue
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
@@ -70,6 +71,7 @@ CONTAINS
          ic_filename,            &
          bc_filename,            &
          alcc_filename_prefix,   &
+         alcc_transition_filename_prefix,    &       !Mingyue
          scheme,                 &
          l_daily_alcc,           &
          nr_of_pfts
