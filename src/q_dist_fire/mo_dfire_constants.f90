@@ -37,7 +37,10 @@ MODULE mo_dfire_constants
   !> dfire parameters
   !>
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_dfire_constants'
-  !> Add here model constants
+
+  !< Top Soil layers to account for moisture in fuel
+  INTEGER, PARAMETER :: df_sf_sl_dims_nr=2   !< soil moisture layer dimension from w_soil_sl(dim1, dim2)
+  INTEGER, PARAMETeR :: df_sf_sl_indices(df_sf_sl_dims_nr) = [1,2]!< Select soil moisture layer to use
 
 CONTAINS
 
