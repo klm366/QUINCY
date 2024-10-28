@@ -68,6 +68,8 @@ MODULE mo_dfire_spitfire
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID
 
+  USE mo_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
+
   IMPLICIT NONE
 
   PRIVATE
@@ -90,7 +92,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_ !, SB_, DFIRE_, SPQ_, A2L_
+    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_ !, SB_, DFIRE_, A2L_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -98,7 +100,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(DFIRE_)
-    !dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     !dsl4jsb_Use_memory(SB_)
     !dsl4jsb_Use_memory(A2L_)
@@ -111,11 +113,16 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: iblk, ics, ice, nc, ic
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
-    REAL(wp), ALLOCATABLE  :: fract_fpc(:,:)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+    REAL(wp), ALLOCATABLE                 :: fract_fpc(:,:)
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+
+    REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
+    REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
+    REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
+    REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -125,12 +132,14 @@ CONTAINS
     dsl4jsb_Def_memory(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     !dsl4jsb_Def_memory(SB_)
-    !dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(SPQ_)
     !dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
+    dsl4jsb_Real3D_onChunk                :: w_soil_sl        ! soil water content [m]
+    dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl     ! soil water field capacity [m]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_)            ! dfire__mem => dfire_memory
     ! ----------------------------------------------------------------------------------------------------- !
@@ -143,19 +152,18 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-!!    model  => Get_model(tile%owner_model_id)
     model => Get_model(tile%owner_model_id)
-!    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     !dsl4jsb_Get_memory(SB_)
-    !dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(SPQ_)
     !dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-
     !dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)                 ! out
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)             ! in
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -169,10 +177,27 @@ CONTAINS
     ALLOCATE(fract_fpc(nc,no_children))
     fract_fpc(:,:) = 0._wp !SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
     CALL veg__mem%HandDown_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc, fract_fpc)
+    ab_moisture_sl = 0._wp
+    ab_moisture = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
+    ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
+    ab_w_soil_fc_sl(:,:) = w_soil_fc_sl(:, [df_sf_sl_indices])
+    WHERE (ab_w_soil_fc_sl > 0._wp) ! should it happen?
+      ab_moisture_sl(:,:) = ab_w_soil_sl(:,:) / ab_w_soil_fc_sl(:,:)
+    END WHERE
+
+    !< moisture average of above ground soil layers
+    DO ic=1, nc
+      IF (SUM(ab_moisture_sl(ic,:)) > 0._wp) THEN
+        ab_moisture(ic) = sum(ab_moisture_sl(ic,:)) / size(ab_moisture_sl, dim=2) !< 2 = soil layers index
+      END IF
+    ENDDO
+
     write(*,*) "I am burning..., fract_fpc=", fract_fpc(1,:)
 
   END SUBROUTINE update_dfire_spitfire
