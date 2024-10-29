@@ -54,15 +54,15 @@ MODULE mo_alcc_memory_class
   ! natural(3)   natural2crop    natural2pasture   natural2natural
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
   
-    
-    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx(3:3) ! define crop_nature_pasture transition matrix
+    REAL(wp),              :: TransMtrx(3:3)  ! real type or ? ???
+    !TYPE(t_jsb_var_real2d) :: TransMtrx(3:3) ! define crop_nature_pasture transition matrix
 
     ! Accessing elements of the matrices 
     ! Use a do loop for the read in LUH2 transition data: 
     ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
     !TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
-  
-    TYPE(t_jsb_var_real2d), TARGET :: TransMtrx_pfts(npft, npft) ! define pfts transition matrix
+    REAL(wp),              :: TransMtrx_pfts(npft:npft)
+    !TYPE(t_jsb_var_real2d) :: TransMtrx_pfts(npft, npft) ! define pfts transition matrix
   
     ! Mingyue Zhang: define TransMtrx end 
 
@@ -74,9 +74,10 @@ MODULE mo_alcc_memory_class
     ! Initialize the array with the different transition strings
     transitions = (/ 'crop2crop', 'crop2pasture', 'crop2natural', &
                  'pasture2crop', 'pasture2pasture', 'pasture2natural', &
-                 'natural2crop', 'natural2pasture', 'natural2natural' /)
-    print *, transitions
+                 'natural2crop', 'natural2pasture', 'natural2natural' &/)             
+    !TODO: here the transitions type should be print out
     ! Mingyue Zhang: defeine transition types end
+    
 
     ! Mingyue Zhang:define land_cover mapping start (landcover class to landcover type)
     !LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                     
@@ -92,11 +93,11 @@ MODULE mo_alcc_memory_class
 
     TYPE(t_jsb_var_real3d) :: &
       & cf_current_year,      & !< This years cover fractions derived from annually read land use data [-].
-      & cf_day_delta          & !< Daily change in cover fractions calculated from cf_current_year.
-      & cf_transition_gain    & !< Mingyue Zhang:define transition gain 
-      & cf_transition_loss    & !< Mingyue Zhang:define transition loss 
-      & cf_transition         & !< Mingyue Zhang:define transition matrix 3*3
-      & cf_transition_pfts    & !< Mingyue Zhang:define transition matrix npft*npft
+      & cf_day_delta,          & !< Daily change in cover fractions calculated from cf_current_year.
+      & cf_transition_gain,    & !< Mingyue Zhang:define transition gain 
+      & cf_transition_loss,    & !< Mingyue Zhang:define transition loss 
+      & cf_transition,         & !< Mingyue Zhang:define transition matrix 3*3
+      & cf_transition_pfts     !< Mingyue Zhang:define transition matrix npft*npft
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
   END TYPE t_alcc_memory
