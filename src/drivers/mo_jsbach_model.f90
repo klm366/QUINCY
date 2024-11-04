@@ -20,7 +20,6 @@
 
 MODULE mo_jsbach_model
 
-#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -1150,7 +1149,6 @@ CONTAINS
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
         &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
       ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
@@ -1182,6 +1180,5 @@ CONTAINS
 
   END SUBROUTINE run_one_timestep
 
-#endif
 #endif
 END MODULE mo_jsbach_model

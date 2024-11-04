@@ -59,6 +59,7 @@ CONTAINS
     CLASS(t_q_rad_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     INTEGER                     :: nspec
@@ -70,6 +71,7 @@ CONTAINS
     NAMELIST /q_rad_nml/ &
 #endif
       & active,                      &
+      & lrestart_cont,               &
       & ic_filename,                 &
       & bc_filename
 
@@ -80,6 +82,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
+    lrestart_cont             = .FALSE.  ! TRUE: Continue although RAD variables are missing in restart file
     bc_filename               = 'bc_land_q_rad.nc'  !< input file not yet available
     ic_filename               = 'ic_land_q_rad.nc'  !< input file not yet available
     ! ----------------------------------------------------------------------------------------------------- !
@@ -96,6 +99,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
 

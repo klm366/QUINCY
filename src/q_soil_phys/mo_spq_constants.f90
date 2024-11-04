@@ -85,8 +85,8 @@ MODULE mo_spq_constants
     snow_heat_capa,  &          !< Volumetric heat capacity of snow                             [kJ/m3/K]
     snow_therm_cond,     &      !< Heat conductivity snow                                       [W/m/K]
     albedo_snow,         &      !< Snow albedo                                                  [-]
-    w_snow_min,          &      !> minimum snow water content                                   [m]
-    w_snow_max                  !> maximum water content of snow layer, should be function of snow grid depth attribute [m]
+    w_snow_min,          &      !< minimum snow water content                                   [m]
+    w_snow_max                  !< maximum water content of snow layer, should be function of snow grid depth attribute [m]
   ! constants used as factor for multiplication with namelist parameters (spq_config) when "parameter sensitivity" is enabled
   ! see spq_config & mo_qs_set_parameters:Modify_quincy_namelist_parameter
   REAL(wp) :: &
@@ -167,13 +167,13 @@ CONTAINS
     kdiff_sat_max   = 1930.0_wp / 1000.0_wp / 3600._wp ! m/s
 
     ! snow
-    snow_dens           = 150.0_wp                                !> Literature research, 30-800 kg/m-3, adapted based on calibration with FI-So2 & Siberian sites
+    snow_dens           = 150.0_wp                                !< Literature research, 30-800 kg/m-3, adapted based on calibration with FI-So2 & Siberian sites
                                                                   !! TODO: could vary with age (see JSBACH4) or temperature
     snow_height_min     = 0.02_wp                                 !< same as jsbach4
     w_snow_min          = snow_height_min * snow_dens / w_density !< minimum snow amount for thermal conductivity calculations
     w_snow_max          = 0.05_wp * snow_dens / w_density         !< determined by snow grid, can the 0.05_wp be replaced by the grid information? Jan?
     snow_heat_capa      = 3100.0_wp                               !< constant from bried literature review, otherwise check jsbach4 range, adapted based on calibration with FI-So2 & Siberian sites
-    snow_therm_cond     = 0.06_wp                                  !< constant from brief literature search, range 0.03-0.8 d, adapted based on calibration with FI-So2 & Siberian sites
+    snow_therm_cond     = 0.06_wp                                 !< constant from brief literature search, range 0.03-0.8 d, adapted based on calibration with FI-So2 & Siberian sites
                                                                   !!  depending on snow properties, within range used in jsbach4
 
 

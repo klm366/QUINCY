@@ -62,7 +62,7 @@ CONTAINS
 
     CLASS(t_disturb_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fire_algorithm
@@ -83,6 +83,7 @@ CONTAINS
 
     NAMELIST /jsb_disturb_nml/     &
          active,                   &
+         lrestart_cont,            &
          ic_filename,              &
          bc_filename,              &
          fire_algorithm,           &
@@ -105,6 +106,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
+    lrestart_cont          = .FALSE.    ! TRUE: Continue although DISTURB variables are missing in restart file
     bc_filename            = 'bc_land_disturb.nc'
     ic_filename            = 'ic_land_disturb.nc'
     fire_algorithm         =  1
@@ -133,6 +135,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%lrestart_cont          = lrestart_cont
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%fire_algorithm         = fire_algorithm

@@ -199,7 +199,7 @@ MODULE mo_veg_memory_class
                                     unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [micro-mol P m-2 s-1]
                                     delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
-                                    mortality_rate            , & !< background_mort_rate_tree / grass [timestep-1]
+                                    mortality_rate            , & !< mortality rate of tree/grass [fraction of population timestep-1]
                                     k1_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
                                     k2_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio [unitless]
@@ -421,10 +421,10 @@ CONTAINS
     dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_memory),  INTENT(inout), TARGET :: mem             !< veg memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),                POINTER :: model                      !< model
     TYPE(t_jsb_grid),                 POINTER :: hgrid                      !< Horizontal grid
@@ -1893,7 +1893,7 @@ CONTAINS
 
       CALL mem%Add_var('mortality_rate', mem%mortality_rate, &
         & hgrid, surface, &
-        & t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
+        & t_cf('mortality_rate', 'mortality rate of trees / grass per timestep-1', 'mortality rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

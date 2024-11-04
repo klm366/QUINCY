@@ -62,7 +62,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_fage_config), INTENT(inout) :: config !< Configuration type of process (t_fage_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                       :: active
+    LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
 
     INTEGER            :: nacs, max_age
@@ -73,6 +73,7 @@ CONTAINS
 
     NAMELIST /jsb_fage_nml/         &
       & active,                     &
+      & lrestart_cont,              &
       & ic_filename,                &
       & bc_filename,                &
       & max_age,                    &
@@ -95,6 +96,7 @@ CONTAINS
 
     ! Set defaults
     active            = .FALSE.
+    lrestart_cont     = .FALSE.         ! TRUE: Continue although FAGE variables are missing in restart file
     bc_filename       = 'bc_land_fage.nc'  !JN-TODO do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !JN-TODO
     max_age           = 150
@@ -111,6 +113,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%max_age             = max_age
