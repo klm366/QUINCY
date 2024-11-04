@@ -540,13 +540,6 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_pplcc_diagnostics(tile)
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_pplccl_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
 
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
@@ -652,7 +645,7 @@ CONTAINS
       &  C4pft_area_gsum      = global_sum_array(C4pft_fract(:,:)    * scaling(:,:))
 
     DEALLOCATE (scaling, in_domain)
-#endif
+
   END SUBROUTINE global_pplcc_diagnostics
 
 #endif

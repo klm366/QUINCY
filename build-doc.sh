@@ -6,21 +6,68 @@ FORD_MD='project.md'
 
 no_search=""
 quiet=""
-if [[ $# > 0 ]]; then
+verbose="false"
+clean="false"
+while [ $# -gt 0 ]; do
   case $1 in
     -f)
       no_search="--no-search"
+      shift
       ;;
     -q)
       quiet="-q"
+      shift
+      ;;
+    -v)
+      verbose="true"
+      shift
+      ;;
+    -c)
+      clean="true"
+      shift
       ;;
   esac
+done
+
+if [[ $clean == true ]]; then
+  rm -rf 3rdparty
+  rm -rf doc/html
+  echo "Removed 3rdparty and doc/html directories"
+  exit
 fi
+
+mkdir 3rdparty >& /dev/null || true
 
 if ! hash python3 2>/dev/null; then
   echo "python3 not found"
   exit 1
 fi
+
+PYTHON_VERSION=3.10
+export UV_TOOL_DIR=./3rdparty/uv
+export UV=${UV_TOOL_DIR}/bin/uv
+export UV_TOOL_BIN_DIR=`pwd`/3rdparty/uv/bin
+export UV_LINK_MODE=symlink
+if [[ ! -f $UV ]]; then
+  if [[ $verbose == true ]]; then
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_DIR} INSTALLER_NO_MODIFY_PATH=1 sh 
+  else
+    ( curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_DIR} INSTALLER_NO_MODIFY_PATH=1 sh ) &>/dev/null
+  fi
+fi
+
+#${UV} python install 3.10
+
+#${UV} tool install --with lxml ford@v6.2.5 # latest v6
+#${UV} tool install --with lxml ford        # new v7
+if [[ $verbose == true ]]; then
+  #${UV} tool install --python $PYTHON_VERSION --with lxml --from https://github.com/RMShur/ford.git ford
+  ${UV} tool install --with lxml --from https://github.com/RMShur/ford.git ford
+else
+  #${UV} tool install --python $PYTHON_VERSION --with lxml --from https://github.com/RMShur/ford.git ford 2>/dev/null
+  ${UV} tool install --with lxml --from https://github.com/RMShur/ford.git ford 2>/dev/null
+fi
+FORD=${UV_TOOL_BIN_DIR}/ford
 
 if grep 'graph: *true' ${FORD_MD}; then
   if ! hash dot; then
@@ -28,15 +75,6 @@ if grep 'graph: *true' ${FORD_MD}; then
     exit 1
   fi
 fi
-
-mkdir 3rdparty >& /dev/null || true
-cd 3rdparty
-[[ -d ford ]] || git clone https://github.com/RMShur/ford.git
-cd ford
-git pull --rebase
-pip3 install --user -r requirements.txt
-pip3 install --user lxml
-cd ../..
 
 output_dir=$(grep output_dir project.md | cut -d' ' -f2)
 
@@ -53,14 +91,14 @@ echo "Building documentation (Revision:${rev}${dirty} Branch:${branch}) ..."
 mkdir pp_temp$$
 python3 scripts/dsl4jsb/dsl4jsb.py -n -d src -t pp_temp$$ -k
 find pp_temp$$ -type f -name '*.f90' -exec \
-    sed -i -e '1s/!> /!> Summary: /' \
-           -e '1,20s/icon-model.org/<https:\/\/icon-model.org>  /' \
-           -e '1,20s/!> ICON-Land/!>#### ICON-Land/' \
-           -e '1,20s/MPI-BGC$/MPI-BGC  /' \
-           -e '1,20s/AUTHORS.md$/AUTHORS.md  /' \
-           -e '1,20s/license information$/license information  /' \
+    perl -i -pe 's/!> /!> Summary: / if $. == 1;' \
+            -pe 's/icon-model.org/<https:\/\/icon-model.org>  / if $. <= 20;' \
+            -pe 's/!> ICON-Land/!>#### ICON-Land/ if $. <= 20;' \
+            -pe 's/MPI-BGC$/MPI-BGC  / if $. <= 20;' \
+            -pe 's/AUTHORS.md$/AUTHORS.md  / if $. <= 20;' \
+            -pe 's/license information$/license information  / if $. <= 20;' \
     '{}' \;
-python3 ./ford.py $no_search $quiet -r "Revision:${rev}${dirty} Branch:${branch}" -d pp_temp$$ ${FORD_MD}
-find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is developed by/' '{}' \;
+$FORD $no_search $quiet -r "Revision:${rev}${dirty} Branch:${branch}" -d pp_temp$$ ${FORD_MD}
+find $output_dir -type f -name '*.html' -exec perl -pi -e 's/was developed by/is developed by/;' '{}' \;
 rm -rf pp_temp$$
 

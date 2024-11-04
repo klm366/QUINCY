@@ -753,11 +753,9 @@ CONTAINS
 
 
   !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of subgrid orographic features
+  !! Calculation of subgrid orographic features
   !!
-  !! @par Revision History
-  !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
-  !!   ARNO Scheme infiltration routine
+  !! Written by Tobias Stacke (MPI-M) in January 2023 based on the ARNO Scheme infiltration routine
 
   SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
 
@@ -795,11 +793,10 @@ CONTAINS
   END SUBROUTINE calc_orographic_features
 
   !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of surface runoff based on the ARNO Scheme
+  !! Calculation of surface runoff based on the ARNO Scheme
   !! (E. Todini, The ARNO rainfall-runoff model, doi:10.1016/S0022-1694(96)80016-3.)
   !!
-  !! @par Revision History
-  !!   Revised by Tobias Stacke (MPI-M) in January 2023
+  !! Revised by Tobias Stacke (MPI-M) in January 2023
 
 #ifndef _OPENACC
   ELEMENTAL &
@@ -872,7 +869,7 @@ CONTAINS
   END SUBROUTINE arno_scheme
 
   !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of vertical soil water movement for multiple soil layers
+  !! Calculation of vertical soil water movement for multiple soil layers
   !!
   !!   Routine based on the soil hydrology proposed by Christian Reick (MPI-M) and written
   !!   by Philipp de Vrese (MPI-M)

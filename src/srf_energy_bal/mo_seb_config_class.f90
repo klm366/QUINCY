@@ -48,7 +48,7 @@ CONTAINS
 
     CLASS(t_seb_config), INTENT(inout) :: config
 
-    LOGICAL  :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
@@ -57,6 +57,7 @@ CONTAINS
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
+      lrestart_cont,               &
       ic_filename, bc_filename,    &
       scheme_albedo,               &
       lake_mixed_layer_depth,      &
@@ -75,6 +76,7 @@ CONTAINS
 
     ! Set defaults
     active          = .TRUE.
+    lrestart_cont   = .FALSE.  ! TRUE: Continue although SEB variables are missing in restart file
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
@@ -92,6 +94,7 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_seb_nml)
 
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%scheme_albedo             = scheme_albedo

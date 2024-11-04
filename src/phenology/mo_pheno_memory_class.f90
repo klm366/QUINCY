@@ -371,7 +371,6 @@ CONTAINS
         END IF ! l_forestRegrowth
       END IF ! logrop
 
-#ifdef __ICON__
       ! Diagnostic global carbon sums for experiment monitoring
       !   (1d stream variables are not supported with echam)
       IF (TRIM(suffix) == 'box') THEN
@@ -391,7 +390,6 @@ CONTAINS
           & lrestart=.FALSE., initval_r=0.0_wp )
 
       END IF
-#endif
     END IF !  VEG / LAND
 
   END SUBROUTINE Init_pheno_memory

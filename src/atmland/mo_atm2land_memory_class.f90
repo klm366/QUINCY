@@ -188,37 +188,39 @@ CONTAINS
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
 #ifndef __NO_QUINCY__
-    CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 #endif
+      END IF
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
