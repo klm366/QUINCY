@@ -313,12 +313,9 @@ MODULE mo_sb_memory_class
                             sb_bgcm_pool_microbial_c, &           !< microbial C [mol C m-3 soil]
                             sb_bgcm_pool_microbial_n, &           !< microbial N [mol N m-3 soil]
                             sb_bgcm_pool_microbial_p, &           !< microbial P [mol P m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_c, &           !< microbial C [mol C m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_n, &           !< microbial N [mol N m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_p, &           !< microbial P [mol P m-3 soil]
-                            sb_bgcm_pool_residue_c, &           !< microbial C [mol C m-3 soil]
-                            sb_bgcm_pool_residue_n, &           !< microbial N [mol N m-3 soil]
-                            sb_bgcm_pool_residue_p              !< microbial P [mol P m-3 soil]
+                            sb_bgcm_pool_mineral_assoc_c, &       !< microbial C [mol C m-3 soil]
+                            sb_bgcm_pool_mineral_assoc_n, &       !< microbial N [mol N m-3 soil]
+                            sb_bgcm_pool_mineral_assoc_p          !< microbial P [mol P m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
     !>3D soil properties
@@ -352,9 +349,7 @@ MODULE mo_sb_memory_class
     !>
     TYPE(t_jsb_var_real3d)  :: &
       & total_soil_n, &                 !< sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
-      & total_soil_inorg_n, &           !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
-      & total_soil_inorg_p, &           !< po4_primary + po4_occluded + po4_assoc_slow + po4_assoc_fast + po4_solute [mol m-3]
-      & total_soil_lab_pi               !< po4_assoc_fast + po4_solute [mol m-3]
+      & total_soil_inorg_n              !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
 
     TYPE(t_jsb_var_real2d)  :: &
       & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
@@ -2968,28 +2963,6 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_soil_inorg_p', mem%total_soil_inorg_p, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('total_soil_inorg_p', 'mol m-3', 'po4_solute + po4_primary + po4_occluded + po4_assoc_slow + po4_assoc_fast'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_soil_lab_pi', mem%total_soil_lab_pi, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('total_soil_lab_pi', 'mol m-3', 'po4_solute + po4_assoc_fast'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)		
 
       CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
@@ -3050,39 +3023,6 @@ CONTAINS
       CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_p', mem%sb_bgcm_pool_mineral_assoc_p, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_bgcm_pool_mineral_assoc_p', 'mol m-3', 'mineral associated P in soils'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('sb_bgcm_pool_residue_c', mem%sb_bgcm_pool_residue_c, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_bgcm_pool_residue_c', 'mol m-3', 'microbial residue C'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('sb_bgcm_pool_residue_n', mem%sb_bgcm_pool_residue_n, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_bgcm_pool_residue_n', 'mol m-3', 'microbial residue N'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('sb_bgcm_pool_residue_p', mem%sb_bgcm_pool_residue_p, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('sb_bgcm_pool_residue_p', 'mol m-3', 'microbial residue P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
