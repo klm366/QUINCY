@@ -961,9 +961,11 @@ CONTAINS
 
     SELECT CASE (this%mode)
     CASE (HSM_simple)
+#ifdef _OPENACC
       ! Prepare OpenACC streams for multi-stream processing
       original_stream = acc_stream
       IF (acc_stream /= acc_async_sync) acc_stream = 1
+#endif
 
       IF (msg%action%name /= "INTEGRATE") THEN
         CALL finish(TRIM(routine), "routines should start with INTEGRATE")
@@ -977,6 +979,7 @@ CONTAINS
         ! Process message on current state
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
 
+#ifdef _OPENACC
         IF (new_msg%action%name /= "INTEGRATE") THEN
           ! Join all the streams before the first non-integration task
           IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
@@ -995,6 +998,7 @@ CONTAINS
           IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
           !$ACC WAIT(original_stream) ASYNC(acc_stream)
         ENDIF
+#endif
 
         tmp_msg => state%Process_message(new_msg)
         IF (ASSOCIATED(new_msg)) THEN
@@ -1011,11 +1015,11 @@ CONTAINS
           ! CALL this%Process_entry_to_next()
           IF (this%next(no_omp_thread)%p%level == this%current(no_omp_thread)%p%level) THEN
             ! Goto to a sibling: exit current state
-            this%current(no_omp_thread)%p%visited = .FALSE.   ! Exit current on way up
+            this%current(no_omp_thread)%p%visited(no_omp_thread) = .FALSE.   ! Exit current on way up
           END IF
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
           NULLIFY(this%next(no_omp_thread)%p)
-          this%current(no_omp_thread)%p%visited = .TRUE.  ! Enter new state
+          this%current(no_omp_thread)%p%visited(no_omp_thread) = .TRUE.  ! Enter new state
           IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
             EXIT
           ELSE
@@ -1023,7 +1027,7 @@ CONTAINS
           END IF
         ELSE                                ! No state transition taken
           IF (ASSOCIATED(new_msg)) THEN
-            state%visited = .FALSE.         ! Exit current state
+            state%visited(no_omp_thread) = .FALSE.         ! Exit current state
             state => state%parent           ! Goto parent
           ELSE
             EXIT
@@ -1031,6 +1035,7 @@ CONTAINS
         END IF
       END DO
 
+#ifdef _OPENACC
       IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
         DO stream = original_stream+1, acc_stream
           !$ACC WAIT(stream) ASYNC(original_stream)
@@ -1042,6 +1047,7 @@ CONTAINS
         acc_stream = original_stream
         original_stream = -1
       ENDIF
+#endif
 
     CASE (HSM_full)
 
@@ -1149,7 +1155,7 @@ CONTAINS
 
     SELECT CASE (this%mode)
     CASE (HSM_simple)
-      this%next(no_omp_thread)%p%visited = .TRUE.
+      this%next(no_omp_thread)%p%visited(no_omp_thread) = .TRUE.
     CASE (HSM_full)
       ALLOCATE(t_Message::entry_msg)
       entry_msg%action = this%Get_action('ENTER')
