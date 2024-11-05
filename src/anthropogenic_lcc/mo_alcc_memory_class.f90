@@ -54,14 +54,14 @@ MODULE mo_alcc_memory_class
   ! natural(3)   natural2crop    natural2pasture   natural2natural
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
   
-    REAL(wp),    POINTER           :: TransMtrx(3, 3)  ! AllOACATABLE? or POINTER?
+    REAL(wp),    ALLOCATABLE            :: TransMtrx(3, 3)  ! AllOACATABLE? or POINTER?
     !TYPE(t_jsb_var_real2d) :: TransMtrx(3:3) ! define crop_nature_pasture transition matrix
 
     ! Accessing elements of the matrices 
     ! Use a do loop for the read in LUH2 transition data: 
     ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
     ! TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
-    REAL(wp),    POINTER           :: TransMtrx_pfts(npft,npft)
+    REAL(wp),    ALLOCATABLE            :: TransMtrx_pfts(npft,npft)
     ! TYPE(t_jsb_var_real2d) :: TransMtrx_pfts(npft, npft) ! define pfts transition matrix
   
     ! Mingyue Zhang: define TransMtrx end 
