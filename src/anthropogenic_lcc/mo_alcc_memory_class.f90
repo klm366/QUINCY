@@ -54,14 +54,14 @@ MODULE mo_alcc_memory_class
   ! natural(3)   natural2crop    natural2pasture   natural2natural
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
   
-    REAL(wp),    POINTER           :: TransMtrx(3:3)  ! real type or ? ???
+    REAL(wp),    POINTER           :: TransMtrx(3, 3)  ! AllOACATABLE? or POINTER?
     !TYPE(t_jsb_var_real2d) :: TransMtrx(3:3) ! define crop_nature_pasture transition matrix
 
     ! Accessing elements of the matrices 
     ! Use a do loop for the read in LUH2 transition data: 
     ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
     ! TransMtrx(1)%ptr(i, j) = 1.0_dp ! Example assignment (now go to init.f90 to read in data and then come back to here)
-    REAL(wp),    POINTER           :: TransMtrx_pfts(npft:npft)
+    REAL(wp),    POINTER           :: TransMtrx_pfts(npft,npft)
     ! TYPE(t_jsb_var_real2d) :: TransMtrx_pfts(npft, npft) ! define pfts transition matrix
   
     ! Mingyue Zhang: define TransMtrx end 
@@ -69,12 +69,12 @@ MODULE mo_alcc_memory_class
     ! Mingyue Zhang: defeine transition types start  CHARACTER(len=*) :: transitions(9)
     ! Initialize the array with the character strings
     ! Declare a character array with a length of 12 for each string
-    CHARACTER(LEN=*), DIMENSION(9) :: transitions
+    CHARACTER(LEN=12), DIMENSION(9) :: transitions
     
     
     ! Mingyue Zhang:define land_cover mapping start (landcover class to landcover type)
-    !LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                     
-    !Land cover type: see details in lctlib_nlct21.def
+    ! LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                     
+    ! Land cover type: see details in lctlib_nlct21.def
     ! Declare the LC_type2LC_class_mapping array with 11 elements
     INTEGER, DIMENSION(11) :: LC_type2LC_class_mapping
 
@@ -89,7 +89,7 @@ MODULE mo_alcc_memory_class
     ! Initialize the array using the DATA statement
     LC_type2LC_class_mapping = (/  3, 3, 3, 3, 3, 3, 3, 3, &                                    ! pft 1-8 (Natural)
                                    2, 2, 1 &                                                /)  ! pft 9 (Pasture), pft11 (Crops)
-    ! Mingyue Zhang:define land_cover mapping end
+    ! Mingyue Zhang:define land_cover mapping end 
 
     TYPE(t_jsb_var_real3d) :: &
       & cf_current_year,       & !< This years cover fractions derived from annually read land use data [-].
