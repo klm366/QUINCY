@@ -26,13 +26,15 @@ MODULE mo_alcc_config_class
   PRIVATE
   PUBLIC :: t_alcc_config
 
-  TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
-     INTEGER                       :: nr_of_pfts
-     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
-     CHARACTER(len=filename_max-7) :: alcc_transition_filename_prefix   !mingyue
+  TYPE, EXTENDS(t_jsb_config)        :: t_alcc_config
+     INTEGER                         :: nr_of_pfts
+     CHARACTER(len=filename_max-7)   :: alcc_filename_prefix
+     CHARACTER(len=filename_max-7)   :: alcc_transition_filename_prefix   !Mingyue
+     CHARACTER(len=12), DIMENSION(9) :: transitions                       !Mingyue add transition types of the C,N,P
+     INTEGER,           DIMENSION(9) :: LC_type2LC_class_mapping          !Mingyue add mapping table of 11 pfts to C, N, P , where 1->crop, 2-> pasture, 3->natual
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
-     CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     LOGICAL                       :: l_daily_alcc
+     CHARACTER(len=SHORT_NAME_LEN)   :: scheme
+     LOGICAL                         :: l_daily_alcc
        !< determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
@@ -61,9 +63,13 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=filename_max-7) :: alcc_transition_filename_prefix   !Mingyue
+    CHARACTER(len=12), DIMENSION(9) :: transitions                     !Mingyue
+    INTEGER,           DIMENSION(9) :: LC_type2LC_class_mapping        !Mingyue
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
+    TYPE(t_jsb_vgrid), POINTER    :: trans_layer                       !Mingyue
+    TYPE(t_jsb_vgrid), POINTER    :: trans_pft_layer                   !Mingyue
     INTEGER                       :: i, nr_of_pfts
 
     NAMELIST /jsb_alcc_nml/      &
@@ -73,6 +79,8 @@ CONTAINS
          bc_filename,            &
          alcc_filename_prefix,   &
          alcc_transition_filename_prefix,    &       !Mingyue
+         transitions,                        &       !Mingyue
+         LC_type2LC_class_mapping,           &       !Mingyue
          scheme,                 &
          l_daily_alcc,           &
          nr_of_pfts
@@ -90,8 +98,11 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    ! Mingyue Zhang: Set defaults for transition data nc file prefix 
-    alcc_transition_filename_prefix = 'LUH_scaled_transitions_T63_'
+    alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
+    transitions                     =   (/ 'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
+                                           'pasture2crop', 'pasture2pasture', 'pasture2natural', &
+                                           'natural2crop', 'natural2pasture', 'natural2natural'  &   /)      ! TODO: here the transitions type should be print out                                                                                                     
+    LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
     scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
@@ -103,16 +114,17 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    config%active               = active
-    config%lrestart_cont        = lrestart_cont
-    config%ic_filename          = ic_filename
-    config%bc_filename          = bc_filename
-    config%alcc_filename_prefix = alcc_filename_prefix
-    ! Mingyue Zhang: add config for transition data nc file prefix 
-    config%alcc_transition_filename_prefix = alcc_transition_filename_prefix
-    config%scheme               = scheme
-    config%l_daily_alcc         = l_daily_alcc
-    config%nr_of_pfts           = nr_of_pfts
+    config%active                                    = active
+    config%lrestart_cont                             = lrestart_cont
+    config%ic_filename                               = ic_filename
+    config%bc_filename                               = bc_filename
+    config%alcc_filename_prefix                      = alcc_filename_prefix          
+    config%transitions                               = transitions                                   ! Mingyue Zhang: add config for transitions type 
+    config%alcc_transition_filename_prefix           = alcc_transition_filename_prefix               ! Mingyue Zhang: add config for transition data nc file prefix 
+    config%LC_type2LC_class_mapping                  = LC_type2LC_class_mapping                      ! Mingyue Zhang: add config for transition table
+    config%scheme                                    = scheme
+    config%l_daily_alcc                              = l_daily_alcc
+    config%nr_of_pfts                                = nr_of_pfts
 
     SELECT CASE (TRIM(config%scheme))
     CASE ('maps')
@@ -135,6 +147,16 @@ CONTAINS
     pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
       & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
     CALL register_vgrid(pft_layer)
+    
+    ! Mingyue Zhang define v_grid of (c,n,p) transition
+    trans_layer  => new_vgrid('transition', ZAXIS_GENERIC, 9, &
+      & levels=(/ (REAL(i,kind=wp),i=1,9) /), units='')
+    CALL register_vgrid(trans_layer)
+
+    ! Mingyue Zhang define v_grid of pfts transition
+    trans_pft_layer  => new_vgrid('transition_pfts', ZAXIS_GENERIC, nr_of_pfts*nr_of_pfts, &
+      & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts*nr_of_pfts) /), units='')
+    CALL register_vgrid(trans_pft_layer)
 
   END SUBROUTINE Init_alcc_config
 
