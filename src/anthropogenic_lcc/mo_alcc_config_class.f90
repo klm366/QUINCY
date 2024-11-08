@@ -64,7 +64,7 @@ CONTAINS
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=filename_max-7) :: alcc_transition_filename_prefix   !Mingyue
     CHARACTER(len=12), DIMENSION(9) :: transitions                     !Mingyue
-    INTEGER,           DIMENSION(9) :: LC_type2LC_class_mapping        !Mingyue
+    INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping        !Mingyue
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
