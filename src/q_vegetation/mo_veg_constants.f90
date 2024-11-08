@@ -198,6 +198,13 @@ MODULE mo_veg_constants
       tau_pp_pv,         & !< exponential time constants for the decay of the plywood and veneer product pool
       tau_pp_sawnwood      !< exponential time constants for the decay of the sawnwood product pool
 
+  ! red to far red ratio calculations
+  REAL(wp), SAVE :: &
+    & rfr_ratio_toc, &     !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
+    & k_r2fr_chl           !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N);
+                           !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio
+                           !! of 0.15 at full canopy closure (a common value)
+
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
   INTEGER, PARAMETER ::    &
@@ -363,6 +370,10 @@ CONTAINS
     tau_pp_oirw = 16.5
     tau_pp_pv = 24.9
     tau_pp_sawnwood = 49.9
+
+    ! red to far red ratio calculations
+    rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998
+    k_r2fr_chl              = 0.0012_wp - 0.012_wp  !< Kull & Kruijt 1998
 
   END SUBROUTINE init_veg_constants
 

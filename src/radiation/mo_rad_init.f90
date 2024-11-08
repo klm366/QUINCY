@@ -18,7 +18,7 @@ MODULE mo_rad_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_class,         ONLY: Get_model
@@ -63,6 +63,9 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
+#ifdef __QUINCY_STANDALONE__
+    CALL q_rad_init_ic(tile)
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL rad_read_init_vars(tile)
     END IF
@@ -73,9 +76,56 @@ CONTAINS
     IF (tile%Is_last_process_tile(RAD_)) THEN
       CALL rad_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE rad_init
 
+#ifdef __QUINCY_STANDALONE__
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize radiation process (after memory has been set up)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE q_rad_init_ic(tile)
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_rad_constants,         ONLY: AlbedoVisInitial, AlbedoNirInitial
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':q_rad_init_ic'
+
+    dsl4jsb_Def_memory(RAD_)
+
+    dsl4jsb_Real2D_onDomain      :: alb_vis
+    dsl4jsb_Real2D_onDomain      :: alb_nir
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
+
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
+      &                                   TRIM(tile%name))
+
+    dsl4jsb_Get_memory(RAD_)
+
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_vis)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_nir)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
+
+    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
+    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
+
+    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
+    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
+
+    ! these variables are initialized with the mem%Add_var() routine in addition (same values) !
+    alb_vis(:,:)                        = AlbedoVisInitial
+    alb_nir(:,:)                        = AlbedoNirInitial
+  END SUBROUTINE q_rad_init_ic
+#else
   SUBROUTINE rad_finalize_init_vars
 
     DEALLOCATE( &
@@ -297,9 +347,26 @@ CONTAINS
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)   =  150.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)    =  150.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)   =  10.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_wp
+
+        !$ACC UPDATE ASYNC(1) &
+        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
+      END SELECT
+#endif
+
     END IF
 
   END SUBROUTINE rad_init_ic
 
+#endif
 #endif
 END MODULE mo_rad_init
