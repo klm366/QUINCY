@@ -51,10 +51,10 @@ MODULE mo_alcc_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & cf_current_year,       & !< This years cover fractions derived from annually read land use data [-].
       & cf_day_delta,          & !< Daily change in cover fractions calculated from cf_current_year.
-      & cf_transition,    & !< Mingyue Zhang:define transition gain 
-      & cf_transition_pfts,    & !< Mingyue Zhang:define transition loss 
-      & cf_transition_gain,         & !< Mingyue Zhang:define transition matrix 3*3
-      & cf_transition_loss       !< Mingyue Zhang:define transition matrix npft*npft
+      & cf_transition,         & !< Mingyue Zhang:define transition matrix 3*3=9
+      & cf_transition_pfts,    & !< Mingyue Zhang:define transition matrix pfts*pfts = 121
+      & cf_transition_gain,    & !< Mingyue Zhang:define transition gain
+      & cf_transition_loss       !< Mingyue Zhang:define transition loss
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
   END TYPE t_alcc_memory
