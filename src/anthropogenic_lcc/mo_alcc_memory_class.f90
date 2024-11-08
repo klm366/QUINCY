@@ -38,7 +38,7 @@ MODULE mo_alcc_memory_class
 
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 6
+  INTEGER, PARAMETER :: max_no_of_vars = 11
 
    ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
@@ -116,43 +116,43 @@ CONTAINS
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
-    ! Mingyue Zhang: add variables for transitions type start 
+     ! Mingyue Zhang: add variables for transitions type start 
     CALL mem%Add_var('cf_transition', mem%cf_transition,                                  &
       & hgrid, trans_vgrid,                                                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-    ! Mingyue Zhang: add variables for transitions type finish
+     ! Mingyue Zhang: add variables for transitions type finish
 
-    ! Mingyue Zhang: add variables for transitions type start 
+     ! Mingyue Zhang: add variables for transitions type start 
     CALL mem%Add_var('cf_transition_pfts', mem%cf_transition_pfts,                        &
       & hgrid, trans_pft_vgrid,                                                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-    ! Mingyue Zhang: add variables for transitions type finish
+     ! Mingyue Zhang: add variables for transitions type finish
  
-    ! Mingyue Zhang: add variables for transitions gain start 
-    ! TODO: the vgrid(trans_vgrid) should be modified
+     ! Mingyue Zhang: add variables for transitions gain start 
+     ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_gain', mem%cf_transition_gain,                        &
       & hgrid, trans_vgrid,                                                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-    ! Mingyue Zhang: add variables for transitions gain finish
+     ! Mingyue Zhang: add variables for transitions gain finish
 
-    ! Mingyue Zhang: add variables for transitions loss start 
-    ! TODO: the vgrid(trans_vgrid) should be modified
+     ! Mingyue Zhang: add variables for transitions loss start 
+     ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_loss', mem%cf_transition_loss,                        &
       & hgrid, trans_vgrid,                                                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &
       & loutput=.FALSE., lrestart=.FALSE., initval_r=-0.1_wp)
-    ! Mingyue Zhang: add variables for transitions loss finish
+     ! Mingyue Zhang: add variables for transitions loss finish
 
   END SUBROUTINE Init_alcc_memory
 
