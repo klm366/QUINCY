@@ -247,7 +247,7 @@ CONTAINS
 
             transition_prob = cf_transition(ic)%TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
             !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
-            cf_transition_pfts(ic)%ptr(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
+            cf_transition_pfts(ic)%TransMtrx_pfts(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
           END DO
         END DO 
         ! read in six luh transition data and assign the grid box value to one 3*3 matrix

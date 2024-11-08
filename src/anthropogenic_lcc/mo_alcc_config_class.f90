@@ -26,12 +26,12 @@ MODULE mo_alcc_config_class
   PRIVATE
   PUBLIC :: t_alcc_config
 
-  TYPE, EXTENDS(t_jsb_config)        :: t_alcc_config
-     INTEGER                         :: nr_of_pfts
-     CHARACTER(len=filename_max-7)   :: alcc_filename_prefix
-     CHARACTER(len=filename_max-7)   :: alcc_transition_filename_prefix   !Mingyue
-     CHARACTER(len=12), DIMENSION(9) :: transitions                       !Mingyue add transition types of the C,N,P
-     INTEGER,           DIMENSION(9) :: LC_type2LC_class_mapping          !Mingyue add mapping table of 11 pfts to C, N, P , where 1->crop, 2-> pasture, 3->natual
+  TYPE, EXTENDS(t_jsb_config)         :: t_alcc_config
+     INTEGER                          :: nr_of_pfts
+     CHARACTER(len=filename_max-7)    :: alcc_filename_prefix
+     CHARACTER(len=filename_max-7)    :: alcc_transition_filename_prefix   !Mingyue
+     CHARACTER(len=12), DIMENSION(9)  :: transitions                       !Mingyue add transition types of the C,N,P
+     INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping          !Mingyue add mapping table of 11 pfts to C, N, P , where 1->crop, 2-> pasture, 3->natual
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN)   :: scheme
      LOGICAL                         :: l_daily_alcc
