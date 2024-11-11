@@ -388,6 +388,11 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+          IF (this%Has_process_memory(iproc)) THEN
+            this%mem(iproc)%p%lrestart_cont = model%processes(iproc)%p%config%lrestart_cont
+          END IF
+        END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
@@ -495,7 +500,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
@@ -507,7 +512,7 @@ CONTAINS
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE., &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -530,6 +535,16 @@ CONTAINS
         tmp_fract(:,:) = 1._wp
       END IF
       ! Set the fraction of the tile
+      CALL this%Set_fraction(fract=tmp_fract(:,:))
+    ELSE IF (this%fract_varname == 'allFirst') THEN
+      IF(ASSOCIATED(this%parent_tile)) THEN
+        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        IF (.NOT. this%Is_first_child()) THEN
+          tmp_fract(:,:) = 0._wp
+        END IF
+      ELSE
+        tmp_fract(:,:) = 1._wp
+      END IF
       CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
@@ -607,7 +622,7 @@ CONTAINS
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
+        & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                                 &
         & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 

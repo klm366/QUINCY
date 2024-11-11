@@ -104,6 +104,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: drag_srf      ! old turb
@@ -121,7 +123,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
-    dsl4jsb_Real3D_onChunk :: matrix_pot_sl
+    dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: t_acoef
@@ -141,8 +143,6 @@ CONTAINS
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
      & liquid_max,                      &
-     & rough_h_srf,                     &
-     & rough_m_srf,                     &
      & t_srf_upd,                       & !< Updated surface temperature for drag filtering
      & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds)
 
@@ -252,7 +252,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)   ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)       ! in
     END IF
 
@@ -387,7 +387,7 @@ CONTAINS
 
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE
@@ -404,19 +404,18 @@ CONTAINS
     ! Compute surface drag and exchange coefficients for standalone simulations
     IF (jsb_standalone) THEN
       !$ACC WAIT
-      !TODO: GPU adaptation still missing!
       !$ACC DATA &
-      !$ACC   CREATE(rough_h_srf, rough_m_srf, t_srf_upd)
+      !$ACC   CREATE(t_srf_upd)
 
       ! Get surface roughness
-      rough_h_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      rough_m_srf(:)   = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+      dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)  ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)  ! in
 
       ! Update drag and exchange coefficients based on external forcing data
       CALL update_drag( &
           ! INTENT in
         & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
@@ -430,7 +429,6 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
-        frozen_fract(ic) = fract_snow(ic)
 
         IF (lstart) THEN
           s_star(ic) = s_old(ic)
@@ -467,7 +465,7 @@ CONTAINS
       CALL update_drag( &
           ! INTENT in
         & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h_srf(:), rough_m_srf(:), &
+        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
@@ -476,6 +474,7 @@ CONTAINS
         & t_srf_upd(:), richardson(:))
 
       !$ACC END DATA
+
     END IF ! jsbach_runs_standalone
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -589,7 +588,7 @@ CONTAINS
           liquid_max(ic) = Get_liquid_max( &
             & t_star(ic)                                   , &
             & soil_depth_sl_vol_porosity_sl_tmp            , & ! Maximum water storage
-            & matrix_pot_sl  (ic,1)                        , &
+            & matric_pot_sl  (ic,1)                        , &
             & bclapp_sl      (ic,1)                          &
             & )
         ELSE
@@ -920,7 +919,7 @@ CONTAINS
       !
       ! Account for pond ice, assuming that as soon as there is pond ice, the pond surface
       ! is completely frozen. The frozen land fraction includes the snow fraction (on dry land
-      ! and on frozen ponds) as well as the snow-free frozen lake fraction.
+      ! and on frozen ponds) as well as the snow-free frozen pond fraction.
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE

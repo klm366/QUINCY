@@ -164,7 +164,8 @@ CONTAINS
     new%configured = .TRUE.
 
     grid => new
-    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm)
+
+    !$ACC ENTER DATA COPYIN(grid, grid%lon, grid%lat, grid%area, grid%lsf, grid%lsm, grid%sinlat, grid%coslat)
 
     ! CALL message(routine, 'construction of JSBACH grid completed.')
 

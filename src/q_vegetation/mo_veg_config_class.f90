@@ -58,6 +58,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
                                                    !! by default; this is hard-coded in SPQ_ init
+    LOGICAL          :: l_use_product_pools        !< enable product pools (required for harvest process); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
 
    CONTAINS
@@ -97,10 +98,11 @@ CONTAINS
     CLASS(t_veg_config), INTENT(inout) :: config    !< config type for veg
     ! ---------------------------
     ! 0.2 Local
-    ! variables for reading from namlist, identical to variable-name in namelist
+    ! variables for reading from namelist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename,   &
-                                   bc_filename
+      &                            bc_filename
     INTEGER                     :: plant_functional_type_id
     REAL(wp)                    :: cohort_harvest_interval
     CHARACTER(15)               :: veg_bnf_scheme
@@ -109,6 +111,7 @@ CONTAINS
     CHARACTER(15)               :: leaf_stoichom_scheme
     LOGICAL                     :: flag_dynamic_roots
     LOGICAL                     :: flag_dynroots_h2o_n_limit
+    LOGICAL                     :: l_use_product_pools
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
 #ifdef __QUINCY_STANDALONE__
@@ -117,6 +120,7 @@ CONTAINS
     NAMELIST /jsb_veg_nml/          &
 #endif
       active,                       &
+      lrestart_cont,                &
       ic_filename,                  &
       bc_filename,                  &
       plant_functional_type_id,     &
@@ -126,13 +130,15 @@ CONTAINS
       biomass_alloc_scheme,         &
       leaf_stoichom_scheme,         &
       flag_dynamic_roots,           &
-      flag_dynroots_h2o_n_limit
+      flag_dynroots_h2o_n_limit,    &
+      l_use_product_pools
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
     active                         = .TRUE.
+    lrestart_cont                  = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
     bc_filename                    = 'bc_land_phys.nc'
     ic_filename                    = 'ic_land_phys.nc'
     plant_functional_type_id       = 1
@@ -143,6 +149,7 @@ CONTAINS
     leaf_stoichom_scheme           = "dynamic"
     flag_dynamic_roots             = .TRUE.
     flag_dynroots_h2o_n_limit      = .FALSE.
+    l_use_product_pools            = .FALSE.
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -158,6 +165,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                        = active
+    config%lrestart_cont                 = lrestart_cont
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
     config%pft_id                        = plant_functional_type_id
@@ -168,6 +176,7 @@ CONTAINS
     config%leaf_stoichom_scheme          = TRIM(leaf_stoichom_scheme)
     config%flag_dynamic_roots            = flag_dynamic_roots
     config%flag_dynroots_h2o_n_limit     = flag_dynroots_h2o_n_limit
+    config%l_use_product_pools           = l_use_product_pools
 
   END SUBROUTINE Init_veg_config
 

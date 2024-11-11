@@ -29,8 +29,10 @@ MODULE mo_alcc_config_class
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+       !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
+     LOGICAL                       :: l_daily_alcc
+       !< determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
   END type t_alcc_config
@@ -54,19 +56,22 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_alcc_config), INTENT(inout) :: config !<Configuration type of process (t_alcc_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                       :: active
+    LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
+    LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     INTEGER                       :: i, nr_of_pfts
 
     NAMELIST /jsb_alcc_nml/      &
-         active,                      &
-         ic_filename,                 &
-         bc_filename,                 &
-         alcc_filename_prefix,        &
-         scheme,                      &
+         active,                 &
+         lrestart_cont,          &
+         ic_filename,            &
+         bc_filename,            &
+         alcc_filename_prefix,   &
+         scheme,                 &
+         l_daily_alcc,           &
          nr_of_pfts
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -78,11 +83,13 @@ CONTAINS
 
     ! Set defaults
     active               = .FALSE.
+    lrestart_cont        = .FALSE.       ! TRUE: Continue although ALCC variables are missing in restart file
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     nr_of_pfts           = 11
     scheme               = 'maps'
+    l_daily_alcc         = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -92,18 +99,26 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active               = active
+    config%lrestart_cont        = lrestart_cont
     config%ic_filename          = ic_filename
     config%bc_filename          = bc_filename
     config%alcc_filename_prefix = alcc_filename_prefix
     config%scheme               = scheme
+    config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
 
     SELECT CASE (TRIM(config%scheme))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
     CASE DEFAULT
-      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(config%scheme))
+      CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
+
+    IF(l_daily_alcc) THEN
+      CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
+    ELSE
+      CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
+    END IF
 
     ! Create vertical axis
     ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?

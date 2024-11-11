@@ -26,6 +26,9 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_config(VEG_)
+#endif
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -62,18 +65,6 @@ CONTAINS
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 
-#ifndef __ICON__
-    ! >> TODO: echam
-    USE mo_gaussgrid,            ONLY : inigau
-    USE mo_echam_convect_tables, ONLY : init_convect_tables
-    USE mo_netCDF,               ONLY: add_dim
-    ! <<
-    USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
-    USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,             ONLY: Register_grid
-#endif
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension
                                                      !< of 2-d decomposition
@@ -87,50 +78,13 @@ CONTAINS
         !< Name of model instance
     ! -------------------------------------------------------------------------------------------------- !
 
-#ifndef __ICON__
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
-    TYPE(t_patch)               :: decomposition
-
-    INTEGER :: nlon, nlat
-#endif
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
     ! ---------------------------------------------------------------------------------------------------!
 
-#ifdef __ICON__
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
-    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
-#else
-    model => Get_model(model_id)
 
-    IF (PRESENT(model_name)) THEN
-      IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
-        CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
-    END IF
-
-    CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
-    CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
-
-    CALL inigau               ! beside others required for get_area, i.e. required before new_grid
-    CALL init_convect_tables
-
-    CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
-    CALL add_dim("lat", nlat, "latitude", "degrees_north")
-
-    CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
-        ! needs to be done after the decomposition is initialised; required for get_lon and get_lat,
-        ! especially for site-level sims
-    grid => new_grid(decomposition, type='echam')
-
-    CALL register_grid(grid)
-    model%grid_id = grid%id
-
-    ! CALL init_model_common(model)
-
-    NULLIFY(model)
-#endif
+    CALL finish(TRIM(routine),'Not implemented for ICON')
 
   END SUBROUTINE setup_grid_standalone
 
@@ -193,16 +147,14 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
 #ifndef __NO_QUINCY__
-    USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
+    USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_rad_init,          ONLY: q_rad_init
-    USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
 #endif
-    USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fage_init,           ONLY: fage_init
 
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
@@ -230,6 +182,9 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(VEG_)
+#endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -330,6 +285,9 @@ CONTAINS
         CALL model%Queue_task(TURB_, "surface_roughness")
         CALL model%Queue_task(TURB_, "exchange_coefficients")
       END IF
+      ! The first call to task `snow_and_wet_fraction` currently needs to be before `surface_hydrology`,
+      ! `soil_hydrology` and `update_albedo` because of pond scheme
+      ! TODO: add cross-check
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
@@ -407,6 +365,8 @@ CONTAINS
     ! # QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
     !
     CASE (MODEL_QUINCY)
+      dsl4jsb_Get_config(VEG_)
+
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
                 .OR. (model%config%qmodel_id == QCANOPY))) THEN
@@ -433,6 +393,9 @@ CONTAINS
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT
+        ENDIF
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF(model%config%qmodel_id == QLAND) THEN
@@ -450,7 +413,9 @@ CONTAINS
       CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
-      CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
+      IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
+      ENDIF
 #endif
 
     END SELECT
@@ -574,22 +539,22 @@ CONTAINS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
+
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(SPQ_)) THEN
           CALL spq_init(tile)
         END IF
-        IF (tile%Is_process_active(SB_)) THEN
-          CALL sb_init(tile)
+        IF (tile%Is_process_active(VEG_)) THEN
+          CALL veg_init(tile)
         END IF
+        IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
+          IF (tile%Is_process_active(SB_)) THEN
+            CALL sb_init(tile)
+          END IF
+        ENDIF
 #endif
       END SELECT
-
-#ifndef __NO_QUINCY__
-      IF (tile%Is_process_active(A2L_)) THEN
-        CALL atm2land_init(tile)
-      END IF
-#endif
 
       SELECT CASE (model%config%model_scheme)
       ! CASE (MODEL_JSBACH)
@@ -606,23 +571,10 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(CARBON_)) THEN
-          CALL carbon_init(tile)
-        END IF
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init(tile)
         END IF
       END SELECT
-
-#ifndef __NO_QUINCY__
-      ! VEG_ needs HYDRO_ to be initilized
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        IF (tile%Is_process_active(VEG_)) THEN
-          CALL veg_init(tile)
-        END IF
-      END SELECT
-#endif
 
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)

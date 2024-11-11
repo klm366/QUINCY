@@ -144,6 +144,10 @@ CONTAINS
        IF (model_idx == 1) THEN
          CALL set_bgcm_element_idx(model%config%elements_index_map)
        END IF
+#else
+      IF (model_scheme == MODEL_QUINCY) THEN
+        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
+      END IF
 #endif
 
        !> parameter init
@@ -216,30 +220,31 @@ CONTAINS
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
-      END SELECT
 
-      ! Make number of vertical layers available from the options type
-      IF (model%Is_process_enabled(HYDRO_)) THEN
-        soil_w => Get_vgrid('soil_depth_water')
-        nsoil_w = soil_w%n_levels
-      END IF
-      IF (model%Is_process_enabled(SSE_)) THEN
-        soil_e => Get_vgrid('soil_depth_energy')
-        nsoil_e = soil_e%n_levels
-        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-          snow_e => Get_vgrid('snow_depth_energy')
-          nsnow_e = snow_e%n_levels
+        ! Make number of vertical layers available from the options type
+        IF (model%Is_process_enabled(HYDRO_)) THEN
+          soil_w => Get_vgrid('soil_depth_water')
+          nsoil_w = soil_w%n_levels
         END IF
-      END IF
-      CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+        IF (model%Is_process_enabled(SSE_)) THEN
+          soil_e => Get_vgrid('soil_depth_energy')
+          nsoil_e = soil_e%n_levels
+          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+            snow_e => Get_vgrid('snow_depth_energy')
+            nsnow_e = snow_e%n_levels
+          END IF
+        END IF
+        CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
 
-      ! Crosscheck process configs
-      IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
-        & .AND. (nsoil_e /= nsoil_w)) THEN
-        CALL finish(routine, &
-          & 'The number of soil layers used for water and energy currently need to be identical:'  &
-          & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
-      END IF
+        ! Crosscheck process configs
+        IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+          & .AND. (nsoil_e /= nsoil_w)) THEN
+          CALL finish(routine, &
+            & 'The number of soil layers used for water and energy currently need to be identical:'  &
+            & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+        END IF
+
+      END SELECT
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
         CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
@@ -257,7 +262,7 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        ! There are several jsbach processes for whom active is set to TRUE as default, however, these are not required for IQ:
+        ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
         model%processes(SSE_)%p%config%active = .FALSE.
         model%processes(SEB_)%p%config%active = .FALSE.
         model%processes(RAD_)%p%config%active = .FALSE.
@@ -265,26 +270,6 @@ CONTAINS
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
-        IF (model%config%l_compat401) THEN
-          CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
-          CALL message('    ', '... using soil heat capacity from mineral soil map')
-          CALL message('    ', '... using soil heat conductivity from mineral soil map')
-          CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
-          CALL message('    ', '... not using multi-layer snow model')
-          CALL message('    ', '... not using dynamical snow density and thickness')
-          CALL message('    ', '... not using frozen ground')
-          CALL message('    ', '... not using organic soil fractions')
-          CALL message('    ', '... using canopy albedo from ini file')
-          dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_snow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
-          dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
-          dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
-        END IF
 
         IF (model%Do_fractions_change()) THEN
           IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
@@ -295,6 +280,11 @@ CONTAINS
 
         IF (model%config%init_from_ifs) THEN
           CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+          IF (dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+            CALL message(routine, 'Reading initial soil moisture from '//TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
+          END IF
+        ELSE
+          dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
         END IF
 
         IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -374,7 +364,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

@@ -54,28 +54,32 @@ CONTAINS
     CLASS(t_q_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    REAL(wp)                    :: lai_site_specific      !< site specific lai, used to init lai_max in Q_PHENO_
+    REAL(wp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
+                                                   !! in case this value is less than zero, the lctlib value is used
 #ifdef __QUINCY_STANDALONE__
     NAMELIST /phenology_ctl/  &
 #else
     NAMELIST /q_pheno_nml/  &
 #endif
       & active,               &
+      & lrestart_cont,        &
       & ic_filename,          &
       & bc_filename,          &
-      & lai_site_specific
+      & lai_max
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_pheno_config'
     ! ----------------------------------------------------------------------------------------------------- !
     CALL message(TRIM(routine), 'Starting phenology configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_phenology.nc'
-    ic_filename         = 'ic_land_phenology.nc'
-    lai_site_specific   = 6.0_wp
+    active      = .TRUE.
+    lrestart_cont = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
+    bc_filename = 'bc_land_phenology.nc'
+    ic_filename = 'ic_land_phenology.nc'
+    lai_max     = -1.0_wp
     !first_call_phenology_this_day = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
@@ -90,9 +94,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
+    config%lrestart_cont              = lrestart_cont
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
-    config%lai_max                    = lai_site_specific
+    config%lai_max                    = lai_max
     CALL close_nml(nml_handler)
   END SUBROUTINE Init_q_pheno_config
 

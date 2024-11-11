@@ -48,17 +48,15 @@ MODULE mo_l2a_memory_class
       & alb_vis_dir                     , &  !< surface albedo for direct radiation in the visible band [unitless]
       & alb_nir_dir                          !< surface albedo for direct radiation in the near infrared band [unitless]
 
-    ! CARBON_
+    ! C in jsbach
     TYPE(t_jsb_var_real2d) :: &
-      & carbon_conservation_test        , &  !<
-      & yday_c_state_sum                     !<
+      & carbon_conservation_test        , &  !< difference of change in total C sum and Cflux
+      & yday_c_state_sum                     !< total C sum
 
-    ! biosphere-level diagnostics
-    !   additional variables are created in VEG_ as '*_l2aveghlp' and are passed to the L2A_ var in 'mo_atmland_interface:update_land2atm'
-    !   TODO pass VEG_ '*_l2aveghlp' var to L2A_ variables and modify the model inteface accordingly
-    ! TYPE(t_jsb_var_real2d) ::       &
-    !   & net_biosphere_production  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
-    !   & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
+    ! C in Quincy
+    TYPE(t_jsb_var_real2d) :: &
+      & q_total_c,            & !< total C, sum of all quincy carbon pools
+      & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
@@ -85,14 +83,14 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_l2a_memory),       INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),          INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),          INTENT(in)            :: suffix          !> tile name
+    CHARACTER(len=*),          INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),          INTENT(in)            :: suffix          !< tile name
     INTEGER,                   INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,                   INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,                   INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -198,51 +196,54 @@ CONTAINS
       & lrestart = .FALSE., &
       & initval_r = 0.0_wp)
 
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+#ifndef __NO_QUINCY__
+      CALL mem%Add_var('q_total_c', mem%q_total_c, &
+        & hgrid, surface, &
+        & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
+        & hgrid, surface, &
+        & t_cf('q_c_conservation_test', '[mol m-2]', 'difference in change in quincy total C and nbp'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+#endif
+    ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
-    ! carbon
-    IF (model%processes(CARBON_)%p%config%active) THEN
 
-      CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
-        & hgrid, surface,                                                              &
-        & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
-        & initval_r=-999.0_wp )
+      ! jsbach carbon
+      IF (model%processes(CARBON_)%p%config%active) THEN
+        CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
+          & hgrid, surface,                                                              &
+          & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE., lrestart_cont=.TRUE., &
+          & initval_r=-999.0_wp )
 
-      CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
-        & hgrid, surface,                                                                          &
-        & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-        & prefix, suffix,                                                                          &
-        & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
-        & initval_r=0.0_wp )
-
-    END IF
+        CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
+          & hgrid, surface,                                                                          &
+          & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+          & prefix, suffix,                                                                          &
+          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
+          & initval_r=0.0_wp )
+      END IF
 #endif
-
-      ! CALL mem%Add_var('net_biosphere_production', mem%net_biosphere_production, &
-      !   & hgrid, surface, &
-      !   & t_cf('net_biosphere_production', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
-      !   & t_grib1(table, 255, grib_bits), &
-      !   & t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix, &
-      !   & output_level = BASIC, &
-      !   & loutput = .TRUE., &
-      !   & lrestart = .FALSE., &
-      !   & initval_r = 0.0_wp)
-
-      ! CALL mem%Add_var('biological_n_fixation', mem%biological_n_fixation, &
-      !   & hgrid, surface, &
-      !   & t_cf('biological_n_fixation', '[micro-mol N m-2 s-1]', 'symbiotic + asymbiotic N fixation'), &
-      !   & t_grib1(table, 255, grib_bits), &
-      !   & t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix, &
-      !   & output_level = BASIC, &
-      !   & loutput = .TRUE., &
-      !   & lrestart = .FALSE., &
-      !   & initval_r = 0.0_wp)
+    END IF
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
