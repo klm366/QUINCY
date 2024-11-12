@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, Q_RAD_, SPQ_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, SPQ_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -56,7 +56,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(Q_RAD_)
+    dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -80,7 +80,7 @@ CONTAINS
     dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -120,7 +120,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
     dsl4jsb_Real3D_onChunk      :: chlfl_yield_cl
-    ! Q_RAD_ 3D
+    ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! SPQ_ 2D
@@ -167,7 +167,7 @@ CONTAINS
     dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -204,8 +204,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, jmax_cl)                   ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, vcmax_cl)                  ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)               ! in
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)               ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, spq_drag_srf)                   ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                      ! in

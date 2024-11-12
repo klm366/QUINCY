@@ -1062,6 +1062,13 @@ CONTAINS
       ENDDO
       !$ACC END PARALLEL LOOP
 
+      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
+      !> if the ICON-Land QUINCY model is selected to run.
+      !>
+#ifdef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) &
+        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
+#endif
 #ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
@@ -1069,7 +1076,7 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
 #ifdef _OPENACC
-        CALL finish(routine, 'QUINCY standalone not ported to GPU, yet. Stop.')
+        CALL finish(routine, 'The ICON-Land QUINCY model is not ported to GPU, yet. Stop.')
 #endif
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)

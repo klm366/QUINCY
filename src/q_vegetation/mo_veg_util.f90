@@ -311,6 +311,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_soil_root
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
@@ -467,6 +469,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc_tvegdyn_mavg)         ! inout
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -775,6 +779,9 @@ CONTAINS
       END IF
     END DO
     lai_tvegdyn_mavg(:) = calc_time_mavg(dtime, lai_tvegdyn_mavg(:), lai(:), mavg_period_tvegdyn, do_calc=l_hlp(:))
+
+    rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(dtime, rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
+      &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(ix_leaf,ixC,:) > eps8))
 
     !>  2.11 tacclim (averages at the respiration acclimation time-scale)
     !>    t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
