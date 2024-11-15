@@ -38,7 +38,7 @@ MODULE mo_alcc_memory_class
 
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 11
+  INTEGER, PARAMETER :: max_no_of_vars = 20
 
    ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
@@ -51,10 +51,11 @@ MODULE mo_alcc_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & cf_current_year,       & !< This years cover fractions derived from annually read land use data [-].
       & cf_day_delta,          & !< Daily change in cover fractions calculated from cf_current_year.
-      & cf_transition,    & !< Mingyue Zhang:define transition gain 
-      & cf_transition_pfts,    & !< Mingyue Zhang:define transition loss 
-      & cf_transition_gain,         & !< Mingyue Zhang:define transition matrix 3*3
-      & cf_transition_loss       !< Mingyue Zhang:define transition matrix npft*npft
+      & cf_transition,         & ! Mingyue Zhang:define transition gain v_grid = 11
+      & cf_transition_pfts,    & ! Mingyue Zhang:define transition loss v_grid = 11
+      & cf_transition_gain,    & ! Mingyue Zhang:define transition matrix v_grid3 = *3
+      & cf_transition_loss       ! Mingyue Zhang:define transition matrix nv_grid = pft*npft
+
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
   END TYPE t_alcc_memory
@@ -137,7 +138,7 @@ CONTAINS
      ! Mingyue Zhang: add variables for transitions gain start 
      ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_gain', mem%cf_transition_gain,                        &
-      & hgrid, trans_vgrid,                                                                &
+      & hgrid, pft_vgrid,                                                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
@@ -147,7 +148,7 @@ CONTAINS
      ! Mingyue Zhang: add variables for transitions loss start 
      ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_loss', mem%cf_transition_loss,                        &
-      & hgrid, trans_vgrid,                                                                 &
+      & hgrid, pft_vgrid,                                                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &
