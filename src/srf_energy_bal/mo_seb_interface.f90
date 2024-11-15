@@ -205,7 +205,9 @@ CONTAINS
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .OR. &
+      & TRIM(model%config%usecase) == 'jsbach_seb' .OR. TRIM(model%config%usecase) == 'jsbach_hydrotiles') &
+      & .AND. .NOT. model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
@@ -474,7 +476,9 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .OR. &
+      & TRIM(model%config%usecase) == 'jsbach_seb' .OR. TRIM(model%config%usecase) == 'jsbach_hydrotiles') &
+      & .AND. .NOT. model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
@@ -551,7 +555,9 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .OR. &
+      & TRIM(model%config%usecase) == 'jsbach_seb' .OR. TRIM(model%config%usecase) == 'jsbach_hydrotiles') &
+      & .AND. .NOT. model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)

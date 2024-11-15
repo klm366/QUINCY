@@ -232,7 +232,9 @@ CONTAINS
         & initval_r=0.0_wp )
     END IF
 
-    IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
+    IF ( model%config%use_tmx .OR. &
+      & TRIM(model%config%usecase) == 'jsbach_seb' .OR. TRIM(model%config%usecase) == 'jsbach_hydrotiles' &
+      & .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
         & hgrid, surface,                                                                    &
         & t_cf('surface_temperature_eff**4', 'K', 'effective surface temperature**4'),       &
@@ -243,7 +245,9 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
+    IF ( model%config%use_tmx .OR. &
+      & TRIM(model%config%usecase) == 'jsbach_seb' .OR. TRIM(model%config%usecase) == 'jsbach_hydrotiles' &
+      & .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
