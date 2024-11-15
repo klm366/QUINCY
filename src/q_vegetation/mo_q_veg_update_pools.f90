@@ -50,17 +50,16 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
-    USE mo_q_rad_parameters,                ONLY: rfr_ratio_toc
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree, eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, &
-      &                                           fresp_growth, k_fpc, k_sai2lai
+      &                                           fresp_growth, k_fpc, k_sai2lai, rfr_ratio_toc
     USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
@@ -74,7 +73,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(Q_RAD_)
+    dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -121,7 +120,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
@@ -139,9 +138,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    ! Q_RAD_ 2D
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
-    ! Q_RAD_ 3D
+    ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_ 2D
@@ -221,6 +218,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: veg_litterfall_total_n15
     dsl4jsb_Real2D_onChunk      :: veg_products_total_c
     dsl4jsb_Real2D_onChunk      :: veg_products_total_n
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
@@ -258,7 +256,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -297,11 +295,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                  ! in
-    ! Q_RAD_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! in
-    ! Q_RAD_ 3D
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
+    ! RAD_ 3D
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout
@@ -381,6 +377,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)               ! out
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_n)               ! out
     END IF
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc_tvegdyn_mavg)           ! in
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout

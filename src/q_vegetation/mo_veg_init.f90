@@ -56,7 +56,7 @@ CONTAINS
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
-      &                                           background_mort_rate_grass, w_root_lim_max
+      &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
@@ -166,6 +166,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onDomain      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: exudation_c_tmyc_mavg
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onDomain    :: root_fraction_sl
     dsl4jsb_Real3D_onDomain    :: fleaf_sunlit_tfrac_mavg_cl
@@ -274,6 +276,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc_tvegdyn_mavg)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onDomain(VEG_, root_fraction_sl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -605,6 +609,9 @@ CONTAINS
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp
+    ! bottom of the canopy radiation
+    rfr_ratio_boc(:,:)                    = rfr_ratio_toc
+    rfr_ratio_boc_tvegdyn_mavg(:,:)       = rfr_ratio_boc(:,:)
 
   END SUBROUTINE veg_init
 

@@ -322,7 +322,12 @@ MODULE mo_veg_memory_class
                                     t_jmax_opt_mavg                , &  !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
                                     t_soil_root                         !< Temperature of fine roots in the soil [K]
 
-    ! 1.11 helper variables for L2A_ process
+    ! 1.11 bottom of the canopy radiation
+    TYPE(t_jsb_var_real2d)          :: &
+      & rfr_ratio_boc                   , & !< red to far-red ratio at the bottom of the canopy [unitless]
+      & rfr_ratio_boc_tvegdyn_mavg          !< red to far-red ratio at the bottom of the canopy time-averaged [unitless]
+
+    ! 1.12 helper variables for L2A_ process
     !      these var are used at PFT tiles and aggregated to box tile
     !      in 'mo_atmland_interface:update_land2atm' their values are added to the "L2A_ counterpart variables"
     !      this is needed because the L2A_ var are not available at other tiles than the box tile (i.e., top tile)
@@ -2808,6 +2813,27 @@ CONTAINS
       CALL mem%Add_var('t_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
         & hgrid, surface, &
         & t_cf('t_jmax_opt_mavg', '', 'optimim temperature for electron transport of photosynthesis'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('rfr_ratio_boc', mem%rfr_ratio_boc, &
+        & hgrid, surface, &
+        & t_cf('rfr_ratio_boc', unitless, 'red to far-red ratio at the bottom of the canopy'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
+        & hgrid, surface, &
+        & t_cf('rfr_ratio_boc_tvegdyn_mavg', unitless, 'avrg red to far-red ratio at the bottom of the canopy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

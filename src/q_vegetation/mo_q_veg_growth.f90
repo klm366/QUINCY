@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -63,7 +63,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(Q_RAD_)
+    dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -103,7 +103,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -148,7 +148,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_pot_sl
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
-    ! Q_RAD_ 3D
+    ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
@@ -288,7 +288,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -343,11 +343,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_center_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pot_sl)                     ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                         ! in
-    ! Q_RAD_ 3D
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_cl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_cl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_sunlit_tcnl_mavg_cl)           ! in
-    dsl4jsb_Get_var3D_onChunk(Q_RAD_, ppfd_shaded_tcnl_mavg_cl)           ! in
+    ! RAD_ 3D
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)           ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)           ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)                     !   inout
