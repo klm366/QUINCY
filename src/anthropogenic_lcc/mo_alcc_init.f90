@@ -90,6 +90,10 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_current_year
+    dsl4jsb_Real3D_onDomain :: cf_transition            ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Real3D_onDomain :: cf_transition_pfts       ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Real3D_onDomain :: cf_transition_gain       ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Real3D_onDomain :: cf_transition_loss       ! Mingyue add dsl4jsb for transition vars
     REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
 
@@ -156,7 +160,7 @@ CONTAINS
 
     ! Read land use data
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year,cf_transition,cf_transition_pfts,cf_transition_gain,cf_transition_loss)  ! Mingyue add dsl4jsb for transition vars
 
     !>
     !> Assertion: alcc process currently expects filenames with 4 digits
@@ -213,66 +217,83 @@ CONTAINS
       ENDDO
         
     CASE ('transitions')
-        !Mingyue Zhang added for reading in transition data start 
-        !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
-        !so possibly here the CASE ('transitions') should not be inside the do while loop
+      !Mingyue Zhang added for reading in transition data start 
+      !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
+      !so possibly here the CASE ('transitions') should not be inside the do while loop
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
       WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
 
-      ! be careful with the diagonal elements(see discussion with Ann Kristin)
-      DO WHILE ic = 1,nc
-        !!!!here associate the trasition matrix with the grid: as the process is done on each block with a loop of the index od the cell
-        ! define and adjust 'rows' and 'cols' as needed, should be same as the simulation domian lat/lon box
-        DO WHILE i = 1, 3
-          DO WHILE j = 1, 3
-            ! Accessing elements of the matrices 
-            ! Use a do loop for the read in LUH2 transition data: 
-            ! crop2pasture pasture2crop natural2crop natural2pasture crop2natural pasture2natural
-            ! here each value of the TransMtrx is corresponding to the upper six transitions, should it also be defined as variable               
-            IF (i == j) THEN
-              cf_transition(ic)%TransMtrx(i, j) = 0.0 
-            ELSE
-              cf_transition(ic)%TransMtrx(i, j) = input_file_trans%Read_2d(variable_name=TRIM(transitions(i*j)) 
-            ENDIF   
-          END DO
-        END DO
 
-        DO WHILE  i = 1,3
-          cf_transition(ic)%TransMtrx(i, i) = 1 - SUM(cf_transition(ic)(i,:))
+      ! Loop over gridcell in the chunk to read in transition matrix data
+      ic = 1
+      DO ic = ics,ice
+        ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
+        ! Read and set transition matrix
+        DO idx = 1, 9
+           ! Calculate the original row (`i`) and column (`j`) positions from the 1D index `idx
+           i = (idx - 1) / 3 + 1
+           j = MOD(idx - 1, 3) + 1
+     
+           ! Set diagonal elements to 0.0; otherwise, read from input
+           IF (i .EQ. j) THEN
+              cf_transition(ic, idx, :) = 0.0
+           ELSE
+            ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(i*j)), &
+            & fill_array = cf_transition(ic, idx, :) )
+           END IF
         END DO
-
-        !here the transtion matrix has to be extend to pfts*pfts, use the cf_current_year
-        DO WHILE i = 1, npft
-          DO WHILE j = 1,npft 
-
-            transition_prob = cf_transition(ic)%TransMtrx(LC_type2LC_class_mapping(i), LC_type2LC_class_mapping(j))
-            !here need to associate the relation between C, N, P with pfts, like which pfts are charactize as C/N/P
-            cf_transition_pfts(ic)%TransMtrx_pfts(i, j) = cf_current_year(:,i,:)*transition_prob*cf_current_year(:,j,:)
-          END DO
-        END DO 
-        ! read in six luh transition data and assign the grid box value to one 3*3 matrix
-      
-        !calculate the transition gain of each PFTS
-        !if the the diagonal elements is set to 0, the the following steps should be taken to get the updated cf_current_year
-        cf_transition_gain =  0.0
-        cf_transition_gain =  TRANSPOSE(cf_transition(ic)%(TransMtrx_pfts(:,:))*cf_current_year(ic,:,:))
-      
-        !calculate the transition loss of each PFTS
-        cf_transition_loss= 0.0
-        DO WHILE i = 1, npft
-          DO WHILE j = 1, npft
-            cf_transition_loss(i) = cf_transition_loss(i) + cf_transition(ic)%TransMtrx_pfts(i, j) * cf_current_year(ic,j,:)
-          END DO
+     
+        ! Loop over all pairs of PFTs and extend the transition matrix for PFTs
+        DO idx = 1, npft * npft
+           ! Calculate the row (`i`) and column (`j`) indices in the `npft x npft` matrix
+           i = (idx - 1) / npft + 1
+           j = MOD(idx - 1, npft) + 1
+     
+           ! Use the mappings to access the corresponding element in `TransMtrxVec`
+           row = LC_type2LC_class_mapping(i)
+           col = LC_type2LC_class_mapping(j)
+           trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
+     
+           transition_prob = cf_transition(ic, trans_idx, :)
+     
+           ! Calculate transition probabilities for PFTs
+           cf_transition_pfts(ic, idx, :) = cf_current_year(ic, i, :) * transition_prob * cf_current_year(ic, j, :)
         END DO
-      
-        !use the cf_current_year from maps and multiply with the matrix to update the cf_current
-        !here should use minus as the matrix indicate loss (pay attention to the dimentions of the matrix)
-        cf_current_year = cf_current_year(ic) + cf_transition_gain - cf_transition_loss
-        !if the the diagonal elements is set to the fraction remain unchanged, then the following steps should be taken to get the updated cf_current_year
-        cf_current_year = cf_current_year(ic)*TransMtrx_pfts(ic)
-      
-      ENDDO
+      END DO
       !Mingyue Zhang added for reading in transition data end
+
+      ! loop over the v-grid to update gain and loss and cf_current_year
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      
+      DO WHILE (ASSOCIATED(current_tile))   
+        i_tile = i_tile + 1
+
+        ! Initialize transition gain and loss
+        cf_transition_gain = 0.0
+        cf_transition_loss = 0.0
+     
+        ! Calculate transition gain and loss of each PFT in one loop
+        DO idx = 1, npft * npft
+           ! Determine the (i, j) position for gain and loss calculations
+           i = (idx - 1) / npft + 1
+           j = MOD(idx - 1, npft) + 1
+     
+           ! Calculate transition gain for PFT i -> j, and loss for PFT j -> i
+           cf_transition_gain(:, i_tile, :) = cf_transition_gain(:, i_tile, :) + &
+                                              cf_transition_pfts(:, idx, :) * cf_current_year(:, j, :)
+     
+           cf_transition_loss(:, i_tile, :) = cf_transition_loss(:, i_tile, :) + &
+                                              cf_transition_pfts(:, idx, :) * cf_current_year(:, i, :)
+        END DO
+        ! Update cf_current_year by subtracting transition losses and adding transition gains
+        cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
+     
+        ! Get the next sibling tile
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+      
+      
     CASE DEFAULT 
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
       
