@@ -146,6 +146,7 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_carbon_init,         ONLY: carbon_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
@@ -564,6 +565,9 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        IF (tile%Is_process_active(CARBON_)) THEN
+          CALL carbon_init(tile)
+        END IF
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init(tile)
         END IF
