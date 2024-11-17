@@ -589,6 +589,13 @@ CONTAINS
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
+#ifndef __NO_QUINCY__
+      ! Write back all values from the matrices to the bgcm variables that have been set
+      ! in the init routines -- this is required when writing the init values to the output
+      ! before the time-loop is started
+      CALL model%Write_back_to_bgcms()
+#endif
+
     ! -------------------------------------------------------------------------------------------------- !
     !>
     !> 3. Iterate over tiles again and

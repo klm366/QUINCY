@@ -20,6 +20,7 @@ title: Authors
 - Rainer Schneck
 - Reiner Schnur
 - Roland Wirth
+- Sergey Sukov
 - Silvia Caldararu
 - Soenke Zaehle
 - Stefan Hagemann

@@ -139,22 +139,34 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, blended_height)       ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !$ACC DATA CREATE(ztvd(:), ztvir(:), q_sat_surf(:), ztvs(:), zg(:), zgh(:), zdu2(:), zril(:), zcdnl(:)) &
+    !$ACC   CREATE(zchln(:), zscfl(:), zucfl(:), zucfhl(:), zcons(:), zcfncl(:), zcfnchl(:), zcfml(:)) &
+    !$ACC   CREATE(zcfhl(:), csat(:), cair(:), zchnl(:), zlev(:), wind_air(:))
+
     !>0.9 init local variables and constants
     !>
     ! Some constants from echam/mo_surface_land.f90
-    csat(:)     = fact_qsat_srf(:)
-    cair(:)     = fact_q_air(:)
-    wind_air(:) = MIN(MAX(wind_10m(:),min_wind),max_wind)
-    zlev(:)     = height_wind + 3._wp/10._wp * height(:)
-    z0m(:)      = MAX(blended_height(:) / 10.0_wp, 0.1_wp)
-    z0h(:)      = z0m(:) / 10.0_wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      csat(ic)     = fact_qsat_srf(ic)
+      cair(ic)     = fact_q_air(ic)
+      wind_air(ic) = MIN(MAX(wind_10m(ic),min_wind),max_wind)
+      zlev(ic)     = height_wind + 3._wp/10._wp * height(ic)
+      z0m(ic)      = MAX(blended_height(ic) / 10.0_wp, 0.1_wp)
+      z0h(ic)      = z0m(ic) / 10.0_wp
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
     ! If height_wind is set, then the measurement height + an offset from the average vegetation height
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
-    zg(:)       = zlev(:) * grav
-    zgh(:)      = zg(:)                          ! height_humidity and height_temperature have to be equal
-    zdu2(:)     = wind_air(:)**2._wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      zg(ic)       = zlev(ic) * grav
+      zgh(ic)      = zg(ic)                          ! height_humidity and height_temperature have to be equal
+      zdu2(ic)     = wind_air(ic)**2._wp
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>1.0 ...
     !>
@@ -163,18 +175,27 @@ CONTAINS
     ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
     ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
     ! tvd = tair * (100000/p_pa)^rd_o_cpd * 1 + rvd1 * q_air) ! virtual potential temperature
-    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**rd_o_cpd * ( 1._wp + rvd1 * q_air(:) )
-    ztvir(:)      = t_air(:) * ( 1._wp + rvd1 * q_air(:) )
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      ztvd(ic)       = t_air(ic) * ( 100000._wp/press_srf(ic))**rd_o_cpd * ( 1._wp + rvd1 * q_air(ic) )
+      ztvir(ic)      = t_air(ic) * ( 1._wp + rvd1 * q_air(ic) )
+    END DO
+    !$ACC END PARALLEL LOOP
     ! virtual potential surface temperature
-    WHERE (w_snow_snl(:,1) > w_snow_min)
-      q_sat_surf(:) = calc_spec_humidity_sat(t_snow_snl(:,1),press_srf(:))
-      ztvs(:)       = t_snow_snl(:,1) * ( 100000._wp/press_srf(:))**rd_o_cpd * &
-                    ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
-    ELSEWHERE
-      q_sat_surf(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
-      ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**rd_o_cpd * &
-                    ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
-    ENDWHERE
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      IF (w_snow_snl(ic,1) > w_snow_min) THEN
+        q_sat_surf(ic) = calc_spec_humidity_sat(t_snow_snl(ic,1),press_srf(ic))
+        ztvs(ic)       = t_snow_snl(ic,1) * ( 100000._wp/press_srf(ic))**rd_o_cpd * &
+                         ( 1._wp + rvd1 * ( csat(ic) * q_sat_surf(ic) + ( 1._wp - cair(ic) ) * q_air(ic)))
+      ELSE
+        q_sat_surf(ic) = calc_spec_humidity_sat(t_soil_sl(ic,1),press_srf(ic))
+        ztvs(ic)       = t_soil_sl(ic,1) * ( 100000._wp/press_srf(ic))**rd_o_cpd * &
+                        ( 1._wp + rvd1 * ( csat(ic) * q_sat_surf(ic) + ( 1._wp - cair(ic) ) * q_air(ic)))
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
     jsb_standalone = jsbach_runs_standalone()
     IF (jsb_standalone) THEN
@@ -184,23 +205,36 @@ CONTAINS
       ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
       ! SZ: limited zril to < 1.5 to avoid complete decoupling
       ! effectively this limits drag to values larger than about 10% of the neutral drag
-      zril(:)       = MIN(zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:)) / 2._wp ), 0.5_wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        zril(ic)       = MIN(zg(ic) * ( ztvd(ic) - ztvs(ic) ) / ( zdu2(ic) * (ztvd(ic) + ztvs(ic)) / 2._wp ), 0.5_wp)
+      END DO
+      !$ACC END PARALLEL LOOP
 
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         CALL calc_drag_coefficient(steplen, &
                                   alpha, &
-                                  t_air(ic), q_air(ic), wind_air(ic), press_srf(ic), &
-                                  zg(ic), zgh(ic), z0m(ic), z0h(ic), &
+                                  t_air(ic),q_air(ic),wind_air(ic),press_srf(ic), &
+                                  zg(ic),zgh(ic),z0m(ic),z0h(ic), &
                                   zril(ic), &                 ! inout
-                                  spq_drag_srf(ic), spq_pch(ic))  ! out
+                                  spq_drag_srf(ic),spq_pch(ic))  ! out
       END DO
+      !$ACC END PARALLEL LOOP
 
       ! The explicit coupling used in the standalone case requires the acoef coefficients to be zero
-      spq_t_acoef(:) = 0.0_wp
-      spq_t_bcoef(:) = t_air(:) * cpd * (1._wp + cpvd1 * q_air(:)) + zgh
-      spq_q_acoef(:) = 0.0_wp
-      spq_q_bcoef(:) = q_air(:)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        spq_t_acoef(ic) = 0.0_wp
+        spq_t_bcoef(ic) = t_air(ic) * cpd * (1._wp + cpvd1 * q_air(ic)) + zgh(ic)
+        spq_q_acoef(ic) = 0.0_wp
+        spq_q_bcoef(ic) = q_air(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
   END SUBROUTINE update_soil_turbulence
 
   !-----------------------------------------------------------------------------------------------------
@@ -217,6 +251,8 @@ CONTAINS
                          t_air, q_air, wind_air, press_srf, &
                          zg, zgh, z0m, z0h, zril, &
                          drag_srf, pch)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_phy_schemes,             ONLY: heat_transfer_coef
     USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, von_karman, rvd1

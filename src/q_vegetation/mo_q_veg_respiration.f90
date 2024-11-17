@@ -38,6 +38,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION temperature_response_respiration(temp, temp_mavg) RESULT(temp_response)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero

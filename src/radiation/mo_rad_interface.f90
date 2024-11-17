@@ -456,7 +456,7 @@ CONTAINS
       ! re-calculate rad_srf_net for QUINCY
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_srf_old(ic) ** 4._wp
         END DO
@@ -697,6 +697,12 @@ CONTAINS
     !> 1.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !>
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
+    !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
+    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
+    !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
@@ -706,30 +712,49 @@ CONTAINS
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:),arad_vis_soil(:), &
                      alb_vis_can(:),alb_vis_lnd(:))
-    swvis_srf_net(:) = (1.0_wp - alb_vis_lnd(:)) * swvis_srf_down(:)
+    !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
+    !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      swvis_srf_net(ic) = (1.0_wp - alb_vis_lnd(ic)) * swvis_srf_down(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 2.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !>
-    fleaf_sunlit_cl(:,:) = fleaf_sunlit_vis_cl(:,:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO icanopy = 1,ncanopy
+      DO ic = 1, nc
+        fleaf_sunlit_cl(ic,icanopy) = fleaf_sunlit_vis_cl(ic,icanopy)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (swvis_srf_down(ic) > eps8) THEN
+      IF(swvis_srf_down(ic) > eps8) THEN
         appfd(ic) = arad_vis_can(ic) * swpar_srf_down(ic) / swvis_srf_down(ic) * rad2ppfd
       ELSE
         appfd(ic) = 0.0_wp
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
-    DO icanopy = 1, ncanopy
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO icanopy=1,ncanopy
       DO ic = 1, nc
         IF (swvis_srf_down(ic) > eps8) THEN
-          ppfd_sunlit_cl(ic,icanopy) = arad_sunlit_vis_cl(ic,icanopy) * swpar_srf_down(ic) / swvis_srf_down(ic) * rad2ppfd
-          ppfd_shaded_cl(ic,icanopy) = arad_shaded_vis_cl(ic,icanopy) * swpar_srf_down(ic) / swvis_srf_down(ic) * rad2ppfd
+          ppfd_sunlit_cl(ic,icanopy) = arad_sunlit_vis_cl(ic,icanopy) * swpar_srf_down(ic)/swvis_srf_down(ic) * rad2ppfd
+          ppfd_shaded_cl(ic,icanopy) = arad_shaded_vis_cl(ic,icanopy) * swpar_srf_down(ic)/swvis_srf_down(ic) * rad2ppfd
         ELSE
           ppfd_sunlit_cl(ic,icanopy) = 0.0_wp
           ppfd_shaded_cl(ic,icanopy) = 0.0_wp
         END IF
       END DO
     END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE update_radiation_par_quincy
 #endif
@@ -1724,16 +1749,19 @@ CONTAINS
 
       ! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
       ! soil's albedo
-      alb_vis_soil(:) = def_alb_vis_soil
-      alb_nir_soil(:) = def_alb_nir_soil
-      alb_vis_snow(:) = def_alb_vis_snow
-      alb_nir_snow(:) = def_alb_nir_snow
-      DO ic=1,nc
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        alb_vis_soil(ic) = def_alb_vis_soil
+        alb_nir_soil(ic) = def_alb_nir_soil
+        alb_vis_snow(ic) = def_alb_vis_snow
+        alb_nir_snow(ic) = def_alb_nir_snow
+
         alb_vis_soil(ic) = fract_snow_soil(ic) * alb_vis_snow(ic) &
-            &              + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic)
+          &                + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic)
         alb_nir_soil(ic) = fract_snow_soil(ic) * alb_nir_snow(ic) &
-            &              + (1.0_wp - fract_snow_soil(ic)) * alb_nir_soil(ic)
+          &                + (1.0_wp - fract_snow_soil(ic)) * alb_nir_soil(ic)
       END DO
+      !$ACC END PARALLEL LOOP
       ! calculate surface albedo
       CALL calc_surface_radiation_quincy(tile, options)
 #endif
@@ -1935,8 +1963,6 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(Q_PHENO_)
 
-    ALLOCATE(l_growing_season_cl(nc, ncanopy))
-
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1959,17 +1985,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ALLOCATE(l_growing_season_cl(nc, ncanopy))
+    !$ACC ENTER DATA CREATE(l_growing_season_cl, l_growing_season)
+
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF (growing_season(ic) > test_false_true) THEN
         l_growing_season(ic)      = .TRUE.
-        l_growing_season_cl(ic,:) = .TRUE.
       ELSE
         l_growing_season(ic)      = .FALSE.
-        l_growing_season_cl(ic,:) = .FALSE.
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO icanopy = 1, ncanopy
+      DO ic = 1, nc
+        l_growing_season_cl(ic,icanopy) = l_growing_season(ic)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 daytime averages
@@ -1978,36 +2014,46 @@ CONTAINS
 
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
-    DO ic = 1, nc
-      IF (swpar_srf_down(ic) > eps8) THEN
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO icanopy = 1, ncanopy
+      !$ACC LOOP GANG VECTOR
+      DO ic = 1, nc
+        IF (swpar_srf_down(ic) > eps8) THEN
         ! add values
-        DO icanopy = 1, ncanopy
-          ppfd_sunlit_daytime_dacc_cl(ic,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) + &
-            & ppfd_sunlit_cl(ic,icanopy)
-          ppfd_shaded_daytime_dacc_cl(ic,icanopy)  = ppfd_shaded_daytime_dacc_cl(ic,icanopy) + &
-            & ppfd_shaded_cl(ic,icanopy)
-        END DO
-      END IF
+          ppfd_sunlit_daytime_dacc_cl(ic,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) &
+            & + ppfd_sunlit_cl(ic,icanopy)
+          ppfd_shaded_daytime_dacc_cl(ic,icanopy)  = ppfd_shaded_daytime_dacc_cl(ic,icanopy) &
+            & + ppfd_shaded_cl(ic,icanopy)
+        END IF
+      END DO
     END DO
+    !$ACC END PARALLEL
 
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    DO ic = 1, nc
-      IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
-        ! check if at least one value had been assigned at the current day, avoiding division by zero
-        IF (daytime_counter(ic) > eps8) THEN
-          ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)
-          ppfd_shaded_daytime_cl(ic,:) = ppfd_shaded_daytime_dacc_cl(ic,:) / daytime_counter(ic)
-        ELSE
-          ppfd_sunlit_daytime_cl(ic,:) = 0.0_wp
-          ppfd_shaded_daytime_cl(ic,:) = 0.0_wp
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO icanopy = 1, ncanopy
+      !$ACC LOOP GANG VECTOR
+      DO ic = 1, nc
+        IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+          ! check if at least one value had been assigned at the current day, avoiding division by zero
+          IF (daytime_counter(ic) > eps8) THEN
+            ppfd_sunlit_daytime_cl(ic,icanopy) = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) / daytime_counter(ic)
+            ppfd_shaded_daytime_cl(ic,icanopy) = ppfd_shaded_daytime_dacc_cl(ic,icanopy) / daytime_counter(ic)
+          ELSE
+            ppfd_sunlit_daytime_cl(ic,icanopy) = 0.0_wp
+            ppfd_shaded_daytime_cl(ic,icanopy) = 0.0_wp
+          END IF
+          ! zero the accumulation variables after daily average has been calculated
+          ppfd_sunlit_daytime_dacc_cl(ic,icanopy) = 0.0_wp
+          ppfd_shaded_daytime_dacc_cl(ic,icanopy) = 0.0_wp
         END IF
-        ! zero the accumulation variables after daily average has been calculated
-        ppfd_sunlit_daytime_dacc_cl(ic,:) = 0.0_wp
-        ppfd_shaded_daytime_dacc_cl(ic,:) = 0.0_wp
-      END IF
+      END DO
     END DO
+    !$ACC END PARALLEL
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>2.0 moving averages
@@ -2020,27 +2066,43 @@ CONTAINS
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
 
-    !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !>
-    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
-                                                    mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
-                                                    mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO icanopy = 1, ncanopy
+      DO ic = 1, nc
+        !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
+        !>
+        ppfd_sunlit_tfrac_mavg_cl(ic,icanopy) = calc_time_mavg(dtime, ppfd_sunlit_tfrac_mavg_cl(ic,icanopy), &
+          & ppfd_sunlit_daytime_cl(ic,icanopy), mavg_period_tfrac, do_calc=l_growing_season_cl(ic,icanopy))
+        ppfd_shaded_tfrac_mavg_cl(ic,icanopy) = calc_time_mavg(dtime, ppfd_shaded_tfrac_mavg_cl(ic,icanopy), &
+          & ppfd_shaded_daytime_cl(ic,icanopy), mavg_period_tfrac, do_calc=l_growing_season_cl(ic,icanopy))
+        !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
+        !>
+        ppfd_sunlit_tcnl_mavg_cl(ic,icanopy) = calc_time_mavg(dtime, ppfd_sunlit_tcnl_mavg_cl(ic,icanopy), &
+          & ppfd_sunlit_cl(ic,icanopy), mavg_period_tcnl, do_calc=l_growing_season_cl(ic,icanopy))
+        ppfd_shaded_tcnl_mavg_cl(ic,icanopy) = calc_time_mavg(dtime, ppfd_shaded_tcnl_mavg_cl(ic,icanopy), &
+          & ppfd_shaded_cl(ic,icanopy), mavg_period_tcnl, do_calc=l_growing_season_cl(ic,icanopy))
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
-    !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
-    !>
-    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
-                                                    mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_time_mavg(dtime, ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
-                                                    mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
+    !$ACC WAIT(1)
+
+    !$ACC EXIT DATA DELETE(l_growing_season_cl, l_growing_season)
+    DEALLOCATE(l_growing_season_cl)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
+
   END SUBROUTINE update_time_average_radiation
+
 #else
+
   SUBROUTINE update_time_average_radiation(tile, options)
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
   END SUBROUTINE update_time_average_radiation
+
 #endif
   ! ======================================================================================================= !
   !> aggregate: time moving averages and daytime averages for RAD_

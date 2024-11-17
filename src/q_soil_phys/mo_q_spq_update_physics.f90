@@ -66,6 +66,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: ic
     REAL(wp)                              :: steplen
     REAL(wp)                              :: dtime          !< timestep length
     REAL(wp)                              :: alpha          !< implicitness factor
@@ -288,6 +289,9 @@ CONTAINS
     !> 1.0 Compute snow accumulation (in the case of snowfall), used later in calc_surface_energy_balance()
     !!
     IF (dsl4jsb_Config(SPQ_)%flag_snow) THEN
+
+      !$ACC UPDATE HOST(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+      !$ACC WAIT(1)
       CALL calc_snow_accumulation(nc, &                                   ! in
                                   nsoil_sb, &                             ! in
                                   nsnow, &                                ! in
@@ -297,14 +301,34 @@ CONTAINS
                                   snow_present_snl(:,:), &                ! inout
                                   w_snow_snl(:,:), &                      ! inout
                                   snow_lay_thickness_snl(:,:))            ! inout
+      !$ACC UPDATE DEVICE(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+#ifdef _OPENACC
+      snow_height(:) = -1.0E+22; snow_lay_thickness_snl(:,:) = -2.0E+33
+#endif
     END IF
 
     !> 2.0 Diagnose surface relative humidity for energy budget calculations
     !!
-    rel_hum(:) = MIN(1.0_wp, (w_soil_sl(:,1) - w_soil_pwp_sl(:,1)) / (w_soil_fc_sl(:,1) - w_soil_pwp_sl(:,1)))
+    !$ACC DATA CREATE(rel_hum)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      rel_hum(ic) = MIN(1.0_wp, (w_soil_sl(ic,1) - w_soil_pwp_sl(ic,1)) / (w_soil_fc_sl(ic,1) - w_soil_pwp_sl(ic,1)))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 3.0 Calculate surface energy budget
     !!
+    !$ACC UPDATE HOST(rad_srf_net(:), t_air(:), spq_t_acoef(:), spq_t_bcoef(:), q_air(:), spq_q_acoef(:), spq_q_bcoef(:)) &
+    !$ACC   HOST(press_srf(:), wind_10m(:), height(:), fract_fpc(:), lai(:), w_skin(:), canopy_cond(:), rel_hum(:)) &
+    !$ACC   HOST(soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), fact_q_air(:), fact_qsat_srf(:)) &
+    !$ACC   HOST(qsat_star(:), s_star(:), evapotranspiration(:), spq_drag_srf(:), spq_pch(:), ground_heat_flx_old(:)) &
+    !$ACC   HOST(zril_old(:), t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), evapopot(:), evaporation(:)) &
+    !$ACC   HOST(evaporation_snow(:), interception(:), transpiration(:), sensible_heat_flx(:), latent_heat_flx(:)) &
+    !$ACC   HOST(ground_heat_flx(:), snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux(:)) &
+    !$ACC   HOST(snow_melt_to_soil(:), therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
+    !$ACC   HOST(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
+    !$ACC   HOST(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                      steplen, &
                                      alpha, &
@@ -335,9 +359,32 @@ CONTAINS
                                      w_snow_snl(:,:), &                                                                ! inout
                                      snow_present_snl, &                                                               ! inout
                                      snow_lay_thickness_snl(:,:))                                                     ! inout
+    !$ACC UPDATE DEVICE(rad_srf_net(:), t_air(:), spq_t_acoef(:), spq_t_bcoef(:), q_air(:), spq_q_acoef(:), spq_q_bcoef(:)) &
+    !$ACC   DEVICE(press_srf(:), wind_10m(:), height(:), fract_fpc(:), lai(:), w_skin(:), canopy_cond(:), rel_hum(:)) &
+    !$ACC   DEVICE(soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), fact_q_air(:), fact_qsat_srf(:)) &
+    !$ACC   DEVICE(qsat_star(:), s_star(:), evapotranspiration(:), spq_drag_srf(:), spq_pch(:), ground_heat_flx_old(:)) &
+    !$ACC   DEVICE(zril_old(:), t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), evapopot(:), evaporation(:)) &
+    !$ACC   DEVICE(evaporation_snow(:), interception(:), transpiration(:), sensible_heat_flx(:), latent_heat_flx(:)) &
+    !$ACC   DEVICE(ground_heat_flx(:), snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux(:)) &
+    !$ACC   DEVICE(snow_melt_to_soil(:), therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
+    !$ACC   DEVICE(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
+    !$ACC   DEVICE(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+#ifdef _OPENACC
+    lai(:) = -1.0E+11; w_soil_fc_sl(:,:) = -2.0E+36
+#endif
 
     !> 4.0 Calculate soil hydrology processes
     !!
+    !$ACC UPDATE HOST(num_sl_above_bedrock(:), soil_lay_depth_ubound_sl(:,:), rain(:), snow(:), interception(:)) &
+    !$ACC   HOST(evaporation(:), evaporation_snow(:), transpiration(:), w_soil_root_fc(:), w_soil_root_pwp(:)) &
+    !$ACC   HOST(lai(:), root_depth(:), snow_melt_to_soil(:), soil_depth_sl(:,:), w_soil_sat_sl(:,:)) &
+    !$ACC   HOST(w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
+    !$ACC   HOST(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
+    !$ACC   HOST(w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), srf_runoff(:)) &
+    !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), w_soil_sl(:,:), w_soil_pot_sl(:,:)) &
+    !$ACC   HOST(drainage_sl(:,:), percolation_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:)) &
+    !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_soil_hydrology(nc, nsoil_sb, dtime, &
                              num_sl_above_bedrock, &
                              soil_lay_depth_ubound_sl(:,:), &                                      ! (upper bound > lower bound !)
@@ -345,7 +392,7 @@ CONTAINS
                              rain(:),snow(:),interception(:),evaporation(:),evaporation_snow(:),transpiration(:), &
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), &
                              snow_melt_to_soil(:), soil_depth_sl(:,:), ftranspiration_sl(:,:), &
-                              w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), &
+                             w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), &
                              saxtonA(:,:),saxtonB(:,:),saxtonC(:,:),kdiff_sat_sl(:,:),root_fraction_sl(:,:),&
                              w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), &                                  ! in
                              w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), &             ! inout
@@ -353,8 +400,23 @@ CONTAINS
                              w_soil_sl(:,:), w_soil_pot_sl(:,:), drainage_sl(:,:), percolation_sl(:,:), &       ! inout
                              gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:), &                                ! inout
                              frac_w_lat_loss_sl(:,:))                                                           ! out
+    !$ACC UPDATE DEVICE(num_sl_above_bedrock(:), soil_lay_depth_ubound_sl(:,:), rain(:), snow(:), interception(:)) &
+    !$ACC   DEVICE(evaporation(:), evaporation_snow(:), transpiration(:), w_soil_root_fc(:), w_soil_root_pwp(:)) &
+    !$ACC   DEVICE(lai(:), root_depth(:), snow_melt_to_soil(:), soil_depth_sl(:,:), w_soil_sat_sl(:,:)) &
+    !$ACC   DEVICE(w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
+    !$ACC   DEVICE(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
+    !$ACC   DEVICE(w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), srf_runoff(:)) &
+    !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), w_soil_sl(:,:), w_soil_pot_sl(:,:)) &
+    !$ACC   DEVICE(drainage_sl(:,:), percolation_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:)) &
+    !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
+#ifdef _OPENACC
+    w_soil_root(:) = -1.0E+21; frac_w_lat_loss_sl(:,:) = -2.0E+14
+#endif
 
     !> 5.0 diagnose root temperature -> moved to veg_growth
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
   END SUBROUTINE update_spq_physics
 
   !> calc snow accumulation

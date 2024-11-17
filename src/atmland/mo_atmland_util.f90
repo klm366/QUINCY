@@ -37,6 +37,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(t_air, press_srf) RESULT(q_sat)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_atmland_constants,       ONLY: eps_vpd
     USE mo_jsb_physical_constants,  ONLY: Tzero
 
