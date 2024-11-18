@@ -40,7 +40,7 @@ MODULE mo_alcc_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 20
 
-   ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
+  ! TO-DO, associate the Transmatrix with the girds, so iblk (<= nblk) and ic (<= nc) in the jsb_interface
   ! comments from Julia N: The update_alcc routine is already only called for one chunk, 
   ! thus you do not have to care about the block number (iblk) but only about the cells on this chunk (ic <= nc). 
   ! So You would loop over nc which is already available in the update_all routine (nc  = options%nc).
@@ -73,6 +73,7 @@ CONTAINS
     !USE mo_jsb_model_usecases, ONLY: npft ! R: Note, this leads to circular dependency
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_alcc_memory), INTENT(inout), TARGET   :: mem
+
     CHARACTER(len=*),      INTENT(in)             :: prefix
     CHARACTER(len=*),      INTENT(in)             :: suffix
     INTEGER,               INTENT(in)             :: lct_ids(:)
@@ -118,8 +119,9 @@ CONTAINS
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
      ! Mingyue Zhang: add variables for transitions type start 
-    CALL mem%Add_var('cf_transition', mem%cf_transition,                                  &
+    CALL mem%Add_var('cf_transition', mem%cf_transition,                                   &
       & hgrid, trans_vgrid,                                                                &
+      & t_cf('transitions between crop, natural and pasture'),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
@@ -127,8 +129,9 @@ CONTAINS
      ! Mingyue Zhang: add variables for transitions type finish
 
      ! Mingyue Zhang: add variables for transitions type start 
-    CALL mem%Add_var('cf_transition_pfts', mem%cf_transition_pfts,                        &
+    CALL mem%Add_var('cf_transition_pfts', mem%cf_transition_pfts,                          &
       & hgrid, trans_pft_vgrid,                                                             &
+      & t_cf('transitions between pfts'),                                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &
@@ -137,8 +140,8 @@ CONTAINS
  
      ! Mingyue Zhang: add variables for transitions gain start 
      ! TODO: the vgrid(trans_vgrid) should be modified
-    CALL mem%Add_var('cf_transition_gain', mem%cf_transition_gain,                        &
-      & hgrid, pft_vgrid,                                                                &
+    CALL mem%Add_var('cf_transition_gain', mem%cf_transition_gain,                         &
+      & hgrid, pft_vgrid,                                                                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
@@ -147,8 +150,8 @@ CONTAINS
 
      ! Mingyue Zhang: add variables for transitions loss start 
      ! TODO: the vgrid(trans_vgrid) should be modified
-    CALL mem%Add_var('cf_transition_loss', mem%cf_transition_loss,                        &
-      & hgrid, pft_vgrid,                                                                 &
+    CALL mem%Add_var('cf_transition_loss', mem%cf_transition_loss,                          &
+      & hgrid, pft_vgrid,                                                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &
