@@ -340,7 +340,8 @@ CONTAINS
     END IF
 
     ! Read in maximum fraction and depth of local surface depressions
-    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. TRIM(model%config%usecase) == 'jsbach_hydrotiles' &
+      & .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
         ! Use depression area fraction as maximum pond fraction
         ptr_2D => input_file%Read_2d(                                 &
@@ -758,21 +759,26 @@ CONTAINS
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       ! Maximum depth and extent of surface water ponds
       IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
-        ! Note, surface depression depth is given as negative value in the data, but represent
-        !   a storage on top of the soil --> needs to be converted to positive values!
-        !   Also, the depression are grid cell averages. As the HydroTiles allow ponds only on the flood
-        !   plain tile, depression depth needs to be scaled accordingly. However, it is limited to 10m.
+        ! It is assumed that the floodplain tile can be fully flooded and the lowlands
+        !   can only be partially flooded (set to 50% until better infos are available)
         IF (tile%contains_floodplain) THEN
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
+        ELSE IF (tile%contains_lowland) THEN
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.5_wp
+        ELSE
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
+        END IF
+        ! Note, surface depression depth is computed from the tile slope using a grid cell
+        !   radius of 250m because the original CTI data is derived from 500m grid cells
+        IF (tile%contains_floodplain .OR. tile%contains_lowland) THEN
           WHERE (hydro_init_vars%fract_pond_max > 1.0E-10_wp)
-            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = MIN(10.0_wp, (-1._wp) * &
-              & hydro_init_vars%depth_pond_max / hydro_init_vars%fract_pond_max)
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = MIN(10.0_wp, &
+              & 0.5_wp * 250.0_wp * dsl4jsb_var2D_onDomain(HYDRO_, tile_slope))
           ELSE WHERE
             dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.0_wp
           END WHERE
         ELSE
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.0_wp
         END IF
       ELSE IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
         ! Note, surface depression depth is given as negative value in the data, but represent
