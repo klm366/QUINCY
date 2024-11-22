@@ -57,7 +57,7 @@ MODULE mo_disturb_memory_class
         USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
         USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     
-        CLASS(t_disturb_memory), INTENT(inout), TARGET :: mem
+        CLASS(t_harvest_memory), INTENT(inout), TARGET :: mem
         CHARACTER(len=*),    INTENT(in)    :: prefix
         CHARACTER(len=*),    INTENT(in)    :: suffix
         INTEGER,             INTENT(in)    :: lct_ids(:)
