@@ -87,8 +87,6 @@ CONTAINS
       return_value = 'hydro'
     CASE (RAD_)
       return_value = 'rad'
-    CASE (Q_RAD_)
-      return_value = 'q_rad'
     CASE (ASSIMI_)
       return_value = 'assimi'
     CASE (Q_ASSIMI_)
@@ -153,8 +151,6 @@ CONTAINS
       return_value = HYDRO_
     CASE ('rad')
       return_value = RAD_
-    CASE ('q_rad')
-      return_value = Q_RAD_
     CASE ('assimi')
       return_value = ASSIMI_
     CASE ('q_assimi')

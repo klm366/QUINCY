@@ -16,6 +16,7 @@
 !>#### provides index variables for bgc material compartments and elements in the bgcm_store
 !>
 MODULE mo_lnd_bgcm_idx
+#ifndef __NO_QUINCY__
 
   USE mo_veg_config_class,        ONLY: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, &
     &                                   VEG_PART_SAP_WOOD_IDX, VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, &
@@ -93,4 +94,5 @@ CONTAINS
     ixN15 = elements_index_map(ELEM_N15_ID)
   END SUBROUTINE set_bgcm_element_idx
 
+#endif
 END MODULE mo_lnd_bgcm_idx

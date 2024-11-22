@@ -48,6 +48,8 @@ MODULE mo_atmland_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_atmland_constants'
 
+  !$ACC DECLARE CREATE(eps_vpd)
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -97,6 +99,8 @@ CONTAINS
     def_co2_deltaC14          = -14.9_wp
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
     def_wind                  = 1.0_wp
+
+    !$ACC UPDATE DEVICE(eps_vpd) ASYNC(1)
 
   END SUBROUTINE init_atmland_constants
 

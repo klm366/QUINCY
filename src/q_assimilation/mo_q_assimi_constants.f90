@@ -45,5 +45,7 @@ MODULE mo_q_assimi_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_assimi_constants'
 
+  !$ACC DECLARE COPYIN(Dwv2co2_turb, Dwv2co2_air, ic3phot, ic4phot)
+
 #endif
 END MODULE mo_q_assimi_constants

@@ -42,5 +42,8 @@ MODULE mo_q_pheno_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_pheno_constants'
 
+  !$ACC DECLARE COPYIN(ievergreen, isummergreen, iraingreen, iperennial)
+  !$ACC DECLARE COPYIN(ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous)
+
 #endif
 END MODULE mo_q_pheno_constants

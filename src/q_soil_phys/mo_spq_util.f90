@@ -68,13 +68,19 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_math_constants,    ONLY: zero
 
     ! Use of process memories
     dsl4jsb_Use_memory(SPQ_)        !  USE mo_spq_memory_class,      ONLY: t_spq_memory
 
     IMPLICIT NONE
+
+    dsl4jsb_Real2D_onChunk :: transpiration
+    dsl4jsb_Real3D_onChunk :: w_soil_freeze_flux
+    dsl4jsb_Real3D_onChunk :: w_soil_melt_flux
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -82,7 +88,9 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    !TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                               :: nsoil_sb             !< number of soil layers
+    INTEGER                               :: isoil, ic
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_spq_fluxes'
     ! ---------------------------
@@ -103,14 +111,27 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SPQ_)           ! spq__mem => spq_memory
     model  => Get_model(tile%owner_model_id)
-    !lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+    ! --------------------------------------------------------------------------------------------------------
+    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_freeze_flux)
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_melt_flux)
 
-    dsl4jsb_var2D_onChunk(SPQ_, transpiration) = zero        !< transpiration in kg m-2 s-1
-    dsl4jsb_var3D_onChunk(SPQ_, w_soil_freeze_flux) = zero
-    dsl4jsb_var3D_onChunk(SPQ_, w_soil_melt_flux) = zero
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      transpiration(ic) = zero
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO isoil = 1, nsoil_sb
+      DO ic = 1, nc
+        w_soil_freeze_flux(ic,isoil) = zero
+        w_soil_melt_flux(ic,isoil)   = zero
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE reset_spq_fluxes
 
