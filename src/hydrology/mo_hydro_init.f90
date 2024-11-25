@@ -328,15 +328,15 @@ CONTAINS
       ptr_2D => input_file%Read_2d(  &
         & variable_name='slp_up',    &
         & fill_array = hydro_init_vars%slope_up)
-      hydro_init_vars%slope_up = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+      hydro_init_vars%slope_up = MERGE(ptr_2D, 1.0e-10_wp, ptr_2D >= 1.0e-10_wp)
       ptr_2D => input_file%Read_2d(  &
         & variable_name='slp_low',    &
         & fill_array = hydro_init_vars%slope_low)
-      hydro_init_vars%slope_low = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+      hydro_init_vars%slope_low = MERGE(ptr_2D, 1.0e-10_wp, ptr_2D >= 1.0e-10_wp)
       ptr_2D => input_file%Read_2d(  &
         & variable_name='slp_plain',    &
         & fill_array = hydro_init_vars%slope_plain)
-      hydro_init_vars%slope_plain = MERGE(ptr_2D, 0.01_wp, ptr_2D >= 0.01_wp)
+      hydro_init_vars%slope_plain = MERGE(ptr_2D, 1.0e-10_wp, ptr_2D >= 1.0e-10_wp)
     END IF
 
     ! Read in maximum fraction and depth of local surface depressions
@@ -771,12 +771,8 @@ CONTAINS
         ! Note, surface depression depth is computed from the tile slope using a grid cell
         !   radius of 250m because the original CTI data is derived from 500m grid cells
         IF (tile%contains_floodplain .OR. tile%contains_lowland) THEN
-          WHERE (hydro_init_vars%fract_pond_max > 1.0E-10_wp)
-            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = MIN(10.0_wp, &
-              & 0.5_wp * 250.0_wp * dsl4jsb_var2D_onDomain(HYDRO_, tile_slope))
-          ELSE WHERE
-            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.0_wp
-          END WHERE
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = MIN(10.0_wp, &
+            & 0.5_wp * 250.0_wp * dsl4jsb_var2D_onDomain(HYDRO_, tile_slope))
         ELSE
           dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0.0_wp
         END IF
