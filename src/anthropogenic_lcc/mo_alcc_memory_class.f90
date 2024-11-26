@@ -142,6 +142,7 @@ CONTAINS
      ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_gain', mem%cf_transition_gain,                         &
       & hgrid, pft_vgrid,                                                                  &
+      & t_cf('transitions gain_pfts'),                                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
       & output_level=FULL,                                                                 &
@@ -152,6 +153,7 @@ CONTAINS
      ! TODO: the vgrid(trans_vgrid) should be modified
     CALL mem%Add_var('cf_transition_loss', mem%cf_transition_loss,                          &
       & hgrid, pft_vgrid,                                                                   &
+      & t_cf('transitions loss_pfts'),                                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
       & prefix, suffix,                                                                     &
       & output_level=FULL,                                                                  &

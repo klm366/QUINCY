@@ -262,30 +262,34 @@ CONTAINS
       END DO
       !Mingyue Zhang added for reading in transition data end
 
+
+      ! Initialize transition gain and loss
+      cf_transition_gain = 0.0
+      cf_transition_loss = 0.0
+
+      ! ! Calculate transition gain and loss of each PFT in one loop
+      DO idx = 1, npft
+        ! Calculate gain(idx)
+        cf_transition_gain(ic, idx, :) = 0.0
+        DO j = 1, npft
+           cf_transition_gain(ic, idx, :) = cf_transition_gain(ic, idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + idx), :)
+        END DO
+     
+        ! Calculate loss(idx) within the inner loop
+        cf_transition_loss(ic, idx, :) = 0.0
+        DO j = 1, npft
+           cf_transition_loss(ic, idx, :) = cf_transition_loss(ic, idx, :) + cf_current_year(ic, idx, :)  * cf_transition_pfts(ic, ((idx - 1) * npft + j), :)
+        END DO
+      END DO 
+    
+
       ! loop over the v-grid to update gain and loss and cf_current_year
       current_tile => tile%Get_first_child_tile()
       i_tile = 0
       
       DO WHILE (ASSOCIATED(current_tile))   
         i_tile = i_tile + 1
-
-        ! Initialize transition gain and loss
-        cf_transition_gain = 0.0
-        cf_transition_loss = 0.0
-     
-        ! Calculate transition gain and loss of each PFT in one loop
-        DO idx = 1, npft * npft
-           ! Determine the (i, j) position for gain and loss calculations
-           i = (idx - 1) / npft + 1
-           j = MOD(idx - 1, npft) + 1
-     
-           ! Calculate transition gain for PFT i -> j, and loss for PFT j -> i
-           cf_transition_gain(:, i_tile, :) = cf_transition_gain(:, i_tile, :) + &
-                                              cf_transition_pfts(:, idx, :) * cf_current_year(:, j, :)
-     
-           cf_transition_loss(:, i_tile, :) = cf_transition_loss(:, i_tile, :) + &
-                                              cf_transition_pfts(:, idx, :) * cf_current_year(:, i, :)
-        END DO
+   
         ! Update cf_current_year by subtracting transition losses and adding transition gains
         cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
      
