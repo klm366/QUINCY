@@ -30,7 +30,7 @@ MODULE mo_alcc_config_class
      INTEGER                          :: nr_of_pfts
      CHARACTER(len=filename_max-7)    :: alcc_filename_prefix
      CHARACTER(len=filename_max-7)    :: alcc_transition_filename_prefix   !Mingyue
-     CHARACTER(len=12), DIMENSION(9)  :: transitions                       !Mingyue add transition types of the C,N,P
+     CHARACTER(len=15), DIMENSION(9)  :: transitions                       !Mingyue add transition types of the C,N,P
      INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping          !Mingyue add mapping table of 11 pfts to C, N, P , where 1->crop, 2-> pasture, 3->natual
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN)   :: scheme
@@ -63,7 +63,6 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
     CHARACTER(len=filename_max-7) :: alcc_transition_filename_prefix   !Mingyue
-    CHARACTER(len=12), DIMENSION(9) :: transitions                     !Mingyue
     INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping        !Mingyue
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
@@ -72,6 +71,11 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: trans_pft_layer                   !Mingyue
     INTEGER                       :: i, nr_of_pfts
 
+    CHARACTER(len=15), PARAMETER :: transitions(9) = [character(len=15) :: &
+      &                        'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
+                               'pasture2crop', 'pasture2pasture', 'pasture2natural', &
+                               'natural2crop', 'natural2pasture', 'natural2natural' ]            ! TODO: here the transitions type should be print out
+
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
          lrestart_cont,          &
@@ -79,7 +83,6 @@ CONTAINS
          bc_filename,            &
          alcc_filename_prefix,   &
          alcc_transition_filename_prefix,    &       !Mingyue
-         transitions,                        &       !Mingyue
          LC_type2LC_class_mapping,           &       !Mingyue
          scheme,                 &
          l_daily_alcc,           &
@@ -99,9 +102,6 @@ CONTAINS
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
-    transitions                     =   (/ 'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
-                                           'pasture2crop', 'pasture2pasture', 'pasture2natural', &
-                                           'natural2crop', 'natural2pasture', 'natural2natural'     /)      ! TODO: here the transitions type should be print out                                                                                                     
     LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
