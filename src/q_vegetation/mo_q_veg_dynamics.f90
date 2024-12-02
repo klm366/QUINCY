@@ -51,12 +51,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_RAD_, Q_PHENO_, SPQ_
-    USE mo_veg_constants,         ONLY: ITREE
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_
+    USE mo_veg_constants,         ONLY: ITREE, rfr_ratio_toc, k_r2fr_chl
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(Q_RAD_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -81,12 +80,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(Q_RAD_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! Q_RAD_ 2D
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! SPQ_ 2D
@@ -103,6 +99,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
@@ -129,7 +131,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(Q_RAD_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -139,8 +140,6 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! Q_RAD_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
     ! SPQ_ 2D
@@ -157,6 +156,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc)              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc_tvegdyn_mavg) ! in
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)           ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)           ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)      ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)     ! inout
@@ -331,6 +336,11 @@ CONTAINS
         delta_dens_ind(:) = 0.0_wp
       END IF
     END SELECT
+
+    !> 5.0 calculate forest floor red to far-red ratio
+    !>
+    rfr_ratio_boc(:) = rfr_ratio_toc * &
+      &                EXP(k_r2fr_chl * SUM(leaf_nitrogen_cl(:,:) * fn_chl_cl(:,:) * lai_cl(:,:), DIM=2))
 
   END SUBROUTINE update_veg_dynamics
 
@@ -650,8 +660,8 @@ CONTAINS
     & veg_pool_mt_seed_bed        , &
     & veg_establishment_mt         )
 
-    USE mo_q_rad_parameters,            ONLY: rfr_ratio_toc
-    USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
+    USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist, &
+      &                                       rfr_ratio_toc
     USE mo_jsb_physical_constants,      ONLY: Tzero
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions

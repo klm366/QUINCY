@@ -141,8 +141,12 @@ CONTAINS
         CASE(2)
           idx_1l_2d_bgcm = idx_1l_2d_bgcm + 1
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(nr_of_elements))
+
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
+          !$ACC ENTER DATA CREATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(:,:,:))
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_wp
+          !$ACC UPDATE DEVICE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm) ASYNC(1)
+
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_2d_bgcm
           DO i_element = 1, nr_of_elements
@@ -152,8 +156,12 @@ CONTAINS
         CASE(3)
           idx_1l_3d_bgcm = idx_1l_3d_bgcm + 1
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(nr_of_elements))
+
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
+          !$ACC ENTER DATA CREATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(:,:,:,:))
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_wp
+          !$ACC UPDATE DEVICE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm) ASYNC(1)
+
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_3d_bgcm
           DO i_element = 1, nr_of_elements
@@ -177,18 +185,26 @@ CONTAINS
         CASE(2)
           idx_2l_2d_bgcm = idx_2l_2d_bgcm + 1
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
+          !$ACC ENTER DATA CREATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(:,:,:,:))
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_wp
+          !$ACC UPDATE DEVICE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm) ASYNC(1)
+
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_2d_bgcm
         CASE(3)
           idx_2l_3d_bgcm = idx_2l_3d_bgcm + 1
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
+          !$ACC ENTER DATA CREATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(:,:,:,:,:))
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_wp
+          !$ACC UPDATE DEVICE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm) ASYNC(1)
+
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_parts = nr_of_compartments
           this%idx_in_store(idx_bgcm) = idx_2l_3d_bgcm
@@ -216,7 +232,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Store current values of all bgcms in the storage matrices
+  !> Store current values of all bgcms in the storage matrices (currently only required after a restart)
   !>
   SUBROUTINE Store_bgcms_in_matrices(this, tile_name, ics, ice, iblk)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -230,10 +246,17 @@ CONTAINS
     INTEGER                                :: i_part         !< index of compartment
     INTEGER                                :: i_elem         !< index of element
 
+    ! temporary pointers used to copy data from bgcm variables to bgcm matrices
+    ! introduced to enable update on GPU nodes
+    REAL(wp), POINTER                      :: ptr2D(:,:)
+    REAL(wp), POINTER                      :: ptr3D(:,:,:)
+    REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
+    REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms_in_matrices'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    IF (debug_on()) &
+    IF (debug_on() .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Store bgcms in matrices for - tile '//TRIM(tile_name))
 
     DO i_bgcm = 1, this%nr_of_bgc_materials
@@ -243,15 +266,31 @@ CONTAINS
         SELECT CASE(this%nr_of_dimensions(i_bgcm))
         CASE(2)
           ! 1level 2D -> fill matrix (elems, nc, nblks)
+          ptr3D => this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(:,:,:)
           DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-            this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(i_elem,ics:ice,iblk) &
-              & = this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk)
+
+            ! this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(i_elem,ics:ice,iblk) &
+            ! & = this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk)
+
+            ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(:,:)
+
+            ptr3D(i_elem,ics:ice,iblk) = ptr2D(ics:ice,iblk)
+            !$ACC UPDATE DEVICE(ptr3D(i_elem,ics:ice,iblk)) ASYNC(1)
+
           ENDDO
         CASE(3)
           ! 1level 3D -> fill matrix (elems, nc, var_dim3, nblks)
+          ptr4D => this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(:,:,:,:)
           DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-            this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(i_elem,ics:ice,:,iblk) &
-              & = this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(ics:ice,:,iblk)
+
+            ! this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(i_elem,ics:ice,:,iblk) &
+            ! & = this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(ics:ice,:,iblk)
+
+            ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
+
+            ptr4D(i_elem,ics:ice,:,iblk) = ptr3D(ics:ice,:,iblk)
+            !$ACC UPDATE DEVICE(ptr4D(i_elem,ics:ice,:,iblk)) ASYNC(1)
+
           ENDDO
         ENDSELECT
       CASE(2)
@@ -259,18 +298,34 @@ CONTAINS
         SELECT CASE(this%nr_of_dimensions(i_bgcm))
         CASE(2)
           ! 2levels 2D -> fill matrix (parts, elems, nc, nblks)
+          ptr4D => this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(:,:,:,:)
           DO i_part = 1,this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_parts
             DO i_elem = 1,this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-              this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(i_part,i_elem,ics:ice,iblk) &
-                & = this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(ics:ice,iblk)
+
+              ! this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(i_part,i_elem,ics:ice,iblk) &
+              ! & = this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(ics:ice,iblk)
+
+              ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
+
+              ptr4D(i_part,i_elem,ics:ice,iblk) = ptr2D(ics:ice,iblk)
+              !$ACC UPDATE DEVICE(ptr4D(i_part,i_elem,ics:ice,iblk)) ASYNC(1)
+
             ENDDO
           ENDDO
         CASE(3)
           ! 2levels 3D -> fill matrix (parts, elems, nc, var_dim3, nblks)
+          ptr5D => this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(:,:,:,:,:)
           DO i_part = 1,this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_parts
             DO i_elem = 1,this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-              this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(i_part,i_elem,ics:ice,:,iblk) &
-                & = this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(ics:ice,:,iblk)
+
+              ! this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(i_part,i_elem,ics:ice,:,iblk) &
+              ! & = this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(ics:ice,:,iblk)
+
+              ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
+
+              ptr5D(i_part,i_elem,ics:ice,:,iblk) = ptr3D(ics:ice,:,iblk)
+              !$ACC UPDATE DEVICE(ptr5D(i_part,i_elem,ics:ice,:,iblk)) ASYNC(1)
+
             ENDDO
           ENDDO
         ENDSELECT
@@ -296,10 +351,17 @@ CONTAINS
     INTEGER                                :: i_part         !< index of compartment
     INTEGER                                :: i_elem         !< index of element
 
+    ! temporary pointers used to copy data from bgcm matrices to bgcm variables
+    ! introduced to enable update on GPU nodes
+    REAL(wp), POINTER                      :: ptr2D(:,:)
+    REAL(wp), POINTER                      :: ptr3D(:,:,:)
+    REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
+    REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Write_stored_matrices_to_bgcms'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    IF (debug_on()) &
+    IF (debug_on() .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Write back matrices to bgcms for - tile '//TRIM(tile_name))
 
     DO i_bgcm = 1, this%nr_of_bgc_materials
@@ -309,15 +371,33 @@ CONTAINS
         SELECT CASE(this%nr_of_dimensions(i_bgcm))
         CASE(2)
           ! 1level 2D -> fill matrix (elems, nc, nblks)
+          ptr3D => this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(:,:,:)
           DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-            this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk) &
-              & = this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(i_elem,ics:ice,iblk)
+
+            ! this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk) &
+            !  & = this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_2d_bgcm(i_elem,ics:ice,iblk)
+
+            ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(:,:)
+
+            !$ACC KERNELS DEFAULT(PRESENT)
+            ptr2D(ics:ice,iblk) = ptr3D(i_elem,ics:ice,iblk)
+            !$ACC END KERNELS
+
           ENDDO
         CASE(3)
           ! 1level 3D -> fill matrix (elems, nc, var_dim3, nblks)
+          ptr4D => this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(:,:,:,:)
           DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-            this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(ics:ice,:,iblk) &
-              & = this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(i_elem,ics:ice,:,iblk)
+
+            ! this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(ics:ice,:,iblk) &
+            ! & = this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_1l_3d_bgcm(i_elem,ics:ice,:,iblk)
+
+            ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
+
+            !$ACC KERNELS DEFAULT(PRESENT)
+            ptr3D(ics:ice,:,iblk) = ptr4D(i_elem,ics:ice,:,iblk)
+            !$ACC END KERNELS
+
           ENDDO
         ENDSELECT
       CASE(2)
@@ -325,18 +405,36 @@ CONTAINS
         SELECT CASE(this%nr_of_dimensions(i_bgcm))
         CASE(2)
           ! 2levels 2D -> fill matrix (parts, elems, nc, nblks)
+          ptr4D => this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(:,:,:,:)
           DO i_part = 1,this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_parts
             DO i_elem = 1,this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-              this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(ics:ice,iblk) &
-                & = this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(i_part,i_elem,ics:ice,iblk)
+
+              ! this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(ics:ice,iblk) &
+              !  & = this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_2d_bgcm(i_part,i_elem,ics:ice,iblk)
+
+              ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
+
+              !$ACC KERNELS DEFAULT(PRESENT)
+              ptr2D(ics:ice,iblk) = ptr4D(i_part,i_elem,ics:ice,iblk)
+              !$ACC END KERNELS
+
             ENDDO
           ENDDO
         CASE(3)
           ! 2levels 3D -> fill matrix (parts, elems, nc, var_dim3, nblks)
+          ptr5D => this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(:,:,:,:,:)
           DO i_part = 1,this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_parts
             DO i_elem = 1,this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%nr_of_elems
-              this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(ics:ice,:,iblk) &
-                & = this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(i_part,i_elem,ics:ice,:,iblk)
+
+              ! this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(ics:ice,:,iblk) &
+              ! & = this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%mt_2l_3d_bgcm(i_part,i_elem,ics:ice,:,iblk)
+
+              ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
+
+              !$ACC KERNELS DEFAULT(PRESENT)
+              ptr3D(ics:ice,:,iblk) = ptr5D(i_part,i_elem,ics:ice,:,iblk)
+              !$ACC END KERNELS
+
             ENDDO
           ENDDO
         ENDSELECT
@@ -511,8 +609,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_3d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_3d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_3d_bgcm)
       ENDDO
@@ -523,8 +623,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_3d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_3d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_3d_bgcm)
       ENDDO
@@ -535,9 +637,11 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)
-         IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)) &
+        !$ACC EXIT DATA DELETE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
+        IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)) &
            & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
-         IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_3d_bgcm)) &
+        !$ACC EXIT DATA DELETE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_3d_bgcm)
+        IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_3d_bgcm)) &
            & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_3d_bgcm)
       ENDDO
       DEALLOCATE(bgcm_store%store_2l_2d_bgcms)
@@ -547,8 +651,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)
+        !$ACC EXIT DATA DELETE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_3d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_3d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_3d_bgcm)
       ENDDO

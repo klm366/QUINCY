@@ -398,9 +398,6 @@ CONTAINS
 
     ! convert if required
     IF(forcing_options(model_id)%precip_in_mm_per_day) THEN
-#ifdef _OPENACC
-      CALL finish(routine, 'Forcing option %precip_in_mm_per_day not ported to GPU, yet. Stop.')
-#endif
 !$OMP PARALLEL DO PRIVATE(iblk, ic)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk = 1, nblks
@@ -773,7 +770,7 @@ CONTAINS
           & forcing_input(model_id)%noy_dep, noy_deposition)
         CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
           & forcing_input(model_id)%p_dep, p_deposition)
-        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition)
+        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition) ASYNC(1)
 
         ! Convert from kg/m2/s -> mumol/m2/s
         ! -- This unit should have been tested above if specified correctly using expectedUnit
@@ -2396,7 +2393,7 @@ CONTAINS
   !
   FUNCTION bottom_pressure(elevation,air_temperature)
 
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(IN)  :: elevation
     REAL(wp), INTENT(IN)  :: air_temperature

@@ -75,5 +75,11 @@ MODULE mo_jsb_physical_constants
                                                                           !< reduce the use of the very large/small AvogadroC/lambda_C14
     & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
 
+#ifdef __QUINCY_STANDALONE__
+  ! compatibility with jsbach code
+  REAL(wp), PARAMETER :: &
+    & tmelt = Tzero
+#endif
+
 #endif
 END MODULE mo_jsb_physical_constants
