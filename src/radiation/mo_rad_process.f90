@@ -1377,6 +1377,13 @@ CONTAINS
 
     !> 1.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
+
+    !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
+    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
+    !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
@@ -1386,12 +1393,21 @@ CONTAINS
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:),arad_vis_soil(:), &
                      alb_vis_can(:),alb_vis_lnd(:))
+    !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
+    !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
 
     !> 2.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !!
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR
     !! diffuse radiation are very similar
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
+
+    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil(:)) &
+    !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
+    !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
+    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
@@ -1401,9 +1417,13 @@ CONTAINS
                      arad_sunlit_nir_cl(:,:),arad_shaded_nir_cl(:,:),fleaf_sunlit_nir_cl(:,:), &
                      arad_nir_can(:),arad_nir_soil(:), &
                      alb_nir_can(:),alb_nir_lnd(:))
+    !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
+    !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
+    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
 
     !> 3.0 calculate albedo and net radiation for total shortwave radiation
     !!
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
         albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &
@@ -1418,6 +1438,7 @@ CONTAINS
         albedo_noon(ic) = albedo(ic)
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_surface_radiation_quincy
 

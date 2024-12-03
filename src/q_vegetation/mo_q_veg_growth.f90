@@ -586,6 +586,9 @@ CONTAINS
     !>      i.e., the direction in which total leaf N should change in order to increase NPP
     !>
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
+
+      CALL finish(routine, 'Running with optimal leaf_stoichom_scheme will only be possible after a code refactoring. Stop.')
+
       CALL calc_dir_optimal_cn_leaf( &
         & nc                                                      , & ! in
         & ncanopy                                                 , &
@@ -3042,6 +3045,8 @@ CONTAINS
                                                             dens_ind)             &
                                                             RESULT(diameter)
 
+  !$ACC ROUTINE SEQ
+
     USE mo_jsb_math_constants,      ONLY: pi
 
     IMPLICIT NONE
@@ -3077,6 +3082,8 @@ CONTAINS
   !! min_height < height
   !----------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter) RESULT(height)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_veg_constants,           ONLY: min_height
 

@@ -613,6 +613,32 @@ CONTAINS
     rfr_ratio_boc(:,:)                    = rfr_ratio_toc
     rfr_ratio_boc_tvegdyn_mavg(:,:)       = rfr_ratio_boc(:,:)
 
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:)) &
+    !$ACC   DEVICE(height(:,:), leaf_nitrogen_cl(:,:,:), lai(:,:), lai_cl(:,:,:)) &
+    !$ACC   DEVICE(dphi(:,:), beta_sinklim_ps(:,:), leaf_cn_direction(:,:), fn_oth_cl(:,:,:), npp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(n_fixation_talloc_mavg(:,:), transpiration_talloc_mavg(:,:), unit_transpiration_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(unit_uptake_n_talloc_mavg(:,:), unit_uptake_p_talloc_mavg(:,:), dphi_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_cn_talloc_mavg(:,:), unit_npp_talloc_mavg(:,:), growth_cp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_talloc_mavg(:,:), labile_carbon_talloc_mavg(:,:), labile_nitrogen_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(labile_phosphorus_talloc_mavg(:,:), growth_p_limit_based_on_n_mavg(:,:), reserve_carbon_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), w_root_lim_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(exudation_c_tmyc_mavg(:,:), fleaf_sunlit_tfrac_mavg_cl(:,:,:), t_air_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tfrac_mavg(:,:), co2_mixing_ratio_tfrac_mavg(:,:), ga_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_tfrac_mavg(:,:), fleaf_sunlit_tcnl_mavg_cl(:,:,:), t_air_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tcnl_mavg(:,:), co2_mixing_ratio_tcnl_mavg(:,:), growth_cn_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_tcnl_mavg(:,:), uptake_n_tcnl_mavg(:,:), npp_tcnl_mavg(:,:), t_air_daytime(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime(:,:), co2_mixing_ratio_daytime(:,:), ga_daytime(:,:), beta_sinklim_ps_daytime(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_daytime(:,:), t_jmax_opt_daytime_dacc(:,:), t_air_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime_dacc(:,:), co2_mixing_ratio_daytime_dacc(:,:), ga_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_daytime_dacc(:,:), growth_req_n_tlabile_mavg(:,:), growth_req_p_tlabile_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tphen_mavg(:,:), t_soil_srf_tphen_mavg(:,:), npp_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(demand_uptake_n_tuptake_mavg(:,:), demand_uptake_p_tuptake_mavg(:,:), growth_req_n_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(growth_req_p_tuptake_mavg(:,:), ga_tcnl_mavg(:,:), leaf2root_troot_mavg(:,:), an_boc_tvegdyn_mavg(:,:)) &
+    !$ACC   DEVICE(net_growth_tvegdyn_mavg(:,:), lai_tvegdyn_mavg(:,:), beta_sinklim_ps_tacclim_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
+    !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
+
   END SUBROUTINE veg_init
 
 #endif

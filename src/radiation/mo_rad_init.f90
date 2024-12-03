@@ -356,10 +356,10 @@ CONTAINS
         dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_wp
 
         !$ACC UPDATE ASYNC(1) &
-        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
-        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)) &
-        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
-        !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
       END SELECT
 #endif
 
