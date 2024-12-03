@@ -109,6 +109,7 @@ CONTAINS
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
+
     nml_unit = position_nml('jsb_alcc_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_alcc_nml)
 
