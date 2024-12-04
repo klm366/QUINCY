@@ -70,7 +70,7 @@ CONTAINS
   !
   SUBROUTINE read_land_use_data(model_id, current_datetime)
   
-    USE mo_kinds,               ONLY: wp
+    USE mo_kind,               ONLY: wp
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_time_iface,      ONLY: t_datetime
