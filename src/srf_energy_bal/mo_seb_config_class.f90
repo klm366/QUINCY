@@ -31,6 +31,7 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
      REAL(wp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
+     LOGICAL                     :: use_skin               !< Whether to use skin temperature scheme
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
@@ -51,6 +52,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth
     LOGICAL                     :: l_ice_on_lakes
+    LOGICAL                     :: use_skin
     INTEGER                     :: niter_tmx
 
     NAMELIST /jsb_seb_nml/         &
@@ -60,6 +62,7 @@ CONTAINS
       lake_mixed_layer_depth,      &
       lake_min_ice_depth,          &
       l_ice_on_lakes,              &
+      use_skin,                    &
       niter_tmx
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -76,6 +79,7 @@ CONTAINS
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
+    use_skin = .FALSE.
     niter_tmx       = 10
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -90,6 +94,7 @@ CONTAINS
     config%lake_mixed_layer_depth    = lake_mixed_layer_depth
     config%lake_min_ice_depth        = lake_min_ice_depth
     config%l_ice_on_lakes            = l_ice_on_lakes
+    config%use_skin                  = use_skin
     config%niter_tmx                 = niter_tmx
 
     CALL close_nml(nml_handler)

@@ -357,6 +357,7 @@ CONTAINS
     & nidx, nsoil, dz, mids,              &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
+    & l_use_skin,                         &
     & t_srf_unfilt,                       &
     & vol_heat_cap, heat_cond,            &
     & t_soil_sl,                          &
@@ -433,6 +434,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
+    LOGICAL,  INTENT(in)    ::  l_use_skin               !! .TRUE., if skin temperature is used
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_srf_unfilt(:)          !! surface temperature at top of soil [K]
@@ -444,7 +446,7 @@ CONTAINS
     REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
 
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
-    REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
+    REAL(wp), INTENT(inout) ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matrix_pot(:,:)   !! Matrix potential
@@ -458,6 +460,7 @@ CONTAINS
     !  local Variables
 
     INTEGER  :: jl, jk
+    INTEGER  :: nlowest_z1
     REAL(wp) :: z1(nidx,nsoil)
     REAL(wp) :: zd1(nsoil)
     REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
@@ -508,7 +511,11 @@ CONTAINS
       ! uppermost layer
       !$claw acc loop gang vector 
       DO jl=1,nidx
-        t_soil_sl(jl,1) = t_srf_unfilt(jl)
+        IF (l_use_skin) THEN
+          t_soil_sl(jl,1) = t_soil_acoef(jl,1) + t_soil_bcoef(jl,1) * t_srf_unfilt(jl)
+        ELSE
+          t_soil_sl(jl,1) = t_srf_unfilt(jl)
+        END IF
       END DO
 
       ! deeper layers
@@ -516,7 +523,11 @@ CONTAINS
       DO jk = 1, nsoil-1
         !$claw acc loop gang vector
         DO jl=1,nidx
-          t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil_sl(jl,jk)
+          IF (l_use_skin) THEN
+            t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk+1) + t_soil_bcoef(jl,jk+1) * t_soil_sl(jl,jk)
+          ELSE
+            t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil_sl(jl,jk)
+          END IF
         END DO
       END DO
 
@@ -629,15 +640,17 @@ CONTAINS
     z1(:,:) = 0._wp
 
     ! lowest soil layer
+    nlowest_z1 = nsoil-1
+    IF (l_use_skin) nlowest_z1 = nsoil
     !$claw acc parallel loop default(present) present(zdz1,zdz2,z1) gang vector
     DO jl=1,nidx
-      z1(jl,nsoil-1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
+      z1(jl,nlowest_z1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_4 counter=ser_counter
     ! z1(:,nsoil-1) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
-    t_soil_acoef(:,nsoil-1) = zdz2(:,nsoil) * t_soil_sl(:,nsoil) / z1(:,nsoil-1)
-    t_soil_bcoef(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:,nsoil-1)
+    t_soil_acoef(:,nlowest_z1) = zdz2(:,nsoil) * t_soil_sl(:,nsoil) / z1(:,nlowest_z1)
+    t_soil_bcoef(:,nlowest_z1) = zdz1(:,nsoil-1) / z1(:,nlowest_z1)
     !$claw end expand
 
     ! soil layers above
@@ -647,20 +660,40 @@ CONTAINS
     DO jl=1,nidx
       !$claw acc loop seq
       DO jk = nsoil-1, 2, -1
-        z1(jl,jk-1) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk)))
-        t_soil_acoef(jl,jk-1) = (t_soil_sl(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
-        t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
+        IF (l_use_skin) THEN
+          z1(jl,jk) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk+1)))
+          t_soil_acoef(jl,jk) = (t_soil_sl(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk+1)) * z1(jl,jk)
+          t_soil_bcoef(jl,jk) = zdz1(jl,jk-1) * z1(jl,jk)
+        ELSE
+          z1(jl,jk-1) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk)))
+          t_soil_acoef(jl,jk-1) = (t_soil_sl(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
+          t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
+        END IF
       END DO
-    END DO  
+    END DO
     !$claw acc end parallel
     !$claw acc end data
+    ! top soil layer
+    IF (l_use_skin) THEN
+      !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil_sl,grnd_hflx)
+      !$claw acc parallel
+      !$claw acc loop gang vector
+      DO jl=1,nidx
+        jk = 1
+        z1(jl,jk) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk+1)))
+        t_soil_acoef(jl,jk) = (t_soil_sl(jl,jk) * zdz2(jl,jk) - grnd_hflx(jl) + zdz1(jl,jk) * t_soil_acoef(jl,jk+1)) * z1(jl,jk)
+        t_soil_bcoef(jl,jk) = 0._wp
+      END DO
+      !$claw acc end parallel
+      !$claw acc end data     
+    END IF
 
 #if defined(_CLAW) && defined(SERIALIZE)
     !$claw acc data create(z1_sum,t_soil_acoef_sum,t_soil_bcoef_sum)
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_5 counter=ser_counter
-    z1_sum(:)           = SUM(z1(:,1:nsoil-1), DIM=2)
-    t_soil_acoef_sum(:) = SUM(t_soil_acoef(:,1:nsoil-1), DIM=2)
-    t_soil_bcoef_sum(:) = SUM(t_soil_bcoef(:,1:nsoil-1), DIM=2)
+    z1_sum(:)           = SUM(z1(:,1:nlowest_z1), DIM=2)
+    t_soil_acoef_sum(:) = SUM(t_soil_acoef(:,1:nlowest_z1), DIM=2)
+    t_soil_bcoef_sum(:) = SUM(t_soil_bcoef(:,1:nlowest_z1), DIM=2)
     !$claw end expand
     !$claw acc end data
 #endif
@@ -669,8 +702,12 @@ CONTAINS
     ! Computation of surface diffusive heat flux from the ground and heat capacity of the ground
     !------------------------------------------------------------------------------------------------
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_6 counter=ser_counter
-    grnd_hflx(:) = zdz1(:,1) * (t_soil_acoef(:,1) + (t_soil_bcoef(:,1) - 1._wp) * t_soil_sl(:,1))
-    hcap_grnd(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(:,1)) * zdz1(:,1))
+    IF (l_use_skin) THEN
+      hcap_grnd(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(:,2)) * zdz1(:,1))
+    ELSE
+      grnd_hflx(:) = zdz1(:,1) * (t_soil_acoef(:,1) + (t_soil_bcoef(:,1) - 1._wp) * t_soil_sl(:,1))
+      hcap_grnd(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(:,1)) * zdz1(:,1))
+    END IF
     !$claw end expand
 
     !$claw acc end data
@@ -994,6 +1031,7 @@ CONTAINS
     & nidx,nsoil,cdel,cmid,     &
     & delta_time,               &
     & lstart,                   &
+    & l_use_skin,               &
     & pts,                      &
     & psn,                      &
     & psocond, prgcgn,          &
@@ -1057,6 +1095,7 @@ CONTAINS
     REAL(wp), Intent(in) ::  cmid(nsoil)
     REAL(wp), Intent(in) ::  delta_time           !! time step
     LOGICAL, INTENT(in)  :: lstart
+    LOGICAL, INTENT(in)  :: l_use_skin            !! .TRUE., if skin temperature scheme is used
     REAL(wp), Intent(in)     ::  pts(nidx)            !! surface temperature at top of soil [K]
     REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
     REAL(wp), Intent(in)     ::  psocond(nidx)        !! soil heat conductivity
@@ -1065,7 +1104,7 @@ CONTAINS
     REAL(wp), Intent(inout)  ::  pgrndd(nidx,nsoil)   !!
     REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
     REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
-    REAL(wp), Intent(out)    ::  pgrndhflx(nidx)      !! ground heat flux
+    REAL(wp), Intent(inout)  ::  pgrndhflx(nidx)      !! ground heat flux
     LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
   !
   !     ------------------------------------------------------------------
@@ -1138,8 +1177,12 @@ CONTAINS
     IF (.NOT. lstart) THEN
 
       !$claw acc parallel loop gang vector
-      DO i = 1, nidx
-        ptsoil(i,1) = pts(i)
+       DO i = 1, nidx
+         IF (l_use_skin) THEN
+           ptsoil(i,1) =  pgrndc(i,1) + pgrndd(i,1) * pts(i)
+         ELSE
+           ptsoil(i,1) = pts(i)
+         END IF
       END DO
   !
   !   Deeper layers
@@ -1148,7 +1191,11 @@ CONTAINS
       !$claw acc parallel loop gang vector collapse(2)
       DO i = 1, nidx
         DO jk = 1,nsoil-1
-          ptsoil(i,jk+1) = pgrndc(i,jk) + pgrndd(i,jk) * ptsoil(i,jk)
+          IF (l_use_skin) THEN
+            ptsoil(i,jk+1) = pgrndc(i,jk+1) + pgrndd(i,jk+1) * ptsoil(i,jk)
+          ELSE
+            ptsoil(i,jk+1) = pgrndc(i,jk) + pgrndd(i,jk) * ptsoil(i,jk)
+          END IF
         END DO
       END DO
 
@@ -1178,7 +1225,7 @@ CONTAINS
       END IF
     END DO
   !
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
@@ -1216,21 +1263,43 @@ CONTAINS
     !$claw acc parallel loop gang vector
     DO i = 1, nidx
       z1(i) = zdz2(i,nsoil) + zdz1(i,nsoil-1)
-      pgrndc(i,nsoil-1) = zdz2(i,nsoil) * ptsoil(i,nsoil) / z1(i)
-      pgrndd(i,nsoil-1) = zdz1(i,nsoil-1) / z1(i)
+      IF (l_use_skin) THEN
+        pgrndc(i,nsoil) = zdz2(i,nsoil) * ptsoil(i,nsoil) / z1(i)
+        pgrndd(i,nsoil) = zdz1(i,nsoil-1) / z1(i)
+      ELSE
+        pgrndc(i,nsoil-1) = zdz2(i,nsoil) * ptsoil(i,nsoil) / z1(i)
+        pgrndd(i,nsoil-1) = zdz1(i,nsoil-1) / z1(i)
+      END IF
     END DO
   !
 
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
       DO jk=nsoil-1,2,-1
-        z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk-1) + zdz1(i,jk) * (1._wp - pgrndd(i,jk)))
-        pgrndc(i,jk-1) = (ptsoil(i,jk) * zdz2(i,jk) + zdz1(i,jk) * pgrndc(i,jk)) * z1(i)
-        pgrndd(i,jk-1) = zdz1(i,jk-1) * z1(i)
+        IF (l_use_skin) THEN
+          z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk-1) + zdz1(i,jk) * (1._wp - pgrndd(i,jk+1)))
+          pgrndc(i,jk) = (ptsoil(i,jk) * zdz2(i,jk) + zdz1(i,jk) * pgrndc(i,jk+1)) * z1(i)
+          pgrndd(i,jk) = zdz1(i,jk-1) * z1(i)
+        ELSE
+          z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk-1) + zdz1(i,jk) * (1._wp - pgrndd(i,jk)))
+          pgrndc(i,jk-1) = (ptsoil(i,jk) * zdz2(i,jk) + zdz1(i,jk) * pgrndc(i,jk)) * z1(i)
+          pgrndd(i,jk-1) = zdz1(i,jk-1) * z1(i)
+        END IF
       END DO
     END DO
+
+    IF (l_use_skin) THEN
+      DO i = 1, nidx
+        !$claw acc loop seq
+        jk=1
+        z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk) * (1._wp - pgrndd(i,jk+1)))
+        pgrndc(i,jk) = (ptsoil(i,jk) * zdz2(i,jk) - pgrndhflx(i) + zdz1(i,jk) * pgrndc(i,jk+1)) * z1(i)
+        pgrndd(i,jk) = 0._wp
+      END DO
+    END IF
+
     !$claw acc end parallel
   !
   !   ---------------------------------------------------------
@@ -1239,10 +1308,16 @@ CONTAINS
   !   ---------------------------------------------------------
   !
     !$claw acc parallel loop gang vector
-    DO i = 1, nidx
-      pgrndhflx(i) = zdz1(i,1) * (pgrndc(i,1) + (pgrndd(i,1) - 1._wp) * ptsoil(i,1))
-      pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,1)) * zdz1(i,1))
-    END DO
+    IF (l_use_skin) THEN
+      DO i = 1, nidx
+        pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,2)) * zdz1(i,1))
+      END DO
+    ELSE
+      DO i = 1, nidx
+        pgrndhflx(i) = zdz1(i,1) * (pgrndc(i,1) + (pgrndd(i,1) - 1._wp) * ptsoil(i,1))
+        pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,1)) * zdz1(i,1))
+      END DO
+    END IF
 
     !$claw acc end data
 

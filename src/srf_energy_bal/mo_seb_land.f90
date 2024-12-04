@@ -53,8 +53,9 @@ CONTAINS
   SUBROUTINE update_surface_energy_land(tile, options)
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
+    USE mo_jsb_physical_constants, ONLY: zemiss_def, stbo
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: qsat_water, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac1, tpfac2, tpfac3, cpd, cvd
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
@@ -116,6 +117,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
@@ -132,7 +134,16 @@ CONTAINS
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
      & liquid_max,                      &
-     & t_air_in_Celcius
+     & t_air_in_Celcius,                &
+     & htc_stable,                      & !
+     & htc_unstable,                    & !
+     & t_soil_upper,                    &
+     & zsold,                           &
+     & zqsold,                          &
+     & zdqsold,                         &
+     & znetrad,                         &
+     & zradcon,                         &
+     & zTold
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -145,7 +156,7 @@ CONTAINS
     REAL(wp) :: w_soil_critical_tmp
 
     INTEGER  :: iblk, ics, ice, nc, i, iter
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, zTeps
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
@@ -160,6 +171,8 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
+
+    zTeps = 0.001_wp ! small temperature difference used for derivative of saturated specific humidity
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -232,6 +245,10 @@ CONTAINS
     ELSE
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN
       dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
+    END IF
+
+    IF (dsl4jsb_Config(SEB_)%use_skin) THEN
+      dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)    ! in
     END IF
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
@@ -330,26 +347,17 @@ CONTAINS
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
-    IF (tile%is_glacier .AND. model%config%use_tmx) THEN
-      qsat_srf_old(:) = qsat_ice(t_old(:), press_srf(:))
-      dQdT(:) = ( qsat_ice(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
-    ELSE
-      qsat_srf_old(:) = qsat_water(t_old(:), press_srf(:))
-      dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
-    END IF
+    qsat_srf_old(:) = qsat_water(t_old(:), press_srf(:))
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
-
-    ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
-    forc_hflx(:) = grnd_hflx(:)
     !$claw end expand
 
     ! Update surface temperature
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2 tile_name=tile%name
-    ! dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    dQdT(:) = ( qsat_water(t(:) + zTeps, press_srf(:)) - qsat_srf_old(:) ) / zTeps
 
     ! 2. Old dry static energy
     s_old(:) = surface_dry_static_energy( &
@@ -375,34 +383,83 @@ CONTAINS
       s_star(:) = s_old(:)
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc,                    & ! in
-        MERGE(1._wp, tpfac1, model%config%use_tmx), & ! in
-        steplen,                                         & ! in
-        t2s_conv(:),                                     & ! in
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),  & ! in
-        s_old(:), qsat_srf_old(:), dQdT(:),              & ! in
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),     & ! in
-        fact_q_air(:), fact_qsat_srf(:),                 & ! in
-        fract_snow(:), heat_cap(:),                      & ! in
-        & s_star(:))                                       ! out
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL surface_temp_implicit( nc,                    & ! in
+          MERGE(1._wp, tpfac1, model%config%use_tmx),      & ! in
+          steplen,                                         & ! in
+          t2s_conv(:),                                     & ! in
+          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),  & ! in
+          s_old(:), qsat_srf_old(:), dQdT(:),              & ! in
+          rad_srf_net(:), grnd_hflx(:), heat_tcoef(:),     & ! in
+          fact_q_air(:), fact_qsat_srf(:),                 & ! in
+          fract_snow(:), heat_cap(:),                      & ! in
+          & s_star(:))                                       ! out
 
-      IF (model%config%use_tmx) THEN
+      ElSE IF (model%config%use_tmx) THEN
+
         DO iter=1,dsl4jsb_Config(SEB_)%niter_tmx
           t_unfilt(:) = s_star(:) / t2s_conv(:)
           CALL update_exchange_coefficients(tile, options)
           heat_tcoef(:) = ch(:)
-          CALL surface_temp_implicit( nc,                    & ! in
-            MERGE(1._wp, tpfac1, model%config%use_tmx), & ! in
+          IF (.NOT. dsl4jsb_Config(SEB_)%use_skin) THEN
+            CALL surface_temp_implicit( nc,                    & ! in
+            MERGE(1._wp, tpfac1, model%config%use_tmx),      & ! in
             steplen,                                         & ! in
             t2s_conv(:),                                     & ! in
             t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),  & ! in
             s_old(:), qsat_srf_old(:), dQdT(:),              & ! in
-            rad_srf_net(:), forc_hflx(:), heat_tcoef(:),     & ! in
+            rad_srf_net(:), grnd_hflx(:), heat_tcoef(:),     & ! in
             fact_q_air(:), fact_qsat_srf(:),                 & ! in
             fract_snow(:), heat_cap(:),                      & ! in
             & s_star(:))                                       ! out
-        END DO
-      END IF
+          ELSE IF (dsl4jsb_Config(SEB_)%use_skin) THEN
+             htc_stable(:) = 10._wp   !!$ TODO: read in via lctlib, see values https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2015JD023812
+             htc_unstable(:) = 10._wp !!$ TODO: read in via lctlib, see values https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2015JD023812
+             t_soil_upper(:) = t_soil_sl(:,1)
+             IF (iter == 1) THEN
+                zsold(:)    = s_old(:)
+                zqsold(:)   = qsat_srf_old(:)
+                zdqsold(:)  = dQdT(:)
+                znetrad(:)  = rad_srf_net(:)
+                zradcon(:)  = rad_srf_net(:) + zemiss_def * stbo * t_old(:)**4
+             ELSE IF (iter > 1) THEN
+                zsold(:)   = s_star(:)
+                zTold(:)   = zsold(:) / t2s_conv(:)
+                zqsold(:)  = qsat_water(zTold(:), press_srf(:))
+                zdqsold(:) = (qsat_water(zTold(:) + zTeps, press_srf(:)) - zqsold(:)) / zTeps
+                znetrad(:) = zradcon(:) - zemiss_def * stbo * zTold(:)**4
+             END IF
+             CALL surface_temp_implicit_skin( &
+             ! Input
+             dsl4jsb_Config(SEB_)%niter_tmx - iter, & ! Number of iterations still to be made
+             nc,                &  ! Number of land grid points
+             steplen,           &  ! Length of timestep (2 * delta t)
+             zemiss_def,        &  ! surface emissivity
+             stbo,              &  ! Stefan-Boltzmann constant
+             t2s_conv(:),       &  ! Conversion factor for temperature to dry static energy (formerly pcp)
+             t_acoef(:),        &  ! Linear   Richtmyer Morton coefficient for dry static energy (As)
+             t_bcoef(:),        &  ! Additive Richtmyer Morton coefficient for dry static energy (Bs)
+             q_acoef(:),        &  ! Linear   Richtmyer Morton coefficient for humidity (Aq)
+             q_bcoef(:),        &  ! Additive Richtmyer Morton coefficient for humidity (Bq)
+             zsold(:),          &  ! Dry static energy of the surface (old timestep or last iteration)
+             t_air(:),          &  ! Air temperature [K] in the lowest layer of the atmosphere
+             zqsold(:),         &  ! Saturated specific humidity of the surface (old timestep or last iteration)
+             zdqsold(:),        &  ! Sensitivity of surface saturation specific humidity to temperature
+             znetrad(:),        &  ! Net radiation (with regard to surface temp. of old timestep or last iteration)
+             heat_tcoef(:),     &  ! Drag coefficient for heat (updated for each iteration)
+             fact_q_air(:),     &  ! See (*)
+             fact_qsat_srf(:),  &  ! Similar to fact_q_air (formerly c_sat)
+             fract_snow(:),     &  ! Snow fraction
+             t_soil_upper(:),   &  ! Soil temperature of top/uppermost soil layer
+             htc_stable(:),     &  ! Heat transfer coefficient (skin conductivity) for stable   conditions (Ri > 0)
+             htc_unstable(:),   &  ! Heat transfer coefficient (skin conductivity) for unstable conditions (Ri < 0)
+             ! Output
+             forc_hflx(:),      &  ! Ground heat flux
+             s_star(:))            ! Dry static energy of the surface (new timestep)
+          END IF ! use_skin
+        END DO ! iter
+
+      END IF ! use_tmx
     END IF
 
     ! Todo: Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
@@ -574,6 +631,308 @@ CONTAINS
 
     !$claw acc end data
   END SUBROUTINE surface_temp_implicit
+  !
+  ! ================================================================================================================================
+  !
+  SUBROUTINE surface_temp_implicit_skin( &
+       ! Input
+      niter,         &  ! Number of iterations still to be made
+      nc,            &  ! Number of land grid points
+      steplen,       &  ! Length of timestep (2 * delta t)
+      zemiss,        &  ! surface emissivity
+      stbo,          &  ! Stefan-Boltzmann constant
+      t2s_conv,      &  ! Conversion factor for temperature to dry static energy (formerly pcp)
+      t_acoef,       &  ! Linear   Richtmyer Morton coefficient for dry static energy (As)
+      t_bcoef,       &  ! Additive Richtmyer Morton coefficient for dry static energy (Bs)
+      q_acoef,       &  ! Linear   Richtmyer Morton coefficient for humidity (Aq)
+      q_bcoef,       &  ! Additive Richtmyer Morton coefficient for humidity (Bq)
+      s_old,         &  ! Dry static energy of the surface (old timestep)
+      T_air,         &  ! Air temperature [K] in the lowest layer of the atmosphere
+      qsat_srf_old,  &  ! Saturated specific humidity of the surface (old timestep)
+      dQdT,          &  ! Sensitivity of surface saturation specific humidity to temperature
+      rad_srf_net,   &  ! Net radiation
+      heat_tcoef,    &  ! Drag coefficient for heat
+      fact_q_air,    &  ! See (*)
+      fact_qsat_srf, &  ! Similar to fact_q_air (formerly c_sat)
+      fract_snow,    &  ! Snow fraction
+      t_soil_upper,  &  ! Soil temperature of top/uppermost soil layer
+      htc_stable,    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
+      htc_unstable,  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
+!!$ see https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2015JD023812 htc_stable and htc_unstable about 15 W m-2 K-1 for vegetation and 7 for snow.
+      ! Output
+      forc_hflx,     &  ! Ground heat flux
+      s_star        )  ! Dry static energy of the surface (new timestep)
+
+  ! (*) Dimensionless factor for lowest atm. level in formulation of surface fluxes of specific humidity and
+  ! dry static energy to account for evapotranspiration including snow, wetskin and vegetation cover fractions,
+  ! stomatal and atmospheric resistance, as well as the specific humidity of air and the saturated specific humidity
+  ! of the surface (formerly c_air)
+
+!!$    USE mo_jsb_time,               ONLY: get_date_components
+!!$    USE mo_time_control,           ONLY: current_date
+    USE mo_phy_schemes,            ONLY: qsat_water
+    USE mo_jsb_physical_constants, ONLY: alv, als, cvdifts
+
+    ! Input
+    INTEGER,  INTENT(in)    :: niter
+    INTEGER,  INTENT(in)    :: nc
+    REAL(wp), INTENT(in)    :: steplen
+    REAL(wp), INTENT(in)    :: zemiss
+    REAL(wp), INTENT(in)    :: stbo
+    REAL(wp), INTENT(in)    :: t2s_conv(nc)
+    REAL(wp), INTENT(in)    :: t_bcoef(nc)
+    REAL(wp), INTENT(in)    :: t_acoef(nc)
+    REAL(wp), INTENT(in)    :: q_bcoef(nc)
+    REAL(wp), INTENT(in)    :: q_acoef(nc)
+    REAL(wp), INTENT(in)    :: s_old(nc)
+    REAL(wp), INTENT(in)    :: T_air(nc)
+    REAL(wp), INTENT(in)    :: qsat_srf_old(nc)
+    REAL(wp), INTENT(in)    :: dQdT(nc)
+    REAL(wp), INTENT(in)    :: rad_srf_net(nc)
+    REAL(wp), INTENT(in)    :: heat_tcoef(nc)
+    REAL(wp), INTENT(in)    :: fact_q_air(nc)
+    REAL(wp), INTENT(in)    :: fact_qsat_srf(nc)
+    REAL(wp), INTENT(in)    :: fract_snow(nc)
+    REAL(wp), INTENT(in)    :: t_soil_upper(nc)
+    REAL(wp), INTENT(in)    :: htc_stable(nc)
+    REAL(wp), INTENT(in)    :: htc_unstable(nc)
+  ! Output
+    REAL(wp), INTENT(out)   :: forc_hflx(nc)
+    REAL(wp), INTENT(out)   :: s_star(nc)
+
+    ! Local variables
+!!$    REAL(wp) :: zdt ! time step (later needed for CanoStor in SkIn+)
+!!$    INTEGER :: yr, mo, dy, hr, mn, se, i
+
+    ! Old local variables needed for classic SEB
+    REAL(wp), DIMENSION(nc) :: &
+        zcolin			&	! factors of linearized terms in energy balance
+      , zcohfl			&	! factors from sensible and ground heat flux in energy balance
+      , zcoind			&	! factors of independent terms in energy balance
+      , zicp			  &	! inverse specific heat capacity of humid air
+      , zca				  &	! cair, snow fraction, Lv and Lsub
+      , zcs					  ! csat, snow fraction, Lv and Lsub
+
+!!$    ! Iteration variables
+!!$    REAL(wp), DIMENSION(nc) :: &
+!!$        zsend			  &	! final dry static energy
+!!$    	, zTdiffend		&	! final temperature difference between two iteration steps (for potential diag.)
+!!$    	, zsdiffend		&	! final dry static energy difference between two iteration steps (for potential diag.)
+!!$      , zTdiff			&	! temperature difference between two iteration steps (for potential diag.)
+!!$      , zsdiff				! dry static energy difference between two iteration steps
+
+    REAL(wp), DIMENSION(nc) :: &
+    	  T_old			  &	! surface temperature (old time step)
+!!$      , zTold			  &	! surface temperature (old iteration step)
+    	, zTnew			  &	! new surface temperature
+!!$      , zsold			  &	! surface dry static energy (old iteration step)
+!!$  	  , zqsold			&	! saturated surface specific humidity (old iteration step)
+!!$  	  , zdqsold			&	! derivative saturated surface specific humidity (old iteration step)
+!!$  	  , znetrad			&	! net radiation (iteration)
+!!$      , zradcon			&	! constant part of net radiation (SWnet + LWdown)
+      , zhtc				  ! stable/unstable heat transfer coefficient (skin conductivity)
+
+    ! Parameters needed for heat transfer coefficient
+!!$    REAL(wp) :: 		&
+!!$    	  zslope			&	! slope of hyberbolic tangent
+!!$    	, zaxSym				! axial symmetry of hyberbolic tangent
+
+!!$    REAL(wp) :: 		&
+!!$        zTeps			  & ! Small temperature difference used for derivative of saturated specific humidity
+!!$      , zpressfrac    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
+
+    ! Iteration parameters
+    REAL(wp) :: 		&
+        zlam	        	! iteration weighting factor
+!!$      , zlammin			&	! minimal iteration weighting factor
+!!$      , zlamdec			&	! decrease of iteration weighting factor
+!!$      , zsdelta				! stop criterium
+
+!!$    INTEGER,  DIMENSION(nc) :: &
+!!$        zfinaloop	    ! maximal number of iterations
+
+!!$    LOGICAL,  DIMENSION(nc) :: &
+!!$        literate		  ! grid points which have to be iterated
+
+!!$    INTEGER ::			&
+!!$    	  zloop			  &	! iteration loop
+!!$    	, zendloop		&	! final iteration loop
+!!$    	, zlamfreq			! number of iteration loops per decrease of iteration weighting factor
+
+    ! Heat transfer coefficient (Skin conductivity from ECMWF Part IV
+    ! Physical Processes, Chapter 8 Surface Parametrization)
+      zhtc(:) = 0.5_wp * ( htc_stable(:) + htc_unstable(:) ) ! arithmetic mean [W/m^2/K]
+!!$      zslope  = -2._wp	 	! slope of hyperbolic tangent transition (this value can be adjusted)
+!!$      zaxSym  =  0.5_wp  	! axial symmetry of hyperbolic tangent (this value has to be 0.5)
+
+!!$    ! Small temperature difference used for derivative of saturated specific humidity
+!!$      zTeps   = 0.001_wp
+
+!!$    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
+!!$      zpressfrac   = 0.99615_wp
+
+    ! Iteration options
+!!$      zloop       = 0
+!!$      zendloop    = 50
+!!$      zsdelta  	  = 100._wp
+!!$      literate(:) = .TRUE.
+
+    ! Weighting factor to ensure convergence of iteration
+      zlam       = 2._wp/3._wp
+!!$      zlammin    = 0.001_wp
+!!$      zlamdec    = 0.5_wp
+!!$      zlamfreq   = 10
+
+    ! Starting/Missing values of iteration
+!!$      zsend(:)     = 0._wp
+!!$      zTdiffend(:) = 9999._wp
+!!$      zfinaloop(:) = 9999
+
+      !-----------------------------------------------------------------------------------------
+      ! Update SurfaceTemp (no iteration)
+      !-----------------------------------------------------------------------------------------
+
+      !$claw acc data &
+      !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
+      ! Overimplicit time stepping: cvdifts = 3/2, steplen = 2 * delta_time
+!!$        zdt     = cvdifts * steplen
+
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_surface_temp_implicit_skin_1
+
+      ! Inverse specific heat capacity 1/cp
+        zicp(:)     = 1._wp / t2s_conv(:)
+
+      ! Factors used for latent heat flux (including atmospheric/stomatal resistance in cair/csat
+        zca(:)      = als*fract_snow(:) +  alv*( fact_q_air(:) - fract_snow(:) )
+        zcs(:)      = als*fract_snow(:) +  alv*( fact_qsat_srf(:) - fract_snow(:) )
+
+      ! Surface temperature (old time step)
+        T_old(:)    = s_old(:) * zicp(:)
+
+      ! Net radiation without upward longwave radiation (SWnet + LWdown) so that it is
+      ! independent from surface temperature (dry static energy)
+!!$        zradcon(:)  = rad_srf_net(:) + zemiss_def * stbo * T_old(:)**4
+
+      ! Old time step values as starting points for iteration
+!!$        zTold(:)    = T_old(:)
+!!$        zsold(:)    = s_old(:)
+!!$        zqsold(:)   = qsat_srf_old(:)
+!!$        zdqsold(:)  = dQdT(:)
+!!$        znetrad(:)  = rad_srf_net(:)
+
+!!$      ! While loop
+!!$      DO WHILE ( zloop <= zendloop)
+!!$
+!!$    	  zloop = zloop + 1
+!!$
+!!$    	! Update temperature dependent variables
+!!$
+!!$    	  IF (zloop > 1) THEN
+!!$    	  ! Update dry static energy, temperature, humidity and net radiation
+!!$    	  	zsold(:)   = s_star(:)
+!!$    	  	zTold(:)   = zsold(:) * zicp(:)
+!!$    	  	zqsold(:)  = qsat(zTold(:), press_srf(:))
+!!$    	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, press_srf(:)) - zqsold(:) ) / zTeps
+!!$    	  	znetrad(:) = zradcon(:) - zemiss_def * stbo * zTold(:)**4
+!!$    	  END IF
+
+    	! Heat Transfer Coefficient (Hyperbolic tangent ensures smooth transition from stable to unstable)
+    	! zhtc(:) = zaxSym*(phtcu(:) - phtcs(:)) * tanh(-zslope*zril(:)) + zaxSym*(phtcu(:) + phtcs(:))
+
+    	  ! Update surface temperature (iteration)
+
+    	  zcohfl(:)     = zhtc(:)*zicp(:) - heat_tcoef(:) * (t_acoef(:) - 1._wp)
+
+    	  zcolin(:)     = 4._wp * zicp(:) * zemiss * stbo * ( (T_old(:))**3 )  &
+                          - heat_tcoef(:) * ( zca(:)*q_acoef(:) - zcs(:) )         &
+                          * zicp(:) * dQdT(:)
+
+    	  zcoind(:)     = rad_srf_net(:) + zhtc(:) * t_soil_upper(:)    &
+                          + heat_tcoef(:)*( t_bcoef(:) + (zca(:)    &
+                          * q_acoef(:) - zcs(:)) * qsat_srf_old(:) + zca(:) * q_bcoef(:) )
+
+    	  s_star(:)      = (zcolin(:) * s_old(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
+
+       ! Iteration filter
+          s_star(:) = s_old(:) + zlam * (s_star(:) - s_old(:))
+
+    	  zTnew(:) = s_star(:) * zicp(:)
+
+       ! Care about cases when the new surface temperature changes the stability regime
+       ! stable ==> unstable          
+          WHERE (zTnew(:) .GT. T_air(:) + 0.001_wp .AND. T_old(:) .LT. T_air(:))
+             zTnew(:) = T_air(:) + 0.001_wp
+             s_star(:) = zTnew(:) * t2s_conv(:)
+          END WHERE
+       ! unstable ==> stable
+          WHERE (zTnew(:) .LT. T_air(:) - 0.001_wp .AND. T_old(:) .GT. T_air(:))
+             zTnew(:) = T_air(:) - 0.001_wp
+             s_star(:) = zTnew(:) * t2s_conv(:)
+          END WHERE
+
+!!$    	  zsdiff(:)     = ABS(s_star(:) - zsold(:))
+!!$    	  zTdiff(:)     = ABS(zTnew(:) - zTold(:))
+!!$
+!!$    	! Check iteration criteria
+!!$    	! Check which grid points are already converged and save their final values
+!!$    	  WHERE (zsdiff(:) < zsdelta .AND. literate(:))
+!!$    		literate(:)  = .FALSE.
+!!$    		zsend(:)     = s_star(:)
+!!$    		zTdiffend(:) = zTdiff(:)
+!!$    		zsdiffend(:) = zsdiff(:)
+!!$    		zfinaloop(:) = zloop
+!!$    	  END WHERE
+!!$
+!!$    	! Decrease iteration weighting factor at certain iteration steps
+!!$    	  IF(MOD(zloop,zlamfreq) == 0) THEN
+!!$    		zlam = MAX(zlamdec * zlam, zlammin)
+!!$    	  END IF
+!!$
+!!$    	! If the maximal number of iteration loops is reached, save the current values
+!!$    	  IF(zloop == zendloop) THEN
+!!$    		WRITE(*,*) 'Iteration did not converge after ', zloop ,' loops'
+!!$    		WHERE( literate(:) )
+!!$    		  literate(:)  = .FALSE.
+!!$    		  zsend(:)     = s_star(:)
+!!$    		  zTdiffend(:) = zTdiff(:)
+!!$    		  zsdiffend(:) = zsdiff(:)
+!!$    		  zfinaloop(:) = zloop
+!!$    		END WHERE
+!!$    	  END IF
+!!$
+!!$      	! End iteration prematurely if all points are converged
+!!$    	  IF ( .NOT. ANY(literate(:)) ) THEN
+!!$    		EXIT
+!!$    	  END IF
+!!$
+!!$      END DO ! end of while (iteration) loop
+
+!!$    ! Rewrite output variable with saved final values
+!!$      s_star(:)    = zsend(:)
+!!$      zTnew(:)     = s_star(:) * zicp(:)
+
+    ! Ground heat flux
+      forc_hflx(:) = zhtc(:)*(t_soil_upper(:) - zTnew(:))
+
+!!$      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+!!$      999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+!!$      998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
+!!$
+!!$        IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+!!$          DO i=1,size(lat, dim=1)
+!!$            IF (lat(i) > 37._wp) THEN
+!!$              write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', zTnew(i)
+!!$              write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', zhtc(i)
+!!$              write(555,998) yr,mo,dy, hr,mn,se, 'loop', zfinaloop(i)
+!!$            END IF
+!!$          END DO
+!!$        END IF
+
+    !$claw end expand
+
+    !$claw acc end data
+
+  END SUBROUTINE surface_temp_implicit_skin
   !
   ! ================================================================================================================================
   !

@@ -31,6 +31,7 @@ MODULE mo_sse_interface
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
@@ -127,12 +128,14 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: t_soil_acoef
@@ -185,7 +188,7 @@ CONTAINS
 
     INTEGER :: isnow
 
-    LOGICAL  :: lstart
+    LOGICAL  :: lstart, l_use_skin
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
@@ -205,6 +208,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(SEB_)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -257,15 +261,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   forc_hflx)       ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
-
+    l_use_skin = dsl4jsb_Config(SEB_)%use_skin
+    
     !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
     ! given back to the atmosphere so that the surface energy balance can be computed there
     !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_0 tile_name=tile%name
+    IF (l_use_skin) grnd_hflx(:) = forc_hflx(:)
     grnd_hflx_old(:) = grnd_hflx(:)
     hcap_grnd_old(:) = hcap_grnd(:)
     !$claw end expand
@@ -291,6 +298,7 @@ CONTAINS
         & soil_e%levels(:),                            &
         & dtime,                                       &
         & lstart,                                      &
+        & l_use_skin,                                  &
         & t_unfilt_corrected(:)                     ,  &
         & w_snow_soil(:)                            ,  &
         & heat_cond(:)                              ,  &
@@ -438,6 +446,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & l_use_skin                               , &
         & t_soil_top                          (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
@@ -466,6 +475,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & l_use_skin                               , &
         & t_soil_top                          (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
