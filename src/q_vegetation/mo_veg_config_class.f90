@@ -100,6 +100,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namelist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename,   &
       &                            bc_filename
     INTEGER                     :: plant_functional_type_id
@@ -119,6 +120,7 @@ CONTAINS
     NAMELIST /jsb_veg_nml/          &
 #endif
       active,                       &
+      lrestart_cont,                &
       ic_filename,                  &
       bc_filename,                  &
       plant_functional_type_id,     &
@@ -136,6 +138,7 @@ CONTAINS
 
     ! Set defaults
     active                         = .TRUE.
+    lrestart_cont                  = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
     bc_filename                    = 'bc_land_phys.nc'
     ic_filename                    = 'ic_land_phys.nc'
     plant_functional_type_id       = 1
@@ -162,6 +165,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                        = active
+    config%lrestart_cont                 = lrestart_cont
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
     config%pft_id                        = plant_functional_type_id

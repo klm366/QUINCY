@@ -478,7 +478,6 @@ CONTAINS
       & hydro_scale
     LOGICAL  :: &
       & is_experiment_start,    &
-      & l_compat401_config,     &
       & l_dynsnow_config,       &
       & l_infil_subzero_config, &
       & ltpe_closed,            &
@@ -501,7 +500,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    l_compat401_config = model%config%l_compat401
 
     use_tmx = model%config%use_tmx
 
@@ -657,11 +655,7 @@ CONTAINS
         drainage(ic) = 0._wp
         weq_snow_soil(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
-        IF (l_compat401_config) THEN
-          snow_soil_dens(ic) = 330._wp
-        ELSE
-          snow_soil_dens(ic) = dens_snow
-        END IF
+        snow_soil_dens(ic) = dens_snow
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
@@ -805,22 +799,12 @@ CONTAINS
         & runoff_horton(:)                & ! Horton component of surface runoff [m water equivalent]
         & )
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       ! Update weq_pond storage
-      !$ACC LOOP GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         weq_pond(ic) = wtr_pond(ic) + ice_pond(ic)
       END DO
-      !$ACC END LOOP
-
-      IF (l_compat401_config) THEN
-        !$ACC LOOP GANG VECTOR
-        DO ic=1,nc
-          snow_soil_dens(ic) = 330._wp
-        END DO
-        !$ACC END LOOP
-      END IF
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
 
       !$ACC WAIT(1)
       !$ACC END DATA
@@ -1036,19 +1020,17 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-
-      ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(bclapp_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(matric_pot_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(pore_size_index_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
-      ALLOCATE(vol_wres_org(SIZE(hyd_cond_sat),nsoil))
-
-      ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways
-      ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
-      ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
+      ALLOCATE(hyd_cond_sat_org   (nc, nsoil))
+      ALLOCATE(vol_porosity_org   (nc, nsoil))
+      ALLOCATE(bclapp_org         (nc, nsoil))
+      ALLOCATE(matric_pot_org     (nc, nsoil))
+      ALLOCATE(pore_size_index_org(nc, nsoil))
+      ALLOCATE(vol_field_cap_org  (nc, nsoil))
+      ALLOCATE(vol_p_wilt_org     (nc, nsoil))
+      ALLOCATE(vol_wres_org       (nc, nsoil))
+      ALLOCATE(fract_perc         (nc, nsoil))  ! fraction of the soil with connected organic pathways
+      ALLOCATE(fract_uncon        (nc, nsoil))  ! fraction of the soil with unconnected organic matter
+      ALLOCATE(hyd_cond_sat_uncon (nc, nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
       !$ACC DATA &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
@@ -1218,6 +1200,9 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: vol_weq_soil_sl
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
@@ -1227,11 +1212,12 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
 
-    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: iblk, ics, ice, nc, ic, is
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
@@ -1261,6 +1247,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)
+    soil_w => Get_vgrid('soil_depth_water')
 
     area => grid%area(ics:ice, iblk)
     lat => grid%lat(ics:ice, iblk)
@@ -1274,6 +1261,9 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_weq_soil_sl)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
@@ -1319,8 +1309,8 @@ CONTAINS
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+      & wtr_soil_sl,                                            &
+      & ice_soil_sl,                                            &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_net_flx  ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
@@ -1353,6 +1343,15 @@ CONTAINS
     !ACC END LOOP
 
     !$ACC END PARALLEL
+
+    ! Compute volumetric soil moisture (liquid + ice) in m3/m3 (= m/m) water equivalent
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)) / soil_w%dz(is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !$ACC WAIT(1)
     !$ACC END DATA
@@ -1393,6 +1392,7 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_weq_soil_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl,  weighted_by_fract)
@@ -2729,13 +2729,6 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_hydrology_diagnostics(tile)
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
 
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
@@ -2867,7 +2860,7 @@ CONTAINS
     END IF
 
     DEALLOCATE (scaling, in_domain)
-#endif
+
   END SUBROUTINE global_hydrology_diagnostics
 
 #endif

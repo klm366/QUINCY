@@ -687,14 +687,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_seb_diagnostics(tile)
 
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
-
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
@@ -761,7 +753,6 @@ CONTAINS
       DEALLOCATE (scaling, in_domain)
     END IF
 
-#endif
   END SUBROUTINE global_seb_diagnostics
 
   !

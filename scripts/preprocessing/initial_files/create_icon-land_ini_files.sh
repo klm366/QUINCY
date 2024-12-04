@@ -45,32 +45,36 @@
 #     variables, that are also included in the bc_land files. For consistency,
 #     these variables are replaced by the respective bc_land file variables.
 #
+#  5) calc_hd_receive_mask.sh
+#     Coupled setups with external HD model need a mask file indicating ocean
+#     inflow cells. This mask depends on the fractional land sea mask. For
+#     that reason it is part of this script suite.
+#
+#  6) generate_hdpara_file.sh
+#     If the HD model is run within jsbach ("internal HD") it needs several
+#     parameters on the ICON-Land grid. The script clones, configures and
+#     runs the software in https://github.com/ThomasRiddick/DynamicHD.git
+#
 # This approach is meant to be preliminary. It documents the current process
 # of initial data generation. The aim is however, to generate all initial data
 # from extpar in the not so far future.
 #-----------------------------------------------------------------------------
 #
-# Notes on the extpar files
+# Notes on the extpar file variables
 #
-# In this script we use three different variables defining extpar files:
-# - initial_extpar_file: An extpar file generally available from the pool,
-#      that contains e.g. orographic parameters
-# - nwp_extpar_file: The extpar file read by the NWP-atmosphere at runtime.
-#      It will be adapted to the newly generated ic/bc files in
-#      adapt_nwp_extpar_file.sh.
+# In this script we use three different variables defining extpar files although
+# you generally need just one extpar file:
 # - extpar_file: The extpar file we generate here using extpar4jsbach_mpim_icon.sh
 #      (unless it is already available from /pool/data/JSBACH/icon/extpar4jsbach/).
 #      This extpar file contains e.g. soil textures and other soil parameters.
-#
-# Generally, you should only need one or two different extpar files:
-#   In setups with AES atmosphere
-#      you should use the "extpar_file" also as "initial_extpar_file".
-#      (An nwp_extpar_file is not used.)
-#   In setups with NWP atmosphere
-#      you should use the "nwp_extpar_file" as "initial_extpar_file", if
-#      provided from DWD. If you do not have this file available, it is
-#      possible to use the "extpar_file" instead - and to also use this file
-#      as nwp_extpar_file.
+# - initial_extpar_file: In earlier revisions we based the ic/bc file generation
+#      on extpar files already available from the ICON pool. We have now switched
+#      to also using the "extpar_file" described above as "initial_extpar_file".
+# - nwp_extpar_file: The extpar file read by the NWP atmosphere at runtime.
+#      It will be adapted to the newly generated ic/bc files in
+#      adapt_nwp_extpar_file.sh. Unless a better extpar file is provided by DWD
+#      (e.g. with additional variables needed for the run) you should here also
+#      use the "extpar_file" from above.
 #
 #-----------------------------------------------------------------------------
 set -e
@@ -85,6 +89,8 @@ run_jsbach4_ini_files_from_extpar=true
 rm_bc_files_from_gauss=true        # true: move ic/bc files into output directory
 run_adapt_nwp_extpar_file=false    # Only needed for configurations with NWP atmosphere,
                                    # and only possible after "rm_bc_files_from_gauss"
+run_calc_hd_receive_mask=false     # Only needed for coupled setups with external HD model
+run_generate_hdpara_file=false     # Needed with internal HD model
 
 #-----------------------------------------------------------------------------
 #
@@ -123,7 +129,8 @@ export coupled=false       # land sea mask for coupled experiment?
 if [[ ${coupled} == true ]]; then
   export oceGridID=0035      # Required for coupled configurations
   export oceRes=R02B06
-                             # We need the global ocean grid/mask file: *_G.nc
+  # Ocean grid/mask: We need the mask on the global (*_G.nc) grid.
+  #    Using the reduced ocean grid (*_O.nc) thechnically works but leads to wrong results!
   export icon_grid_oce=${icon_grid_rootdir}/mpim/${oceGridID}/icon_mask_${oceGridID}_${oceRes}_G.nc
   export grid_label=$atmGridID-$oceGridID
 else
@@ -136,6 +143,8 @@ export revision=r00xx      # ic/bc revision directory that will be generated
 export work_dir=${scratch_dir_base}/ini_files/work/${grid_label}/${revision}  # temporary working directory
 export output_root_dir=${work_dir_base}/ini_files     # root directory for the new ic/bc files
 export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
+hd_rev=""                                  # revision for external HD data; "" for no revision subdirectory
+export hd_file_dir=${output_root_dir}/${grid_label}/hd/${hd_rev} # directory for external HD data
 
 # --------------------------------------
 # List of years:
@@ -212,7 +221,7 @@ if [[ ${coupled} == true ]]; then
     export fractional_mask=${icon_grid_rootdir}/mpim/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
   fi
 else
-  export fractional_mask=${initial_extpar_file}
+  export fractional_mask=${initial_extpar_file} # Fractional mask in extpar file (based on observations)
   # export fractional_mask=${icon_grid}          # Leads to integer LSM!
 fi
 
@@ -231,10 +240,24 @@ else
   #--- AMIP setup corresponding to coupled setup with matching grids, e.g. R2B5/R2B6
   export min_fract=0.25     # minimum land grid cell fraction if not complete ocean
   export max_fract=0.75     # maximum land grid cell fraction if not complete land
-  #---  AMIP setup with integer land sea mask
+  #--- AMIP setup with integer land sea mask
   #export min_fract=0.5      # minimum land grid cell fraction if not complete ocean
   #export max_fract=0.5      # maximum land grid cell fraction if not complete land
 fi
+
+# --------------------------------------
+# Definitions needed with HD input file generation
+#
+# --- Definitions needed with run_calc_hd_receive_mask
+# (existing) HD parameter file on 0.5 grid
+export hdpara05_file=/pool/data/ICON/edzw-shadow/indepedent/hd/input/05deg/hdpara_vs1_12.nc
+# HD receive mask file (to be generated)
+export hd_receive=${hd_file_dir}/hd_receive_${grid_label}.nc
+
+# --- Definitions needed with run_generate_hdpara_file
+# Depending min- and max_fract, the fractional mask in bc_land_frac ('notsea') might
+# not be identical to the mask in ${fractional_mask}, we thus use the bc_land file.
+export hd_fractional_mask=${bc_file_dir}/bc_land_frac.nc
 
 ### End of settings ###
 
@@ -242,7 +265,7 @@ fi
 # Some preparations
 scripts_dir=$(dirname $0)
 cd $scripts_dir
-scripts_dir=$(pwd)
+export scripts_dir=$(pwd)
 
 function finish {
   if [[ -d ${work_dir} ]]; then
@@ -263,6 +286,12 @@ fi
 
 # Create directory to save all scripts used for this initial file revision
 [[ -d ${bc_file_dir}/scripts ]] || mkdir -p ${bc_file_dir}/scripts
+if [[ ${run_generate_fractional_mask} == true ]]; then
+  [[ -d ${fractional_mask%/*}/scripts ]] || mkdir -p ${fractional_mask%/*}/scripts
+fi
+if [[ ${run_calc_hd_receive_mask} == true ]]; then
+  [[ -d ${hd_file_dir}/scripts ]] || mkdir -p ${hd_file_dir}/scripts
+fi
 
 
 #-----------------------------------------------------------------------------
@@ -272,7 +301,8 @@ if [[ ${run_generate_fractional_mask} == true ]]; then
     echo " Skipping the generation of fractional masks as this is only needed in coupled setups."
   else
     ./generate_fractional_mask.sh
-    cp ./generate_fractional_mask.sh ${bc_file_dir}/scripts
+    cp ./generate_fractional_mask.sh ${fractional_mask%/*}/scripts
+    cp    $0                         ${fractional_mask%/*}/scripts
   fi
 fi
 
@@ -361,6 +391,8 @@ fi
 if [[ ${run_jsbach4_ini_files_from_gauss} == true ]]; then
   ./jsbach4_ini_files_from_gauss.sh
   cp ./jsbach4_ini_files_from_gauss.sh ${bc_file_dir}/scripts
+  cp ./jsbach_init_file.f90            ${bc_file_dir}/scripts
+  cp ./jsbach_init_file.ksh            ${bc_file_dir}/scripts
 fi
 
 #-----------------------------------------------------------------------------
@@ -379,7 +411,7 @@ if [[ ${run_jsbach4_ini_files_from_extpar} == true ]]; then
 fi
 
 #-----------------------------------------------------------------------------
-# 4. Move new bc/ic files to bc_file_dir and remove preliminary directories
+#    Move new bc/ic files to bc_file_dir and remove preliminary directories
 if [[ ${rm_bc_files_from_gauss} == true ]]; then
   [[ -d ${bc_file_dir} ]] || mkdir ${bc_file_dir}
   mv ${bc_file_dir}_with_extpar/*.nc                ${bc_file_dir}
@@ -393,14 +425,31 @@ if [[ ${rm_bc_files_from_gauss} == true ]]; then
 fi
 
 #-----------------------------------------------------------------------------
-# 5. Run adapt_nwp_extpar_file
+# 4. Run adapt_nwp_extpar_file
 if [[ ${run_adapt_nwp_extpar_file} == true ]]; then
   ./adapt_nwp_extpar_file.sh
   cp ./adapt_nwp_extpar_file.sh ${bc_file_dir}/scripts
 fi
 
+#-----------------------------------------------------------------------------
+# 5. Run calc_hd_receive_mask: generate receive mask for external HD model
+if [[ ${run_calc_hd_receive_mask} == true ]]; then
+  ./calc_hd_receive_mask.sh
+  cp ./calc_hd_receive_mask.sh ${hd_file_dir}/scripts
+  cp   $0                      ${hd_file_dir}/scripts
+fi
+
+#-----------------------------------------------------------------------------
+# 6. Generate the hdpara file: generate HD parameter file for internal HD
+if [[ ${run_generate_hdpara_file} == true ]]; then
+  ./generate_hdpara_file.sh
+  cp ./generate_hdpara_file.sh ${bc_file_dir}/scripts
+  cp   $0                      ${bc_file_dir}/scripts
+fi
+
 cp $0 ${bc_file_dir}/scripts
 
+echo ""
 echo "====  Initial and boundary file generation completed. ===="
 echo ""
 

@@ -59,7 +59,7 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
@@ -1488,20 +1488,20 @@ CONTAINS
                                                   & pool_slow_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 inout
-    INTEGER,  INTENT(in)    :: nsoil_sb                  !> soil dimension
-    REAL(wp), INTENT(in)    :: dtime                     !> timestep length [s]
-    REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !> soil depth at each layer[m]
-    INTEGER,  INTENT(in)    :: spinup_accelerator_length !> loop times of acceleration, read from namelist
-    REAL(wp), INTENT(in)    :: formation_c_mavg_sl(:)    !> averaged slow soil C pool formation rate [mol m-3 timestep-1]
-    REAL(wp), INTENT(in)    :: formation_c14_mavg_sl(:)  !> averaged slow soil C14 pool formation rate [mol m-3 timestep-1]
-    REAL(wp), INTENT(in)    :: loss_c_mavg_sl(:)         !> averaged slow soil C pool loss rate [mol m-3timestep-1]
-    REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !> slow soil pool with all elements [mol m-3]
+    INTEGER,  INTENT(in)    :: nsoil_sb                  !< soil dimension
+    REAL(wp), INTENT(in)    :: dtime                     !< timestep length [s]
+    REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !< soil depth at each layer[m]
+    INTEGER,  INTENT(in)    :: spinup_accelerator_length !< loop times of acceleration, read from namelist
+    REAL(wp), INTENT(in)    :: formation_c_mavg_sl(:)    !< averaged slow soil C pool formation rate [mol m-3 timestep-1]
+    REAL(wp), INTENT(in)    :: formation_c14_mavg_sl(:)  !< averaged slow soil C14 pool formation rate [mol m-3 timestep-1]
+    REAL(wp), INTENT(in)    :: loss_c_mavg_sl(:)         !< averaged slow soil C pool loss rate [mol m-3timestep-1]
+    REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
-    REAL, DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !> stiochiometry factors [mol / mol]
-    REAL, DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !> slow soil pool distributions across all soil layers[unitless]
-    REAL                      :: tau_slow !> slow soil pool turnover rate [timestep]
-    REAL                      :: pool_c_slow, pool_c14_slow !> the total slow soil pool [mol m-2]
+    REAL, DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
+    REAL, DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
+    REAL                      :: tau_slow !< slow soil pool turnover rate [timestep]
+    REAL                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
     REAL                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
     INTEGER                   :: ilength, i_soil !counter for loops
     ! ------------------------------------------------------------------------------------------------------------
