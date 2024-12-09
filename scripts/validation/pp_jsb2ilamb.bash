@@ -12,7 +12,7 @@ set -e
 # using iLamb (see https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2018MS001354)
 # -----------------------------------------------------------------------------------------------------
 
-VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,nee,reco,swe,tas,twsa'
+VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,nee,pr,reco,swe,tas,twsa'
 TRGGRID='r192x96'
 MOL2G_C=12.01
 GM2_2_MGHA=0.01
@@ -88,7 +88,8 @@ for VAR in $(echo ${VARLIST//,/ }); do
         # *** Hydrology Cycle
         evspsbl ) echo "evspsbl = hydro_evapotrans_box * -1;"             >> $TASKLIST ;;
         mrro    ) echo "mrro    = hydro_runoff_box + hydro_drainage_box;" >> $TASKLIST ;;
-        mrsos   ) echo "mrsos   = ((sellevel(hydro_wtr_soil_sl_box,0.0325) + sellevel(hydro_ice_soil_sl_box,0.0325)) + 0.1378 * (sellevel(hydro_wtr_soil_sl_box,0.192) + sellevel(hydro_ice_soil_sl_box,0.192))) * 1000;"       >> $TASKLIST ;;
+        mrsos   ) echo "mrsos   = ((sellevel(hydro_wtr_soil_sl_box,0.0325) + sellevel(hydro_ice_soil_sl_box,0.0325)) + 0.1378 * (sellevel(hydro_wtr_soil_sl_box,0.192) + sellevel(hydro_ice_soil_sl_box,0.192))) * 1000;"           >> $TASKLIST ;;
+        pr      ) echo "pr      = a2l_rain_box + a2l_snow_box;"           >> $TASKLIST ;;
         swe     ) echo "swe     = hydro_weq_snow_box;"                    >> $TASKLIST ;;
         twsa    ) echo "twsa    = (vertsum(hydro_wtr_soil_sl_box) + vertsum(hydro_ice_soil_sl_box) + hydro_weq_snow_box) * 1000;" >> $TASKLIST ;;
         # *** Ecosystem and Carbon Cycle
@@ -156,6 +157,11 @@ cat > $PARTAB << EOF
   name = nee
   long_name = "Net ecosystem exchange"
   units = "g m-2 d-1"
+/
+&parameter
+  name = pr
+  long_name = "Total precipitation"
+  units = "kg m-2 s-1"
 /
 &parameter
   name = reco
