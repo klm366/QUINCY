@@ -503,6 +503,31 @@ CONTAINS
       sb_pool_mt_domain(:,:,:,:,:) = 0.0_wp
     END IF
 
+    ! IN
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), w_soil_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
+
+    ! IN-OUT
+    !$ACC UPDATE DEVICE(qmax_org_min_sl(:,:,:), qmax_po4_min_sl(:,:,:), qmax_nh4_min_sl(:,:,:), qmax_po4_om_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(volume_min_sl(:,:,:)) ASYNC(1)
+
+    ! SB_
+    !$ACC UPDATE DEVICE(nh4_assoc(:,:,:), nh4_solute(:,:,:), no3_solute(:,:,:), po4_solute(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(nh4_n15_assoc(:,:,:), nh4_n15_solute(:,:,:), no3_n15_solute(:,:,:), bulk_soil_carbon_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_litter_carbon_sl(:,:,:), bulk_dens_corr_sl(:,:,:), qmax_org(:,:,:), qmax_po4(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(qmax_nh4(:,:,:), qmax_fast_po4(:,:,:), qmax_slow_po4(:,:,:), km_fast_po4(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(km_slow_po4(:,:,:), km_adsorpt_po4_sl(:,:,:), km_adsorpt_nh4_sl(:,:,:), k_bioturb(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(po4_assoc_fast(:,:,:), po4_assoc_slow(:,:,:), po4_occluded(:,:,:), ph_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(Qmax_AlFe_cor(:,:,:), po4_primary(:,:,:), microbial_cue_eff_tmic_mavg(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(microbial_nue_eff_tmic_mavg(:,:,:), microbial_pue_eff_tmic_mavg(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(vmax_weath_mineral_sl(:,:,:), enzyme_frac_poly(:,:,:), enzyme_frac_residue(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(enzyme_frac_poly_c(:,:,:), enzyme_frac_poly_n(:,:,:), enzyme_frac_poly_p(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(dom_cn(:,:,:), dom_cp(:,:,:), fact_n_status_mic_c_growth(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(fact_p_status_mic_c_growth(:,:,:), enzyme_frac_AP(:,:,:)) ASYNC(1)
+
+    !$ACC UPDATE DEVICE(sb_pool_mt_domain(:,:,:,:,:)) ASYNC(1)
+
   END SUBROUTINE sb_init_ic_bc
 
   ! ======================================================================================================= !

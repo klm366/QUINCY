@@ -134,6 +134,8 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
+      & vol_weq_soil_sl,      & !< Volumetric water equivalent (liquid+ice) in soil layers                  [m3 m-3]
+                                !  Based on fixed soil layer thickness, ignoring bedrock depth
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
       & drainage_sl,          & !< Subsurface drainage from soil layers                                     [kg m-2 s-1]
@@ -819,6 +821,14 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'vol_weq_soil_sl', mem%vol_weq_soil_sl,                       &
+        & hgrid, soil_w,                                                              &
+        & t_cf('vol_weq_soil_sl', 'm', 'Volumetric water equivalent of soil layers'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
+        & prefix, suffix,                                                             &
+        & loutput=.TRUE., lrestart=.FALSE.,                                           &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'wtr_freeze_sl', mem%wtr_freeze_sl,                              &
         & hgrid, soil_w,                                                                 &
         & t_cf('wtr_freeze_sl', 'kg m-2 s-1', 'Freezing water flux in soil layers'),     &
@@ -1154,9 +1164,7 @@ CONTAINS
 
     END IF
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
-    !       (1d stream variables are not supported with echam)
     !
     IF ( TRIM(suffix) == 'box' ) THEN
       CALL mem%Add_var('trans_gmean', mem%trans_gmean,                                   &
@@ -1208,7 +1216,6 @@ CONTAINS
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
     END IF
-#endif
 
     END SUBROUTINE Init_hydro_memory
 #endif

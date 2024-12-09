@@ -122,6 +122,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
@@ -155,6 +156,7 @@ CONTAINS
     NAMELIST /jsb_sb_nml/                     &
 #endif
                       active                    , &
+                      lrestart_cont             , &
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
@@ -189,6 +191,7 @@ CONTAINS
 
     ! Set defaults
     active                      = .TRUE.
+    lrestart_cont               = .FALSE.    ! TRUE: Continue although SB variables are missing in restart file
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
@@ -230,6 +233,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                          = active
+    config%lrestart_cont                   = lrestart_cont
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename

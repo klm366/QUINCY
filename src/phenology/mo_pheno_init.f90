@@ -291,55 +291,44 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (model%config%l_compat401) THEN
+    IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+        & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO ib=1,nblks
         DO ic=1,nc
-          fract_fpc(ic,ib) = get_foliage_projected_cover( &
-            &                  fract_fpc_max(ic,ib), lai(ic,ib), 2._wp)
+          fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
         END DO
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
-          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
+      IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
         DO ib=1,nblks
           DO ic=1,nc
-            fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
+            lai(ic,ib) = MIN(lai(ic,ib), MaxLai_param)
           END DO
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
-          DO ib=1,nblks
-            DO ic=1,nc
-              lai(ic,ib) = MIN(lai(ic,ib), MaxLai_param)
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
-          DO ib=1,nblks
-            DO ic=1,nc
-              lai(ic,ib) = MIN(lai(ic,ib), maxLAI_allom(ic,ib))
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
         DO ib=1,nblks
           DO ic=1,nc
-            ! fract_fpc = get_foliage_projected_cover(                &
-            !   & fract_fpc_max, lai, &
-            !   & dsl4jsb_Lctlib_param(ClumpinessFactor))
-            fract_fpc(ic,ib) = get_foliage_projected_cover(                &
-              & fract_fpc_max(ic,ib), lai(ic,ib), ClumpinessFactor_param)
+            lai(ic,ib) = MIN(lai(ic,ib), maxLAI_allom(ic,ib))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
       END IF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          ! fract_fpc = get_foliage_projected_cover(                &
+          !   & fract_fpc_max, lai, &
+          !   & dsl4jsb_Lctlib_param(ClumpinessFactor))
+          fract_fpc(ic,ib) = get_foliage_projected_cover(                &
+            & fract_fpc_max(ic,ib), lai(ic,ib), ClumpinessFactor_param)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
   END SUBROUTINE pheno_init_ic

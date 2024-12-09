@@ -48,6 +48,16 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: bulk_density
     CHARACTER(len=filename_max) :: bc_sso_filename          !< elevation and oro_stddev
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
+
+    !> ---------------------------------------------------------------------------------------------------- !
+    !> temporary SPQ_ config variables - used during implementation of using jsbach physics in quincy
+    !>
+    !> SEB_
+    LOGICAL           :: l_ice_on_lakes       !< Whether to use ice on lakes
+    LOGICAL           :: l_dynsnow            !< T: Calculate snow heat cond. and heat cap. dynamically depending on snow density
+    !> HYDRO_
+    LOGICAL           ::  l_ponds             !< Additional surface water storage
+
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
@@ -85,6 +95,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     LOGICAL                     :: flag_snow
     INTEGER                     :: nsoil_energy    , &
                                    nsoil_water
@@ -123,6 +134,7 @@ CONTAINS
     NAMELIST /jsb_spq_nml/   &
 #endif
                           active                  , &
+                          lrestart_cont           , &
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
@@ -159,6 +171,7 @@ CONTAINS
 
     ! Set defaults
     active                        = .TRUE.
+    lrestart_cont                 = .FALSE.  ! TRUE: Continue although SPQ variables are missing in restart file
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
@@ -239,6 +252,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename
@@ -256,6 +270,17 @@ CONTAINS
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     config%bulk_density              = bulk_density
+
+    !> ---------------------------------------------------------------------------------------------------- !
+    !> jsbach config
+    !>
+    !> SEB_
+    config%l_ice_on_lakes            = .FALSE.
+    config%l_dynsnow                 = .TRUE.
+    !> HYDRO_
+    config%l_ponds                   = .FALSE.
+
+    !> ---------------------------------------------------------------------------------------------------- !
 
     ! check for an error in clay content of soil
     IF(config%soil_clay < eps8) THEN

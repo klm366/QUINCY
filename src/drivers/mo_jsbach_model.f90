@@ -20,7 +20,6 @@
 
 MODULE mo_jsbach_model
 
-#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -780,9 +779,11 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
+    USE mo_fortran_tools,             ONLY: assert_acc_host_only
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_quincy_model_config,       ONLY: QCANOPY
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_config(SPQ_)
@@ -823,6 +824,7 @@ CONTAINS
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_config(SPQ_)
 
+    dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
@@ -921,8 +923,8 @@ CONTAINS
       coslat => grid%coslat
       sinlat => grid%sinlat
 
-      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air_mol)
-      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air)
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air)
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
@@ -1063,20 +1065,31 @@ CONTAINS
       ENDDO
       !$ACC END PARALLEL LOOP
 
+      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
+      !> if the ICON-Land QUINCY model is selected to run.
+      !>
+#ifdef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) &
+        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
+#endif
 #ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-#ifdef _OPENACC
-        CALL finish(routine, 'QUINCY standalone not ported to GPU, yet. Stop.')
-#endif
+
+        IF (model%config%qmodel_id /= QCANOPY) THEN
+          CALL assert_acc_host_only( &
+            & 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model, lacc=i_am_accel_node)
+        ENDIF
+
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+        dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            dsl4jsb_var_ptr(A2L_, CO2_mixing_ratio)(ic, iblk) = dsl4jsb_var_ptr(A2L_, CO2_air_mol)(ic, iblk) * 1000000._wp
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -1086,14 +1099,22 @@ CONTAINS
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
         global_seconds_day = get_secs_of_day(datetime_new)
-        CALL update_local_time_and_daytime_counter( &
-          &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            CALL update_local_time_and_daytime_counter( &
+              &     global_seconds_day, dtime, lon(ic, iblk), swpar_srf_down(ic, iblk), &
+              &     daytime_counter(ic, iblk), local_time_day_seconds(ic, iblk))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
 
         IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
           dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
 
           ! in most years the spin-up will not be accelerated
-          !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO iblk = 1, nblks
             DO ic = 1, nproma
               slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
@@ -1107,7 +1128,8 @@ CONTAINS
             accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
             accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
             accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
-            !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
             DO iblk = 1, nblks
               DO ic = 1, nproma
                 CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
@@ -1150,7 +1172,6 @@ CONTAINS
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
         &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
       ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
@@ -1178,10 +1199,10 @@ CONTAINS
     CALL deallocateDatetime(datetime_old_old)
     CALL deallocateDatetime(datetime_forcing)
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE run_one_timestep
 
-#endif
 #endif
 END MODULE mo_jsbach_model
