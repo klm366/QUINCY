@@ -807,8 +807,18 @@ CONTAINS
         & )
 
       ! PFL TODO
+      ! Let ParFlow do the full runoff/infiltration partitioning (without pond storage)
+      ! Ponds should only exist in JSBACH and not be mixed up with the ParFlow surface water
+      ! water_to_soil = water_to_soil + wtr_pond_inflow - wtr_pond_outflow - wtr_pond_overflow
+      ! -> water_to_parflow = water_to_soil + wtr_pond_net_flux - (pond_melt - pond_freeze + evapo_pond)
+      !
+      ! IF (evapo_pond_in_m > 0._wp ...: add evapo_pond to water_to_soil
+      ! ELSE: add evapo_pond to evapotrans_to_parflow
+      ! -> just add evapo_pond to water_to_parflow
+      ! -> water_to_parflow = water_to_soil + wtr_pond_net_flux - (pond_melt - pond_freeze)
       DO ic=1,nc
-        water_to_parflow(ic) = water_to_soil(ic) / dtime ! m -> m/s
+        water_to_parflow(ic) = water_to_soil(ic) / dtime &
+          & + ( wtr_pond_net_flx(ic) - pond_melt(ic) + pond_freeze(ic) ) / rhoh2o ! m -> m/s, kg m-2 s-1 -> m/s
       END DO
 
       ! Update weq_pond storage
