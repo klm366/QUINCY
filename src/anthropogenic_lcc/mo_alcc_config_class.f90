@@ -44,11 +44,11 @@ MODULE mo_alcc_config_class
 
 CONTAINS
 
-  ! ====================================================================================================== !
+  ! ===================================================================================================== !
   !
   !> Initialize alcc process
   !
-  ! -------------------------------------------------------------------------------------------------------
+  ! ----------------------------------------------------------------------------------------------------- !
   SUBROUTINE Init_alcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -126,6 +126,7 @@ CONTAINS
     config%scheme                                    = scheme
     config%l_daily_alcc                              = l_daily_alcc
     config%nr_of_pfts                                = nr_of_pfts
+  
 
     SELECT CASE (TRIM(config%scheme))
     CASE ('maps')

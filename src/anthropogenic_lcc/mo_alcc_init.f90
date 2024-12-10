@@ -97,7 +97,7 @@ CONTAINS
     REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
 
-    INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
+    INTEGER :: ic, iblk, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
     CHARACTER(len=filename_max) :: filename_land_use_data
@@ -111,6 +111,8 @@ CONTAINS
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
+    iblk    = options%iblk
+    nc      = options%nc
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
@@ -222,14 +224,14 @@ CONTAINS
       !so possibly here the CASE ('transitions') should not be inside the do while loop
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
       WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
+      
 
 
       ! Loop over gridcell in the chunk to read in transition matrix data
-      ic = 1
-      DO ic = ics,ice
+      DO ic = 1,nc   ! ic = ics,ice
         ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
         ! Read and set transition matrix
-        DO idx = 1, 9
+        DO idx = 1, 9 
            ! Calculate the original row (`i`) and column (`j`) positions from the 1D index `idx
            i = (idx - 1) / 3 + 1
            j = MOD(idx - 1, 3) + 1
@@ -268,30 +270,31 @@ CONTAINS
       cf_transition_loss = 0.0
 
       ! ! Calculate transition gain and loss of each PFT in one loop
-      DO idx = 1, npft
-        ! Calculate gain(idx)
-        cf_transition_gain(ic, idx, :) = 0.0
+      DO pft_idx = 1, npft
+        ! Calculate gain(pft_idx)
+        cf_transition_gain(ic, pft_idx, :) = 0.0
         DO j = 1, npft
-           cf_transition_gain(ic, idx, :) = cf_transition_gain(ic, idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + idx), :)
+           cf_transition_gain(ic, pft_idx, :) = cf_transition_gain(ic, pft_idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + pft_idx), :)
         END DO
      
-        ! Calculate loss(idx) within the inner loop
-        cf_transition_loss(ic, idx, :) = 0.0
+        ! Calculate loss(pft_idx) within the inner loop
+        cf_transition_loss(ic, pft_idx, :) = 0.0
         DO j = 1, npft
-           cf_transition_loss(ic, idx, :) = cf_transition_loss(ic, idx, :) + cf_current_year(ic, idx, :)  * cf_transition_pfts(ic, ((idx - 1) * npft + j), :)
+           cf_transition_loss(ic, pft_idx, :) = cf_transition_loss(ic, pft_idx, :) + cf_current_year(ic, pft_idx, :)  * cf_transition_pfts(ic, ((pft_idx - 1) * npft + j), :)
         END DO
       END DO 
     
 
-      ! loop over the v-grid to update gain and loss and cf_current_year
+      ! Loop over the vegetation grid to update the current year's cover fractions
+      ! by subtracting transition losses and adding transition gains for each tile.
       current_tile => tile%Get_first_child_tile()
       i_tile = 0
       
       DO WHILE (ASSOCIATED(current_tile))   
         i_tile = i_tile + 1
    
-        ! Update cf_current_year by subtracting transition losses and adding transition gains
-        cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
+        cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :))
+        !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
      
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
