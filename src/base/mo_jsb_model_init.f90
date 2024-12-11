@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_, DFIRE_
+    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_, DFIRE_, DFIRE_FUEL_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -156,6 +156,7 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
     USE mo_dfire_init,          ONLY: dfire_init
+    USE mo_dfire_fuel_init,     ONLY: dfire_fuel_init
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
@@ -389,6 +390,7 @@ CONTAINS
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+          CALL model%Queue_task(DFIRE_FUEL_, "dfire_fuel")        ! LAND ONLY
           CALL model%Queue_task(DFIRE_, "dfire_spitfire")         ! LAND ONLY
         ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
@@ -562,6 +564,7 @@ CONTAINS
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN 
           IF (tile%Is_process_active(DFIRE_)) THEN
+            CALL dfire_fuel_init(tile)
             CALL dfire_init(tile)
           END IF
         ENDIF
