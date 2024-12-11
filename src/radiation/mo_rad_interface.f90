@@ -1059,7 +1059,7 @@ CONTAINS
     USE mo_rad_process,       ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
-      & Has_minimal_radiation
+      & Has_minimal_radiation, calc_snow_age
 #ifndef __NO_QUINCY__
     USE mo_rad_process,       ONLY: calc_surface_radiation_quincy
     USE mo_rad_parameters,    ONLY: def_alb_vis_soil, def_alb_nir_soil, &
@@ -1124,6 +1124,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  &
       & cos_zenith_angle,      &
       & t_unfilt,              &
+      & snow,                  &
       & alb_vis,               &
       & alb_nir,               &
       & alb_vis_lnd,           &
@@ -1315,6 +1316,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   snow)                  ! in
     SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
@@ -1389,6 +1391,19 @@ CONTAINS
 #endif
     END SELECT
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
+
+      ! Update (non-dimensional) snow age
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        CALL calc_snow_age(          &
+          & options%dtime,           & ! in
+          & temperature_surface(ic), & ! in
+          & snow(ic),                & ! in
+          & fract_snow_soil(ic),     & ! in
+          & snow_age(ic)             & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
