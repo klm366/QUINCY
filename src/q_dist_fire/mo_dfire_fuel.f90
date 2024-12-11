@@ -33,6 +33,24 @@ MODULE mo_dfire_fuel
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
+
+  USE mo_veg_constants,         ONLY: ITREE, IGRASS
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix ! dead fuel indices from sb_pool
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
+                                      t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
+                                      t_sf_fuel_dead_fuel_grass_sap_ix
+
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
+                                      t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &
+                                      t_sf_fuel_live_fuel_sap_wood_ix, t_sf_fuel_live_fuel_heart_wood_ix
+
+  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
+  USE mo_dfire_constants,       ONLY: sf_fuel_classes_nr ! total number of fuel classes
+
+  USE mo_lnd_bgcm_idx,          ONLY: ixC
+  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
+  USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
 
   IMPLICIT NONE
 
@@ -73,10 +91,14 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
-    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
 
+    REAL(wp) :: dead_fuel(options%nc,sf_fuel_dead_fuel_nr,sf_fuel_classes_n) !< (#nc,#dead pools,#fuel classes) [g DM m-2]
+    REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_n) !< (#nc,#live pools,#fuel classes) [g DM m-2]
+
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
@@ -84,7 +106,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
+
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -101,17 +127,51 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)                 ! out
-    !dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)         ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)
     ! ----------------------------------------------------------------------------------------------------- !
-
-    write(*,*) "update_dfire_fuel:: computing fuel..."
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    ! ----------------------------------------------------------------------------------------------------- !
+    WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")"
+    dead_fuel = 0._wp
+    live_fuel = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !< Add something smart here
+    IF (lctlib%growthform == ITREE) THEN
+      dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,:) = sb_pool_mt(ix_woody_litter,ixC,:,1) * sf_slow_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sb_pool_mt(ix_polymeric_litter,ixC,:,1) * sf_slow_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,:) = veg_pool_mt(ix_labile,ixC,:) * sf_fast_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:) = veg_pool_mt(ix_reserve,ixC,:) * sf_fast_fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,:) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_fast_fuel
+    ELSE IF (lctlib%growthform == IGRASS) THEN
+      live_fuel(:,t_sf_fuel_live_fuel_leaf_ix,:) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel
+      live_fuel(:,t_sf_fuel_live_fuel_fruit_ix,:) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel
+      live_fuel(:,t_sf_fuel_live_fuel_labile_ix,:) = veg_pool_mt(ix_labile,ixC,:) * sf_slow_fuel
+      live_fuel(:,t_sf_fuel_live_fuel_reserve_ix,:) = veg_pool_mt(ix_reserve,ixC,:) * sf_slow_fuel
+      live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,:) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_slow_fuel
+      live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix,:) = veg_pool_mt(ix_heart_wood,ixC,:) * sf_slow_fuel
+    ELSE ! something unexpected
+      CALL finish(routine, "Unexpected growth form found")
+    END IF
+
+    dead_fuel_1hr = dead_fuel(:,:,1)
+    dead_fuel_10hr = dead_fuel(:,:,2)
+    dead_fuel_100hr = dead_fuel(:,:,3)
+    dead_fuel_1000hr = dead_fuel(:,:,4)
+
+    live_fuel_1hr = live_fuel(:,:,1)
+    live_fuel_10hr = live_fuel(:,:,2)
+    live_fuel_100hr = live_fuel(:,:,3)
+    live_fuel_1000hr = live_fuel(:,:,4)
 
   END SUBROUTINE update_dfire_fuel
 
