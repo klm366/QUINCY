@@ -65,11 +65,7 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
-!    USE mo_dfire_constants,    ONLY: df_sf_species_nr , df_sf_fc_full_nr, df_sf_fc_fast_nr, &
-!                                      df_sf_elements_nr, &
-!                                      df_sf_vgrid_fuel_class_name, df_sf_vgrid_species_name, &
-!                                      df_sf_vgrid_live_fuel_pools_name, &
-!                                      df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_fuel_moisture_name
+    USE mo_dfire_constants,    ONLY: df_sf_vgrid_dead_fuel_pools_name
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_dfire_fuel_config), INTENT(inout) :: config    !< config type for dfire_fuel
@@ -125,10 +121,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
-!    vgrid_fuel_class  => new_vgrid(df_sf_vgrid_fuel_class_name, zaxis_generic, df_sf_fc_full_nr, &
-!            longname='Fuel classes (1,10,100,1000)', &
-!            & units='hours')
-!    CALL register_vgrid(vgrid_fuel_class)
+    vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, t_sf_fuel_dead_fuel_nr, &
+        longname='Total number of dead fuel pools', &
+        & units='g DM m-2')
+    CALL register_vgrid(vgrid_fuel_class)
   END SUBROUTINE Init_dfire_fuel_config
 
 #endif
