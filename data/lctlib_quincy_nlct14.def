@@ -297,3 +297,10 @@ k_som_fast_init 10.0 8.0 10.0 7.0 5.0 5.7 5.0 7.0 5.0 5.0 7.0 7.0 7.0 7.0
 
 #k_som_slow_init: slow pools SOM init value, empirically calibrated values to equilibrium soil profiles (unitless)
 k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5
+
+#
+# copy/paste from JSBACH (lctlib_nlct21.def) adapted to 14 PFT
+#
+
+#AlbedoLitterVIS: Albedo of litter in the visible range                     
+AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0
