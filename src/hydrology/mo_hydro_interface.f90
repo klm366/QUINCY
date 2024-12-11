@@ -1189,6 +1189,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1345,10 +1346,11 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! Compute volumetric soil moisture (liquid + ice) in m3/m3 (= m/m) water equivalent
+    ! Note that the soil ice content needs to be converted to water equivalent first.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
       DO ic = 1, nc
-        vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)) / soil_w%dz(is)
+        vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * (rhoi / rhoh2o)) / soil_w%dz(is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
