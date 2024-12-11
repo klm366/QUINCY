@@ -36,7 +36,7 @@ MODULE mo_dfire_fuel_memory_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_dfire_memory, max_no_of_vars
+  PUBLIC :: t_dfire_fuel_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 10
 
@@ -60,7 +60,7 @@ CONTAINS
   !>
   !> initialize memory (variables) for the process: dist_fire
   !>
-  SUBROUTINE Init_dfire_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_dfire_fuel_memory(mem, prefix, suffix, lct_ids, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -68,7 +68,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
 
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_dfire_memory), INTENT(inout), TARGET  :: mem           !> dfire memory
+    CLASS(t_dfire_fuel_memory), INTENT(inout), TARGET  :: mem           !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
@@ -96,7 +96,7 @@ CONTAINS
     !        & lrestart = .TRUE., &
     !        & initval_r = 0.0_wp)
 
-  END SUBROUTINE Init_dfire_memory
+  END SUBROUTINE Init_dfire_fuel_memory
 
 #endif
 END MODULE mo_dfire_fuel_memory_class

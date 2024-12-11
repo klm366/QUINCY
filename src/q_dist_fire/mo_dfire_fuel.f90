@@ -53,14 +53,14 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_math_constants,      ONLY: one_day
 
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_memory(DFIRE_FUEL)
+    dsl4jsb_Use_memory(DFIRE_FUEL_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -86,8 +86,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(DFIRE_FUEL_)
-    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
@@ -107,7 +105,7 @@ CONTAINS
     !dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
-    write(*,*) "update_spitfire:: computing fuel..."
+    write(*,*) "update_dfire_fuel:: computing fuel..."
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science

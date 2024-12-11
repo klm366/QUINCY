@@ -33,10 +33,10 @@ MODULE mo_dfire_fuel_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, DFIRE_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process, DFIRE_FUEL_
   USE mo_dfire_fuel,                  ONLY: update_dfire_fuel
 
-  dsl4jsb_Use_memory(DFIRE_)
+  dsl4jsb_Use_memory(DFIRE_FUEL_)
 
   IMPLICIT NONE
   PRIVATE
@@ -119,7 +119,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -130,7 +130,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_memory(DFIRE_FUEL_)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go aggregate
@@ -175,7 +175,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_dist_fire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. options%iblk == 1) &
             & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -200,11 +200,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_dist_fire'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_dist_fire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -215,10 +215,10 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_memory(DFIRE_FUEL_)
 
     ! DFIRE_ 2D
-!    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_qc_mavg                    , weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, precip_qc_mavg                    , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
-    dsl4jsb_Use_config(DFIRE_FUEL_)
+    !dsl4jsb_Use_config(DFIRE_FUEL_)
     dsl4jsb_Use_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -62,7 +62,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_fuel_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(DFIRE_FUEL_)
+    !dsl4jsb_Def_config(DFIRE_FUEL_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
 !    dsl4jsb_Real2D_onChunk      :: nesterov_index
@@ -74,7 +74,7 @@ CONTAINS
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(DFIRE_FUEL_)
+    !dsl4jsb_Get_config(DFIRE_FUEL_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
 !    dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
