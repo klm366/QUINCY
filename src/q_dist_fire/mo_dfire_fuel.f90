@@ -47,6 +47,7 @@ MODULE mo_dfire_fuel
 
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
   USE mo_dfire_constants,       ONLY: sf_fuel_classes_nr ! total number of fuel classes
+  USE mo_dfire_constants,       ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
@@ -92,8 +93,10 @@ CONTAINS
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
-    REAL(wp) :: dead_fuel(options%nc,sf_fuel_dead_fuel_nr,sf_fuel_classes_n) !< (#nc,#dead pools,#fuel classes) [g DM m-2]
-    REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_n) !< (#nc,#live pools,#fuel classes) [g DM m-2]
+    INTEGER                               :: ifc
+
+    REAL(wp) :: dead_fuel(options%nc,sf_fuel_dead_fuel_nr,sf_fuel_classes_nr) !< (#nc,#dead pools,#fuel classes) [g DM m-2]
+    REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_nr) !< (#nc,#live pools,#fuel classes) [g DM m-2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -122,6 +125,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
@@ -145,20 +149,24 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     IF (lctlib%growthform == ITREE) THEN
-      dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,:) = sb_pool_mt(ix_woody_litter,ixC,:,1) * sf_slow_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sb_pool_mt(ix_polymeric_litter,ixC,:,1) * sf_slow_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,:) = veg_pool_mt(ix_labile,ixC,:) * sf_fast_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:) = veg_pool_mt(ix_reserve,ixC,:) * sf_fast_fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,:) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_fast_fuel
+      DO ifc = 1, sf_fuel_classes_nr
+        dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,ifc) = sb_pool_mt(ix_woody_litter,ixC,:,1) * sf_slow_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,ifc) = sb_pool_mt(ix_polymeric_litter,ixC,:,1) * sf_fast_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,ifc) = veg_pool_mt(ix_labile,ixC,:) * sf_fast_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifc) = veg_pool_mt(ix_reserve,ixC,:) * sf_fast_fuel(ifc)
+        dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_fast_fuel(ifc)
+      ENDDO
     ELSE IF (lctlib%growthform == IGRASS) THEN
-      live_fuel(:,t_sf_fuel_live_fuel_leaf_ix,:) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel
-      live_fuel(:,t_sf_fuel_live_fuel_fruit_ix,:) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel
-      live_fuel(:,t_sf_fuel_live_fuel_labile_ix,:) = veg_pool_mt(ix_labile,ixC,:) * sf_slow_fuel
-      live_fuel(:,t_sf_fuel_live_fuel_reserve_ix,:) = veg_pool_mt(ix_reserve,ixC,:) * sf_slow_fuel
-      live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,:) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_slow_fuel
-      live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix,:) = veg_pool_mt(ix_heart_wood,ixC,:) * sf_slow_fuel
+      DO ifc = 1, sf_fuel_classes_nr
+        live_fuel(:,t_sf_fuel_live_fuel_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
+        live_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
+        live_fuel(:,t_sf_fuel_live_fuel_labile_ix,ifc) = veg_pool_mt(ix_labile,ixC,:) * sf_slow_fuel(ifc)
+        live_fuel(:,t_sf_fuel_live_fuel_reserve_ix,ifc) = veg_pool_mt(ix_reserve,ixC,:) * sf_slow_fuel(ifc)
+        live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_slow_fuel(ifc)
+        live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix,ifc) = veg_pool_mt(ix_heart_wood,ixC,:) * sf_slow_fuel(ifc)
+      END DO
     ELSE ! something unexpected
       CALL finish(routine, "Unexpected growth form found")
     END IF
@@ -168,10 +176,10 @@ CONTAINS
     dead_fuel_100hr = dead_fuel(:,:,3)
     dead_fuel_1000hr = dead_fuel(:,:,4)
 
-    live_fuel_1hr = live_fuel(:,:,1)
-    live_fuel_10hr = live_fuel(:,:,2)
-    live_fuel_100hr = live_fuel(:,:,3)
-    live_fuel_1000hr = live_fuel(:,:,4)
+    !live_fuel_1hr = live_fuel(:,:,1)
+    !live_fuel_10hr = live_fuel(:,:,2)
+    !live_fuel_100hr = live_fuel(:,:,3)
+    !live_fuel_1000hr = live_fuel(:,:,4)
 
   END SUBROUTINE update_dfire_fuel
 
