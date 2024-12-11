@@ -65,10 +65,10 @@ CONTAINS
     !dsl4jsb_Def_config(DFIRE_FUEL_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_1hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_10hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_100hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_1000hr
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -80,10 +80,10 @@ CONTAINS
     !dsl4jsb_Get_config(DFIRE_FUEL_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, dead_fuel_1hr)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, dead_fuel_10hr)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, dead_fuel_100hr)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, dead_fuel_1000hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_10hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_100hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1000hr)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr = 0._wp

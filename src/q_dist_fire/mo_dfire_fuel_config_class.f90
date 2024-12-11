@@ -66,6 +66,8 @@ CONTAINS
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
     USE mo_dfire_constants,    ONLY: df_sf_vgrid_dead_fuel_pools_name
+    USE mo_dfire_constants,    ONLY: sf_fuel_dead_fuel_nr
+
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_dfire_fuel_config), INTENT(inout) :: config    !< config type for dfire_fuel
@@ -75,6 +77,8 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ic_filename, &
                                      bc_filename
     LOGICAL                       :: flag_dfire_fuel            !< on/off disturbance fire process [boolean]
+
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_fuel_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -121,10 +125,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
-    vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, t_sf_fuel_dead_fuel_nr, &
+    vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, sf_fuel_dead_fuel_nr, &
         longname='Total number of dead fuel pools', &
         & units='g DM m-2')
-    CALL register_vgrid(vgrid_fuel_class)
+    CALL register_vgrid(vgrid_dead_fuel_pools)
   END SUBROUTINE Init_dfire_fuel_config
 
 #endif

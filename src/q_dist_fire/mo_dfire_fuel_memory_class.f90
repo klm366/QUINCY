@@ -33,7 +33,7 @@ MODULE mo_dfire_fuel_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name
+  USE mo_dfire_constants,        ONLY: df_sf_vgrid_dead_fuel_pools_name
 
   IMPLICIT NONE
 
@@ -83,6 +83,9 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                    !> Vertical grid
 
     INTEGER                    :: table
+
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_fuel_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
