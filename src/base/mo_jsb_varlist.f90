@@ -14,7 +14,7 @@
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp, dp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
@@ -100,7 +100,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
@@ -110,7 +110,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: n_groups
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     ! groups to which this variable belongs to

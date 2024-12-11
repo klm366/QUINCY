@@ -28,9 +28,9 @@ MODULE mo_q_atmland_interface
   !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes A2L_, Q_RAD_, SPQ_, VEG_
+  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, VEG_
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(Q_RAD_)
+  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(VEG_)
 
@@ -736,7 +736,7 @@ CONTAINS
       & albedo_lwtr(:), &
       & albedo_lice(:)
 
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
 
@@ -812,7 +812,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     ! use_tmx =  model%config%use_tmx
 
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
 
@@ -883,10 +883,10 @@ CONTAINS
     rough_h_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0h)
     rough_m_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0m)
     !q_snocpymlt_ptr    => dsl4jsb_var2D_onChunk(SPQ_, ) ! just set to zero, no variable available
-    alb_vis_dir_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_vis)
-    alb_nir_dir_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_nir)
-    alb_vis_dif_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_vis)
-    alb_nir_dif_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_nir)
+    alb_vis_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_vis)
+    alb_nir_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
+    alb_vis_dif_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_vis)
+    alb_nir_dif_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
     ! the JSBACH interface uses the CO2_flux here (different unit and different sign)
     net_biosphere_production_ptr => dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production)
 
