@@ -116,6 +116,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER         :: model
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -129,6 +130,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
 
