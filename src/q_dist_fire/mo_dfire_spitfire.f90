@@ -153,6 +153,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl     ! soil water field capacity [m]
 
     ! DFIRE_FUEL_ 3D
+    ! Note: t_air_max/t_air_min belongs to the previous days due to implementation constraints
+    dsl4jsb_Real2D_onChunk                :: t_air_min         ! Min temperature of the day (previous day) [k]
+    dsl4jsb_Real2D_onChunk                :: t_air_max         ! Max temperature of the day (previous day) [k]
+
+    ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr     ! [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr    ! 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr   ! 
@@ -173,15 +178,15 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
-    !dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SPQ_)
-    !dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)                 ! out
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)             ! in
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)     ! in
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)              ! in [k]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)              ! in
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)    ! in
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)   ! in
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)  ! in
@@ -226,7 +231,7 @@ CONTAINS
                                                             dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
-
+    WRITE(*,*) "(spitfire) t_air_min, t_air_max = ", t_air_min, t_air_max
   END SUBROUTINE update_dfire_spitfire
 
 
