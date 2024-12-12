@@ -136,6 +136,17 @@ CONTAINS
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! DFIRE_FUEL_ 3D
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_10hr             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_100hr            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1000hr           , weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1hr              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_10hr             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_100hr            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1000hr           , weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
 
@@ -217,9 +228,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
 
-    ! DFIRE_ 2D
-!    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, precip_qc_mavg                    , weighted_by_fract)
-
+    
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_time_average_dist_fire_fuel
