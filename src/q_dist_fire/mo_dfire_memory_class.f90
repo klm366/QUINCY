@@ -46,8 +46,10 @@ MODULE mo_dfire_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_memory
     !TYPE(t_jsb_var_real3d)               :: fuel_moisture                  !< moisture in fuel [0 to 1]
-
     !TYPE(t_jsb_var_real2d)               :: nesterov_index                 !< cumulative function of tmax and tdew [C2]
+
+    TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
+    TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
@@ -67,10 +69,6 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
-!    USE mo_dfire_constants,   ONLY: df_sf_vgrid_fuel_class_name, &
-!                                      df_sf_vgrid_species_name, &
-!                                      df_sf_vgrid_live_fuel_pools_name, &
-!                                      df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_fuel_moisture_name
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_dfire_memory), INTENT(inout), TARGET  :: mem           !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
@@ -81,11 +79,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                            !> Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                    !> Vertical grid
-!    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_class                 !> Vertical grid
-!    TYPE(t_jsb_vgrid), POINTER :: vgrid_species
-!    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture
-!    TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools
-!    TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -93,21 +86,27 @@ CONTAINS
     table         =  tables(1)
     hgrid         => Get_grid(model%grid_id)
     vgrid_surface         => Get_vgrid('surface')
-    !vgrid_fuel_class      => Get_vgrid(df_sf_vgrid_fuel_class_name)
-    !vgrid_species         => Get_vgrid(df_sf_vgrid_species_name)
-    !vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
-    !vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
-    !vgrid_fuel_moisture   => Get_vgrid(df_sf_vgrid_fuel_moisture_name)
     ! ----------------------------------------------------------------------------------------------------- !
-    !CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
-    !        & hgrid, vgrid_surface, &
-    !        & t_cf('nesterov_index', 'Celsius^2', 'Cumulative function of daily tmax and tdew '), &
-    !        & t_grib1(table, 255, grib_bits), &
-    !        & t_grib2(255, 255, 255, grib_bits), &
-    !        & prefix, suffix, &
-    !        & loutput = .TRUE., &
-    !        & lrestart = .TRUE., &
-    !        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('t_air_max', mem%t_air_max, &
+        & hgrid, vgrid_surface, &
+        & t_cf('t_air_max', 'K', 'Max temperature of the previous day (daytime_counter)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('t_air_min', mem%t_air_min, &
+        & hgrid, vgrid_surface, &
+        & t_cf('t_air_min', 'K', 'Min temperature of the previous day (daytime_counter)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
   END SUBROUTINE Init_dfire_memory
 
