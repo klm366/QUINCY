@@ -1081,6 +1081,7 @@ CONTAINS
     INTEGER                         :: iblk, ic, is
     INTEGER                         :: ics, ice, nc
     LOGICAL, ALLOCATABLE            :: l_day(:)
+    REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
     REAL(wp), ALLOCATABLE           :: aboveground_litter(:)     !< use for jsbach & quincy, as helper variable
     REAL(wp), ALLOCATABLE           :: belowground_carbon(:)     !< use for jsbach & quincy, as helper variable
@@ -1186,6 +1187,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1396,7 +1398,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         CALL calc_snow_age(          &
-          & options%dtime,           & ! in
+          & dtime,                   & ! in
           & temperature_surface(ic), & ! in
           & snow(ic),                & ! in
           & fract_snow_soil(ic),     & ! in
