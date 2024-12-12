@@ -69,6 +69,11 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_fuel_10hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_100hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1000hr
+
+    dsl4jsb_Real3D_onDomain      :: live_fuel_1hr
+    dsl4jsb_Real3D_onDomain      :: live_fuel_10hr
+    dsl4jsb_Real3D_onDomain      :: live_fuel_100hr
+    dsl4jsb_Real3D_onDomain      :: live_fuel_1000hr
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -84,6 +89,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_10hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_100hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1000hr)
+
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_10hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_100hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1000hr)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr = 0._wp
@@ -91,6 +101,10 @@ CONTAINS
     dead_fuel_100hr = 0._wp
     dead_fuel_1000hr = 0._wp
 
+    live_fuel_1hr = 0._wp
+    live_fuel_10hr = 0._wp
+    live_fuel_100hr = 0._wp
+    live_fuel_1000hr = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif

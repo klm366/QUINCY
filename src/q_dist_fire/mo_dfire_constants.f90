@@ -43,6 +43,7 @@ MODULE mo_dfire_constants
   INTEGER, PARAMETeR :: df_sf_sl_indices(df_sf_sl_dims_nr) = [1,2]!< Select soil moisture layer to use
 
   CHARACTER(*), PARAMETER :: df_sf_vgrid_dead_fuel_pools_name="vg_dd_fl_pls" ! vgrid_dead_fuel_pools
+  CHARACTER(*), PARAMETER :: df_sf_vgrid_live_fuel_pools_name="vg_lv_fl_pls" ! vgrid_live_fuel_pools
 
   INTEGER, PARAMETER :: sf_fuel_dead_fuel_nr = 7  !< (sb_pool) woody/leaf, (veg_pool grass) sap wood/labile/reserve/fruit/polymeric
   ENUM, BIND(C)
