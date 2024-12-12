@@ -114,6 +114,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr
     dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr
+
+    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr
+    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr
+    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -135,6 +140,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr)         ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr)
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr)
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -171,15 +181,15 @@ CONTAINS
       CALL finish(routine, "Unexpected growth form found")
     END IF
 
-    dead_fuel_1hr = dead_fuel(:,:,1)
+    dead_fuel_1hr = dead_fuel(:,:,1) !< 1 = 1hr fuel class index
     dead_fuel_10hr = dead_fuel(:,:,2)
     dead_fuel_100hr = dead_fuel(:,:,3)
     dead_fuel_1000hr = dead_fuel(:,:,4)
 
-    !live_fuel_1hr = live_fuel(:,:,1)
-    !live_fuel_10hr = live_fuel(:,:,2)
-    !live_fuel_100hr = live_fuel(:,:,3)
-    !live_fuel_1000hr = live_fuel(:,:,4)
+    live_fuel_1hr = live_fuel(:,:,1)
+    live_fuel_10hr = live_fuel(:,:,2)
+    live_fuel_100hr = live_fuel(:,:,3)
+    live_fuel_1000hr = live_fuel(:,:,4)
 
   END SUBROUTINE update_dfire_fuel
 
