@@ -434,9 +434,11 @@ CONTAINS
     apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl, 1.e-10_wp))
 
   END SUBROUTINE calc_par
-  !
-  !--------------------------------------------------------------------------------------------------------------------------------
-  !
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Compute non-dimensional snow age
+  !!
 #ifndef _OPENACC
   ELEMENTAL PURE &
 #endif
@@ -452,7 +454,6 @@ CONTAINS
 
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
-    ! Arguments
     REAL(wp), INTENT(in)    :: dtime,               & !< model time step [s]
       &                        temperature_surface, & !< surface temperature [K]
       &                        snow,                & !< snowfall [kg m-2 s-1]
@@ -460,11 +461,12 @@ CONTAINS
 
     REAL(wp), INTENT(inout) :: snow_age               !< non-dimensional age of snow
 
-    ! Local variables
-    REAL(wp)                :: hlp1
+    REAL(wp)                :: hlp1                   !< temporary variable
 
     ! ---------------------------
-    ! Go
+    ! Update snow age where ever there is snow on the ground
+    ! Snow age increases with time and temperatures closer to the melting point
+    ! It decreases with new snowfall or resets to zero in case all snow is melted
 
     IF (fract_snow_soil > EPSILON(1.0_wp)) THEN
       hlp1     = MIN(1._wp, EXP(5000._wp * ((1._wp / tmelt) - (1._wp / temperature_surface))))
@@ -476,7 +478,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_snow_age
-  !
+
   !--------------------------------------------------------------------------------------------------------------------------------
   !
 #ifndef _OPENACC
