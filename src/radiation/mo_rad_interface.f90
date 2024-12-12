@@ -1860,6 +1860,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                 weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
       ! RAD_ 3D
       dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl,     weighted_by_fract)
@@ -1887,6 +1888,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
       IF (.NOT. tile%is_vegetation) THEN
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
