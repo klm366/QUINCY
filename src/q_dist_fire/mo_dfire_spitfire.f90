@@ -98,7 +98,6 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
@@ -120,7 +119,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc, ic
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
@@ -170,9 +168,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
