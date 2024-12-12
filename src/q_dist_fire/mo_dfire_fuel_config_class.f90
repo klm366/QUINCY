@@ -67,7 +67,7 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: register_vgrid
     USE mo_dfire_constants,    ONLY: df_sf_vgrid_dead_fuel_pools_name
     USE mo_dfire_constants,    ONLY: df_sf_vgrid_live_fuel_pools_name
-    USE mo_dfire_constants,    ONLY: sf_fuel_dead_fuel_nr
+    USE mo_dfire_constants,    ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
 
 
     ! ----------------------------------------------------------------------------------------------------- !
