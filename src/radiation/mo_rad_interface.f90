@@ -1888,7 +1888,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,            weighted_by_fract)
       IF (.NOT. tile%is_vegetation) THEN
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
