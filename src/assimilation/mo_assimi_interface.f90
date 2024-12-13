@@ -26,7 +26,7 @@ MODULE mo_assimi_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, get_previous_year_length
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
@@ -928,6 +928,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice !, nc
+    REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
     REAL(wp)                   :: dtime
     LOGICAL                    :: lstart, init_running_means, init_npp, new_year
 
@@ -940,7 +941,6 @@ CONTAINS
     ! Declare pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: seconds_year
     dsl4jsb_Real2D_onChunk :: NPP_sum_year
     dsl4jsb_Real2D_onChunk :: NPP_mean_5year
     dsl4jsb_Real2D_onChunk :: land_cover_class
@@ -974,7 +974,6 @@ CONTAINS
     ! Get process variables
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)         ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   seconds_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_sum_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_mean_5year)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   land_cover_class)        ! out
@@ -988,6 +987,7 @@ CONTAINS
     ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
+    seconds_year = get_previous_year_length(options%current_datetime)
 
     init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
     init_NPP = .TRUE.
@@ -1046,7 +1046,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, seconds_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_sum_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_mean_5year,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, land_cover_class,         weighted_by_fract)
