@@ -16,7 +16,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_disturb_memory_class
+MODULE mo_hlcc_memory_class
     #ifndef __NO_JSBACH__
     
       USE mo_kind, ONLY: wp
@@ -31,33 +31,34 @@ MODULE mo_disturb_memory_class
       IMPLICIT NONE
       PRIVATE
     
-      PUBLIC :: t_harvest_memory, max_no_of_vars
+      PUBLIC :: t_hlcc_memory, max_no_of_vars
     
       INTEGER, PARAMETER :: max_no_of_vars = 5 ! MR-TODO : significance?
     
       !> Type definition for memory
-      TYPE, EXTENDS(t_jsb_memory) :: t_harvest_memory
+      TYPE, EXTENDS(t_jsb_memory) :: t_hlcc_memory
     
-      TYPE(t_jsb_var_real2d) ::   &
-        harvested_fract,              ! harvested fraction of tile
+      TYPE(t_jsb_var_real2d) ::  &
+        harvested_fract,         &              ! harvested fraction of tile
+        cconservation_harvest                   ! MR: I think this is just for checking for the conservation (used in connection w CALL check_carbon_conservation...) 
     
       CONTAINS
-        PROCEDURE :: Init => Init_harvest_memory
-      END TYPE t_harvest_memory
+        PROCEDURE :: Init => Init_hlcc_memory
+      END TYPE t_hlcc_memory
     
     
-      CHARACTER(len=*), PARAMETER :: modname = 'mo_harvest_memory_class'
+      CHARACTER(len=*), PARAMETER :: modname = 'mo_hlcc_memory_class'
     
     CONTAINS
     
-      SUBROUTINE Init_harvest_memory(mem, prefix, suffix, lct_ids, model_id)
+      SUBROUTINE Init_hlcc_memory(mem, prefix, suffix, lct_ids, model_id)
     
         USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
         USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
         USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
         USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     
-        CLASS(t_harvest_memory), INTENT(inout), TARGET :: mem
+        CLASS(t_hlcc_memory), INTENT(inout), TARGET :: mem
         CHARACTER(len=*),    INTENT(in)    :: prefix
         CHARACTER(len=*),    INTENT(in)    :: suffix
         INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -68,7 +69,7 @@ MODULE mo_disturb_memory_class
         TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
         INTEGER :: table
     
-        CHARACTER(len=*), PARAMETER :: routine = modname//':Init_harvest_memory'
+        CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hlcc_memory'
     
         IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
         IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
@@ -97,7 +98,7 @@ MODULE mo_disturb_memory_class
             & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
         END IF
     
-      END SUBROUTINE Init_harvest_memory
+      END SUBROUTINE Init_hlcc_memory
     
     #endif
-    END MODULE mo_harvest_memory_class
+    END MODULE mo_hlcc_memory_class

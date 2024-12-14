@@ -103,9 +103,9 @@ MODULE mo_hlcc_interface
       !> Task "hlcc" shifts harvested area (from youngest AC or "from tile back to the same tile") and cares for quantities conserved upon hlcc
       !
       SUBROUTINE update_hlcc(tile, options)
-        USE mo_hlcc_process,       ONLY: harvested_fract_jsbach
+        !USE mo_hlcc_process,       ONLY: harvested_fract_jsbach !MR-TODO: not used (delete)
         !USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract ! MR-TODO : not repeated here in flcc either, since already done
-        USE mo_jsb_time,           ONLY: is_newday
+        USE mo_jsb_time,           ONLY: is_newday, is_newyear
         USE mo_jsb_lcc_class,      ONLY: min_daily_cf_change, t_jsb_lcc_proc, &
           &                              transfer_from_active_to_passive_var_onChunk, copy_from_active_to_passive_var_onChunk
         USE mo_jsb_lcc,            ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
@@ -149,11 +149,11 @@ MODULE mo_hlcc_interface
              dsl4jsb_Def_config(CARBON_)
 
              
-             dsl4jsb_Real2D_onChunk :: dtime !MR-TODO : same name as internal variable? problem?
-             dsl4jsb_Real2D_onChunk :: current_datetime
+            ! dsl4jsb_Real2D_onChunk :: dtime !MR-TODO : same name as internal variable? problem?
+            ! dsl4jsb_Real2D_onChunk :: current_datetime !MR-TODO: delete these
              dsl4jsb_Real2D_onChunk :: harvested_fract
 
-             dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm !MR-TODO : carbon process?
+             dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm !MR-TODO : declaring carbon process variables (REAL(wp), POINTER, DIMENSION(:) :: ) Needed cos technically everything still burned
              dsl4jsb_Real2D_onChunk :: cflux_dist_green_2_soil
              dsl4jsb_Real2D_onChunk :: cflux_dist_woods_2_soil
 
@@ -181,7 +181,7 @@ MODULE mo_hlcc_interface
         IF (.NOT. tile%Is_process_calculated(HLCC_)) RETURN
     
         ! If not newday, do nothing
-        IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
+        IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN !MR-TODO: what's the point of this, vs. the later check again for the actual process? OR what's the point for the latter, if already returns here...
     
         IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
@@ -206,8 +206,8 @@ MODULE mo_hlcc_interface
 
         ! Get process variables - MR-TODO : not sure if these are correct (Get?). Also same variables as elsewhere
 
-        dsl4jsb_Get_var2D_onChunk(HLCC_,   dtime)         ! in
-        dsl4jsb_Get_var2D_onChunk(HLCC_,   current_datetime)    ! in
+        !dsl4jsb_Get_var2D_onChunk(HLCC_,   dtime)         ! in !MR-TODO: just things being called from memory (is same as dtime => hlcc__mem%dtime%ptr(ics:ice,iblk)), but these two not in memory: DELETE!
+        !dsl4jsb_Get_var2D_onChunk(HLCC_,   current_datetime)    ! in
 
         dsl4jsb_Get_var2D_onChunk(HLCC_,   harvested_fract)             ! out
 
@@ -215,7 +215,7 @@ MODULE mo_hlcc_interface
         dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
         dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
 
-        IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day - MR-TODO: but there is already a check fot this earlier??
+        IF (is_newday(options%current_datetime, dtime)) THEN ! only once per day (check) - MR-TODO: but there is already a check fot this earlier??
           harvested_fract(:) = 0._wp
           IF (dsl4jsb_Lctlib_param(dynamic_PFT)) THEN ! MR-TODO: what's this
     
@@ -223,13 +223,16 @@ MODULE mo_hlcc_interface
             ! Calculate harvested area. ("Dummy harvesting")
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! MR-TODO: Woody Type only, harvested should otherwise be 0 (defined earlier)
 
-    
-              CALL harvested_fract_jsbach(                            &
-                & options%dtime,                                      & ! in
-                & options%current_datetime,                           & ! in
-                & harvested_fract(:)                                  & ! inout
-                & )
+             ! MR-TODO: delete this old process module based version
+             ! CALL harvested_fract_jsbach(                            &
+             !   & options%dtime,                                      & ! in
+             !   & options%current_datetime,                           & ! in
+             !   & harvested_fract(:)                                  & ! inout
+             !   & )
 
+              IF(is_newyear(options%current_datetime,dtime)) THEN !MR-TODO: clean up and combine with other ifs
+                harvested_fract = 0.2
+              END IF
 
             ENDIF
 
