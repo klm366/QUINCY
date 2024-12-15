@@ -111,11 +111,7 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
     ! ---------------------------
