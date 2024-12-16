@@ -209,7 +209,8 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    write(*,*) "dfire_util.f90:: calculate_daily_weather..."
+    write(*,*) "dfire_util.f90:: calculate_daily_weather..., t_air_min(1), t_air_max =", &
+            t_air_min(1), t_air_max(1)
 
     !> 1.0 init
     !!
@@ -279,6 +280,7 @@ CONTAINS
         CALL finish("calc_daily_weather", "t_air_min cant be higher than t_air_max")
       ENDIF
     ENDIF
+    write(*,*) "dfire_util.f90:: (end) calculate_daily_weather, t_air_min(1), t_air_max(1) =", t_air_min(1), t_air_max(1)
 
     !> 3.0 update cos_zenith_angle of previous time steps
     !!
