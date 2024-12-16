@@ -93,6 +93,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_dfire_spitfire(model_id))
+    CALL this%Register_task(tsk_time_average_dist_fire(model_id))
   END SUBROUTINE Register_dfire_tasks
 
   ! ======================================================================================================= !
