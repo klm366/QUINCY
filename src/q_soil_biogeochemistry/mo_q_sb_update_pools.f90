@@ -642,9 +642,7 @@ CONTAINS
 
     !> 4.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-    f_myc_sl(:,:)          = root_fraction_sl(:,:)
-
-    f_myc_sl(:,:)          = root_fraction_sl(:,:)
+    f_myc_sl(:,:) = root_fraction_sl(:,:)
 
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
