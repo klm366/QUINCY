@@ -41,7 +41,7 @@ MODULE mo_dfire_fuel_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_dfire_fuel_tasks
-  PUBLIC :: update_time_average_dist_fire_fuel, update_dfire_fuel
+  PUBLIC :: update_dfire_fuel
 
 
   ! ======================================================================================================= !
@@ -62,24 +62,6 @@ MODULE mo_dfire_fuel_interface
     PROCEDURE Create_task_dfire_fuel         !< Constructor function for task
   END INTERFACE tsk_dfire_fuel
 
-  ! ======================================================================================================= !
-  !>
-  !> Constructor interface: time_average_dfire task
-  !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_dist_fire_fuel
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_time_average_dist_fire_fuel    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_dist_fire_fuel !< Aggregates computed task variables
-  END TYPE tsk_time_average_dist_fire_fuel
-
-  ! ======================================================================================================= !
-  !>
-  !> Constructor interface: update_time__average_dfire task
-  !>
-  INTERFACE tsk_time_average_dist_fire_fuel
-    PROCEDURE Create_task_update_time_average_dist_fire_fuel         !< Constructor function for task
-  END INTERFACE tsk_time_average_dist_fire_fuel
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_fuel_interface'
 
 CONTAINS
@@ -93,7 +75,6 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_dfire_fuel(model_id))
-    CALL this%Register_task(tsk_time_average_dist_fire_fuel(model_id))
   END SUBROUTINE Register_dfire_fuel_tasks
 
   ! ======================================================================================================= !
@@ -153,88 +134,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
 
-
-  ! ======================================================================================================= !
-  !>
-  !> calculate time moving averages and daytime averages for DFIRE_
-  !>
-  FUNCTION Create_task_update_time_average_dist_fire_fuel(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_time_average_dist_fire_fuel::return_ptr)
-    CALL return_ptr%Construct(name='tavrg_dist_fire_fuel', process_id=DFIRE_FUEL_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_update_time_average_dist_fire_fuel
-
-
-  ! ======================================================================================================= !
-  !>
-  !> calculate time moving averages and daytime averages for DFIRE_
-  !>
-  SUBROUTINE update_time_average_dist_fire_fuel(tile, options)
-
-    USE mo_jsb_control,         ONLY: debug_on
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_dfire_util,          ONLY: calculate_time_average_dist_fire,  &
-                                      calculate_daily_weather, &
-                                      calculate_pure_moving_averages
-
-    dsl4jsb_Use_processes DFIRE_FUEL_
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_dist_fire_fuel'
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
-    IF (debug_on() .AND. options%iblk == 1) &
-            & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL calculate_time_average_dist_fire(tile, options)
-    CALL calculate_daily_weather(tile, options)
-    CALL calculate_pure_moving_averages(tile, options)
-
-    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_time_average_dist_fire_fuel
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Implementation of "aggregate": time_average_dfire task
-  !>
-  SUBROUTINE aggregate_time_average_dist_fire_fuel(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(DFIRE_FUEL_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_dist_fire_fuel'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(DFIRE_FUEL_)
-
-    
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_time_average_dist_fire_fuel
 
 #endif
 END MODULE mo_dfire_fuel_interface
