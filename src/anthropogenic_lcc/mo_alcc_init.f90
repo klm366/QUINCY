@@ -235,6 +235,7 @@ CONTAINS
            ! Calculate the original row (`i`) and column (`j`) positions from the 1D index `idx
            i = (idx - 1) / 3 + 1
            j = MOD(idx - 1, 3) + 1
+
      
            ! Set diagonal elements to 0.0; otherwise, read from input
            IF (i .EQ. j) THEN
