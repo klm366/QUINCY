@@ -50,7 +50,7 @@ CONTAINS
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -65,7 +65,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    !TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
@@ -90,11 +90,11 @@ CONTAINS
     write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire, maybe?"
 
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    !IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy  => Get_vgrid('q_canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
@@ -132,7 +132,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
 
     ! Use of process memories
     dsl4jsb_Use_processes A2L_, DFIRE_
@@ -147,7 +147,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
+    !TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
     INTEGER                                 :: iblk, ics, ice, nc
     REAL(wp)                                :: dtime              !< timestep
     LOGICAL, ALLOCATABLE                    :: is_midnight(:)     !< is peak of the day
@@ -188,7 +188,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     !..
     ! Get process memories
@@ -302,7 +302,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_quincy_mavg_class,       ONLY: t_mavg
 
     ! Use of process memories
@@ -318,7 +318,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    !TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     INTEGER                                 :: iblk, ics, ice, nc
     REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
@@ -348,7 +348,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     !..
     ! Get process memories
