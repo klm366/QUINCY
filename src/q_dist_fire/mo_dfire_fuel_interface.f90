@@ -178,9 +178,9 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-!    USE mo_dfire_util,          ONLY: calculate_time_average_dist_fire,  &
-!                                      calculate_daily_weather, &
-!                                      calculate_pure_moving_averages
+    USE mo_dfire_util,          ONLY: calculate_time_average_dist_fire,  &
+                                      calculate_daily_weather, &
+                                      calculate_pure_moving_averages
 
     dsl4jsb_Use_processes DFIRE_FUEL_
     ! ----------------------------------------------------------------------------------------------------- !
@@ -194,9 +194,9 @@ CONTAINS
     IF (debug_on() .AND. options%iblk == 1) &
             & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-!    CALL calculate_time_average_dist_fire(tile, options)
-!    CALL calculate_daily_weather(tile, options)
-!    CALL calculate_pure_moving_averages(tile, options)
+    CALL calculate_time_average_dist_fire(tile, options)
+    CALL calculate_daily_weather(tile, options)
+    CALL calculate_pure_moving_averages(tile, options)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
