@@ -176,7 +176,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_dist_fire'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    !IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. options%iblk == 1) &
             & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

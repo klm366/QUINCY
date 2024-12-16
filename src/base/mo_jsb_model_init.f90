@@ -419,6 +419,13 @@ CONTAINS
       ENDIF
 
       !-- averaging variables in time
+!      write(*,*) "jsbach_model_init:: jsbach_init:: running..."
+      IF(model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+!          write(*,*) "jsbach_model_init:: jsbach_init:: running tavrg_dist_fire..."
+          CALL model%Queue_task(DFIRE_FUEL_, "tavrg_dist_fire_fuel")   ! LAND ONLY 
+        ENDIF
+      ENDIF
       CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
