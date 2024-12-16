@@ -12,6 +12,7 @@
 !> ---------------------------------------
 !>
 
+!NEC$ options "-finline-functions"
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/assimilation/mo_assimi_process.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/hydrology/mo_hydro_process.pp-jsb.f90"
@@ -308,6 +309,9 @@ CONTAINS
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
+#       ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#       endif
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -461,10 +465,15 @@ CONTAINS
     CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
-    ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = 0._wp
+    END DO
+
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
         & C4Flag,                      &
@@ -477,17 +486,17 @@ CONTAINS
         & CO2_air_mol(ic),             &
         & scaling_fact_cl(ic,icanopy)  &
         & )
+
+        canopy_cond_unlimited(ic) =    &
+          &  canopy_cond_unlimited(ic) + canopy_cond_cl(ic,icanopy) * lai_cl(ic,icanopy)
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
     END DO
 
-    ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
+      canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     !$ACC WAIT(1)
 
@@ -831,18 +840,32 @@ CONTAINS
         & )
     END DO
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      ! convert from leaf area of layer to canopy ground area
-      gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
+      gross_assimilation_ca(ic) = 0._wp
+      dark_respiration_ca(ic) = 0._wp
+    END DO
+
+    !$ACC LOOP SEQ
+    DO icanopy=1,ncanopy
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        ! convert from leaf area of layer to canopy ground area
+        gross_assimilation_ca(ic) =    &
+          & gross_assimilation_ca(ic) + gross_assimilation_cl(ic,icanopy) * lai_cl(ic,icanopy)
+        dark_respiration_ca(ic) =      &
+          & dark_respiration_ca(ic) + dark_respiration_cl(ic,icanopy) * lai_cl(ic,icanopy)
+      END DO
+    END DO
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
       ! convert from canopy area to tile box area
       gross_assimilation(ic) = gross_assimilation_ca(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
-
-      dark_respiration_ca(ic) = SUM(dark_respiration_cl(ic,:) * lai_cl(ic,:))
-      ! convert from canopy area to tile box area
-      dark_respiration(ic) =  dark_respiration_ca(ic)  * veg_fract_correction(ic) * fract_fpc_max(ic)
+      dark_respiration(ic)   = dark_respiration_ca(ic)   * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 

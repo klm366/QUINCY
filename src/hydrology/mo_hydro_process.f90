@@ -19,6 +19,7 @@ MODULE mo_hydro_process
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish, message_text
+  USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
 
   IMPLICIT NONE
   PRIVATE
@@ -368,6 +369,7 @@ CONTAINS
         ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
         ! with the assumptions for the ARNO and point scale scheme.
 
+        wtr_pond_inflow = 0._wp
         IF (hydro_scale == Semi_Distributed_) THEN
           ! The lateral inflow into ponds originates from the whole grid cell
           ! and flows towards the depressions. Thus, most of the available water
@@ -379,8 +381,6 @@ CONTAINS
           ! actual grid cell / tile it goes into the pond storage first.
           IF (fract_pond(ic) > 1.0e-10_wp) THEN
             wtr_pond_inflow = water_to_soil(ic)
-          ELSE
-            wtr_pond_inflow = 0._wp
           END IF
 
         END IF
@@ -390,15 +390,15 @@ CONTAINS
         ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
         !   limitation and is scaled with pond fraction as only a part of the cell is covered by ponds
         ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
-        IF (ice_pond(ic) > 0._wp) THEN
-          wtr_pond_outflow = 0._wp
-        ELSE IF (hydro_scale == Semi_Distributed_) THEN
+        wtr_pond_outflow = 0._wp
+        IF (hydro_scale == Semi_Distributed_ .AND. ice_pond(ic) == 0._wp) THEN
           wtr_pond_outflow = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
           & k_sat_clay * dtime * fract_pond(ic))
-        ELSE IF (hydro_scale == Uniform_) THEN
+        ELSE IF (hydro_scale == Uniform_ .AND. ice_pond(ic) == 0._wp) THEN
           wtr_pond_outflow = MIN(wtr_pond(ic) + wtr_pond_inflow, &
           & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime)
         END IF
+
         ! Update pond storages
         wtr_pond(ic)        = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
 
@@ -889,7 +889,6 @@ CONTAINS
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                  &
     & ltpe_closed, ltpe_open)
 
-    USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
     USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_, &
       & drain_min, drain_max, drain_exp
 
@@ -969,6 +968,12 @@ CONTAINS
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
     REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
 
+    ! Temporary index lists for error detection
+    INTEGER :: ie             !< Error cell index
+    INTEGER :: n_errors       !< Number of error cells
+    INTEGER :: error_idx(nc)  !< Cell indices of error cells
+    LOGICAL :: error_flag(nc) !< Flag that given cell index is already in list (to suppress double-counting)
+
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
@@ -979,20 +984,34 @@ CONTAINS
     !> Finish in case of negative soil moisture
     !
 #ifndef _OPENACC
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
-          WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
-            & lat(ic),'N and ',lon(ic),'E, layer ', is, ':', NEW_LINE('a'), &
-            & 'Soil moisture:    ', wtr_soil_sl(ic,is)
-          IF (enforce_water_budget == WB_ERROR) THEN
-            CALL finish ('soilhyd', message_text)
-          ELSE IF (enforce_water_budget == WB_LOGGING) THEN
-            CALL message ('soilhyd', message_text, all_print=.TRUE.)
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          ! Check for negative soil moisture (in cells with a relevant tile fraction
+          ! that had not yet been counted)
+          IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1    ! count the soil moisture errors
+            error_idx(n_errors) = ic   ! keep the respective cell indices
+            error_flag(ic) = .TRUE.
           END IF
+        END DO
+      END DO
+
+      ! Write error messages in case errors have been found.
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+        WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
+          & lat(ic), 'N and ', lon(ic), 'E:', NEW_LINE('a'), &
+          & 'Soil moisture:    ', wtr_soil_sl(ic,:)
+        IF (enforce_water_budget == WB_ERROR) THEN
+          CALL finish ('soilhyd', message_text)
+        ELSE IF (enforce_water_budget == WB_LOGGING) THEN
+          CALL message ('soilhyd', message_text, all_print=.TRUE.)
         END IF
       END DO
-    END DO
+    END IF
 #endif
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -1115,18 +1134,32 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
+    ! Store actual soil water state, infiltration (upper boundary condition) and evaporation
+    ! to compute the residual transport error.
+    ! With that we are able to correct for computational precision erros later.
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      ! Store soil moisture state for later diagnosis of vertical water fluxes
-      wtr_soil_sl_t0(ic,:) = wtr_soil_sl(ic,:)
-      !> store actual soil water state, infiltration (upper boundary condition) and evaporation
-      !>  to compute the residual transport error
-      !>  so we are able to correct for computational precision erros later
-      wtr_transp_residual(ic) = SUM(wtr_soil_sl(ic,:)) + infilt(ic) + evapo_soil_sl1(ic) &
-        &                     + SUM(transpiration_sl(ic,:)) - SUM(drainage_sl(ic,:))
+      ! Initialize water transport residual with surface fluxes
+      wtr_transp_residual(ic) = infilt(ic) + evapo_soil_sl1(ic)
     END DO
-    !$ACC END PARALLEL LOOP
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        ! Store soil moisture state for later diagnosis of vertical water fluxes
+        wtr_soil_sl_t0(ic,is) = wtr_soil_sl(ic,is)
+
+        ! Calculate current soil water state to calculate transport residual below
+        ! i.e. current amount of soil water plus fluxes of this time step
+        wtr_transp_residual(ic) = wtr_transp_residual(ic) + &
+            & wtr_soil_sl(ic,is) + transpiration_sl(ic,is) - drainage_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL
 
     ! Determination of Vertical movement of mobile water through the soil.
     !   Note that normalized storage values (volumetric soil moisture and storage change) are
@@ -1182,6 +1215,38 @@ CONTAINS
     !> If lowest soil layer becomes negative, reduce bottom drainage
     !   In rare cases - when the bottom layer is very thin - also above layers might get negative.
     !   Generally, this only happens right after initialization.
+
+#ifndef _OPENACC
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      DO is = nsoil, 1, -1
+        DO ic = 1, nc
+          ! Check for negative soil moisture in lowest and above soil layer (in cells with a
+          ! relevant land fraction that had not been counted before) and count affected cells.
+          IF (wtr_soil_sl(ic, last_soil_layer(ic)) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            IF (is <= last_soil_layer(ic) .AND. wtr_soil_sl(ic,is) < 0._wp) THEN
+              n_errors = n_errors + 1
+              error_idx(n_errors) = ic
+              error_flag(ic) = .TRUE.
+            END IF
+          END IF
+        END DO
+      END DO
+
+      ! Write error messages in case cells with negative soil moisture have been found.
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
+        WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
+          &  lat(ic), 'N and ', lon(ic), 'E:' ,      NEW_LINE('a'),          &
+          &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
+          &  'Bottom drainage: ', drain_bot(ic)
+        CALL message('soilhyd', message_text_long, all_print=.TRUE.)
+      END DO
+    END IF
+#endif
+
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = nsoil, 1, -1
@@ -1189,26 +1254,8 @@ CONTAINS
       DO ic = 1, nc
         IF (wtr_soil_sl(ic, last_soil_layer(ic)) < 0._wp .AND. l_fract(ic)) THEN
           IF (is <= last_soil_layer(ic) .AND. wtr_soil_sl(ic,is) < 0._wp) THEN
-#ifndef _OPENACC
-            WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
-              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
-              &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
-              &  'Bottom drainage: ', drain_bot(ic)
-            IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-              CALL message('soilhyd', message_text_long, all_print=.TRUE.)
-            END IF
-#endif
             drain_bot(ic) = MAX((drain_bot(ic) + wtr_soil_sl(ic,is)), 0._wp)
             wtr_soil_sl(ic,is) = 0._wp
-#ifndef _OPENACC
-            WRITE (message_text_long,*) 'After correction: wtr_soil_sl(ic,:): ', &
-              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
-              &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
-              &  'Bottom drainage: ', drain_bot(ic)
-            IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-              CALL message('soilhyd', message_text_long, all_print=.TRUE.)
-            END IF
-#endif
           END IF
         END IF
       END DO
@@ -1218,10 +1265,19 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !> Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    ! Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        wtr_transp_residual(ic) = wtr_transp_residual(ic) - wtr_soil_sl(ic,is)
+      END DO
+    END DO
+
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      wtr_transp_residual(ic) = wtr_transp_residual(ic) - (SUM(wtr_soil_sl(ic,:)) + drain_bot(ic))
+      wtr_transp_residual(ic) = wtr_transp_residual(ic) - drain_bot(ic)
       wtr_soilhyd_res(ic) = wtr_transp_residual(ic)
     END DO
 
@@ -1229,10 +1285,19 @@ CONTAINS
 
 #ifndef _OPENACC
     !< 1. Complain if the overall transport error is too large
-    DO ic = 1, nc
-      IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      DO ic = 1, nc
+        IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
-          & lat(ic),'N and ',lon(ic),'E:',                   NEW_LINE('a'), &
+          & lat(ic), 'N and ', lon(ic), 'E:',                NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(ic), NEW_LINE('a'), &
           & 'Infiltration:       ', infilt(ic),              NEW_LINE('a'), &
           & 'Soil evaporation:   ', evapo_soil_sl1(ic),      NEW_LINE('a'), &
@@ -1245,8 +1310,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
     !> 2. Modify lower boundary condition (drainage) as much as possible
@@ -1281,8 +1346,17 @@ CONTAINS
 
 #ifndef _OPENACC
     !> 4. Complain if correction is not sufficient
-    DO ic = 1, nc
-      IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      DO ic = 1, nc
+        IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'Cannot correct soil water transport residual at ', &
           & lat(ic),'N and ',lon(ic),'E:',                   NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(ic), NEW_LINE('a'), &
@@ -1297,8 +1371,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
     ! Diagnose vertical water transport
@@ -1345,19 +1419,27 @@ CONTAINS
     !       term is needed for this, if no better solution can be found to avoid the evaporation deficit.
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
+      weq_soil(ic) = 0._wp
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
-      weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
-#ifndef _OPENACC
-      IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
-        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
-        IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-          CALL message ('soilhyd', message_text, all_print=.TRUE.)
-        END IF
-      END IF
-#endif
     END DO
 
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        weq_soil(ic) = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
+      END DO
+    END DO
     !$ACC END PARALLEL
+
+#ifndef _OPENACC
+    IF (ANY(weq_soil(:) + deficit_evapotrans(:) < -EPSILON(1.0_wp) .AND. l_fract(:))) THEN
+      IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        CALL message ('soilhyd', message_text, all_print=.TRUE.)
+      END IF
+    END IF
+#endif
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
@@ -1419,16 +1501,19 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE IF (ltpe_closed) THEN
-      !$ACC LOOP GANG VECTOR
       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-      DO ic = 1, nc
-        tpe_overflow(ic) = tpe_overflow(ic) + SUM(drainage_sl(ic,:))
-      END DO
-
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          tpe_overflow(ic) = tpe_overflow(ic) + drainage_sl(ic,is)
+        END DO
+      END DO
+
+      !$ACC LOOP SEQ
       DO is = nsoil, 1, -1
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO ic = 1, nc
           ! refill soil moisture from overflow pool
           remoist(ic)        = MIN(tpe_overflow(ic), wtr_field_cap_sl(ic,is) - wtr_soil_sl(ic,is))
@@ -1441,8 +1526,28 @@ CONTAINS
 
 #ifndef _OPENACC
     ! Check value range for soil moisture
-    DO ic = 1, nc
-      IF (ANY(wtr_soil_sl(ic,:) < -EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
+
+    n_errors = 0
+    error_flag(:) = .FALSE.
+
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF (wtr_soil_sl(ic,is) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
+          IF (.NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+        ELSE IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
+          wtr_soil_sl(ic,is) = 0._wp
+        END IF
+      END DO
+    END DO
+
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
         WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
           & lat(ic),'N and ',lon(ic),'E:',                NEW_LINE('a'), &
           & 'Infiltration:     ', infilt(ic),             NEW_LINE('a'), &
@@ -1456,16 +1561,25 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      ELSE IF (ANY(wtr_soil_sl(ic,:) < 0.0_wp) .AND. l_fract(ic)) THEN
-        ! WRITE (message_text,*) 'setting negative soil moisture (routine end) to zero at ', &
-        !   & lat(ic),'N and ',lon(ic),'E:', NEW_LINE('a'), &
-        !   & 'Soil moisture:    ', wtr_soil_sl(ic,:)
-        ! Enable for debugging purpose, otherwise it fills up the logfile
-        ! CALL message ('soilhyd', message_text)
-        wtr_soil_sl(ic,:) = MAX(wtr_soil_sl(ic,:), 0.0_wp)
-      END IF
+      END DO
+    END IF
 
-      IF (ANY(wtr_soil_sl(ic,:) > wtr_wsat_sl(ic,:) + EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
+    n_errors = 0
+    error_flag(:) = .FALSE.
+
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is) + EPSILON(1.0_wp) .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+    END DO
+
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
         WRITE (message_text_long,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
           &  lat(ic),'N and ',lon(ic),'E:',                 NEW_LINE('a'), &
           & 'Infiltration:       ', infilt(ic),             NEW_LINE('a'), &
@@ -1480,8 +1594,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #else
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is=1,nsoil
@@ -1534,8 +1648,6 @@ CONTAINS
     !! The routine is based on routine soilchange by Stefan Hagemann.
     !----------------------------------------------------------------------------------------------
 
-    USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
-
     ! arguments
 
     INTEGER,  INTENT(in)     :: nc                      ! vector length
@@ -1559,7 +1671,7 @@ CONTAINS
 
     ! local variables
 
-    INTEGER  :: ic, is
+    INTEGER  :: ic, is, ie, n_errors
     CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
     REAL(wp) :: dummy_wtr_soil(nc, nsoil)    ! dummy soil moisture storage [m]
     REAL(wp) :: deficit                      ! water deficit within the actual soil layer [m]
@@ -1567,6 +1679,10 @@ CONTAINS
     REAL(wp) :: rootfract                    ! fraction of the soil layer within the root zone [/]
     REAL(wp) :: fixed                        ! amount of water below the wilting point, not available for plants [m]
     REAL(wp) :: root_depth(nc)               ! Total depth of rootzone [m]
+
+    INTEGER :: error_idx(nc)
+    LOGICAL :: error_flag(nc)
+    REAL(wp) :: transpiration_sum(nc)
 
     !----------------------------------------------------------------------------------------------
     !  diagnose evaporation and transpiration fluxes
@@ -1576,8 +1692,22 @@ CONTAINS
     !$ACC   CREATE(dummy_wtr_soil, root_depth)
 
 #ifndef _OPENACC
-    DO ic = 1, nc
-      IF (ANY(wtr_soil_sl(ic,:) < 0._wp) .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+        END DO
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
           & lat(ic),'N and ',lon(ic),'E:', NEW_LINE('a'), &
           & 'Soil moisture: ', wtr_soil_sl(ic,:)
@@ -1586,21 +1716,30 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      root_depth(ic) = SUM(droot(ic,:))
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic = 1, nc
+      root_depth(ic) = 0._wp
     END DO
-    !$ACC END PARALLEL LOOP
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        root_depth(ic) = root_depth(ic) + droot(ic,is)
+      END DO
+    END DO
 
     !  bare soil evaporation
     ! -----------------------
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC LOOP SEQ
     DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         ! Use dummy soil moisture storage for diagnostics, because the real soil moisture storage
         !   is only to be changed during the vertical transport
@@ -1608,9 +1747,8 @@ CONTAINS
         transpiration_sl(ic,is) = 0._wp
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
 
       evapo_soil_sl1(ic) = 0._wp
@@ -1639,12 +1777,10 @@ CONTAINS
         deficit_trans(ic) = transpiration_in_m(ic)                       ! add transpiration to deficit term
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(deficit, rootfract, fixed, remaining)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(deficit, rootfract, fixed, remaining)
       DO ic = 1, nc
         ! grid cell not sealed and actual transpiration (not dew) takes place
         !    => take water equally from all over the root zone
@@ -1681,21 +1817,18 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_trans(ic)
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! If the transpiration deficit can be reduced by redistributing transpiration extraction from different layers,
     !   it should be done already here. The deficit should be taken from layers starting at the
     !   surface to accelerate the feedback on evapotranspiration.
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(remaining)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(remaining)
       DO ic = 1, nc
         IF (deficit_trans(ic) < 0._wp .AND. dummy_wtr_soil(ic,is) > wtr_field_cap_sl(ic,is) * w_soil_wilt_fract) THEN
           ! add water that can be still transpired to the transpiration to reduce the overall deficit
@@ -1713,9 +1846,25 @@ CONTAINS
     !$ACC END DATA
 
 #ifndef _OPENACC
-    DO ic = 1, nc
-      ! make sure there would be no negative soil moisture after applying ET
-      IF (ANY(dummy_wtr_soil(ic,:) < 0._wp) .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      transpiration_sum(:) = 0._wp
+
+      ! make sure there will be no negative soil moisture after applying ET
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (dummy_wtr_soil(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+          transpiration_sum(ic) = transpiration_sum(ic) + transpiration_sl(ic,is)
+        END DO
+      END DO
+
+      DO ie = 1, n_errors
+        ic= error_idx(ie)
         WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
           & lat(ic),'N and ',lon(ic),'E:',                        NEW_LINE('a'), &
           & 'Soil evaporation:         ', evapo_soil_sl1(ic),     NEW_LINE('a'), &
@@ -1728,11 +1877,21 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-      ! check that diagnosed ET and expected ET is still identical
-      IF ( ABS((evapo_soil_sl1(ic) + deficit_sevap(ic) + SUM(transpiration_sl(ic,:)) + deficit_trans(ic)) &
-        &    - (evapo_soil_in_m(ic) + transpiration_in_m(ic)) ) > 1.0e-13_wp &
-        &  .AND. l_fract(ic)) THEN
+      END DO
+
+      ! check that diagnosed ET and expected ET are still identical
+      n_errors = 0
+      DO ic = 1, nc
+        IF ( ABS((evapo_soil_sl1(ic) + deficit_sevap(ic) + transpiration_sum(ic) + deficit_trans(ic)) &
+          &    - (evapo_soil_in_m(ic) + transpiration_in_m(ic)) ) > 1.0e-13_wp &
+          &  .AND. l_fract(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'ET fluxes mismatch at ', &
           & lat(ic),'N and ',lon(ic),'E:',                                  NEW_LINE('a'), &
           & 'Initial mobile soil water:          ', wtr_soil_sl(ic,:),      NEW_LINE('a'), &
@@ -1748,8 +1907,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
   END SUBROUTINE diagnose_evapotrans

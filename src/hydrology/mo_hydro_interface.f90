@@ -36,6 +36,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_impl_constants, ONLY: WB_IGNORE
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
@@ -635,6 +636,9 @@ CONTAINS
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
+#ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#endif
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & ! in
           & dtime,                           & ! in
@@ -2574,7 +2578,13 @@ CONTAINS
       & wb_threshold, &
       & weq_land_new
 
-    INTEGER  :: iblk, ics, ice, nc, ic
+    REAL(wp), DIMENSION(options%nc) :: &
+      & weq_soil
+
+    INTEGER  :: iblk, ics, ice, nc, ic, is
+    INTEGER  :: n_errors, ie
+    INTEGER  :: error_idx(options%nc)
+
     REAL(wp) :: dtime
     LOGICAL  :: is_experiment_start, tile_contains_soil
 
@@ -2625,8 +2635,29 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_count) ! inout
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(tile_area, weq_land_new)
+    n_errors = 0   ! initialize error counter
+
+    !$ACC DATA CREATE(weq_soil)
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+    ! Calculate total amout of soil water (liquid and frozen)
+    IF (tile_contains_soil) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        weq_soil(ic) = 0._wp
+      END DO
+
+      !$ACC LOOP SEQ
+      DO is = 1, SIZE(wtr_soil_sl, DIM=2)
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          weq_soil(ic) = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
+        END DO
+      END DO
+    END IF
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(tile_area, weq_land_new)
     DO ic=1,nc
       tile_area  = tile_fract(ic) * area(ic)
 
@@ -2634,7 +2665,7 @@ CONTAINS
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic))  &
           &              * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
@@ -2651,7 +2682,21 @@ CONTAINS
       wb_threshold = 1.0e-11_wp * tile_area * dtime
 
       IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
-        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
+        n_errors = n_errors + 1       ! Count number of water balance issues of this time step
+        error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
+        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp  ! Count water budget issues per grid cell
+      END IF
+#endif
+    END DO
+    !$ACC END PARALLEL
+    !$ACC END DATA
+
+#ifndef _OPENACC
+    IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+        tile_area  = tile_fract(ic) * area(ic)
+
         WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
           & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
           & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
@@ -2680,10 +2725,9 @@ CONTAINS
         ELSE IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_LOGGING) THEN
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
-      END IF
+      END DO
+    END IF
 #endif
-    END DO
-    !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2733,7 +2777,6 @@ CONTAINS
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-    USE mo_jsb_impl_constants,    ONLY: WB_IGNORE
 
     ! Argument
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile

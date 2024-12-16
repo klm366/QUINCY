@@ -179,6 +179,7 @@ CONTAINS
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION q_effective(qsat, qair, fsat, fair)
+!NEC$ always_inline
 
     !$ACC ROUTINE SEQ
 
@@ -271,6 +272,7 @@ CONTAINS
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION heat_transfer_coef(drag, steplen, alpha)
+!NEC$ always_inline
 
     !$ACC ROUTINE SEQ
 

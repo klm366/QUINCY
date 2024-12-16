@@ -15,6 +15,10 @@
 !>
 !> current implementation only for daily, timestep or constant data
 !>
+
+!NEC$ options "-finline-functions"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
