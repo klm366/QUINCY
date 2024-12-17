@@ -27,7 +27,7 @@ MODULE mo_q_assimi_process
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
-  PUBLIC :: discrimination_ps
+  PUBLIC :: discrimination_ps, calc_q_NPPbuf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
 
@@ -1004,6 +1004,49 @@ CONTAINS
     END SELECT
 
   END FUNCTION discrimination_ps
+
+  !
+  ! ===============================================================================================================================
+  !>
+  !>   Compute running average of NPP for NLCC process
+  !!
+
+  PURE ELEMENTAL SUBROUTINE calc_q_NPPbuf (lstart, init_running_means, new_year, delta_time, net_assimilation, &
+                                           seconds_year, NPP_sum_year, NPP_mean_5year)
+
+    LOGICAL,  INTENT(in)    :: lstart             ! first time step in a simulation
+    LOGICAL,  INTENT(in)    :: init_running_means ! initialize the min/max temperature climatology
+    LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
+    REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
+    REAL(wp), INTENT(in)    :: net_assimilation   ! potential NPP [micro-mol(CO2) m-2 s-1]
+    REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
+    REAL(wp), INTENT(inout) :: NPP_sum_year       !
+    REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
+
+!   local variables
+    REAL(wp) :: prev_year_mean_NPP ! NPP of previous year
+    REAL(wp) :: NPP
+
+    NPP = net_assimilation * 1.e-6_wp   ! conversion from micro-mol/m2/s to mol/m2/s
+
+   ! update NPP_sum_year and NPP_mean_5year
+   IF (.NOT. new_year .OR. lstart) THEN
+      NPP_sum_year = NPP_sum_year + NPP * delta_time
+   ELSE
+      prev_year_mean_NPP = NPP_sum_year / seconds_year
+      NPP_sum_year = NPP * delta_time
+      IF (init_running_means) THEN
+         NPP_mean_5year = prev_year_mean_NPP
+      ELSE
+         NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
+      END IF
+   ENDIF
+
+   ! count time in seconds that has passed till summing of NPP started
+   seconds_year = seconds_year + delta_time
+   IF (new_year) seconds_year = delta_time
+
+  END SUBROUTINE calc_q_NPPbuf
 
 #endif
 END MODULE mo_q_assimi_process

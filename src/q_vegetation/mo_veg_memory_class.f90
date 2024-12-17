@@ -113,7 +113,9 @@ MODULE mo_veg_memory_class
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP [unitless]
                                     target_lai        , &            !< LAI implied from sap wood area [m2 m-2]
                                     kstar_labile      , &            !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry [day-1]
-                                    root_limitation_state            !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1) [unitless]
+                                    root_limitation_state, &         !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1) [unitless]
+                                    max_green_bio                    ! required for qlcc: maximum biomass
+
     ! used as logical: 0 = FALSE / 1 = TRUE
     TYPE(t_jsb_var_real2d)          :: &
                                     do_cohort_harvest                !< logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort [logical]
@@ -1223,6 +1225,18 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('max_green_bio', mem%max_green_bio, &
+        & hgrid, surface, &
+        & t_cf('max_green_bio', '', 'max_green_bio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & lrestart_cont = .TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('do_cohort_harvest', mem%do_cohort_harvest, &

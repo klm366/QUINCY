@@ -57,7 +57,8 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(FLCC_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+!     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     active_cqts = (/ LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE /)
     passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)

@@ -843,6 +843,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_daytime_cl           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, max_green_bio                     , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

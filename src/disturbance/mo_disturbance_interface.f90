@@ -33,20 +33,39 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, A2L_, SEB_, FLCC_, WLCC_
+#ifdef __NO_QUINCY__
+  dsl4jsb_Use_processes ASSIMI_, CARBON_, SEB_
+#else
+!   dsl4jsb_Use_processes Q_ASSIMI_, VEG_, SB_
+  dsl4jsb_Use_processes SPQ_ !, QLCC_ !,VEG_, SB_
+#endif
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
+#ifdef __NO_QUINCY__
   dsl4jsb_Use_config(CARBON_)
+#else
+  dsl4jsb_Use_config(SPQ_)
+!   dsl4jsb_Use_config(QLCC_)
+!   dsl4jsb_Use_config(VEG_)
+#endif
 
   ! Use of process memories (t_disturb_memory)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
-  dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
-
+#ifdef __NO_QUINCY__
+  dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(ASSIMI_)
+#else
+  dsl4jsb_Use_memory(SPQ_)
+!   dsl4jsb_Use_memory(QLCC_)
+!   dsl4jsb_Use_memory(VEG_)
+!   dsl4jsb_Use_memory(SB_)
+!   dsl4jsb_Use_memory(Q_ASSIMI_)
+#endif
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
 
@@ -152,13 +171,19 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_memory(FUEL_)
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
-
+#ifdef __NO_QUINCY__
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(CARBON_)
+#else
+    dsl4jsb_Def_memory(SPQ_)
+!     dsl4jsb_Def_memory(QLCC_)
+!     dsl4jsb_Def_memory(Q_ASSIMI_)
+!     dsl4jsb_Def_memory(VEG_)
+#endif
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
@@ -177,7 +202,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cflux_dist_green_2_soil
     dsl4jsb_Real2D_onChunk :: cflux_dist_woods_2_soil
 
+#ifdef __NO_QUINCY__
     dsl4jsb_Real2D_onChunk :: cover_fract_pot
+#else
+!      dsl4jsb_Real3D_onChunk :: cover_fract_pot
+    REAL(wp), DIMENSION(options%nc) :: cover_fract_pot
+#endif
+
+    dsl4jsb_Real2D_onChunk :: t_srf_new
 
     ! Locally allocated vectors
     !
@@ -200,6 +232,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+!     CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
@@ -208,18 +241,24 @@ CONTAINS
 
     ! Get process memories
     dsl4jsb_Get_memory(DISTURB_)
-    dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(FUEL_)
-    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(CARBON_)
+#else
+    dsl4jsb_Get_memory(SPQ_)
+!     dsl4jsb_Get_memory(QLCC_)
+!     dsl4jsb_Get_memory(Q_ASSIMI_)
+!     dsl4jsb_Get_memory(VEG_)
+#endif
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       q_air)                    ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       press_srf)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       wind_10m)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,       t_unfilt)                 ! in
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   max_wind_10m_act)         ! inout
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   prev_day_max_wind_10m)    ! inout
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   max_wind_10m)             ! inout
@@ -229,11 +268,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
+#ifdef __NO_QUINCY__
+    dsl4jsb_Get_var2D_onChunk(SEB_,       t_unfilt)                 ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
+#else
+    dsl4jsb_Get_var2D_onChunk(SPQ_,       t_srf_new)                ! in
+!     dsl4jsb_Get_var3D_onChunk(QLCC_,      cover_fract_pot)                ! in
+#endif
     ! -------------------------------------------------------------------------------------------------- !
     !$ACC DATA CREATE(q_rel_air)
 
@@ -244,7 +289,11 @@ CONTAINS
     persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
 
     ! Update climate buffer variables each time step
+#ifdef __NO_QUINCY__
     q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:))
+#else
+    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_srf_new(:), press_srf(:))
+#endif
     !$ACC WAIT(1)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -284,11 +333,12 @@ CONTAINS
       DO ic = 1, nc
         burned_fract(ic) = 0._wp
         damaged_fract(ic) = 0._wp
+        cover_fract_pot(ic) = 1._wp       ! TK for testing purposes only
       END DO
       !$ACC END PARALLEL LOOP
 
       ! Calculate burned area on burning tiles
-      IF (dsl4jsb_Lctlib_param(dynamic_PFT) &
+      IF ((dsl4jsb_Lctlib_param(dynamic_PFT) .AND. (dsl4jsb_Lctlib_param(LandcoverClass) > 0)) &
           .OR. (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. dsl4jsb_Lctlib_param(pasture_PFT)) &
          ) THEN
 
@@ -348,6 +398,7 @@ CONTAINS
     END IF ! newday
 
     ! Init diagnostic carbon fluxes
+#ifdef __NO_QUINCY__
     IF (tile%Has_process_memory(CARBON_) .AND. newday) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -357,6 +408,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+#endif
 
     !$ACC WAIT(1)
     !$ACC END DATA
@@ -433,10 +485,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
     ! Declare process memories
+#ifdef __NO_QUINCY__
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_config(CARBON_)
+#endif
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_config(DISTURB_)
-    dsl4jsb_Def_config(CARBON_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: cconservation_fire
@@ -486,21 +540,27 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+!     CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_config(CARBON_)
+#endif
 
     ! Get process memories
     dsl4jsb_Get_memory(DISTURB_)
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_memory(CARBON_)
+#endif
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
     !
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_reserve)                ! inout
@@ -531,12 +591,14 @@ CONTAINS
 
     ! Tile average (ta) variable required for the carbon conservation test
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm_ta) ! out
+#endif
 
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Calculate carbon relocation due to wind damages and fires
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
+#ifdef __NO_QUINCY__
       IF (tile%Has_process_memory(CARBON_)) THEN
 
         !$ACC DATA CREATE(old_c_state_sum_ta, cflux, lctlib_LeafLit_coef, lctlib_WoodLit_coef)
@@ -706,6 +768,7 @@ CONTAINS
         !$ACC END DATA
 
       ENDIF ! CARBON active
+#endif
 
     ENDIF ! is_newday
 
@@ -723,7 +786,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+#ifdef __NO_QUINCY__
     dsl4jsb_Def_memory(CARBON_)
+#endif
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
@@ -738,6 +803,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -760,6 +826,7 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
     ENDIF
+#endif
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

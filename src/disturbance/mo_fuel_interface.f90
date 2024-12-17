@@ -32,15 +32,24 @@ MODULE mo_fuel_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FUEL_, CARBON_, PHENO_
+  dsl4jsb_Use_processes FUEL_
+#ifdef __NO_QUINCY__
+  dsl4jsb_Use_processes CARBON_, PHENO_
+#else
+  dsl4jsb_Use_processes SB_
+#endif
 
   ! Use of process configurations
   dsl4jsb_Use_config(FUEL_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(FUEL_)
+#ifdef __NO_QUINCY__
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(PHENO_)
+#else
+  dsl4jsb_Use_memory(SB_)
+#endif
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -110,7 +119,7 @@ CONTAINS
   !!
   SUBROUTINE update_fuel(tile, options)
 
-    USE mo_fuel_process,     ONLY: calc_fuel_jsbach
+    USE mo_fuel_process,     ONLY: calc_fuel_jsbach, calc_fuel_quincy
     USE mo_jsb_time,         ONLY: is_newday
     USE mo_jsb_tile_class,   ONLY: t_jsb_tile_abstract
 
@@ -126,9 +135,13 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_fuel'
 
     ! Declare process memories
-    dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(FUEL_)
+#ifdef __NO_QUINCY__
+    dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
+#else
+    dsl4jsb_Def_memory(SB_)
+#endif
 
     dsl4jsb_Def_config(FUEL_)
 
@@ -142,6 +155,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+
+    dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c
+
     !
     ! Locally allocated vectors
     !
@@ -153,10 +169,13 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
+#ifdef __NO_QUINCY__
     IF (.NOT. tile%Has_process_memory(CARBON_)) &
       & CALL finish(TRIM(routine), 'FUEL process depends on CARBON process')
+#endif
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+!     CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get model
     model   => Get_model(tile%owner_model_id)
@@ -166,10 +185,14 @@ CONTAINS
 
     ! Get process memories
     dsl4jsb_Get_memory(FUEL_)
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
-
+#else
+    dsl4jsb_Get_memory(SB_)
+#endif
     ! Get process variables
+#ifdef __NO_QUINCY__
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)         ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)      ! in
@@ -178,6 +201,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
+#else
+    dsl4jsb_Get_var2D_onChunk(SB_,  sb_pool_total_ag_litter_c)   ! in
+#endif
     dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
 
@@ -190,6 +216,7 @@ CONTAINS
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
 
+#ifdef __NO_QUINCY__
           CALL calc_fuel_jsbach(       &
             & c_acid_ag1_ta(:),        & ! in
             & c_water_ag1_ta(:),       & ! in
@@ -201,6 +228,12 @@ CONTAINS
             & c_nonsoluble_ag2_ta(:),  & ! in
             & fuel(:)                  & ! out
             & )
+#else
+          CALL calc_fuel_quincy(       &
+            & sb_pool_total_ag_litter_c(:),        & ! in
+            & fuel(:)                  & ! out
+            & )
+#endif
 
         CASE (2) !! Arora & Boer algorithm
           CALL finish(TRIM(routine),'Arora & Boer fuel algorithm not implemented yet.')

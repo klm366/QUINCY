@@ -66,6 +66,7 @@ CONTAINS
       &                                           def_co2_deltaC13, def_co2_deltaC14
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_q_pheno_constants,               ONLY: ievergreen
+    USE mo_jsb_time,                        ONLY: is_newyear
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_config(VEG_)
@@ -95,6 +96,8 @@ CONTAINS
     INTEGER                           :: ix_comp                !< id and index of bgcm compartments
     INTEGER                           :: n_veg_bgcm_comp        !< number of vegetation bgcm compartments to loop over
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
+    LOGICAL :: new_year
+
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -231,6 +234,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
+    dsl4jsb_Real2D_onChunk      :: max_green_bio
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -246,6 +250,9 @@ CONTAINS
     vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
     nsoil_sb              =  vgrid_soil_sb%n_levels
+
+    new_year = is_newyear(options%current_datetime, options%dtime)
+
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -390,6 +397,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, max_green_bio)                  ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 0.8 get number of bgcm compartments
@@ -759,6 +767,17 @@ CONTAINS
       ! The product pool decay is a loss to the atmosphere (fprod_decay_mt unit is mol m-2 timestep-1)
       net_biosphere_production(:) = net_biosphere_production(:) - (fprod_decay_mt(ixC,:) * 1000000.0_wp / dtime)
     ENDIF
+
+    ! qlcc requires max_green_bio -- determine it here
+    IF (new_year) THEN
+      DO ic = 1, nc
+        max_green_bio(ic) = veg_pool_leaf_c(ic)
+      END DO
+    ELSE
+      DO ic = 1, nc
+        max_green_bio(ic) = MAX(max_green_bio(ic), veg_pool_leaf_c(ic))
+      END DO
+    END IF
 
   END SUBROUTINE update_veg_pools
 

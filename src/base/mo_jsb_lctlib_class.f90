@@ -1001,6 +1001,54 @@ CONTAINS
           CASE ('albedolittervis')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterVIS
             exists_AlbedoLitterVIS = .TRUE.
+          CASE ('tau_c_woods')                              ! PFT-specific time_scale for c_woods (and vegetation dynamics)
+             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_woods
+             ! Conversion from years to days
+             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._wp
+             exist_tau_c_woods = .TRUE.
+          CASE ('bclimit_min_cold_mmtemp')                      ! PFT-specific minimum coldest monthly mean temperature
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_cold_mmtemp
+             exists_bclimit_min_cold_mmtemp = .TRUE.
+          CASE ('bclimit_max_cold_mmtemp')                      ! PFT-specific maximum coldest monthly mean temperature
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_max_cold_mmtemp
+             exists_bclimit_max_cold_mmtemp = .TRUE.
+          CASE ('bclimit_max_warm_mmtemp')                      ! PFT-specific maximum warmest monthly mean temperature
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_max_warm_mmtemp
+             exists_bclimit_max_warm_mmtemp = .TRUE.
+          CASE ('bclimit_min_temprange')                        ! PFT-specific minimum temperature range between warmest and coldest
+                                                                !     month (20-year average)
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_temprange
+             exists_bclimit_min_temprange = .TRUE.
+          CASE ('bclimit_min_gdd')                              ! PFT-specific minimum growing degree days (at or above 5 deg C)
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_gdd
+             exists_bclimit_min_gdd = .TRUE.
+          CASE ('gdd_base')                                     ! PFT-specific GDD base
+             READ(line(pos:length),*) lctlib(1:nlct)%gdd_base
+             exists_gdd_base = .TRUE.
+          CASE ('upper_tlim')                                   ! PFT-specific upper temperature limit (used for gdd_upper_tlim)
+             READ(line(pos:length),*) lctlib(1:nlct)%upper_tlim
+             exists_upper_tlim = .TRUE.
+          CASE ('dynamic_pft')                                  ! Indicates those PFTs that shall take part in vegetation dynamics
+            READ(line(pos:length),*) itmp(1:nlct)
+            lctlib(1:nlct)%dynamic_PFT = .FALSE.
+            DO i=1,nlct
+              IF (itmp(i) /= 0) lctlib(i)%dynamic_PFT = .TRUE.
+            END DO
+            exists_dynamic_PFT = .TRUE.
+          CASE ('woody_pft')                                    ! Indicates woody PFTs
+            READ(line(pos:length),*) itmp(1:nlct)
+            lctlib(1:nlct)%woody_PFT = .FALSE.
+            DO i=1,nlct
+              IF (itmp(i) /= 0) lctlib(i)%woody_PFT = .TRUE.
+            END DO
+            exists_woody_PFT = .TRUE.
+          CASE ('pasture_pft')                                  ! Indicates pasture PFTs
+            READ(line(pos:length),*) itmp(1:nlct)
+            lctlib(1:nlct)%pasture_PFT = .FALSE.
+            DO i=1,nlct
+              IF (itmp(i) /= 0) lctlib(i)%pasture_PFT = .TRUE.
+            END DO
+            exists_pasture_PFT = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1306,6 +1354,28 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_AlbedoLitterVIS) &
           CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exist_tau_c_woods) &
+          CALL finish('init_lctlib','No data for tau_c_woods found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_bclimit_min_cold_mmtemp) &
+          CALL finish('init_lctlib','No data for BCLIMIT_MIN_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_bclimit_max_cold_mmtemp) &
+          CALL finish('init_lctlib','No data for BCLIMIT_MAX_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_bclimit_max_warm_mmtemp) &
+          CALL finish('init_lctlib','No data for BCLIMIT_MAX_WARM_MMTEMP found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_bclimit_min_temprange ) &
+          CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
+        IF(.NOT.exists_bclimit_min_gdd ) &
+          CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_gdd_base) &
+          CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_upper_tlim) &
+          CALL finish('init_lctlib','No data for UPPER_TLIM found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_dynamic_PFT) &
+          CALL finish('init_lctlib','No data for DYNAMIC_PFT found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_woody_PFT) &
+          CALL finish('init_lctlib','No data for WOODY_PFT found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_pasture_PFT) &
+          CALL finish('init_lctlib','No data for PASTURE_PFT found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1640,6 +1710,17 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_c_woods, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_min_cold_mmtemp, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_max_cold_mmtemp, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_max_warm_mmtemp, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_min_temprange, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%gdd_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%upper_tlim, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%dynamic_pft, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%woody_pft, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%pasture_pft, p_io, mpi_comm)
       END IF
 #endif
     END IF
@@ -1651,7 +1732,7 @@ CONTAINS
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
     ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_tk', 'quincy_11_pfts_for_coupling')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif

@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_ASSIMI_
+    &                   QLCC_, Q_PHENO_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -27,6 +27,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
 #ifndef __NO_QUINCY__
+  dsl4jsb_Use_config(QLCC_)
   dsl4jsb_Use_config(VEG_)
 #endif
 
@@ -373,6 +374,16 @@ CONTAINS
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       ENDIF
 
+      IF (model%processes(QLCC_)%p%config%active) THEN
+        CALL model%Queue_task(Q_ASSIMI_, "q_npp_buffer")
+      END IF
+
+!       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
+!       IF (model%processes(DISTURB_)%p%config%active) THEN
+!         CALL model%Queue_task(DISTURB_, "damaged_area")
+!         CALL model%Queue_task(DISTURB_, "natural_disturbances")
+!       END IF
+
       !-- set flux variables to zero
       CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
       CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
@@ -380,6 +391,74 @@ CONTAINS
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
       ENDIF
+
+! ------------------------------------------------------------------
+! TK
+!       IF (model%processes(NLCC_)%p%config%active) THEN
+!         CALL model%Queue_task(ASSIMI_, "npp_buffer")
+!       END IF
+!       IF (model%processes(QLCC_)%p%config%active) THEN
+!         CALL model%Queue_task(Q_ASSIMI_, "q_npp_buffer")
+!       END IF
+
+      ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
+      IF (model%processes(DISTURB_)%p%config%active) THEN
+        CALL model%Queue_task(DISTURB_, "damaged_area")
+        CALL model%Queue_task(DISTURB_, "natural_disturbances")
+      END IF
+
+      ! ------------------------ tasks that can change area
+      !
+      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
+      !
+!       IF (model%processes(PPLCC_)%p%config%active) THEN
+!         ! Prepare LCC tasks
+!         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+!       IF (model%processes(QLCC_)%p%config%active) THEN
+!         ! Prepare LCC tasks
+!         CALL model%Queue_task(QLCC_, "qlcc_pre_lcc")
+
+        !***** Add LCC processes between pplcc_pre and pplcc_post *****
+        ! order of tasks of course determines area available for change for the subsequent lcc tasks!
+        ! suggestion: natural changes before anthropogenic changes; wind before fire (prev. order in disturb)
+
+!         IF (model%processes(FAGE_)%p%config%active) THEN
+!           CALL model%Queue_task(FAGE_, "fage")
+!         END IF
+!
+!         IF (model%processes(WLCC_)%p%config%active) THEN
+!           CALL model%Queue_task(WLCC_, "wlcc")
+!         END IF
+!
+!         IF (model%processes(FLCC_)%p%config%active) THEN
+!           CALL model%Queue_task(FLCC_, "flcc")
+!         END IF
+
+!         IF (model%processes(NLCC_)%p%config%active) THEN
+!           CALL model%Queue_task(NLCC_, "nlcc")
+!         END IF
+        IF (model%processes(QLCC_)%p%config%active) THEN
+          CALL model%Queue_task(QLCC_, "qlcc")
+        END IF
+
+!         IF (model%processes(ALCC_)%p%config%active) THEN
+!           CALL model%Queue_task(ALCC_, "alcc")
+!         END IF
+!
+!         ! Do postprocessing after all LCC tasks were executed
+!         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+        ! Do postprocessing after all LCC tasks were executed
+!         CALL model%Queue_task(QLCC_, "qlcc_post_lcc")
+!       END IF
+
+      ! FLCC (which runs on the veg tile) changes the co2flux_fire_all_2_atm_ta variable on the leaves
+      ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
+!       IF (model%processes(FLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
+!         CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
+!       END IF
+
+! ------------------------------------------------------------------
 
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN
@@ -409,6 +488,10 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
       ENDIF
 
+!       IF (model%processes(QLCC_)%p%config%active) THEN
+!         CALL model%Queue_task(Q_ASSIMI_, "q_npp_buffer")
+!       END IF
+
       CALL model%Queue_task(RAD_, "albedo")                       ! ALL
 
       !-- averaging variables in time
@@ -418,6 +501,12 @@ CONTAINS
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
       ENDIF
+
+      ! Fuel is calculated last in a timestep to be right available in the next timestep
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+
 #endif
 
     END SELECT

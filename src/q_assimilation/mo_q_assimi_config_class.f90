@@ -39,6 +39,7 @@ MODULE mo_q_assimi_config_class
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
     CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
+    LOGICAL                 :: init_running_means ! initialize npp buffer for NLCC process
   CONTAINS
     PROCEDURE :: Init => Init_q_assimi_config
   END TYPE t_q_assimi_config
@@ -77,6 +78,7 @@ CONTAINS
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
     INTEGER                     :: icanopy
+    LOGICAL                     :: init_running_means
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy_q_assimi
 
 #ifdef __QUINCY_STANDALONE__
@@ -93,7 +95,8 @@ CONTAINS
       & flag_t_resp_acclimation,  &
       & flag_t_jmax_acclimation,  &
       & canopy_layer_scheme,      &
-      & canopy_conductance_scheme
+      & canopy_conductance_scheme,  &
+      & init_running_means
 
     INTEGER                     :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_assimi_config'
@@ -111,6 +114,8 @@ CONTAINS
     flag_t_jmax_acclimation       = .FALSE.      ! .TRUE. .FALSE.
     canopy_layer_scheme           = "fapar"      !
     canopy_conductance_scheme     = "medlyn"
+    init_running_means            = .FALSE.
+
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -133,6 +138,7 @@ CONTAINS
     config%flag_t_jmax_acclimation      = flag_t_jmax_acclimation
     config%canopy_layer_scheme          = TRIM(canopy_layer_scheme)
     config%canopy_conductance_scheme    = TRIM(canopy_conductance_scheme)
+    config%init_running_means           = init_running_means
     CALL close_nml(nml_handler)
 
     ! extinction coefficient for canopy layer depth calculation

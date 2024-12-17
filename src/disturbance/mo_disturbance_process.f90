@@ -101,9 +101,15 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. prev_day_max_wind_10m(ic) > max_wind_10m(ic) * wind_threshold) THEN
-        damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
-        &                        delta_time_yr * wind_damage_scale * prev_day_max_wind_10m(ic) ** 3._wp / max_wind_10m(ic) )
+!       IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. prev_day_max_wind_10m(ic) > max_wind_10m(ic) * wind_threshold) THEN
+!         damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
+!         &                        delta_time_yr * wind_damage_scale * prev_day_max_wind_10m(ic) ** 3._wp / max_wind_10m(ic) )
+!       ENDIF
+      IF (cover_fract_pot(ic) > EPSILON(1._wp)) THEN
+        IF (prev_day_max_wind_10m(ic) > max_wind_10m(ic) * wind_threshold) THEN
+          damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
+          &                        delta_time_yr * wind_damage_scale * prev_day_max_wind_10m(ic) ** 3._wp / max_wind_10m(ic) )
+        ENDIF
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP

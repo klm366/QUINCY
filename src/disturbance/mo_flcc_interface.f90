@@ -25,7 +25,9 @@ MODULE mo_flcc_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FLCC_, DISTURB_, CARBON_, FAGE_
+  dsl4jsb_Use_processes FLCC_, DISTURB_
+  dsl4jsb_Use_processes CARBON_, FAGE_
+  dsl4jsb_Use_processes VEG_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -94,6 +96,7 @@ CONTAINS
     dsl4jsb_Use_memory(DISTURB_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(CARBON_)
+    dsl4jsb_Use_config(VEG_) !, SB_
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed

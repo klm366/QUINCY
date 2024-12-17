@@ -19,7 +19,7 @@ MODULE mo_fuel_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_fuel_jsbach
+  PUBLIC :: calc_fuel_jsbach, calc_fuel_quincy
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_fuel_process'
 
@@ -66,6 +66,30 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_fuel_jsbach
+
+  ! Calculate fuel (JSBACH3 algorithm)
+  SUBROUTINE calc_fuel_quincy( &
+    & total_ag_litter,                        & ! in
+    & fuel                                    & ! out
+    & )
+
+    ! Input Arguments
+    REAL(wp), INTENT(in)  :: total_ag_litter(:)
+    ! Output Arguments
+    REAL(wp), INTENT(OUT)   :: fuel(:)
+
+    ! Local Variables
+    INTEGER :: ic, nc
+
+    nc = SIZE(total_ag_litter)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      fuel(ic) =  total_ag_litter(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE calc_fuel_quincy
 
 #endif
 END MODULE mo_fuel_process

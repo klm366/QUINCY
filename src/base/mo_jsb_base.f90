@@ -268,6 +268,8 @@ CONTAINS
         model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
+!         dsl4jsb_Config(PPLCC_)%active = .TRUE.
+
       CASE (MODEL_JSBACH)
 
         IF (model%Do_fractions_change()) THEN
@@ -363,7 +365,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_tk', 'quincy_11_pfts_for_coupling')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
