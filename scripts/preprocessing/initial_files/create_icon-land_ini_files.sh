@@ -106,7 +106,7 @@ run_adapt_nwp_extpar_file=false    # Only needed for configurations with NWP atm
 #
 # --------------------------------------
 # Base directories for constructing work and output directories (see below)
-work_dir_base=/work/mh0287/${USER}    # levante
+work_dir_base=/work/mh1421/${USER}    # levante
 scratch_dir_base=/scratch/m/$USER     # levante
 #scratch_dir_base=/work/mh0287/${USER} # breeze4
 
@@ -132,7 +132,7 @@ fi
 
 # --------------------------------------
 # Output and working directories
-export revision=r00xx      # ic/bc revision directory that will be generated
+export revision=r0001      # ic/bc revision directory that will be generated
 export work_dir=${scratch_dir_base}/ini_files/work/${grid_label}/${revision}  # temporary working directory
 export output_root_dir=${work_dir_base}/ini_files     # root directory for the new ic/bc files
 export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
@@ -141,7 +141,7 @@ export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
 # List of years:
 # a) First and last year for a series of bc_land_frac files, e.g. for historical simulations
 start_year=1850
-end_year=1850
+end_year=2015
 year_list=""
 for ((yr=${start_year}; yr<=${end_year}; yr++)); do
   export year_list="${year_list} $yr"

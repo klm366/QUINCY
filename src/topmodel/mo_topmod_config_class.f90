@@ -44,6 +44,7 @@ MODULE mo_top_config_class
     LOGICAL           :: use_wt_max             ! use wt_max to limit inundated fraction
     LOGICAL           :: use_cti_max            ! use cti_max to limit inundated fraction
     LOGICAL           :: use_cti_flood          ! use cti_min_flooding to limit inundated fraction
+    LOGICAL           :: use_crop_wetlands      ! allow wetlands to form on crops
     REAL(wp)          :: peat_runoff_exp        ! exponent in peat runoff equation
     REAL(wp)          :: peat_runoff_fac        ! factor in peat runoff equation
     INTEGER           :: inun_mode              ! prescribe inundation status:
@@ -94,6 +95,7 @@ CONTAINS
     LOGICAL                     :: use_wt_max
     LOGICAL                     :: use_cti_max
     LOGICAL                     :: use_cti_flood
+    LOGICAL                     :: use_crop_wetlands
     REAL(wp)                    :: peat_runoff_exp
     REAL(wp)                    :: peat_runoff_fac
     INTEGER                     :: inun_mode
@@ -115,6 +117,7 @@ CONTAINS
       & wetland_threshold, init_runmean,             &
       & use_cti_basin, use_openwater,                &
       & use_wt_max, use_cti_max, use_cti_flood,      &
+      & use_crop_wetlands,                           &
       & peat_runoff_exp, peat_runoff_fac,            &
       & inun_mode, lpeat, ltime_means,               &
       & lat_const_wetland_type, years_long_term,     &
@@ -148,7 +151,7 @@ CONTAINS
     use_openwater          = .FALSE.
     use_wt_max             = .FALSE.
     use_cti_max            = .FALSE.
-    use_cti_flood          = .TRUE.
+    use_crop_wetlands      = .TRUE.
     peat_runoff_exp        =  20.0_wp
     peat_runoff_fac        =   1.e-2_wp
     inun_mode              =   0
@@ -186,6 +189,7 @@ CONTAINS
     config%use_wt_max             = use_wt_max
     config%use_cti_max            = use_cti_max
     config%use_cti_flood          = use_cti_flood
+    config%use_crop_wetlands      = use_crop_wetlands
     config%peat_runoff_exp        = peat_runoff_exp
     config%peat_runoff_fac        = peat_runoff_fac
     config%inun_mode              = inun_mode
@@ -234,20 +238,21 @@ CONTAINS
       IF (dbg_process) THEN
         IF (inun_mode == 0) THEN
           CALL message(routine,'Detailed topmodel settings: ')
-          CALL message(routine,'  CTI data from         : '//ic_filename)
-          CALL message(routine,'  cti_min               : '//real2string(cti_min))
-          CALL message(routine,'  efold                 : '//real2string(efold))
-          CALL message(routine,'  wt_min                : '//real2string(wt_min))
-          CALL message(routine,'  saturation_threshold  : '//real2string(saturation_threshold))
+          CALL message(routine,'  CTI data from           : '//ic_filename)
+          CALL message(routine,'  cti_min                 : '//real2string(cti_min))
+          CALL message(routine,'  efold                   : '//real2string(efold))
+          CALL message(routine,'  wt_min                  : '//real2string(wt_min))
+          CALL message(routine,'  saturation_threshold    : '//real2string(saturation_threshold))
           CALL message(routine,'  Max extent option: ')
-          CALL message(routine,'    use_cti_flood   : '//logical2string(use_cti_flood))
-          IF (use_cti_flood) CALL message(routine,'    cti_min_flooding: '//real2string(cti_min_flooding))
-          CALL message(routine,'    use_wt_max      : '//logical2string(use_wt_max))
-          IF (use_wt_max) CALL message(routine,'      wt_max        : '//real2string(wt_max))
-          CALL message(routine,'    use_cti_max     : '//logical2string(use_cti_max))
-          IF (use_cti_max) CALL message(routine,'      cti_max       :'//real2string(cti_max))
-          CALL message(routine,'    use_openwater   : '//logical2string(use_openwater))
-          CALL message(routine,'    use_cti_basin   : '//logical2string(use_cti_basin))
+          CALL message(routine,'    use_cti_flood     : '//logical2string(use_cti_flood))
+          IF (use_cti_flood) CALL message(routine,'    cti_min_flooding  : '//real2string(cti_min_flooding))
+          CALL message(routine,'    use_wt_max        : '//logical2string(use_wt_max))
+          IF (use_wt_max) CALL message(routine,'      wt_max          : '//real2string(wt_max))
+          CALL message(routine,'    use_cti_max       : '//logical2string(use_cti_max))
+          IF (use_cti_max) CALL message(routine,'      cti_max         :'//real2string(cti_max))
+          CALL message(routine,'    use_openwater     : '//logical2string(use_openwater))
+          CALL message(routine,'    use_cti_basin     : '//logical2string(use_cti_basin))
+          CALL message(routine,'    use_crop_wetlands : '//logical2string(use_cti_basin))
           IF (lpeat) THEN
             CALL message(routine,'    peat_runoff_exp   : '//real2string(peat_runoff_exp))
             CALL message(routine,'    peat_runoff_fac   : '//real2string(peat_runoff_fac))

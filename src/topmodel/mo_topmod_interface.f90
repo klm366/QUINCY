@@ -447,80 +447,89 @@ CONTAINS
         ENDDO
       ENDIF
 
-      ! Calculate water table
+      ! Initializations
       !$acc loop gang vector
       DO ic = 1, nc
         water_table      (ic  ) = 0._wp
         frac_liquid_top  (ic  ) = 0._wp
+        frac_inun        (ic  ) = 0._wp
+        wt_inun          (ic  ) = 0._wp
+        frac_inun_uncorr (ic  ) = 0._wp
       ENDDO
 
-      !$acc loop gang vector
-      DO ic = 1, nc
+      ! If this is a crop tile and wetlands are not allowed on crops: Skip calc of wt and inun
+      IF (dsl4jsb_Config(TOP_)%use_crop_wetlands .OR. .NOT. dsl4jsb_Lctlib_param(CropFlag)) THEN
 
-        ! Secure calculations are done on contiguous data - may be faster
-        t_soil  (:) = t_soil_sl  (ic,:)
-        wtr_soil(:) = wtr_soil_sl(ic,:)
-        ice_soil(:) = ice_soil_sl(ic,:)
+        ! Calculate water table
+        !$acc loop gang vector
+        DO ic = 1, nc
 
-        ! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
-        CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
-          &  soil_depth(ic),dsl4jsb_Config(TOP_)%soil_depth_min,                                &
-          &  soil_e%dz(:),soil_e%ubounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
-          &  vol_field_cap(ic),                                                                 &
-          &  t_soil(:),wtr_soil(:),ice_soil(:),                                                 &
-          &  water_table_t, frac_liquid_top_t                                                   &
-          &  )
+          ! Secure calculations are done on contiguous data - may be faster
+          t_soil  (:) = t_soil_sl  (ic,:)
+          wtr_soil(:) = wtr_soil_sl(ic,:)
+          ice_soil(:) = ice_soil_sl(ic,:)
 
-        water_table    (ic  ) = water_table_t
-        frac_liquid_top(ic  ) = frac_liquid_top_t
-!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
-      ENDDO
+          ! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
+          CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
+            &  soil_depth(ic),dsl4jsb_Config(TOP_)%soil_depth_min,                                &
+            &  soil_e%dz(:),soil_e%ubounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
+            &  vol_field_cap(ic),                                                                 &
+            &  t_soil(:),wtr_soil(:),ice_soil(:),                                                 &
+            &  water_table_t, frac_liquid_top_t                                                   &
+            &  )
 
-      !$acc loop gang vector
-      DO ic = 1, nc
-        frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
-        frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
-      ENDDO
-      !$acc loop gang vector
-      DO ic = 1, nc
-        IF (aet_relax(ic) > 0._wp) THEN
-          PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
-        ELSE
-          PE_mask(ic) = precip_relax(ic) > 0._wp
-        ENDIF
-      ENDDO
+          water_table    (ic  ) = water_table_t
+          frac_liquid_top(ic  ) = frac_liquid_top_t
+!!!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
+        ENDDO
 
-      ! Calculate inundated area
-      !$acc loop gang vector
-      DO ic = 1, nc
-        CALL update_inun_frac(                            &
-          & dsl4jsb_Config(TOP_)%soil_depth_min,          & ! Scalar parameters
-          & dsl4jsb_Config(TOP_)%use_cti_basin,           &
-          & dsl4jsb_Config(TOP_)%use_cti_flood,           &
-          & dsl4jsb_Config(TOP_)%use_cti_max,             &
-          & dsl4jsb_Config(TOP_)%use_wt_max,              &
-          & dsl4jsb_Config(TOP_)%use_openwater,           &
-          & dsl4jsb_Config(TOP_)%cti_min,                 &
-          & dsl4jsb_Config(TOP_)%cti_max,                 &
-          & dsl4jsb_Config(TOP_)%cti_min_flooding,        &
-          & dsl4jsb_Config(TOP_)%efold,                   &
-          & dsl4jsb_Config(TOP_)%wt_min,                  &
-          & dsl4jsb_Config(TOP_)%wt_max,                  &
-          & soil_depth(ic),                               & ! Geographical dependent parameters
-          & cti_mean(ic),cti_basin(ic),cti_openwater(ic), &
-          & cti_phi(ic),cti_mu(ic),cti_chi(ic),           &
-          & PE_mask(ic),                                  &
-          & water_table(ic),frac_liquid_top(ic),          & ! Variable inputs
-          & frac_inun(ic),frac_inun_uncorr(ic),           & ! Outputs
-          & wt_inun(ic) &
-        )
+        !$acc loop gang vector
+        DO ic = 1, nc
+          frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
+          frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
+        ENDDO
+        !$acc loop gang vector
+        DO ic = 1, nc
+          IF (aet_relax(ic) > 0._wp) THEN
+            PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
+          ELSE
+            PE_mask(ic) = precip_relax(ic) > 0._wp
+          ENDIF
+        ENDDO
 
-        frac_inun(ic) = MIN(1._wp,MAX(0._wp,frac_inun(ic) * dsl4jsb_Config(TOP_)%scale_inun))
+        ! Calculate inundated area
+        !$acc loop gang vector
+        DO ic = 1, nc
+          CALL update_inun_frac(                            &
+            & dsl4jsb_Config(TOP_)%soil_depth_min,          & ! Scalar parameters
+            & dsl4jsb_Config(TOP_)%use_cti_basin,           &
+            & dsl4jsb_Config(TOP_)%use_cti_flood,           &
+            & dsl4jsb_Config(TOP_)%use_cti_max,             &
+            & dsl4jsb_Config(TOP_)%use_wt_max,              &
+            & dsl4jsb_Config(TOP_)%use_openwater,           &
+            & dsl4jsb_Config(TOP_)%cti_min,                 &
+            & dsl4jsb_Config(TOP_)%cti_max,                 &
+            & dsl4jsb_Config(TOP_)%cti_min_flooding,        &
+            & dsl4jsb_Config(TOP_)%efold,                   &
+            & dsl4jsb_Config(TOP_)%wt_min,                  &
+            & dsl4jsb_Config(TOP_)%wt_max,                  &
+            & soil_depth(ic),                               & ! Geographical dependent parameters
+            & cti_mean(ic),cti_basin(ic),cti_openwater(ic), &
+            & cti_phi(ic),cti_mu(ic),cti_chi(ic),           &
+            & PE_mask(ic),                                  &
+            & water_table(ic),frac_liquid_top(ic),          & ! Variable inputs
+            & frac_inun(ic),frac_inun_uncorr(ic),           & ! Outputs
+            & wt_inun(ic) &
+          )
 
-        IF (lstart) frac_inun_pre(ic) = frac_inun(ic)
+          frac_inun(ic) = MIN(1._wp,MAX(0._wp,frac_inun(ic) * dsl4jsb_Config(TOP_)%scale_inun))
 
-      ENDDO
-      !$acc end parallel
+          IF (lstart) frac_inun_pre(ic) = frac_inun(ic)
+
+        ENDDO
+        !$acc end parallel
+
+      ENDIF ! Wetlands on crops
 
     ENDIF
 

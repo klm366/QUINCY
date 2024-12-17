@@ -217,6 +217,7 @@ CONTAINS
 
     LOGICAL :: lstart, lrestart, lyear, lupdate
     INTEGER :: src, ic, nc, iy, year
+    LOGICAL, SAVE :: First = .TRUE.
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':methane_update_atm_GHG_conc'
 
@@ -250,9 +251,10 @@ CONTAINS
           lupdate = .TRUE.
         ENDIF
     END SELECT
-    IF (lupdate .AND. dbg) &
+    IF ((lupdate .OR. First) .AND. dbg) &
       CALL message(routine,'Updated atmospheric '//TRIM(GAS%specie_name)//' vmr: '// &
                            real2string(concentration_mol_m3_2_vmr(GAS,dst(1))))
+    First = .FALSE.
 
   END SUBROUTINE methane_update_atm_GHG_conc
 
@@ -424,7 +426,7 @@ CONTAINS
     CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
                                      dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
     CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
-                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,dbg)
+                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,.TRUE.)
     CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
                                      dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
@@ -1009,6 +1011,7 @@ CONTAINS
                                      termite_biomass(ic), CH4_out_termite(ic),                                  &
                                      frac_non_crop(ics+ic-1,iblk), sum_non_crop(ics+ic-1,iblk))
         ENDDO
+        ! TODO: This assumes that crops occupy only the last tile processed
         IF (.NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
           DO ic = ics, ice
             frac_non_crop(ic,iblk) = 0._wp
