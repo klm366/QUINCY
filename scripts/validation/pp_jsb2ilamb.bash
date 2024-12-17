@@ -12,7 +12,7 @@ set -e
 # using iLamb (see https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2018MS001354)
 # -----------------------------------------------------------------------------------------------------
 
-VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,nee,pr,reco,swe,tas,twsa'
+VARLIST='albedo,biomass,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,nee,pr,reco,rlns,rlus,rns,rsns,rsus,swe,tas,twsa'
 TRGGRID='r192x96'
 MOL2G_C=12.01
 GM2_2_MGHA=0.01
@@ -85,6 +85,11 @@ for VAR in $(echo ${VARLIST//,/ }); do
         hfls    ) echo "hfls    = seb_latent_hflx_box * -1;"   >> $TASKLIST ;;
         hfss    ) echo "hfss    = seb_sensible_hflx_box * -1;" >> $TASKLIST ;;
         tas     ) echo "tas     = seb_t_box;"                  >> $TASKLIST ;;
+	rlns    ) echo "rlns    = rad_lw_srf_net_box;" >> $TASKLIST ;;
+	rlus    ) echo "rlus    = a2l_lw_srf_down_box - rad_lw_srf_net_box;" >> $TASKLIST ;;
+	rns     ) echo "rns     = rad_rad_srf_net_box;" >> $TASKLIST ;;
+	rsns    ) echo "rsns    = rad_sw_srf_net_box;" >> $TASKLIST ;;
+	rsus    ) echo "rsus    = a2l_swvis_srf_down_box + a2l_swnir_srf_down_box - rad_sw_srf_net_box;" >> $TASKLIST ;;
         # *** Hydrology Cycle
         evspsbl ) echo "evspsbl = hydro_evapotrans_box * -1;"             >> $TASKLIST ;;
         mrro    ) echo "mrro    = hydro_runoff_box + hydro_drainage_box;" >> $TASKLIST ;;
@@ -167,6 +172,31 @@ cat > $PARTAB << EOF
   name = reco
   long_name = "Net ecosystem respiration"
   units = "g m-2 d-1"
+/
+&parameter
+  name = rlns
+  long_name = "Surface Net LW Radiation"
+  units = "W/m2"
+/
+&parameter
+  name = rlus
+  long_name = "Surface Upward LW Radiation"
+  units = "W/m2"
+/
+&parameter
+  name = rns
+  long_name = "Surface Net Radiation"
+  units = "W/m2"
+/
+&parameter
+  name = rsns
+  long_name = "Surface Net SW Radiation"
+  units = "W/m2"
+/
+&parameter
+  name = rsus
+  long_name = "Surface Upward SW Radiation"
+  units = "W/m2"
 /
 &parameter
   name = swe
