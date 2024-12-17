@@ -55,6 +55,12 @@ MODULE mo_dfire_config_class
     ENUMERATOR :: DFIRE_MODEL_SF=1
   END ENUM
 
+  !< Precipitation method names for namelist
+  CHARACTER(len=*), PARAMETER :: dfire_cfg_precip_method_daytime = "daytime"
+  CHARACTER(len=*), PARAMETER :: dfire_cfg_precip_method_mavg = "mavg" !< Default
+  CHARACTER(len=*), PARAMETER :: dfire_cfg_precip_method_aprox_mavg = "mapvg"
+  CHARACTER(len=*), PARAMETER :: dfire_cfg_methods = "'daytime', 'mavg', 'mapvg'"
+
   ! ======================================================================================================= !
   !>
   !> config TYPE of the dist_fire process, derived from t_jsb_config
@@ -63,6 +69,9 @@ MODULE mo_dfire_config_class
     LOGICAL           :: flag_dfire                  !< on/off disturbance fire process [boolean]
     CHARACTER(len=20) :: dfire_modelname             !< name of fire model to run
     INTEGER           :: dfire_model_id              !< fire model ID
+
+    CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
+    INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
   CONTAINS
     PROCEDURE :: Init => Init_dfire_config
@@ -85,11 +94,6 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
-!    USE mo_dfire_constants,    ONLY: df_sf_species_nr , df_sf_fc_full_nr, df_sf_fc_fast_nr, &
-!                                      df_sf_elements_nr, &
-!                                      df_sf_vgrid_fuel_class_name, df_sf_vgrid_species_name, &
-!                                      df_sf_vgrid_live_fuel_pools_name, &
-!                                      df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_fuel_moisture_name
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_dfire_config), INTENT(inout) :: config    !< config type for dfire
@@ -101,6 +105,8 @@ CONTAINS
     LOGICAL                       :: flag_dfire               !< on/off disturbance fire process [boolean]
     CHARACTER(len=20)             :: dfire_modelname          !< name of fire model to run
     INTEGER                       :: dfire_model_id           !< fire model ID, derived from 'dfire_modelname'
+    CHARACTER(len=20)             :: dfire_precip_method_name !< precipitation method name, from namelist
+    INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -113,7 +119,8 @@ CONTAINS
       & ic_filename,                &
       & bc_filename,                &
       & flag_dfire,                 &
-      & dfire_modelname
+      & dfire_modelname,            &
+      & dfire_precip_method_name
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -127,6 +134,7 @@ CONTAINS
     ic_filename              = 'ic_land_dfire.nc'
     flag_dfire               = .FALSE.
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
+    dfire_precip_method_name  = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -147,12 +155,17 @@ CONTAINS
     config%bc_filename               = bc_filename
     config%flag_dfire                = flag_dfire
     config%dfire_modelname           = TRIM(dfire_modelname)
+    config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
     ! set the fire model ID from 'dfire_modelname'
     dfire_model_id        = Get_dfire_model_id(TRIM(config%dfire_modelname))
     config%dfire_model_id = dfire_model_id
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! set the fire precipitation method ID from 'dfire_precip_method_name'
+    dfire_precip_method_id        = Get_Precip_Method_id(TRIM(config%dfire_precip_method_name))
+    config%dfire_precip_method_id = dfire_precip_method_id
     ! ----------------------------------------------------------------------------------------------------- !
 !    vgrid_fuel_class  => new_vgrid(df_sf_vgrid_fuel_class_name, zaxis_generic, df_sf_fc_full_nr, &
 !            longname='Fuel classes (1,10,100,1000)', &
@@ -180,5 +193,31 @@ CONTAINS
   END FUNCTION Get_dfire_model_id
 
 
+  ! ====================================================================================================== !
+  !>
+  !> Returns the id for this fire precipitation method name
+  !>
+  FUNCTION Get_Precip_Method_id(name) RESULT(return_value)
+    USE mo_dfire_constants,   ONLY: DFIRE_PRECIP_METHOD_DAYTIME, &
+                                    DFIRE_PRECIP_METHOD_MAVG, &
+                                    DFIRE_PRECIP_METHOD_APROX_MAVG
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), INTENT(in) :: name
+    INTEGER                      :: return_value
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_Precip_Method_id'
+    ! ----------------------------------------------------------------------------------------------------- !
+    SELECT CASE(tolower(TRIM(name)))
+    CASE (dfire_cfg_precip_method_daytime)
+      return_value = DFIRE_PRECIP_METHOD_DAYTIME
+    CASE (dfire_cfg_precip_method_mavg)
+      return_value = DFIRE_PRECIP_METHOD_MAVG
+    CASE (dfire_cfg_precip_method_aprox_mavg)
+      return_value = DFIRE_PRECIP_METHOD_APROX_MAVG
+    CASE DEFAULT
+      CALL finish(routine,"Invalid precipitation method name. "// &
+          " Only allowed: "// dfire_cfg_methods)
+    END SELECT
+  END FUNCTION Get_Precip_Method_id
 #endif
 END MODULE mo_dfire_config_class

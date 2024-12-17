@@ -97,9 +97,8 @@ CONTAINS
     precip_daily_mmd = 0._wp
     precip_mavg = 0._wp
 
-    ! Chose daily precipitation. Those are calculated in 3 different ways.
-    ! todo: add as an option into namelist
-    dfire_pm_id = DFIRE_PRECIP_METHOD_MAVG !dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
+    !< Chose daily precipitation. Those are calculated in 3 different ways.
+    dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
     IF (dfire_pm_id == DFIRE_PRECIP_METHOD_DAYTIME) THEN
       !< daytime
       dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_daytime)
