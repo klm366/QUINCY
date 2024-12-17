@@ -1059,7 +1059,7 @@ CONTAINS
     USE mo_rad_process,       ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
-      & Has_minimal_radiation, get_litter_carbon, get_soil_carbon
+      & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
     USE mo_rad_process,       ONLY: calc_surface_radiation_quincy
     USE mo_rad_parameters,    ONLY: def_alb_vis_soil, def_alb_nir_soil, &
@@ -1081,6 +1081,7 @@ CONTAINS
     INTEGER                         :: iblk, ic, is
     INTEGER                         :: ics, ice, nc
     LOGICAL, ALLOCATABLE            :: l_day(:)
+    REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
     REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
     LOGICAL                         :: l_ice_on_lakes_local      !< use for jsbach & quincy, as helper variable
@@ -1122,6 +1123,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  &
       & cos_zenith_angle,      &
       & t_unfilt,              &
+      & snow,                  &
       & alb_vis,               &
       & alb_nir,               &
       & alb_vis_lnd,           &
@@ -1202,6 +1204,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1364,6 +1367,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   snow)                  ! in
 
     ALLOCATE(temperature_surface(nc))
     !$ACC ENTER DATA CREATE(temperature_surface)
@@ -1441,6 +1445,19 @@ CONTAINS
     END SELECT
       ! <<< TODO: correct indentation
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
+
+      ! Update (non-dimensional) snow age
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        CALL calc_snow_age(          &
+          & dtime,                   & ! in
+          & temperature_surface(ic), & ! in
+          & snow(ic),                & ! in
+          & fract_snow_soil(ic),     & ! in
+          & snow_age(ic)             & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
@@ -1879,6 +1896,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                 weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
       ! RAD_ 3D
       dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl,     weighted_by_fract)
@@ -1906,6 +1924,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,            weighted_by_fract)
       IF (.NOT. tile%is_vegetation) THEN
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)

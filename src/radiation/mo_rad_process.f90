@@ -22,7 +22,7 @@ MODULE mo_rad_process
   PUBLIC ::                        &
     & calc_radiation_surface_net,  &
     & calc_par,                    &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, calc_snow_age,                 &
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
@@ -435,6 +435,51 @@ CONTAINS
 
   END SUBROUTINE calc_par
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Compute non-dimensional snow age
+  !!
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_snow_age( &
+    & dtime,                & ! in
+    & temperature_surface,  & ! in
+    & snow,                 & ! in
+    & fract_snow_soil,      & ! in
+    & snow_age              & ! inout
+    & )
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+
+    REAL(wp), INTENT(in)    :: dtime,               & !< model time step [s]
+      &                        temperature_surface, & !< surface temperature [K]
+      &                        snow,                & !< snowfall [kg m-2 s-1]
+      &                        fract_snow_soil        !< Fraction of snow covered ground [-]
+
+    REAL(wp), INTENT(inout) :: snow_age               !< non-dimensional age of snow
+
+    REAL(wp)                :: hlp1                   !< temporary variable
+
+    ! ---------------------------
+    ! Update snow age where ever there is snow on the ground
+    ! Snow age increases with time and temperatures closer to the melting point
+    ! It decreases with new snowfall or resets to zero in case all snow is melted
+
+    IF (fract_snow_soil > EPSILON(1.0_wp)) THEN
+      hlp1     = MIN(1._wp, EXP(5000._wp * ((1._wp / tmelt) - (1._wp / temperature_surface))))
+      snow_age = MAX(0.0_wp, (snow_age +                          &
+        & ((hlp1**10._wp + hlp1 + 0.3_wp) * dtime * 1.e-06_wp)) * &
+        & (1._wp - (snow * dtime * 0.5_wp)))
+    ELSE
+      snow_age = 0._wp
+    END IF
+
+  END SUBROUTINE calc_snow_age
+
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
 #ifndef _OPENACC
   ELEMENTAL PURE &
