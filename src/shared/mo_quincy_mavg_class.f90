@@ -54,7 +54,7 @@ MODULE mo_quincy_mavg_class
 
 CONTAINS
 
-  FUNCTION create_t_mavg(dtime, ndays) RESULT (new_mavg)
+  ELEMENTAL FUNCTION create_t_mavg(dtime, ndays) RESULT (new_mavg)
     REAL(wp), INTENT(in) :: dtime !< length of ts [s]
     INTEGER, INTENT(in) :: ndays !< how many days [days]
     TYPE(t_mavg) :: new_mavg

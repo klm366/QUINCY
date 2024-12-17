@@ -45,12 +45,19 @@ MODULE mo_dfire_memory_class
   !> Type definition for dfire memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_memory
-    !TYPE(t_jsb_var_real3d)               :: fuel_moisture                  !< moisture in fuel [0 to 1]
-    !TYPE(t_jsb_var_real2d)               :: nesterov_index                 !< cumulative function of tmax and tdew [C2]
+    !TYPE(t_jsb_var_real3d)               :: fuel_moisture      !< moisture in fuel [0 to 1]
+    !TYPE(t_jsb_var_real2d)               :: nesterov_index     !< cumulative function of tmax and tdew [C2]
 
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
+    !< Precipitation
+    !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
+    TYPE(t_jsb_var_real2d)               :: precip_qc_mavg      !< Precipitation moving average (quincy moving average) [kg m-2 s-1]
+    TYPE(t_jsb_var_real2d)               :: precip_daytime      !< Aproximation to daily precipitation (previous daily data, aproximatted by sun movement) [kg m-2 s-1]
+    TYPE(t_jsb_var_real2d)               :: precip_mavg         !< Precipitation moving average (Pure implementation of moving average) [kg m-2 s-1]
+    TYPE(t_jsb_var_real2d)               :: precip_daily        !< Daily precipitation, it links to precip_daytime, precip_mavg or precip_qc_mavg [kg m-2 s-1]
+    TYPE(t_jsb_var_real2d)               :: precip_daily_mmd    !< Daily precipitation, same as precip_daily but in spitfire expected units [mm day-1]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -101,6 +108,57 @@ CONTAINS
     CALL mem%Add_var('t_air_min', mem%t_air_min, &
         & hgrid, vgrid_surface, &
         & t_cf('t_air_min', 'K', 'Min temperature of the previous day (daytime_counter)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    !< Precipitation related variables
+    CALL mem%Add_var('precip_daily', mem%precip_daily, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_daily', 'kg m-2 s-1', 'Daily precipitation (precip_mavg, precip_qc_mavg, precip_daytime'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('precip_mavg', mem%precip_mavg, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_mavg', 'kg m-2 s-1', 'Precipitation moving average using pure method'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('precip_qc_mavg', mem%precip_qc_mavg, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_qc_mavg', 'kg m-2 s-1', 'Precipitation moving average using quincy method'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('precip_daily_mmd', mem%precip_daily_mmd, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_daily_mmd', 'mm/day', 'Daily precipitation in Spitfire units'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('precip_daytime', mem%precip_daytime, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_daytime', 'kg m-2 s-1', 'Daily precipitation from previous day, related to sun movement'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

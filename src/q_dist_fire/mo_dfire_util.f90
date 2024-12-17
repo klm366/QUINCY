@@ -78,8 +78,8 @@ CONTAINS
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    ! ASSIMI_
-    !dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
+    ! DFIRE_
+    dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -105,11 +105,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! DFIRE_
-    !dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
     ! ----------------------------------------------------------------------------------------------------- !
     write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire..."
 
-    !precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
+    precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
 
   END SUBROUTINE calculate_time_average_dist_fire
 
@@ -167,11 +167,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     ! DFIRE_ 2D
-    !dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
+    dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
     dsl4jsb_Real2D_onChunk      :: t_air_max              !<
     dsl4jsb_Real2D_onChunk      :: t_air_min              !<
     REAL(wp), ALLOCATABLE, SAVE :: prev_one_cos_zenith_angle(:), prev_two_cos_zenith_angle(:)
-    !REAL(wp), ALLOCATABLE, SAVE :: precip_daytime_old(:)
+    REAL(wp), ALLOCATABLE, SAVE :: precip_daytime_old(:)
     REAL(wp), ALLOCATABLE, SAVE :: t_air_max_old(:)
     REAL(wp), ALLOCATABLE, SAVE :: t_air_min_old(:)
     ! Get local variables from options argument
@@ -201,7 +201,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
     ! ---------------------------
-    !dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)
 
@@ -214,10 +214,10 @@ CONTAINS
 
     !> 1.0 init
     !!
-    !IF (.NOT. ALLOCATED(precip_daytime_old)) THEN
-    !  ALLOCATE(precip_daytime_old(nc))
-    !  precip_daytime_old = 0._wp
-    !ENDIF
+    IF (.NOT. ALLOCATED(precip_daytime_old)) THEN
+      ALLOCATE(precip_daytime_old(nc))
+      precip_daytime_old = 0._wp
+    ENDIF
     IF (.NOT. ALLOCATED(t_air_max_old)) THEN
       ALLOCATE(t_air_max_old(nc))
       t_air_max_old = 0._wp
@@ -246,7 +246,7 @@ CONTAINS
     t_air_max_old(:) = max(t_air_max_old(:), t_air(:))
     t_air_min_old(:) = min(t_air_min_old(:), t_air(:))
     ! 1.2 update accumulation values
-    !precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
+    precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
 
     !> 2.0 at the timestep after local midnight (1st timestep of the new day) calc daytime averages
     !!
@@ -264,11 +264,11 @@ CONTAINS
       ! calculate the average over the previous day and pass it to the according *_daytime variable;
       t_air_max(:)            = t_air_max_old(:)
       t_air_min(:)            = t_air_min_old(:)
-      !precip_daytime(:)       = precip_daytime_old(:)
+      precip_daytime(:)       = precip_daytime_old(:)
       ! init variables after min/max daily value
       t_air_max_old(:)        = 0.0_wp     !< zero kelvin
       t_air_min_old(:)        = 9999.0_wp  !< above max
-      !precip_daytime_old(:)   = 0._wp      !< no precipitation
+      precip_daytime_old(:)   = 0._wp      !< no precipitation
     END WHERE
 
     !    IF (debug_on() .AND. iblk == 1) THEN
@@ -324,7 +324,7 @@ CONTAINS
     INTEGER                                 :: iblk, ics, ice, nc
     REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
-    !TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type
+    TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type(:)
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -335,7 +335,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
     ! DFIRE_ 2D
-    !dsl4jsb_Real2D_onChunk      :: precip_mavg
+    dsl4jsb_Real2D_onChunk      :: precip_mavg
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -360,21 +360,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! ---------------------------
-    !dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
 
     write(*,*) "dfire_util.f90:: calculate_pure_moving_averages..."
 
-    !IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
-    !  ALLOCATE(precip_mavg_type)
-    !  precip_mavg_type = t_mavg(dtime, 1) !< daily
-    !ENDIF
+    IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
+      ALLOCATE(precip_mavg_type(nc))
+      precip_mavg_type = t_mavg(dtime, 1) !< daily
+    ENDIF
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !CALL precip_mavg_type%add((snow(1) + rain(1)))
-    !precip_mavg(1) = precip_mavg_type%get()
+    DO ic = 1, nc
+      CALL precip_mavg_type(ic)%add((snow(ic) + rain(ic)))
+      precip_mavg(ic) = precip_mavg_type(ic)%get()
+    END DO
 
   END SUBROUTINE calculate_pure_moving_averages
 
