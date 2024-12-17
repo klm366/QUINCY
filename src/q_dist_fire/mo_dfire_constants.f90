@@ -72,6 +72,13 @@ MODULE mo_dfire_constants
   INTEGER, PARAMETER :: sf_fuel_classes_nr = 4 !< 1, 10, 100, 1000
   REAL(wp), PARAMETER :: sf_slow_fuel(sf_fuel_classes_nr) = [0.045_wp, 0.075_wp, 0.21_wp, 0.67_wp]
   REAL(wp), PARAMETER :: sf_fast_fuel(sf_fuel_classes_nr) = [1._wp, 0._wp, 0._wp, 0._wp]
+
+  !< Methods to compute daily precipitation, as it is not done by the hosting model.
+  ENUM, BIND(C)
+    ENUMERATOR :: DFIRE_PRECIP_METHOD_DAYTIME=10    !< Previous day daily precipitation, based on sun movement (sunset vs sunrise)
+    ENUMERATOR :: DFIRE_PRECIP_METHOD_MAVG=20       !< Pure moving average, so it is never approximatted.
+    ENUMERATOR :: DFIRE_PRECIP_METHOD_APROX_MAVG=30 !< Approximation to moving average used by Quincy. Not recommended as it leaks water over time, as it never reaches 0.
+  END ENUM
 CONTAINS
 
   ! ======================================================================================================= !

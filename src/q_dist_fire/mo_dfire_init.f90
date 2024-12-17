@@ -50,7 +50,11 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-!    USE mo_dfire_constants,         ONLY: live_frac_allocation
+
+    USE mo_dfire_constants,         ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
+                                          DFIRE_PRECIP_METHOD_APROX_MAVG, &
+                                          DFIRE_PRECIP_METHOD_MAVG
+
     dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -63,11 +67,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(DFIRE_)
-    dsl4jsb_Def_memory(DFIRE_)                          !   TYPE(t_dfire_memory), POINTER      :: dfire__mem
+    dsl4jsb_Def_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Real2D_onChunk      :: nesterov_index
+    dsl4jsb_Real2D_onChunk      :: precip_daytime
+    dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
+    dsl4jsb_Real2D_onChunk      :: precip_daily_mmd
+    dsl4jsb_Real2D_onChunk      :: precip_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -79,10 +86,30 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily_mmd)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
     ! ----------------------------------------------------------------------------------------------------- !
-!    nesterov_index(:) = 0._wp
     WRITE(*,*) "dfire_init..."
+    precip_daytime = 0._wp
+    precip_qc_mavg = 0._wp
+    precip_daily_mmd = 0._wp
+    precip_mavg = 0._wp
+
+    ! Chose daily precipitation. Those are calculated in 3 different ways.
+    ! todo: add as an option into namelist
+    dfire_pm_id = DFIRE_PRECIP_METHOD_MAVG !dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
+    IF (dfire_pm_id == DFIRE_PRECIP_METHOD_DAYTIME) THEN
+      !< daytime
+      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_daytime)
+    ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_MAVG) THEN
+      !< moving average
+      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_mavg)
+    ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_APROX_MAVG) THEN
+      !< aproximation to moving average (quincy default method)
+      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_qc_mavg)
+    ENDIF
 
   END SUBROUTINE dfire_init
 #endif
