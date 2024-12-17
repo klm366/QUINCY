@@ -320,8 +320,8 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    !TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
-    INTEGER                                 :: iblk, ics, ice, nc
+    !TYPE(t_lctlib_element), POINTER         :: lctlib              !< land-cover-type library - parameter across pft's
+    INTEGER                                 :: iblk, ics, ice, nc, ic
     REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
     TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type(:)

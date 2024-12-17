@@ -54,7 +54,7 @@ MODULE mo_quincy_queue
 
 CONTAINS
 
-  FUNCTION create_t_queue(capacity) RESULT (new_queue)
+  ELEMENTAL FUNCTION create_t_queue(capacity) RESULT (new_queue)
     INTEGER, INTENT(in) :: capacity
     TYPE(t_queue) :: new_queue !< output
 
