@@ -240,7 +240,8 @@ CONTAINS
                                                             dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
-    WRITE(*,*) "(spitfire) t_air_min, t_air_max = ", t_air_min(1), t_air_max(1)
+    WRITE(*,*) "(spitfire) t_air_min, t_air_max, tile area, tile_Frac, gc_area = ", &
+            t_air_min(1), t_air_max(1), tile_area(1), tile_fract(1), grid_cell_area(1)
   END SUBROUTINE update_dfire_spitfire
 
 
