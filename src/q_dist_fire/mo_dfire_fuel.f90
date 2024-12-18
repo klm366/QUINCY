@@ -98,7 +98,9 @@ CONTAINS
     REAL(wp) :: dead_fuel(options%nc,sf_fuel_dead_fuel_nr,sf_fuel_classes_nr) !< (#nc,#dead pools,#fuel classes) [g DM m-2]
     REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_nr) !< (#nc,#live pools,#fuel classes) [g DM m-2]
 
-    REAL(wp) :: fract(options%nc)
+    REAL(wp) :: tile_fract(options%nc) !  [%]
+    REAL(wp) :: forest_fract(options%nc) ! Forest fraction for current PFT [%]
+    REAL(wp) :: grass_fract(options%nc) ! Grass fraction for current PFT [%]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -154,9 +156,11 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL tile%Get_fraction(ics, ice, iblk, fract)
+    CALL tile%Get_fraction(ics, ice, iblk, tile_fract)
+    !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
+    !             fract(1)
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
-                 fract(1)
+                        tile_fract(1), lctlib%ForestFlag, lctlib%GrassFlag, lctlib%CropFlag
     dead_fuel = 0._wp
     live_fuel = 0._wp
 
@@ -164,13 +168,21 @@ CONTAINS
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! Aggregate fractions by type (Forest, Grass)
+    IF (lctlib%ForestFlag) THEN
+      forest_fract=tile_fract
+    ELSE IF (lctlib%GrassFlag) THEN
+      grass_fract=tile_fract
+    ELSE ! ignore
+    END IF
+
     ! dead fuel from sb_pool
     DO ifc = 1, sf_fuel_classes_nr
       dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,ifc) = sb_pool_mt(ix_woody_litter,ixC,:,1) * sf_slow_fuel(ifc)
       dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,ifc) = sb_pool_mt(ix_polymeric_litter,ixC,:,1) * sf_fast_fuel(ifc)
     ENDDO
 
-    IF (lctlib%growthform == ITREE) THEN
+    IF (lctlib%ForestFlag) THEN
       DO ifc = 1, sf_fuel_classes_nr ! live fuel from veg_pool (tree)
         live_fuel(:,t_sf_fuel_live_fuel_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
         live_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
@@ -179,7 +191,7 @@ CONTAINS
         live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_slow_fuel(ifc)
         live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix,ifc) = veg_pool_mt(ix_heart_wood,ixC,:) * sf_slow_fuel(ifc)
       ENDDO
-    ELSE IF (lctlib%growthform == IGRASS) THEN
+    ELSE IF (lctlib%GrassFlag) THEN
       DO ifc = 1, sf_fuel_classes_nr ! dead fuel from veg_pool (grass)
         dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
         dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
@@ -187,15 +199,15 @@ CONTAINS
         dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifc) = veg_pool_mt(ix_reserve,ixC,:) * sf_fast_fuel(ifc)
         dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_fast_fuel(ifc)
       END DO
-    ELSE ! something unexpected
-      CALL finish(routine, "Unexpected growth form found")
+    !ELSE ! something unexpected
+      !CALL finish(routine, "Unexpected growth form found")
     END IF
 
     dead_fuel_1hr = dead_fuel(:,:,1) !< 1 = 1hr fuel class index
     dead_fuel_10hr = dead_fuel(:,:,2)
     dead_fuel_100hr = dead_fuel(:,:,3)
     dead_fuel_1000hr = dead_fuel(:,:,4)
-    WRITE(*,*) "(fuel) dead fuel (woody)=", dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix,:)
+    !WRITE(*,*) "(fuel) dead fuel (woody)=", dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix,:)
 
     live_fuel_1hr = live_fuel(:,:,1)
     live_fuel_10hr = live_fuel(:,:,2)

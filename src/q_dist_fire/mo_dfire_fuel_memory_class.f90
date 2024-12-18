@@ -40,7 +40,7 @@ MODULE mo_dfire_fuel_memory_class
   PRIVATE
   PUBLIC :: t_dfire_fuel_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 10
+  INTEGER, PARAMETER :: max_no_of_vars = 20
 
   ! ======================================================================================================= !
   !>
@@ -56,6 +56,9 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_fuel_10hr      !< 10hr live fuel (#nc, #nlivepools) [gDM m-2]
     TYPE(t_jsb_var_real3d)  :: live_fuel_100hr     !< 100hr live fuel (#nc, #nlivepools) [gDM m-2]
     TYPE(t_jsb_var_real3d)  :: live_fuel_1000hr    !< 1000hr live fuel (#nc, #nlivepools) [gDM m-2]
+
+    TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
+    TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%] 
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -175,6 +178,26 @@ CONTAINS
     CALL mem%Add_var('live_fuel_1000hr', mem%live_fuel_1000hr, &
         & hgrid, vgrid_live_fuel_pools, &
         & t_cf('live_fuel_1000hr', 'gDM m-2', '1000hr live fuel'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('forest_fract', mem%forest_fract, &
+        & hgrid, vgrid_surface, &
+        & t_cf('forest_fract', '%', 'Forest fraction'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('grass_fract', mem%grass_fract, &
+        & hgrid, vgrid_surface, &
+        & t_cf('grass_fract', '%', 'Grass fraction'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
