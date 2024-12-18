@@ -54,7 +54,8 @@ MODULE mo_jsb_tile_class
   PRIVATE
 
   PUBLIC :: t_jsb_tile_abstract
-  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, t_jsb_aggregator_weighted_by_fract
+  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, &
+                t_jsb_aggregator_weighted_by_fract, t_jsb_aggregator_sum
 
   ! Declarations for aggregators
 
@@ -1402,7 +1403,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Aggregation of a 2d variable from the child tiles by weighted fractions
+  !> Aggregation of a 2d variable from the child tiles by sum all 
   !>
   SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller)
 
@@ -1427,12 +1428,13 @@ CONTAINS
     ELSE
       routine = modname//':Aggregate_sum_2d'
     END IF
+    WRITE(*,*) "aggregation_sum:: start..."
 
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
 
     ! Set the fractions of the child tiles (on the current chunk)
-    CALL this%Set_fractions(tile, ics, ice, iblk)
+    !CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
@@ -1467,6 +1469,7 @@ CONTAINS
         END IF
       END DO
     END IF
+    !WRITE(*,*) "aggregation_sum:: ichild, icount=",  ichild, icount
 
     !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1)
 
@@ -1477,13 +1480,14 @@ CONTAINS
         ! ... and the variable on the current tile equals the var on the child tile.
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
+      !WRITE(*,*) "aggregation_sum:: no_children=1, var%ptr=",  var%ptr(1,iblk)
     ELSE IF (no_children > 1) THEN
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        this%data_sum (j,iblk) = 0._wp
-!        this%fract_sum(j,iblk) = 0._wp
+        this%data_sum(j,iblk) = 0._wp
       END DO
+      !WRITE(*,*) "aggregation_sum:: no_children>1..."
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
       !
@@ -1491,30 +1495,24 @@ CONTAINS
       DO i=1,no_children
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
+          !WRITE(*,*) "aggregation_sum:: no_children>1, var%child_idx>0... ptrs2d(1)=",  &
+                  tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(1,iblk)
           ! The variable exists on the child tile
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             ! Multilply variable of the child with the weight and add it to the data sum
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-!                & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
                  & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
             ! -> The cache is a huge array of pointers with i iterating over the number of children
             !    (second dim: number of variables, third dim: number of processes).
             ! => Without gpu we would use
             !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
-
-            ! Add weight to the weight sum
-!            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
-!        ELSE IF (l_aggregate_all) THEN
-          ! The variable is not defined on the this child tile, but we still want to consider its fraction
-          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
-          !$ACC LOOP GANG(STATIC: 1) VECTOR
-!          DO j = ics, ice
-!            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-!          END DO
         END IF
       END DO
+
+      ! debug only
+      !WRITE(*,*) "aggregation_sum:: no_children>1, this%data_sum=", this%data_sum(1,iblk)
 
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
@@ -1527,29 +1525,24 @@ CONTAINS
       !   CALL finish(TRIM(routine),  '    ... this should not happen')
       ! END IF
 
-      ! Calculate the weighted average
+      ! Output sum data 
       !
-      !IF (icount == 1) THEN  ! Only one child tile needs to be considered.
+      IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
-            ! ichild: the only child that contained the variable
-            var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
-          END IF
+          ! ichild: the only child that contained the variable
+          var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
         END DO
-!      ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
-!        !$ACC LOOP GANG(STATIC: 1) VECTOR
-!        DO j = ics, ice
-!          IF (this%fract_sum(j,iblk) > 0._wp) THEN
-!            ! Divide the data sum by the sum of the fractions
-!            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-!            ! ELSE
-!            !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
-!          END IF
-!        END DO
-      !ELSE
-      !  STOP 'Aggregate_sum_2d: This should not happen (icount=0)!'
-      !END IF
+        !WRITE(*,*) "aggregation_sum:: sum=", var%ptr(1,iblk) 
+      ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO j = ics, ice
+          ! Output computed data 
+          var%ptr(j,iblk) = this%data_sum(j,iblk) 
+        END DO
+      ELSE
+        STOP 'Aggregate_sum_2d: This should not happen (icount=0)!'
+      END IF
 
     END IF
 
@@ -1566,7 +1559,8 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Aggregation of a 3d variable from the child tiles by weighted fractions
+  !> Aggregation of a 3d variable from the child tiles by sum
+  !> todo: ensure it works
   !>
   SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller)
 
@@ -1596,7 +1590,7 @@ CONTAINS
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
 
     ! Set the fractions of the child tiles (on the current chunk)
-    CALL this%Set_fractions(tile, ics, ice, iblk)
+    !CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
@@ -1611,6 +1605,8 @@ CONTAINS
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
+
+    CALL finish(TRIM(routine), "Not yet implemented")
 
     ! Needed for GPUs
     tile_ptrs3d_cache => tile%ptrs3d_cache ! the 3d var pointer cache on this tile
@@ -1701,10 +1697,10 @@ CONTAINS
 !        IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+!            IF (this%fract_sum(j,iblk) > 0._wp) THEN
               ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
-            END IF
+!            END IF
           END DO
 !        ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
 !          !$ACC LOOP GANG(STATIC: 1) VECTOR
