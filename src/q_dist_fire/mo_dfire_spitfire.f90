@@ -128,7 +128,6 @@ CONTAINS
     REAL(wp), POINTER                     :: fract_fpc(:,:) ! in
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
-    REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [?]
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
@@ -156,10 +155,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: w_soil_sl        ! soil water content [m]
     dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl     ! soil water field capacity [m]
 
-    ! DFIRE_FUEL_ 3D
+    ! DFUEL_ 2D
     ! Note: t_air_max/t_air_min belongs to the previous days due to implementation constraints
     dsl4jsb_Real2D_onChunk                :: t_air_min         ! Min temperature of the day (previous day) [k]
     dsl4jsb_Real2D_onChunk                :: t_air_max         ! Max temperature of the day (previous day) [k]
+
+    dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr     ! [g DM m-2]
@@ -194,6 +195,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)              ! in [k]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)              ! in
 
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
+
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)    ! in
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)   ! in
@@ -226,7 +229,11 @@ CONTAINS
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 
-    tile_area = grid_cell_area * tile_fract
+    pot_burn_area = grid_cell_area * (SUM(grass_fract) + SUM(forest_fract))
+    ! assertion
+    IF (ANY(pot_burn_area > tile_fract)) THEN
+      CALL finish(TRIM(routine), "potential_burn_area > tile_fract")
+    END IF
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
@@ -246,8 +253,8 @@ CONTAINS
                                                             dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
-    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract = ", &
-            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1) !tile_area(1), tile_fract(1), grid_cell_area(1)
+    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area = ", &
+            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1)
   END SUBROUTINE update_dfire_spitfire
 
 
