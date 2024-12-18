@@ -166,6 +166,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr    ! 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr   ! 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr  ! 
+
+    dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
+    dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -195,6 +198,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)    ! in
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)   ! in
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)  ! in
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -240,8 +246,8 @@ CONTAINS
                                                             dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
-    WRITE(*,*) "(spitfire) t_air_min, t_air_max, tile area, tile_Frac, gc_area = ", &
-            t_air_min(1), t_air_max(1), tile_area(1), tile_fract(1), grid_cell_area(1)
+    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract = ", &
+            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1) !tile_area(1), tile_fract(1), grid_cell_area(1)
   END SUBROUTINE update_dfire_spitfire
 
 
