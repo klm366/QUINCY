@@ -97,7 +97,8 @@ CONTAINS
     REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
 
-    INTEGER :: ic, iblk, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks
+    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks 
+    INTEGER :: idx, i, j, row, trans_idx, transition_prob, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
     CHARACTER(len=filename_max) :: filename_land_use_data
@@ -105,15 +106,17 @@ CONTAINS
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
+    ! Get local variables from options argument
+    
     model => Get_model(model_id)
     no_omp_thread = Get_omp_thread()
     hgrid => Get_grid(model%grid_id)
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
-    iblk    = options%iblk
-    nc      = options%nc
-
+    ics     = options%ics
+    ice     = options%ice
+    ! nc     = options%nc  nc = ice- ics + 1
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
 
@@ -162,8 +165,11 @@ CONTAINS
 
     ! Read land use data
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year,cf_transition,cf_transition_pfts,cf_transition_gain,cf_transition_loss)  ! Mingyue add dsl4jsb for transition vars
-
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year)  
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition)        ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_pfts)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_gain)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_loss)
     !>
     !> Assertion: alcc process currently expects filenames with 4 digits
     !>
