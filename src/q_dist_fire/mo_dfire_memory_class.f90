@@ -51,6 +51,8 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
+    TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
+
     !< Precipitation
     !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
     TYPE(t_jsb_var_real2d)               :: precip_qc_mavg      !< Precipitation moving average (quincy moving average) [kg m-2 s-1]
@@ -159,6 +161,16 @@ CONTAINS
     CALL mem%Add_var('precip_daytime', mem%precip_daytime, &
         & hgrid, vgrid_surface, &
         & t_cf('precip_daytime', 'kg m-2 s-1', 'Daily precipitation from previous day, related to sun movement'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pot_burn_area', 'm2', 'Potential burnable area (forest and grass area)'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
