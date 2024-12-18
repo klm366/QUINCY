@@ -1428,7 +1428,7 @@ CONTAINS
     ELSE
       routine = modname//':Aggregate_sum_2d'
     END IF
-    WRITE(*,*) "aggregation_sum:: start..."
+    !WRITE(*,*) "aggregation_sum:: start..."
 
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
