@@ -100,8 +100,8 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_
     ! ----------------------------------------------------------------------------------------------------- !
-    USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_math_constants,      ONLY: one_day
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -117,6 +117,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     INTEGER                               :: iblk, ics, ice, nc, ic
@@ -125,6 +126,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
 
     REAL(wp), POINTER                     :: fract_fpc(:,:) ! in
+    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
+    REAL(wp), POINTER                     :: tile_fract(:) ! [%]
+    REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [?]
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
@@ -173,6 +177,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
@@ -212,6 +217,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
+    grid_cell_area => grid % area(ics:ice, iblk)
+    tile_fract => tile%fract(ics:ice, iblk)
+
+    tile_area = grid_cell_area * tile_fract
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
