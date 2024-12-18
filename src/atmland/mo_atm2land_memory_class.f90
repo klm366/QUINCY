@@ -196,6 +196,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -206,6 +207,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -216,6 +218,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -519,6 +522,7 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
+
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &

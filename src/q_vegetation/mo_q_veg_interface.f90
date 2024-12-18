@@ -432,6 +432,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, delta_dens_ind                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, unit_transpiration                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation             , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -658,6 +660,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_n15                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, rfr_ratio_boc_tvegdyn_mavg          , weighted_by_fract)
     ! VEG_ bgcm pools
