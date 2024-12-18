@@ -1496,7 +1496,7 @@ CONTAINS
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
           !WRITE(*,*) "aggregation_sum:: no_children>1, var%child_idx>0... ptrs2d(1)=",  &
-                  tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(1,iblk)
+          !        tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(1,iblk)
           ! The variable exists on the child tile
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
