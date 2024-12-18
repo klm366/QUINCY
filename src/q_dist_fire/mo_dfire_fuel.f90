@@ -99,8 +99,8 @@ CONTAINS
     REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_nr) !< (#nc,#live pools,#fuel classes) [g DM m-2]
 
     REAL(wp) :: tile_fract(options%nc) !  [%]
-    REAL(wp) :: forest_fract(options%nc) ! Forest fraction for current PFT [%]
-    REAL(wp) :: grass_fract(options%nc) ! Grass fraction for current PFT [%]
+    !REAL(wp) :: forest_fract(options%nc) ! Forest fraction for current PFT [%]
+    !REAL(wp) :: grass_fract(options%nc) ! Grass fraction for current PFT [%]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -123,6 +123,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: live_fuel_10hr
     dsl4jsb_Real3D_onChunk      :: live_fuel_100hr
     dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr
+
+    dsl4jsb_Real2D_onChunk      :: forest_fract
+    dsl4jsb_Real2D_onChunk      :: grass_fract
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -151,6 +154,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr)
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr)
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr)
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -159,10 +165,10 @@ CONTAINS
     CALL tile%Get_fraction(ics, ice, iblk, tile_fract)
     !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
     !             fract(1)
-    WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
-                        tile_fract(1), lctlib%ForestFlag, lctlib%GrassFlag, lctlib%CropFlag
     dead_fuel = 0._wp
     live_fuel = 0._wp
+    forest_fract=0._wp
+    grass_fract=0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -173,7 +179,7 @@ CONTAINS
       forest_fract=tile_fract
     ELSE IF (lctlib%GrassFlag) THEN
       grass_fract=tile_fract
-    ELSE ! ignore
+    !ELSE ! ignore
     END IF
 
     ! dead fuel from sb_pool
@@ -213,6 +219,10 @@ CONTAINS
     live_fuel_10hr = live_fuel(:,:,2)
     live_fuel_100hr = live_fuel(:,:,3)
     live_fuel_1000hr = live_fuel(:,:,4)
+
+    WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
+                        ", fraction, forest_fract=", &
+                        tile_fract(1), forest_fract(1)
 
   END SUBROUTINE update_dfire_fuel
 

@@ -99,6 +99,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER         :: model
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    CLASS(t_jsb_aggregator),  POINTER         :: sum_agg
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -113,6 +114,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    sum_agg => tile%Get_aggregator("sum")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
 
@@ -130,6 +132,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_10hr             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_100hr            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1000hr           , weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, forest_fract     , sum_agg)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, grass_fract      , sum_agg)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
