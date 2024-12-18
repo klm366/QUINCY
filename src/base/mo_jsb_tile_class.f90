@@ -1410,7 +1410,7 @@ CONTAINS
   !>
   SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
@@ -1574,7 +1574,7 @@ CONTAINS
   !>
   SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
@@ -1737,11 +1737,11 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Destructs an "weighted_by_fract" aggregator by deallocating its internal fields
+  !> Destructs an "sum" aggregator by deallocating its internal fields
   !>
   SUBROUTINE Finalize_aggregator_sum(aggregator)
 
-    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator !< Aggregator to destruct
+    TYPE(t_jsb_aggregator_sum) :: aggregator !< Aggregator to destruct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Finalize_aggregator_sum'
 
@@ -1761,5 +1761,36 @@ CONTAINS
 !    END IF
 
   END SUBROUTINE Finalize_aggregator_sum
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructs the "sum" aggregator by allocating its internal fields
+  !>
+  !> Uses the size of the domain and the number of children of the tile
+  !>
+  FUNCTION Create_aggregator_sum(grid_id, no_of_children) RESULT(aggregator)
+
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_grid,       ONLY: Get_grid
+
+    INTEGER, INTENT(in) :: grid_id        !< Id of horizontal grid to get domain size from
+    INTEGER, INTENT(in) :: no_of_children !< number of child tiles which are to be aggregated on this tile
+    TYPE(t_jsb_aggregator_sum), POINTER    :: aggregator     !< Constructed "sum" aggregator
+
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Create_aggregator_sum'
+
+    IF (no_of_children < 1) CALL finish(TRIM(routine), 'This should not happen!')
+
+    ALLOCATE(aggregator)
+    aggregator%name = 'sum'
+
+    grid => Get_grid(grid_id)
+!    ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
+    ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
+!    ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
+    !$ACC ENTER DATA CREATE(aggregator, aggregator%data_sum)
+  END FUNCTION Create_aggregator_sum
 #endif
 END MODULE mo_jsb_tile_class
