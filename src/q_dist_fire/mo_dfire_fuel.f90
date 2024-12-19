@@ -99,8 +99,7 @@ CONTAINS
     REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_nr) !< (#nc,#live pools,#fuel classes) [g DM m-2]
 
     REAL(wp) :: tile_fract(options%nc) !  [%]
-    !REAL(wp) :: forest_fract(options%nc) ! Forest fraction for current PFT [%]
-    !REAL(wp) :: grass_fract(options%nc) ! Grass fraction for current PFT [%]
+    REAL(wp), ALLOCATABLE :: dead_fuel_cls(:,:) ! Dead fuel (#nc,#fuel classes) [g DM m -2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -225,7 +224,12 @@ CONTAINS
     live_fuel_100hr = live_fuel(:,:,3)
     live_fuel_1000hr = live_fuel(:,:,4)
 
-    dead_fuel_cls = SUM(dead_fuel, DIM=2)
+    !> Calculate the weighted average of the Fuel bulk density for the current PFT.
+    !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
+    !> when accounting for the other pfts.
+    !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
+    !> fuel bulk densities (slightly more).
+    dead_fuel_cls = SUM(dead_fuel(:,:,1:3), DIM=2) ! todo: 1:3= fuel classes from 1hr to 100hrs, 2 = fuel pools dimension index
     DO ic = 1, nc
       fuel_bulk_density(ic) = lctlib%fbd_pb * SUM(dead_fuel_cls(ic,:) * [1._wp, 1.2_wp, 1.4_wp]) ! todo: add hardcoded values into dfire_constants.f90
     END DO
