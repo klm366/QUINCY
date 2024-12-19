@@ -58,7 +58,9 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_fuel_1000hr    !< 1000hr live fuel (#nc, #nlivepools) [gDM m-2]
 
     TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
-    TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%] 
+    TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%]
+
+    TYPE(t_jsb_var_real2d)  :: fuel_bulk_density   !< Fuel bulk density [kg m-3]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -198,6 +200,16 @@ CONTAINS
     CALL mem%Add_var('grass_fract', mem%grass_fract, &
         & hgrid, vgrid_surface, &
         & t_cf('grass_fract', '%', 'Grass fraction'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fuel_bulk_density', mem%fuel_bulk_density, &
+        & hgrid, vgrid_surface, &
+        & t_cf('fuel_bulk_density', 'kg m-3', 'Fuel bulk density'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

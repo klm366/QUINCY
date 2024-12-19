@@ -126,6 +126,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk      :: forest_fract
     dsl4jsb_Real2D_onChunk      :: grass_fract
+
+    dsl4jsb_Real2D_onChunk      :: fuel_bulk_density
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -155,8 +157,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr)
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr)
 
-    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)          ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -169,6 +173,7 @@ CONTAINS
     live_fuel = 0._wp
     forest_fract=0._wp
     grass_fract=0._wp
+    fuel_bulk_density = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -219,6 +224,11 @@ CONTAINS
     live_fuel_10hr = live_fuel(:,:,2)
     live_fuel_100hr = live_fuel(:,:,3)
     live_fuel_1000hr = live_fuel(:,:,4)
+
+    dead_fuel_cls = SUM(dead_fuel, DIM=2)
+    DO ic = 1, nc
+      fuel_bulk_density(ic) = lctlib%fbd_pb * SUM(dead_fuel_cls(ic,:) * [1._wp, 1.2_wp, 1.4_wp]) ! todo: add hardcoded values into dfire_constants.f90
+    END DO
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &

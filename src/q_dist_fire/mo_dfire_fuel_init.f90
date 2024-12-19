@@ -77,6 +77,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: forest_fract
     dsl4jsb_Real2D_onDomain      :: grass_fract
+
+    dsl4jsb_Real2D_onDomain      :: fuel_bulk_density
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -100,6 +102,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, forest_fract)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, grass_fract)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fuel_bulk_density)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr = 0._wp
@@ -114,6 +118,8 @@ CONTAINS
 
     forest_fract = 0._wp
     grass_fract = 0._wp
+
+    fuel_bulk_density = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif
