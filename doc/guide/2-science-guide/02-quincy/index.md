@@ -35,91 +35,76 @@ model features, whereas the detailed description can be found [here](./quincy_lo
 
 ### Overview
 
-The QUINCY model v1.0 represents the coupled biogeochemical cycles of
+The QUINCY model v1.0 (Thum et al. 2019) represents the coupled biogeochemical cycles of
 carbon (C), nitrogen (N), and phosphorus (P) in terrestrial ecosystems,
 as well as their interaction with the terrestrial water and energy
 balance (<a href="fig_quincy_schematic">[Fig. 1]</a>). The model traces
 the flow of these elements as well as C and N isotopes through
-vegetation and soil at a half-hourly time-step. The model considers
-eight broadly defined plant functional types (PFTs, see Tab.
+vegetation and soil at a half-hourly time-step. 
+
+This page gives a broad overview of 
+model features, whereas the detailed description can be found [here](./quincy_long_description.html).
+
+### Vegetation processes
+
+Vegetation is characterised by an average individual representative of a
+plant functional type (PFT). The model considers
+eight broadly defined PFTs (see Tab.
 <a href="./quincy_long_description.html#tab_pft_list">[Table: A1]</a>), representing
 different leaf types (herbaceous, broadleaved, coniferous),
 phenology (evergreen, rain green, and summer green), as well as growth
 form (grasses and trees), with a set of traits describing time-invariant
 functional differences across types (see Tab.
-<a href="#tab:lctlib:description" data-reference-type="ref"
-data-reference="tab:lctlib:description">[tab:lctlib:description]</a>.
+<a href="./quincy_long_description.html#tab_lctlib">[Table A2]</a>.
 Different to other TBMs, certain "soft" plant functional type
 characteristics, such as the photosynthetic capacity of leaves or the
 temperature sensitivity of photosynthesis and respiration acclimate to
 local conditions, and therefore lead to a smoother transition of
-ecosystem functioning across eco-climatic gradients. A brief overview of
-the model structure and key processes is given in this section, a
-detailed mathematical description of the model processes can be found in
-Appendix <a href="#sec:appendix" data-reference-type="ref"
-data-reference="sec:appendix">[sec:appendix]</a>.
+ecosystem functioning across eco-climatic gradients. 
 
-Although conceived to be coupled to the land-surface scheme of an Earth
-system model, the model is currently applied stand-alone at the
-ecosystem scale. The stand-alone version requires half-hourly short- and
-longwave radiation, air temperature, precipitation and snowfall, wind
-velocity, atmospheric , , mole fractions, as well as rates of , , and
-deposition as time-dependent driving data. In addition, the model
-requires input describing the geographical coordinates, vegetation type,
-and soil physical and chemical parameters (texture, bulk density,
-rooting and soil depth, as well as inorganic soil P content).
-
-### Vegetation processes
-
-Vegetation is characterised by an average individual representative of a
-PFT, composed of three fast-lived structural tissue types (pools:
-leaves, fine roots, and fruits), a respiring non-structural pool
+Each vegetation type is described by three fast-lived structural tissue types (pools:
+leaves, fine roots, fruits, and for herbaceous PFTs a straw pool), a respiring non-structural pool
 (labile), as well as a seasonal, non-respiring, and non-structural
 storage pool (reserve). In the case of tree vegetation types, three
 longer-lived structural tissue types (sapwood, heartwood, and coarse
 roots) are represented in addition, as are stand characteristics
-(height, diameter, density).
+(height, diameter, individual density).
 
-Importantly, plant growth is modelled as the balance of source processes
+Plant growth is modelled as the balance of source processes
 (photosynthesis, nutrient uptake) and the capacity of the plant to
 create sinks (production of new biomass tissue, respiration, and
-storage; Sect. <a href="#sec:growth" data-reference-type="ref"
-data-reference="sec:growth">[sec:growth]</a>). The capacity of the plant
-to generate sinks is dependent on (i) the activity of the plant’s
+storage; see Section <a href="./quincy_long_description.html#sec_growth">
+[Plant Growth]</a>). The capacity of the plant
+to generate sinks is dependent on *(i)* the activity of the plant’s
 meristem controlling the usage of the labile pool for growth, which
-becomes reduced at low air temperature and/or soil moisture; (ii) the
+becomes reduced at low air temperature and/or soil moisture; *(ii)* the
 partitioning of its labile resource to new tissue growth and the
-availability of nutrients to create these tissues; (iii) the need for
-longer-term storage production; and (iv) respiration for maintenance,
+availability of nutrients to create these tissues; *(iii)* the need for
+longer-term storage production; and *(iv*)* respiration for maintenance,
 which is given priority over growth of new tissue.
 
 Photosynthesis is calculated for sunlit and shaded leaves separately,
 explicitly taking account of the vertical canopy gradient of light,
 foliar chlorophyll and photosynthetic N according to (Kull and Kruijt
 1998), with extensions for C4 photosynthesis (Friend et al. 2009), and
-the temperature response as in (Bernacchi et al. 2001) (Sect.
-<a href="#ch:assimi" data-reference-type="ref"
-data-reference="ch:assimi">[ch:assimi]</a>). The stomatal conductance is
-coupled to the calculation of photosynthesis according to the Ball-Berry
-formulation (Ball, Wooddrow, and Berry 1987; Knauer, Werner, and Zaehle
+the temperature response as in (Bernacchi et al. 2001) (see Section
+<a href="./quincy_long_description.html#sec_assimi">[Assimilation]</a>). 
+The stomatal conductance is coupled to the calculation of photosynthesis 
+according to the USO formulation (Medlyn et al. 2011; Knauer, Werner, and Zaehle
 2015). Maintenance respiration is calculated for each tissue type as a
-function of its N content (Sect.
-<a href="#sec:veg:MaintResp" data-reference-type="ref"
-data-reference="sec:veg:MaintResp">[sec:veg:MaintResp]</a>) and tissue
-temperature (Lloyd and Taylor 1994). Photosynthesis and respiration
-acclimate to growth temperature according to (Friend 2010) and (Atkin,
-Meir, and Turnbull 2014), respectively.
+function of its N content and tissue temperature(Lloyd and Taylor, 1994, see Section
+<a href="./quincy_long_description.html#sec_maintresp">[Maintenance Respiration]</a>). 
+Photosynthesis and respiration optima acclimate to growth temperature according to 
+(Friend 2010) and (Atkin, Meir, and Turnbull 2014), respectively.
 
 Plant nutrient uptake is dependent on fine root biomass density, soil
-soluble , , and concentrations as well as plant internal nutrient demand
-(Sect. <a href="#sec:sb:simple_uptake" data-reference-type="ref"
-data-reference="sec:sb:simple_uptake">[sec:sb:simple_uptake]</a>,
-(Zaehle and Friend 2010)). Tissue growth follows a set of allometric
-equations describing size-dependent relationships of foliar, fine root,
-coarse root, sapwood and fruit biomass (Sect.
-<a href="#sec:veg:allocation" data-reference-type="ref"
-data-reference="sec:veg:allocation">[sec:veg:allocation]</a>). The
-allometric relationship between leaves and fine root responds to N, P
+soluble nutrient concentrations, temperature and moisture as well as 
+plant internal nutrient demand (Zaehle and Friend, 2010; see Section 
+<a href="./quincy_long_description.html#sec_plantnutrientuptake">[Plant Nutrient Uptake]</a>). 
+Tissue growth follows a set of allometric equations describing 
+size-dependent relationships of foliar, fine root, coarse root, sapwood and 
+fruit biomass (see Section <a href="./quincy_long_description.html#sec_allocation">
+[Plant Allocation]</a>). The allometric relationship between leaves and fine root responds to N, P
 and water limitation and therefore increases uptake capacity under
 nutrient limitation.
 
@@ -127,12 +112,9 @@ The allometric equations and the N and P content of each tissue give the
 stoichiometric constraint of plant growth. The C:N and N:P ratios of the
 leaves and fine roots are flexible within empirical bounds and respond
 dynamically to an imbalance between C and N, or N and P availability,
-respectively (Sect.
-<a href="#sec:veg:stoichem" data-reference-type="ref"
-data-reference="sec:veg:stoichem">[sec:veg:stoichem]</a>).
-Photosynthesis can be down-regulated through sink-limitation (Sect.
-<a href="#sec:veg:sinklim" data-reference-type="ref"
-data-reference="sec:veg:sinklim">[sec:veg:sinklim]</a>), if nutrient
+respectively (see Section <a href="./quincy_long_description.html#sec_stoichiometry"> 
+[Stoichiometry]</a>). Photosynthesis can be down-regulated through sink-limitation (see Sect.
+ <a href="./quincy_long_description.html#sec_sinklimitation">[Sink Limitation]</a>), if nutrient
 shortage leads to the accumulation of carbon in the labile pool.
 
 Short-term fluctuations in the balance between carbon acquisition
@@ -140,33 +122,29 @@ through photosynthesis and nutrient acquisition by roots are balanced by
 the time-scale of the labile pool turnover. Seasonal and longer-term
 fluctuations are balanced to some extend by the build-up and use of the
 reserve pool. The flow of compounds between the labile and reserve pools
-(Sect. <a href="#sec:veg:reserve" data-reference-type="ref"
-data-reference="sec:veg:reserve">[sec:veg:reserve]</a>) is described by
-a set of pull (from the reserve pool) and push (to the reserve pool)
-mechanisms attempting to simulate the signaling related to the beginning
+(see Section <a href="./quincy_long_description.html#sec_reservepool"> 
+[Reserve Pool Dynamics]</a>) is described by a set of pull 
+(from the reserve pool) and push (to the reserve pool) mechanisms attempting 
+to simulate the signaling related to the beginning
 of the growing season (phenological pull), the need for maintenance and
 growth (maintenance pull), as well as to provide resources for the next
 growing season or resilience against interannual variability (reserve
 push).
 
-Turnover is considered at two time-scales: (i) the rapid breakdown of
+Turnover is considered at two time-scales: *(i)* the rapid breakdown of
 enzymes (N) and associated RNA (P) from tissue, and their ensuing
 replacement from the labile N and P pools (recycling; at the time scale
-of days; (Zaehle and Friend 2010)); and (ii) the senescence of entire
+of days; Zaehle and Friend, 2010); and *(ii)* the senescence of entire
 tissues and their conversion to litter, including the resorption of
-nutrients from foliage (Sect.
-<a href="#veg:sec:turnover" data-reference-type="ref"
-data-reference="veg:sec:turnover">[veg:sec:turnover]</a>). Tissue
-senescence is calculated given a fixed turnover time for each tissue,
-with the exception of the leaves, where turnover is determined by the
-PFT-specific phenological timing
-<a href="#sec:veg:phen" data-reference-type="ref"
-data-reference="sec:veg:phen">[sec:veg:phen]</a>.
+nutrients from foliage (see Sect. <a href="./quincy_long_description.html#sec_plantturnover"> 
+[Vegetation Turnover]</a>). Tissue senescence is calculated given a fixed 
+turnover time for each tissue, with the exception of the leaves and fine roots, where 
+turnover is determined by the PFT-specific phenological timing
+(see Section <a href="./quincy_long_description.html#sec_phenology"> 
+[Phenology]</a>). 
 
-Stand-level vegetation dynamics (Sect.
-<a href="#veg:sec:dynamics" data-reference-type="ref"
-data-reference="veg:sec:dynamics">[veg:sec:dynamics]</a>) are
-represented through density-dependent mortality, as well as a dynamic
+Stand-level vegetation dynamics (see Section <a href="./quincy_long_description.html#sec_vegdynamics"> 
+[Vegetation Dynamics]</a>) are represented through density-dependent mortality, as well as a dynamic
 background mortality related to the overall growth efficiency of the
 plant (Sitch et al. 2003; Zaehle and Friend 2010). Re-establishment of
 vegetation depends directly on the past vegetation ability to produce
@@ -221,6 +199,18 @@ weathering, and biomineralisation of P that is bound in the slow SOM
 pool. The adsorbed P is further absorbed into the soil matrix and
 gradually becomes an inactive form of P, occluded P, as proposed by
 (Walker and Syers 1976).
+
+
+Although conceived to be coupled to the land-surface scheme of an Earth
+system model, the model is currently applied stand-alone at the
+ecosystem scale. The stand-alone version requires half-hourly short- and
+longwave radiation, air temperature, precipitation and snowfall, wind
+velocity, atmospheric , , mole fractions, as well as rates of , , and
+deposition as time-dependent driving data. In addition, the model
+requires input describing the geographical coordinates, vegetation type,
+and soil physical and chemical parameters (texture, bulk density,
+rooting and soil depth, as well as inorganic soil P content).
+
 
 ### Literature
 
