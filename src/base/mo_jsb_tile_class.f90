@@ -285,6 +285,26 @@ MODULE mo_jsb_tile_class
     PROCEDURE Create_aggregator_sum                 !< Constructor of aggregator (call to initialize)
   END INTERFACE
 
+  !> Implementation of a concrete aggregator for aggregation by weighted fractions
+  TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_average
+    !> Variables needed to calculate aggregation weights
+!    REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(wp), ALLOCATABLE :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
+    REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
+  CONTAINS
+    !> Functions to make use of the aggregator
+!    PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
+!    PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
+!    GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
+    PROCEDURE :: Aggregate_2d     => Aggregate_average_2d     !< Specific implementation of agg. of 2d vars
+    PROCEDURE :: Aggregate_3d     => Aggregate_average_3d     !< Specific implementation of agg. of 3d vars
+    FINAL     :: Finalize_aggregator_average            !< Destructor to deallocate fields when aggregator is deallocated
+  END TYPE t_jsb_aggregator_average
+
+  INTERFACE t_jsb_aggregator_average
+    PROCEDURE Create_aggregator_average                 !< Constructor of aggregator (call to initialize)
+  END INTERFACE
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_tile_class'
 
 CONTAINS
@@ -1805,5 +1825,396 @@ CONTAINS
 !    ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
     !$ACC ENTER DATA CREATE(aggregator, aggregator%data_sum)
   END FUNCTION Create_aggregator_sum
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructs the "average" aggregator by allocating its internal fields
+  !>
+  !> Uses the size of the domain and the number of children of the tile
+  !>
+  FUNCTION Create_aggregator_average(grid_id, no_of_children) RESULT(aggregator)
+
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_grid,       ONLY: Get_grid
+
+    INTEGER, INTENT(in) :: grid_id        !< Id of horizontal grid to get domain size from
+    INTEGER, INTENT(in) :: no_of_children !< number of child tiles which are to be aggregated on this tile
+    TYPE(t_jsb_aggregator_average), POINTER    :: aggregator     !< Constructed "average" aggregator
+
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Create_aggregator_average'
+
+    IF (no_of_children < 1) CALL finish(TRIM(routine), 'This should not happen!')
+
+    ALLOCATE(aggregator)
+    aggregator%name = 'average'
+
+    grid => Get_grid(grid_id)
+    ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
+    ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
+    !$ACC ENTER DATA CREATE(aggregator, aggregator%data_sum, aggregator%fract_sum)
+  END FUNCTION Create_aggregator_average
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Destructs an "weighted_by_fract" aggregator by deallocating its internal fields
+  !>
+  SUBROUTINE Finalize_aggregator_average(aggregator)
+
+    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator !< Aggregator to destruct
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Finalize_aggregator_average'
+
+    !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
+
+    IF (ALLOCATED(aggregator%data_sum)) THEN
+      !$ACC EXIT DATA DELETE(aggregator%data_sum)
+      DEALLOCATE(aggregator%data_sum)
+    END IF
+    IF (ALLOCATED(aggregator%fract_sum)) THEN
+      !$ACC EXIT DATA DELETE(aggregator%fract_sum)
+      DEALLOCATE(aggregator%fract_sum)
+    END IF
+
+  END SUBROUTINE Finalize_aggregator_average
+
+
+  ! ====================================================================================================== !
+  !>
+  !> Aggregation of a 2d variable from the child tiles by weighted fractions
+  !> Todo: deal with mask
+  !>
+  SUBROUTINE Aggregate_average_2d(this, tile, var, ics, ice, iblk, caller, mask)
+
+    CLASS(t_jsb_aggregator_average), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
+    TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
+    CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+
+    REAL(wp), POINTER :: ptr(:,:)
+    TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
+
+    INTEGER :: no_children, icount,ichild, i, iproc, j
+    LOGICAL :: l_aggregate_all
+
+    CHARACTER(len=256) :: routine
+
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
+
+    IF (debug_on()) THEN
+      routine = modname//':Aggregate_average_2d'//'(called by '//TRIM(caller)//')'
+    ELSE
+      routine = modname//':Aggregate_average_2d'
+    END IF
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
+
+    no_children = tile%Get_no_of_children()
+    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+
+    ! Assure the current variable belongs to a process
+    iproc = var%owner_proc_id
+    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+
+    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+
+    ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
+    ! and that number of children matches the child indices.
+    IF (.NOT. ALLOCATED(var%child_idx)) THEN
+      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+    ELSE IF (SIZE(var%child_idx) /= no_children) THEN
+      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+    END IF
+
+    ! Needed for GPUs
+    tile_ptrs2d_cache => tile%ptrs2d_cache
+    l_aggregate_all = var%l_aggregate_all
+
+    ! print*, routine//": working on var ", var%full_name
+
+    icount = 0  ! Counter: How many children have been considered
+    ichild = 0  ! Index of the child
+    IF (no_children > 1) THEN
+      DO i=1,no_children
+        IF ( var%child_idx(i) > 0 ) THEN
+          icount = icount + 1
+          ichild = i
+        ELSE IF (l_aggregate_all) THEN
+          icount = icount + 1
+          ichild = i
+        END IF
+      END DO
+    END IF
+
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1)
+
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+      ! If there is only one child nothing needs to be aggregated ...
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO j = ics, ice
+        ! ... and the variable on the current tile equals the var on the child tile.
+        var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
+      END DO
+    ELSE IF (no_children > 1) THEN
+      ! With more then one child tile we need to do the weighted averaging.
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO j = ics, ice
+        this%data_sum (j,iblk) = 0._wp
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+
+      ! Calculate the (weighted) sum of the data and the sum up the fractions
+      !
+      !$ACC LOOP SEQ
+      DO i=1,no_children
+        ! Check if the var exists on this tile (could be a tile on which the according process is not running)
+        IF ( var%child_idx(i) > 0 ) THEN
+          ! The variable exists on the child tile
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            ! Multilply variable of the child with the weight and add it to the data sum
+            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
+            ! -> The cache is a huge array of pointers with i iterating over the number of children
+            !    (second dim: number of variables, third dim: number of processes).
+            ! => Without gpu we would use
+            !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
+
+            ! Add weight to the weight sum
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp
+          END DO
+        ELSE IF (l_aggregate_all) THEN
+          ! The variable is not defined on the this child tile, but we still want to consider its fraction
+          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1.0_wp
+          END DO
+        END IF
+      END DO
+
+      ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
+      ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
+
+      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      !   ! print*, fract_sum
+      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
+      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      !     &          all_print=.TRUE.)
+      !   CALL finish(TRIM(routine),  '    ... this should not happen')
+      ! END IF
+
+      ! Calculate the weighted average
+      !
+      IF (icount == 1) THEN  ! Only one child tile needs to be considered.
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            ! ichild: the only child that contained the variable
+            var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
+          END IF
+        END DO
+      ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            ! Divide the data sum by the sum of the fractions
+            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+            ! ELSE
+            !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
+          END IF
+        END DO
+      ELSE
+        STOP 'Aggregate_average_2d: This should not happen (icount=0)!'
+      END IF
+
+    END IF
+
+    !$ACC END PARALLEL
+
+    IF (l_aggregate_all) THEN
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
+    ELSE
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    END IF
+
+  END SUBROUTINE Aggregate_average_2d
+
+  ! ====================================================================================================== !
+  !>
+  !> Aggregation of a 3d variable from the child tiles by weighted fractions
+  !> Todo: deal with mask
+  !>
+  SUBROUTINE Aggregate_average_3d(this, tile, var, ics, ice, iblk, caller, mask)
+
+    CLASS(t_jsb_aggregator_average), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
+    TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
+    CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+
+    CLASS(t_jsb_var), POINTER :: ptr
+    TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
+
+    INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
+    LOGICAL :: l_aggregate_all
+
+    CHARACTER(len=256) :: routine
+
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
+
+    IF (debug_on()) THEN
+      routine = modname//':Aggregate_average_3d'//'(called by '//TRIM(caller)//')'
+    ELSE
+      routine = modname//':Aggregate_average_3d'
+    END IF
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
+
+    no_children = tile%Get_no_of_children()
+    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+
+    ! Assure the current variable belongs to a process
+    iproc = var%owner_proc_id
+    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+
+    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+
+    ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
+    ! and that number of children matches the child indices.
+    IF (.NOT. ALLOCATED(var%child_idx)) THEN
+      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+    ELSE IF (SIZE(var%child_idx) /= no_children) THEN
+      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+    END IF
+
+    ! Needed for GPUs
+    tile_ptrs3d_cache => tile%ptrs3d_cache ! the 3d var pointer cache on this tile
+    l_aggregate_all = var%l_aggregate_all
+
+    nlev = SIZE(var%ptr,2)
+
+    ! print*, routine//": working on var ", var%full_name
+
+    icount = 0
+    ichild = 0
+    IF (no_children > 1) THEN
+      DO i=1,no_children
+        IF ( var%child_idx(i) > 0 ) THEN
+          icount = icount + 1
+          ichild = i
+        ELSE IF (l_aggregate_all) THEN
+          icount = icount + 1
+          ichild = i
+        END IF
+      END DO
+    END IF
+
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1)
+
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+      ! If there is only one child nothing needs to be aggregated ...
+
+      !$ACC LOOP SEQ
+      DO ilev = 1, nlev
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO j = ics, ice
+          ! ... and the variable on the current tile equals the var on the child tile.
+          var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
+        END DO
+      END DO
+
+    ELSE IF (no_children > 1) THEN
+      ! With more then one child tile we need to do the weighted averaging.
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO j = ics, ice
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+      !$ACC LOOP SEQ
+      DO i=1,no_children
+        ! Check if the var exists on this tile (could be a tile on which the according process is not running)
+        IF (var%child_idx(i) > 0) THEN
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp !this%fractions(j,iblk,i)
+          END DO
+        ELSE IF (l_aggregate_all) THEN
+          ! The variable is not defined on the this child tile, but we still want to consider its fraction
+          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            ! Add weight for this child i to the weight sum
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp !this%fractions(j,iblk,i)
+          END DO
+        END IF
+      END DO
+
+      !$ACC LOOP SEQ
+      DO ilev = 1, nlev
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO j = ics, ice
+          this%data_sum (j,iblk) = 0._wp
+        END DO
+
+        !$ACC LOOP SEQ
+        DO i=1,no_children
+          IF (var%child_idx(i) > 0) THEN
+            !$ACC LOOP GANG(STATIC: 1) VECTOR
+            DO j = ics, ice
+              ! Multilply variable of the child with the weight and add it to the data sum
+              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                  & + tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk)
+              ! -> The cache is a huge array of pointers with i iterating over the number of children.
+              !    second dim: number of variables, third dim: number of processes
+              ! => Without gpu we would use
+              !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr3d(j,ilev,iblk)
+            END DO
+          END IF
+        END DO
+
+        ! Calculate the weighted average
+        !
+        IF (icount == 1) THEN ! Only one child tile needs to be considered
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              ! ichild: the only child that contained the variable
+              var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
+            END IF
+          END DO
+        ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              ! Divide the data sum by the sum of the fractions
+              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+            END IF
+          END DO
+        ELSE
+          STOP 'Aggregate_average_3d: This should not happen (icount=0)!'
+        END IF
+      END DO
+
+    END IF
+
+    !$ACC END PARALLEL
+
+    IF (l_aggregate_all) THEN
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
+    ELSE
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    END IF
+
+  END SUBROUTINE Aggregate_average_3d
+
 #endif
 END MODULE mo_jsb_tile_class
