@@ -273,14 +273,9 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_sum
     !> Variables needed to calculate aggregation weights
-    !REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    !REAL(wp), ALLOCATABLE :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
     REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
   CONTAINS
     !> Functions to make use of the aggregator
-    !PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
-    !PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
-    !GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
     PROCEDURE :: Aggregate_2d     => Aggregate_sum_2d     !< Specific implementation of sum of 2d vars
     PROCEDURE :: Aggregate_3d     => Aggregate_sum_3d     !< Specific implementation of sum of 3d vars
     FINAL     :: Finalize_aggregator_sum                  !< Destructor to deallocate fields when aggregator is deallocated
