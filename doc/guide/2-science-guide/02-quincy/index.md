@@ -6,45 +6,15 @@ title: Scientific documentation for QUINCY: Overview
 
 <figure>
   <img src="../../../media/QUINCY-high-res.png" 
-  style="float: left; border:thin" width="50%" name="fig_quincy_schematic" 
+  style="float: left; border:thick" width="50%" name="fig_quincy_schematic" 
   alt="QUINCY schematic">
-  <figcaption> **Fig 1:** Schematic representation of biogeochemical, water and energy flows in QUINCY</figcaption>
+  <figcaption> Fig 1: Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019</figcaption>
 </figure>
 
-**QUINCY (QUantifying Interactions between terrestrial Nutrient
-  CYcles and the climate system)** has been developed to include a 
-  consistent representation of element cycling in terrestrial
-  ecosystems suitable for the modelling of land-atmosphere interactions. 
-  QUINCY includes i) a representation of plant
-  growth that separates source (e.g. photosynthesis) and sink (growth
-  rate of individual tissues, constrained by nutrients, temperature, and
-  water availability) processes; ii) the acclimation of many
-  ecophysiological processes to meteorological conditions and/or
-  nutrient availabilities; iii) an explicit representation of vertical
-  soil processes to separate litter and soil organic matter dynamics. QUINCY 
-  was originally described by Thum et al. (2019) as a stand-alone ecosystem model. 
-  It is now integrated into the ICON-Land infrastructure and shares the physical 
-  process representation as well as the software infrastructure. 
-  It follows a modular structure to facilitate the consistent testing of multiple 
-  hypothesis for one particular process. It also includes a range of new diagnostics 
-  (leaf chlorophyll; isotopic tracers) that allow for a more in-depth model evaluation. 
-  
-  
-This page gives a broad overview of 
-model features, whereas the detailed description can be found [here](./quincy_long_description.html).
-
-### Overview
-
-The QUINCY model v1.0 (Thum et al. 2019) represents the coupled biogeochemical cycles of
-carbon (C), nitrogen (N), and phosphorus (P) in terrestrial ecosystems,
-as well as their interaction with the terrestrial water and energy
-balance (<a href="fig_quincy_schematic">[Fig. 1]</a>). The model traces
-the flow of these elements as well as C and N isotopes through
-vegetation and soil at a half-hourly time-step. 
-
-This page gives a broad overview of 
-model features, whereas the detailed description can be found [here](./quincy_long_description.html).
-
+@note
+**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to include a consistent representation of element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (<a href="fig_quincy_schematic">[Fig. 1]</a>). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now integrated into the ICON-Land infrastructure and shares its physical process representation as well as the software infrastructure. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process. This page gives a broad overview of model features, whereas the detailed description can be found [here](./quincy_long_description.html). 
+---  
+ 
 ### Vegetation processes
 
 Vegetation is characterised by an average individual representative of a
@@ -151,27 +121,23 @@ vegetation depends directly on the past vegetation ability to produce
 fruits, as the re-establishment is explicitly taking account of the
 available seed pool at the forest / grassland floor.
 
-### Soil biogeochemical processes
+### Soil hydrological and biogeochemical processes
 
-The vertical soil profile of biogeochemical pools and processes is
+The vertical soil profile of physical and biogeochemical processes is
 explicitly represented, with exponentially increasing layer thickness
-with increasing soil depth. For each of these layers, the model
+with increasing soil depth. For each soil layer, temperature and moisture are calculated based on
+soil physical characteristics, and the transport and atmospheric
+exchange of energy and water (see Section <a href="./quincy_long_description.html#sec_soilhydrology"> 
+[Soil Hydrology]</a>). For each soil layer, the model
 represents different organic pools (metabolic, structural, and woody
 litter, as well as fast and slow overturning soil organic matter (SOM)),
-as well as inorganic pools of N and P (soluble inorganic , , as well as
-, , and , soluble inorganic , adsorbed , absorbed , occluded and primary
-). For each soil layer, temperature and moisture are calculated based on
-soil physical characteristics, and the transport and atmospheric
-exchange of energy and water (Sect.
-<a href="#sec:sse:surface_hydrology" data-reference-type="ref"
-data-reference="sec:sse:surface_hydrology">[sec:sse:surface_hydrology]</a>).
+as well as inorganic pools of N and P (soluble and minerally-absorbed 
+NH<sub>4</sub>, soluble NO<sub>3</sub> as well as soluble minerally-adsorbed, 
+occluded and primary PO<sub>4</sub>). 
 
 The turnover and formation of SOM follows, with some modifications, the
-CENTURY approach (Parton et al. 1993) (Sect.
-<a href="#sec:sb:turnover" data-reference-type="ref"
-data-reference="sec:sb:turnover">[sec:sb:turnover]</a> and Sect.
-<a href="#sec:sb:formation" data-reference-type="ref"
-data-reference="sec:sb:formation">[sec:sb:formation]</a>): The turnover
+CENTURY approach (Parton et al. 1993) (see Section <a href="./quincy_long_description.html#sec_soilBGC"> 
+[Soil Biogeochemistry]</a>): The turnover
 of litter and SOM pools are all calculated using first-order kinetics
 with temperature and moisture dependence. The litter stoichiometry is
 determined by the stoichiometry of senescent plant tissue and
@@ -179,19 +145,17 @@ tissue-specific allocation fractions. The stoichiometry of the fast SOM
 pool adjusts to available inorganic nutrients, whereas the slow SOM pool
 is assumed to have fixed C:N:P stoichiometry.
 
-The soluble inorganic , and are assumed to be available for plant and
+The soluble inorganic pools (NH<sub>4</sub>, NO<sub>3</sub> and PO<sub>4</sub>) and are assumed to be available for plant and
 microbial uptake, as concluded by White (2006) and many others. Plants
 and soil microbes compete for these nutrients based on their respective
 demand and uptake capacity, which varies in time and with soil depth. In
-the aerobic part of soil, is oxidised to through nitrification and in
-anaerobic part of soil is reduced to through denitrification (Zaehle et
-al. 2011). Both processes produce and as by-products (Sect.
-<a href="#sec:sb:nitrification_denitrification"
-data-reference-type="ref"
-data-reference="sec:sb:nitrification_denitrification">[sec:sb:nitrification_denitrification]</a>).
-The representation of soil inorganic P dynamics (Sect.
-<a href="#sec:sb:p_flux" data-reference-type="ref"
-data-reference="sec:sb:p_flux">[sec:sb:p_flux]</a>) follow the concept
+the aerobic part of soil, NH<sub>4</sub> is oxidised to through nitrification and in
+anaerobic part of soil, NO<sub>3</sub>is reduced to through denitrification (Zaehle et
+al. 2011). Both processes produce NO<sub>x</sub>, N<sub>2</sub>O and N<sub>2</sub> as by-products (see Section <a href="./quincy_long_description.html#sec_denitrification">
+[Nitrification and Denitrification Processes]</a>). 
+
+The representation of soil inorganic P dynamics (see Section <a href="./quincy_long_description.html#sec_pdynamics">
+[Soil P Processes]</a>) follow the concept
 from (Yang et al. 2014) and (Wang, Law, and Pak 2010). The available
 soluable is exchanged via ad-/desorption with the mineral surface,
 leached with soil water, and replenished by atmospheric deposition,
@@ -200,13 +164,10 @@ pool. The adsorbed P is further absorbed into the soil matrix and
 gradually becomes an inactive form of P, occluded P, as proposed by
 (Walker and Syers 1976).
 
+### Driving data
 
-Although conceived to be coupled to the land-surface scheme of an Earth
-system model, the model is currently applied stand-alone at the
-ecosystem scale. The stand-alone version requires half-hourly short- and
-longwave radiation, air temperature, precipitation and snowfall, wind
-velocity, atmospheric , , mole fractions, as well as rates of , , and
-deposition as time-dependent driving data. In addition, the model
+QUINCY requires hourly short- and longwave downward radiation, 2m air temperature, precipitation and snowfall, wind
+velocity, atmospheric humidity and CO<sub>2</sub> mole fractions, as well as rates of NH<sub>4</sub>, NO<sub>3</sub>, and PO<sub>4</sub> deposition as time-dependent driving data. In addition, the model
 requires input describing the geographical coordinates, vegetation type,
 and soil physical and chemical parameters (texture, bulk density,
 rooting and soil depth, as well as inorganic soil P content).
@@ -214,46 +175,19 @@ rooting and soil depth, as well as inorganic soil P content).
 
 ### Literature
 
-<div id="refs" class="references csl-bib-body hanging-indent"
-entry-spacing="1">
-
-<div id="ref-Atkin:2014" class="csl-entry">
-
 Atkin, Owen K., Patrick Meir, and Matthew H. Turnbull. 2014. “Improving
 Representation of Leaf Respiration in Large-Scale Predictive
 Climate–Vegetation Models.” *New Phytologist* 202 (3): 743–48.
 <https://doi.org/10.1111/nph.12686>.
-
-</div>
-
-<div id="ref-Ball:1987uv" class="csl-entry">
-
-Ball, JT, IE Wooddrow, and Joseph A Berry. 1987. “<span class="nocase">A
-model predicting stomatal conductance and its contribution to the
-control of photosynthesis under different environmental
-conditions</span>.” In *Progress in Photosynthesis Research*, edited by
-J Biggens, 1–4. Dordrecht, The Netherlands.
-
-</div>
-
-<div id="ref-Bernacchi:2001wv" class="csl-entry">
 
 Bernacchi, C J, E L Singsaas, C Pimentel, A R Protis JR, and S P Long.
 2001. “<span class="nocase">Improved temperature response functions for
 models of Rubisco-limited photosynthesis</span>.” *Plant, Cell &
 Environment* 24 (January): 253–59.
 
-</div>
-
-<div id="ref-Friend:2010je" class="csl-entry">
-
 Friend, Andrew D. 2010. “<span class="nocase">Terrestrial plant
 production and climate change</span>.” *Journal of Experimental Botany*
 61 (5): 1293–1309.
-
-</div>
-
-<div id="ref-Friend:2009tf" class="csl-entry">
 
 Friend, Andrew D, R J Geider, M J Behrenfeld, and C J Still. 2009.
 “<span class="nocase">Photosynthesis in Global-Scale Models</span>.” In
@@ -261,35 +195,21 @@ Friend, Andrew D, R J Geider, M J Behrenfeld, and C J Still. 2009.
 Ecosystems*, edited by A Laisk, L Nedbal, and Govindjee, 465–97.
 Springer.
 
-</div>
-
-<div id="ref-Knauer:2015dh" class="csl-entry">
-
 Knauer, Jürgen, Christiane Werner, and Sönke Zaehle. 2015.
 “<span class="nocase">Evaluating stomatal models and their atmospheric
 drought response in a land surface scheme: A multibiome
 analysis</span>.” *Journal of Geophysical Research: Biogeosciences* 120
 (10): 1894–1911.
 
-</div>
-
-<div id="ref-Kull:1998cr" class="csl-entry">
-
 Kull, O, and B Kruijt. 1998. “<span class="nocase">Leaf photosynthetic
 light response: a mechanistic model for scaling photosynthesis to leaves
 and canopies</span>.” *Functional Ecology* 12 (5): 767–77.
-
-</div>
-
-<div id="ref-Lloyd1994-jn" class="csl-entry">
 
 Lloyd, John, and J A Taylor. 1994. “On the Temperature Dependence of
 Soil Respiration.” *Functional Ecology*, 315–23.
 <https://www.jstor.org/stable/2389824>.
 
-</div>
-
-<div id="ref-Parton:1993ud" class="csl-entry">
+Medlyn, B.E., Duursma, R.A., Eamus, D., Ellsworth, D.S., Prentice, I.C., Barton, C.V.M., Crous, K.Y., De Angelis, P., Freeman, M., and Wingate, L., 2011. “<span class="nocase">Reconciling the optimal and empirical approaches to modelling stomatal conductance</span>.”. *Global Change Biology*, 17: 2134–2144. doi:10.1111/j.1365-2486.2010.02375.x
 
 Parton, W J, J M O Scurlock, D S Ojima, T G Gilmanov, R J Scholes, D S
 Schimmel, T Kirchner, et al. 1993. “<span class="nocase">Observations
@@ -297,67 +217,36 @@ and modelling of biomass and soil organic matter dynamics for the
 grassland biome worldwide</span>.” *Global Biogeochemical Cycles* 7 (4):
 785–809.
 
-</div>
-
-<div id="ref-Sitch:2003wg" class="csl-entry">
-
 Sitch, Stephen A, Benjamin Smith, I C Prentice, Almut Arneth, Alberte
 Bondeau, W Cramer, J O Kaplan, et al. 2003.
 “<span class="nocase">Evaluation of ecosystem dynamics, plant geography
 and terrestrial carbon cycling in the LPJ Dynamic Global Vegetation
 Model</span>.” *Global Change Biology* 9: 161–85.
 
-</div>
-
-<div id="ref-Walker:1976" class="csl-entry">
-
 Walker, T. W., and J. K. Syers. 1976. “The Fate of Phosphorus During
 Pedogenesis.” Journal Article. *Geoderma* 15 (1): 1–19.
 <https://doi.org/10.1016/0016-7061(76)90066-5>.
-
-</div>
-
-<div id="ref-Wang:2010ba" class="csl-entry">
 
 Wang, Y P, R M Law, and B Pak. 2010. “<span class="nocase">A global
 model of carbon, nitrogen and phosphorus cycles for the terrestrial
 biosphere</span>.” *Biogeosciences* 7 (7): 2261–82.
 
-</div>
-
-<div id="ref-White:2006" class="csl-entry">
-
 White, Robert E. 2006. *Principles and Practice of Soil Science the Soil
 as a Natural Resource*. Book. 4th ed. Vol. 32. Malden: Blackwell
 Publishing. <https://doi.org/10.1177/0340035206070163>.
 
-</div>
-
-<div id="ref-Yang:2014" class="csl-entry">
 
 Yang, X., P. E. Thornton, D. M. Ricciuto, and W. M. Post. 2014. “The
 Role of Phosphorus Dynamics in Tropical Forests – a Modeling Study Using
 CLM-CNP.” *Biogeosciences* 11 (6): 1667–81.
 <https://doi.org/10.5194/bg-11-1667-2014>.
 
-</div>
-
-<div id="ref-Zaehle:2011gy" class="csl-entry">
-
 Zaehle, S, Philippe Ciais, Andrew D Friend, and Vincent Prieur. 2011.
 “<span class="nocase">Carbon benefits of anthropogenic reactive nitrogen
 offset by nitrous oxide emissions</span>.” *Nature Geoscience* 4 (8):
 601–5.
 
-</div>
-
-<div id="ref-Zaehle:2010cz" class="csl-entry">
-
 Zaehle, S, and Andrew D Friend. 2010. “<span class="nocase">Carbon and
 nitrogen cycle dynamics in the O-CN land surface model: 1. Model
 description, site-scale evaluation, and sensitivity to parameter
 estimates</span>.” *Global Biogeochemical Cycles* 24 (1): GB 1005.
-
-</div>
-
-</div>
