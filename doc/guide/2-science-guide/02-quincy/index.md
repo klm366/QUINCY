@@ -1,5 +1,5 @@
 ---
-title: Scientific documentation for QUINCY: Overview 
+title: QUINCY: Science Overview 
 ---
 
 ### The QUINCY model 
