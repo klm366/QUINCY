@@ -15,6 +15,7 @@ MODULE mo_sse_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_physical_constants, ONLY: rhoh2o
+  USE mo_exception, ONLY: message, finish
   USE mo_kind,      ONLY: wp
 
   IMPLICIT NONE
@@ -314,6 +315,7 @@ CONTAINS
     & nc, nsoil, dz, mids,                &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
+    & enforce_water_budget,               &
     & t_soil_top,                         &
     & vol_heat_cap, heat_cond,            &
     & t_soil_sl,                          &
@@ -321,11 +323,13 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matric_pot, bclapp, ws,     &
+    & ws_max, matric_pot, bclapp, wtr,    &
     & ice, frozen, melt, liquid_max       &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
+    USE mo_jsb_impl_constants,     ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+
 
     IMPLICIT NONE
 
@@ -337,6 +341,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
+    INTEGER,  INTENT(IN)    ::  enforce_water_budget     !! Water balance check setting
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
@@ -353,7 +358,7 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
-    REAL(wp), INTENT(inout), OPTIONAL ::  ws(:,:)           !! Water storage [m]
+    REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
@@ -367,11 +372,20 @@ CONTAINS
     REAL(wp) :: zd1(nsoil-1)
     REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
     REAL(wp) :: heat_cap(nc,nsoil)
+    REAL(wp) :: wtr_old(nc,nsoil), ice_old(nc,nsoil)
+    REAL(wp) :: freeze_mass(nc,nsoil), melt_mass(nc,nsoil)
+    CHARACTER(len=4096) :: message_text_long ! long string for debug output
+
+    ! Temporary index lists for error detection
+    INTEGER :: ie             !< Error cell index
+    INTEGER :: n_errors       !< Number of error cells
+    INTEGER :: error_idx(nc)  !< Cell indices of error cells
+    LOGICAL :: error_flag(nc) !< Flag that given cell index is already in list (to suppress double-counting)
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap)
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, wtr_old, ice_old, freeze_mass, melt_mass)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO is = 1,nsoil-1
@@ -392,13 +406,17 @@ CONTAINS
     !    from surface temperatur and A and B coefficients computed at the previous time step
     !-----------------------------------------------------------------------------------------------
 
-    IF (PRESENT(ws)) THEN
+    IF (PRESENT(wtr)) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO ic = 1, nc
-          frozen    (ic,is) = 0._wp
-          melt      (ic,is) = 0._wp
-          liquid_max(ic,is) = 0._wp
+          frozen    (ic,is)  = 0._wp
+          melt      (ic,is)  = 0._wp
+          liquid_max(ic,is)  = 0._wp
+          freeze_mass(ic,is) = 0._wp
+          melt_mass(ic,is)   = 0._wp
+          wtr_old(ic,is)     = wtr(ic,is)
+          ice_old(ic,is)     = ice(ic,is)
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -433,7 +451,7 @@ CONTAINS
       !$ACC END PARALLEL
 
       ! Phase change calculations
-      IF (l_freeze .AND. PRESENT(ws)) THEN
+      IF (l_freeze .AND. PRESENT(wtr)) THEN
 
         IF (l_supercool) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -458,31 +476,78 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         END IF
 
+        ! Compute mass of feezing water or melting ice using the available energy
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ic=1,nc
           DO is=1,nsoil
-            IF (t_soil_sl(ic,is) < tmelt .AND. ws(ic,is) > liquid_max(ic,is)) THEN
-              frozen(ic,is) = MIN(ws(ic,is) - liquid_max(ic,is), &
-                &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
-                &              )
+            IF (t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
+              freeze_mass(ic,is) = MIN((wtr(ic,is) - liquid_max(ic,is)) * rhoh2o, &
+                & heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / alf)
             ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
+              melt_mass(ic,is) = MIN(ice(ic,is) * rhoi, &
+                & heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf)
             END IF
           END DO
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! Note: only either frozen or melt is non-zero at any given point
+        ! Update water/ice storage and soil layer temperature
+        ! Note: only either freeze or melt is non-zero at any given point
+        ! ToDo: Debug message needs to get own loop to be excluded for GPU runs
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is=1,nsoil
           DO ic=1,nc
-            ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
-            ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
-            t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
-              & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
+            wtr(ic,is) = wtr(ic,is) + (melt_mass(ic,is) - freeze_mass(ic,is)) / rhoh2o
+            ice(ic,is) = ice(ic,is) + (freeze_mass(ic,is) - melt_mass(ic,is)) / rhoi
+            t_soil_sl(ic,is) = t_soil_sl(ic,is) + &
+              & (freeze_mass(ic,is) - melt_mass(ic,is)) * alf / heat_cap(ic,is)
+            frozen(ic,is) = freeze_mass(ic,is) / (rhoh2o * delta_time)
+            melt  (ic,is) = melt_mass(ic,is) / (rhoi * delta_time)
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+#ifndef _OPENACC
+        IF (enforce_water_budget /= WB_IGNORE) THEN
+          ! Check if phase change causes negative water or ice values
+          n_errors = 0
+          error_flag(:) = .FALSE.
+          DO is=1,nsoil
+            DO ic=1,nc
+              IF (((wtr(ic,is) < -EPSILON(1._wp) .AND. frozen(ic,is) > EPSILON(1._wp)) .OR. &
+                & (ice(ic,is) < -EPSILON(1._wp) .AND. melt(ic,is) > EPSILON(1._wp))) .AND.  &
+                & .NOT. error_flag(ic)) THEN
+                n_errors = n_errors + 1    ! count the soil moisture errors
+                error_idx(n_errors) = ic   ! keep the respective cell indices
+                error_flag(ic) = .TRUE.    ! mark gridcell as containing errors
+              END IF
+            END DO
+          END DO
 
-            frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
-            melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+          ! Write error messages in case errors have been found.
+          DO ie = 1, n_errors
+            ic = error_idx(ie)
+            WRITE (message_text_long,*) 'negative soil water or ice content due to phasechange', &
+              & ' at index ', ic,'.:',                       NEW_LINE('a'), &
+              & 'Water content old [m]: ', wtr_old(ic,:),    NEW_LINE('a'), &
+              & 'Ice content old [m]:   ', ice_old(ic,:),    NEW_LINE('a'), &
+              & 'Frozen water [m]:      ', frozen(ic,:),     NEW_LINE('a'), &
+              & 'Melted ice [m]:        ', melt(ic,:),       NEW_LINE('a'), &
+              & 'Water content new [m]: ', wtr(ic,:),        NEW_LINE('a'), &
+              & 'Ice content new [m]:   ', ice(ic,:)
+            IF (enforce_water_budget == WB_ERROR) THEN
+              CALL finish ('calc_soil_temperature', message_text_long)
+            ELSE IF (enforce_water_budget == WB_LOGGING) THEN
+              CALL message ('calc_soil_temperature', message_text_long, all_print=.TRUE.)
+            END IF
+          END DO
+        END IF
+#endif
+        ! Correct for numerical errors
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO is=1,nsoil
+          DO ic=1,nc
+            wtr(ic,is) = MAX(0._wp, wtr(ic,is))
+            ice(ic,is) = MAX(0._wp, ice(ic,is))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -512,7 +577,7 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE ! lstart
-      IF (l_freeze .AND. PRESENT(ws)) THEN
+      IF (l_freeze .AND. PRESENT(wtr)) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is = 1, nsoil
           DO ic=1,nc
