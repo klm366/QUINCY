@@ -2,8 +2,6 @@
 title: Imprint/Service Provider Identification
 ---
 
-@Warning Work in Progress
-
 @note The following provides mandatory data concerning the service provider of this website, obligations with regard to data protection, as well as other important legal references involving the Internet site of the Max Planck Institute for Biogeochemistry (www.bgc-jena.mpg.de) as required by German law.
 
 ## Service Provider
@@ -30,7 +28,7 @@ The value added tax identification number of the Max Planck Society is DE 129517
 Editors
 Responsible editor for the contents of the website of the Max Planck Institute for Biogeochemistry with regard to media law is the Managing Director, Prof. Dr. Markus Reichstein.
 
-## Editor contact
+### Editor contact
 Dr. Eberhard Fritz
 Research Coordinator
 Max Planck Institute for Biogeochemistry
@@ -38,10 +36,7 @@ Hans-Knöll-Str. 10
 07745 Jena, Germany
 efritz@bgc-jena.mpg.de
 
-Editors for further websites
-Responsible editors for the contents of the webpages of the different departments and independent groups of the Max Planck Institute for Biogeochemistry with regard to media law are their respective leaders (see below). All other webpages of research groups and service groups are under responsibility of the Managing Director, currently Prof. Susan Trumbore, if not stated otherwise.
-
-Responsible editors: Reiner Schnur (MPI-MET), Sönke Zaehle (MPI-BGC), ...
+**Responsible editors:** Reiner Schnur (MPI-MET), Sönke Zaehle (MPI-BGC), ...
 
 ### Legal Structure
 The Max Planck Society is a non-profit research facility which is organized as a registered association. All of the institutes and facilities of the Max Planck Society are largely autonomous in terms of organization and research, but as a rule have no legal capacity of their own.
@@ -55,7 +50,8 @@ As the service provider of contents in accordance with Section 7 Paragraph 1 of 
 ### Links to Internet Sites of Third Parties
 This Internet site includes links to external pages. These external links are designated as follows: . The respective provider shall be responsible for the contents of any linked external pages. In establishing the initial link, the Max Planck Society has reviewed the respective external content in order to determine whether such link entailed possible civil or criminal responsibility. However, a constant review of linked external pages is unreasonable without concrete reason to believe that a violation of the law may be involved. If the Max Planck Society determines such or it is pointed out by others that an external offer to which it is connected via a link entails civil or criminal responsibility, then the Max Planck Society will immediately eliminate any link to this offer. The Max Planck Society expressly dissociates itself from such contents.
 
-## Copyright
+### Copyright
+
 The layout, graphics employed and any other contents on the homepage of the Max Planck Society Internet site are protected by copyright law.
 
 © Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V., Munich. All rights reserved

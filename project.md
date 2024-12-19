@@ -62,3 +62,5 @@ at the bottom of the page.
 
 {!LICENSE.md!}
 
+------------------------------
+[Impressum and Provider Information](page/5-impressum/index.html)
