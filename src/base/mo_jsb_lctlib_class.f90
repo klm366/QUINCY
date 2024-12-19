@@ -225,6 +225,9 @@ MODULE mo_jsb_lctlib_class
       & k_root_dist                   , &
       & k_som_fast_init               , &
       & k_som_slow_init
+
+    ! Disturbance fire
+    REAL(wp) :: fbd_pb
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
   END TYPE t_lctlib_element
@@ -438,6 +441,7 @@ CONTAINS
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
+    LOGICAL            :: exists_fbd_pb = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1006,6 +1010,9 @@ CONTAINS
           CASE ('albedolitternir')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
             exists_AlbedoLitterNIR = .TRUE.
+          CASE ('fbd_pb')
+            READ(line(pos:length),*) lctlib(1:nlct)%fbd_pb
+            exists_fbd_pb = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1313,6 +1320,8 @@ CONTAINS
           CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_AlbedoLitterNIR) &
           CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_fbd_pb) &
+            CALL finish('init_lctlib','No data for fbd_pb found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1648,6 +1657,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%fbd_pb, p_io, mpi_comm)
       END IF
 #endif
     END IF

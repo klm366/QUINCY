@@ -319,3 +319,10 @@ AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 
 
 #AlbedoLitterNIR: Albedo of litter in the near infrared range                     
 AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0
+
+#
+# Fire Disturbance (spitfire)
+#
+
+# Fuel bulk density [kg m-3], from Thonicke et al. (2010), Table 1
+fbd_pb 25.0 10.0 25.0 22.0 25.0 22.0 2.0 2.0 2.0 2.0 2.0 2.0 0.0 0.0
