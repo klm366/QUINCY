@@ -51,15 +51,15 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_, Q_SH_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_, Q_SH_, DFIRE_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
-
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -74,6 +74,7 @@ CONTAINS
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< loop over chunk
     INTEGER                           :: ielem, ix_elem         !< id and index of elements
+    REAL(wp)                          :: mortality_rate_fire(options%nc)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -83,9 +84,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -123,6 +126,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
+    ! DFIRE_ 2D
+    dsl4jsb_Real2D_onChunk      :: pm_fire
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -140,9 +145,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -186,6 +193,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)   ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)   ! out
+    ! DFIRE_ 2D
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                  ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 0.9 init local var
@@ -207,6 +216,13 @@ CONTAINS
           &                                         diameter(:))
     ENDSELECT
 
+    !> 1.2 Load mortality_rate_fire
+    IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+      mortality_rate_fire(:) = pm_fire(:)
+    ELSE
+      mortality_rate_fire(:) = 0._wp !< no change
+    END IF
+
     !>2.0 Calculate mortality rate and veg litterfall
     !>
     ! returns constant mortality_rate if veg_dynamics_scheme == none \n
@@ -223,6 +239,7 @@ CONTAINS
       & net_growth_tvegdyn_mavg(:)                      , &
       & lai_tvegdyn_mavg(:)                             , &
       & fpc(:)                                          , &
+      & mortality_rate_fire(:)                          , &
       & veg_pool_mt(:,:,:)                              , & ! in
       & veg_litterfall_mt(:,:,:)                        , & ! inout
       & mortality_rate(:)                               )   ! out
@@ -417,6 +434,7 @@ CONTAINS
     & net_growth_tvegdyn_mavg   , &
     & lai_tvegdyn_mavg          , &
     & fpc                       , &
+    & mortality_rate_fire       , &
     & veg_pool_mt               , &
     & veg_litterfall_mt         , &
     & mortality_rate )
@@ -435,6 +453,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: net_growth_tvegdyn_mavg    !< long-term net growth of the plant (micro-mol / m2 / s)
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: mortality_rate_fire        !< Probability of mortality of dist_fire [-]
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
@@ -513,8 +532,8 @@ CONTAINS
       ENDSELECT
       !>  1.4 total mortality is the sum of all mortality terms, and limited to one
       !>
-      mortality_rate(:) = MIN(greff_mortality_rate(:) + self_thinning_mortality_rate(:) + bg_mortality_rate(:), 1.0_wp) &
-        &                 / one_year / one_day * dtime
+      mortality_rate(:) = MIN(greff_mortality_rate(:) + self_thinning_mortality_rate(:) + bg_mortality_rate(:) + &
+                              mortality_rate_fire , 1.0_wp) / one_year / one_day * dtime
     CASE ("none")
       SELECT CASE (lctlib_growthform)
       CASE (itree)

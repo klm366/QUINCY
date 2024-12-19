@@ -71,6 +71,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real2D_onChunk      :: pm_fire
     dsl4jsb_Real2D_onChunk      :: precip_daytime
     dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
     dsl4jsb_Real2D_onChunk      :: precip_daily_mmd
@@ -86,12 +87,14 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily_mmd)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "dfire_init..."
+    pm_fire = 0._wp
     precip_daytime = 0._wp
     precip_qc_mavg = 0._wp
     precip_daily_mmd = 0._wp

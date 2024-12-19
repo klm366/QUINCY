@@ -53,6 +53,8 @@ MODULE mo_dfire_memory_class
 
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
 
+    TYPE(t_jsb_var_real2d)               :: pm_fire             !< Tree probability of mortality of tree [-]
+
     !< Precipitation
     !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
     TYPE(t_jsb_var_real2d)               :: precip_qc_mavg      !< Precipitation moving average (quincy moving average) [kg m-2 s-1]
@@ -110,6 +112,16 @@ CONTAINS
     CALL mem%Add_var('t_air_min', mem%t_air_min, &
         & hgrid, vgrid_surface, &
         & t_cf('t_air_min', 'K', 'Min temperature of the previous day (daytime_counter)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_fire', mem%pm_fire, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_fire', '-', 'Tree probability of mortality by fire'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

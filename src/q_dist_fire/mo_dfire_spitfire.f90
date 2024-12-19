@@ -161,6 +161,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: t_air_max         ! Max temperature of the day (previous day) [k]
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
+    dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr     ! [g DM m-2]
@@ -196,6 +197,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)              ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)    ! in
@@ -220,6 +222,7 @@ CONTAINS
 
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
+    pm_fire = 0._wp
 
     write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
