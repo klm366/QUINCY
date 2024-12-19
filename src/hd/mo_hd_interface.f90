@@ -431,9 +431,9 @@ CONTAINS
     CASE ('full')
 
       ! Synchronize halos
-      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:),   lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:), lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:),   lacc=.TRUE.)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
