@@ -2,38 +2,17 @@
 title: QUINCY model documentation
 ---
 
-# Detailed model description
+The following presents an attempt to provide a complete overview on QUINCY v1.
+Section [Model Structure](#general-model-structure-and-discretisation) summarises the general structure and vertical discretisation of
+vegetation and soil. Section [Canopy](#canopy-processes) describes the canopy processes, such
+as photosynthesis and stomatal coupling. Section [Vegetation Processes](#vegetation-growth-turnover-and-dynamics)
+ introduces vegetation growth, turnover and dynamics. Soil
+biochemistry is described in the Section on [Soil Processes](#soil-biogeochemistry)
+Section [Physics](#radiation-surface-energy-balance-and-soil-hydrology)
+describes the simplified QUINCY radiation scheme, surface
+energy balance and soil hydrology. 
 
-This appendix includes a detailed model description with equations.
-Section <a href="#sec:structure" data-reference-type="ref"
-data-reference="sec:structure">1.1</a> with parameter
-Tab <a href="#tab:processes:mavg_period" data-reference-type="ref"
-data-reference="tab:processes:mavg_period">[tab:processes:mavg_period]</a>
-summarises the general structure and vertical discretisation of
-vegetation and soil. Section
-<a href="#ch:assimi" data-reference-type="ref"
-data-reference="ch:assimi">1.2</a> describes the canopy processes, such
-as photosynthesis and stomatal coupling, with parameters in
-Tab. <a href="#tab:assimi:param" data-reference-type="ref"
-data-reference="tab:assimi:param">[tab:assimi:param]</a>. Section
-(<a href="#sec:veg" data-reference-type="ref"
-data-reference="sec:veg">1.3</a>) introduces vegetation growth, turnover
-and dynamics and the corresponding parameters are in Table
-<a href="#tab:veg:param" data-reference-type="ref"
-data-reference="tab:veg:param">[tab:veg:param]</a>. The soil
-biochemistry is described in
-Section <a href="#sec:soil_biogeochemistry" data-reference-type="ref"
-data-reference="sec:soil_biogeochemistry">1.4</a>), and its parameters
-are in Tab. <a href="#tab:sb:param" data-reference-type="ref"
-data-reference="tab:sb:param">[tab:sb:param]</a>. Section
- <a href="#sec:rad" data-reference-type="ref"
-data-reference="sec:rad">1.6</a> describes the radiation scheme, surface
-energy balance and soil hydrology, with parameters described in
-Tab. <a href="#tab:radsse:param" data-reference-type="ref"
-data-reference="tab:radsse:param">[tab:radsse:param]</a>. The
-PFT-specific parameters are in the Table
-<a href="#tab:lctlib:description" data-reference-type="ref"
-data-reference="tab:lctlib:description">[tab:lctlib:description]</a>.
+[TOC]
 
 ## General model structure and discretisation
 
@@ -51,18 +30,17 @@ characterised by their height (m), diameter (m), and stand density
 pools: metabolic (met), structural (str) and and woody (wl) litter, as
 well as fast (f) and slow (s) overturning soil organic matter. Each of
 these pools contains carbon (C), nitrogen (N) and phosphorus (P), as
-well as , , and . The unit of the pools is mol   X   m<sup>−2</sup> for
-vegetation and mol   X   m<sup>−3</sup> for soil biogeochemical pools,
-where $X$ represents any of these elements. In addition, the model
-represents the following soil biogeochemical pools (, , , , , and ),
-with equivalent units.
+well as <sup>13</sup>C, <sup>14</sup>C, and <sup>15</sup>N. The unit 
+of the pools is mol X m<sup>−2</sup> for vegetation and mol X m<sup>−3</sup> 
+for soil biogeochemical pools, where *X* represents any of these elements. 
+In addition, the model represents the following soil biogeochemical pools 
+(NH<sub>4</sub>, NO<sub>3</sub>, NO<sub>y</sub>, N<sub>2</sub>O, N<sub>2</sub>, 
+and PO<sub>4</sub>), with equivalent units.
 
-The model operates on a half-hourly time-scale (denoted as $dt$).
+The model operates on a half-hourly time-scale (denoted as *dt*).
 Vegetation processes are assumed to respond to these instantaneous
 conditions and associated fluxes with a process-specific lag time
-($\tau_{mavg}^{process}$, see Tab.
-<a href="#tab:processes:mavg_period" data-reference-type="ref"
-data-reference="tab:processes:mavg_period">[tab:processes:mavg_period]</a>),
+$`\tau_{mavg}^{process}´$, see Tab. X,
 representing a form of memory for instance in the calculation of
 allocation or vegetation dynamic responses. Where appropriate, the
 fluxes or pool sizes are calculated as running means with a
@@ -166,7 +144,8 @@ Kruijt 1998), extended for C4 photosynthesis according to (Friend et al.
 sensitivities follow the form:
 
 $$\label{eq:ps_t_sensitivity}
-f_x(T_{air}) = e^{E_0^x - E_1^x/(R\times T_{air})}$$
+f_x(T_{air}) = e^{E_0^x - E_1^x/(R\times T_{air})}
+$$
 
 where $T_{air}$ is the air temperature (K), $R$ is the universal gas
 constant (J mol<sup>−1</sup> K<sup>−1</sup>), and the process-wise
