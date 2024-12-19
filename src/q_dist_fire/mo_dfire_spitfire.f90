@@ -128,6 +128,7 @@ CONTAINS
     REAL(wp), POINTER                     :: fract_fpc(:,:) ! in
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
+    REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
@@ -232,9 +233,17 @@ CONTAINS
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 
-    pot_burn_area = grid_cell_area * (SUM(grass_fract) + SUM(forest_fract))
+    tile_area = grid_cell_area * tile_fract
+    pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
     ! assertion
-    IF (ANY(pot_burn_area > tile_fract)) THEN
+    IF (ANY(pot_burn_area > tile_area)) THEN
+      DO ic=1, nc
+        IF (pot_burn_area(ic) > tile_area(ic)) THEN
+          WRITE(*,*) "pot_burn_area, tile_fract=", grid_cell_area(ic), tile_fract(ic), &
+                                                   (grass_fract(ic) + forest_fract(ic))
+          WRITE(*,*) "pot_burn_area, tile_fract=", pot_burn_area(ic), tile_area(ic)
+        ENDIF
+      ENDDO
       CALL finish(TRIM(routine), "potential_burn_area > tile_fract")
     END IF
 
