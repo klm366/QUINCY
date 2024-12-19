@@ -227,23 +227,25 @@ MODULE mo_jsb_tile_class
 
   ABSTRACT INTERFACE
     !> Interface for deferred subroutine `Aggregate_2d` of `t_jsb_aggregator`
-    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
+    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller, mask)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this            !< Aggregator
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real2d),     INTENT(inout) :: var             !< Variable with 2 dimensions
       INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
       CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
+      LOGICAL,  OPTIONAL,         INTENT(in)    :: mask(:)         !< T=pft to apply aggregation, F=skip (#pfts)
     END SUBROUTINE aggregate_interface_2d
 
     !> Interface for deferred subroutine `Aggregate_3d` of `t_jsb_aggregator`
-    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk,caller)
+    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk,caller, mask)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real3d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real3d),     INTENT(inout) :: var             !< Variable with 3 dimensions
       INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
       CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
+      LOGICAL,  OPTIONAL,         INTENT(in)    :: mask(:)         !< T=pft to apply aggregation, F=skip (#pfts)
     END SUBROUTINE aggregate_interface_3d
 
   END INTERFACE
@@ -844,13 +846,14 @@ CONTAINS
   !>
   !> Aggregation of a 2d variable from the child tiles by weighted fractions
   !>
-  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller, mask)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
@@ -861,6 +864,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_2d'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
 
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
@@ -1005,13 +1012,14 @@ CONTAINS
   !>
   !> Aggregation of a 3d variable from the child tiles by weighted fractions
   !>
-  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller, mask)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
@@ -1022,6 +1030,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_3d'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
 
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
@@ -1405,13 +1417,14 @@ CONTAINS
   !>
   !> Aggregation of a 2d variable from the child tiles by sum all 
   !>
-  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller, mask)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
@@ -1429,6 +1442,10 @@ CONTAINS
       routine = modname//':Aggregate_sum_2d'
     END IF
     !WRITE(*,*) "aggregation_sum:: start..."
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
 
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
@@ -1562,13 +1579,14 @@ CONTAINS
   !> Aggregation of a 3d variable from the child tiles by sum
   !> todo: ensure it works
   !>
-  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller, mask)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
@@ -1584,6 +1602,10 @@ CONTAINS
       routine = modname//':Aggregate_sum_3d'//'(called by '//TRIM(caller)//')'
     ELSE
       routine = modname//':Aggregate_sum_3d'
+    END IF
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
     END IF
 
     no_children = tile%Get_no_of_children()
