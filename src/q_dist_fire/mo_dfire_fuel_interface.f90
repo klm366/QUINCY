@@ -136,6 +136,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, forest_fract     , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, grass_fract      , sum_agg)
 
+!    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, fuel_bulk_density, average_by_mask)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
 
