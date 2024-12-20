@@ -54,8 +54,8 @@ MODULE mo_jsb_tile_class
   PRIVATE
 
   PUBLIC :: t_jsb_tile_abstract
-  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, &
-                t_jsb_aggregator_weighted_by_fract, t_jsb_aggregator_sum
+  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p
+  PUBLIC :: t_jsb_aggregator_weighted_by_fract, t_jsb_aggregator_sum, t_jsb_aggregator_average
 
   ! Declarations for aggregators
 
@@ -1859,7 +1859,7 @@ CONTAINS
   !>
   SUBROUTINE Finalize_aggregator_average(aggregator)
 
-    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator !< Aggregator to destruct
+    TYPE(t_jsb_aggregator_average) :: aggregator !< Aggregator to destruct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Finalize_aggregator_average'
 
