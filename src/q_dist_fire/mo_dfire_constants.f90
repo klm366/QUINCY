@@ -79,6 +79,12 @@ MODULE mo_dfire_constants
     ENUMERATOR :: DFIRE_PRECIP_METHOD_MAVG=20       !< Pure moving average, so it is never approximatted.
     ENUMERATOR :: DFIRE_PRECIP_METHOD_APROX_MAVG=30 !< Approximation to moving average used by Quincy. Not recommended as it leaks water over time, as it never reaches 0.
   END ENUM
+
+  ! todo: smarter way to do it? 
+  LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
+                                              .TRUE., .TRUE., &                                 ! grass pfts
+                                              .FALSE., .FALSE., &                               ! crop pfts
+                                              .FALSE.]                                          ! Bar soil
 CONTAINS
 
   ! ======================================================================================================= !
