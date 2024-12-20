@@ -470,7 +470,7 @@ CONTAINS
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics
+      CALL update_statistics(lacc=i_am_accel_node)
       ! --
       IF (output_mode%l_nml) THEN
           CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
@@ -626,7 +626,7 @@ CONTAINS
       END DO
 
       ! update accumulated values
-      CALL update_statistics
+      CALL update_statistics(lacc=i_am_accel_node)
 
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep, lacc=i_am_accel_node)
