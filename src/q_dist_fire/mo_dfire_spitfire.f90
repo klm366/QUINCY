@@ -172,6 +172,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
     dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
+
+    dsl4jsb_Real2D_onChunk                :: fuel_bulk_density ! [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -207,6 +209,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density) ! in [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -265,8 +269,9 @@ CONTAINS
                                                             dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
                                                             dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
-    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area = ", &
-            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1)
+    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
+            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
+            fuel_bulk_density(1)
   END SUBROUTINE update_dfire_spitfire
 
 

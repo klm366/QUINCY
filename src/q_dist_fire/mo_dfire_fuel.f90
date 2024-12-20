@@ -229,10 +229,10 @@ CONTAINS
     !> when accounting for the other pfts.
     !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
     !> fuel bulk densities (slightly more).
-    dead_fuel_cls = SUM(dead_fuel(:,:,1:3), DIM=2) ! todo: 1:3= fuel classes from 1hr to 100hrs, 2 = fuel pools dimension index
-    DO ic = 1, nc
-      fuel_bulk_density(ic) = lctlib%fbd_pb * SUM(dead_fuel_cls(ic,:) * [1._wp, 1.2_wp, 1.4_wp]) ! todo: add hardcoded values into dfire_constants.f90
-    END DO
+    !dead_fuel_cls = SUM(dead_fuel(:,:,1:3), DIM=2) ! todo: 1:3= fuel classes from 1hr to 100hrs, 2 = fuel pools dimension index
+    !DO ic = 1, nc
+      fuel_bulk_density(:) = 2._wp !lctlib%fbd_pb * SUM(dead_fuel_cls(ic,:) * [1._wp, 1.2_wp, 1.4_wp]) ! todo: add hardcoded values into dfire_constants.f90
+    !END DO
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &
