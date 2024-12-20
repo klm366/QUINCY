@@ -597,8 +597,10 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN 
-          IF (tile%Is_process_active(DFIRE_)) THEN
+          IF (tile%Is_process_active(DFIRE_FUEL_)) THEN
             CALL dfire_fuel_init(tile)
+          ENDIF
+          IF (tile%Is_process_active(DFIRE_)) THEN
             CALL dfire_init(tile)
           END IF
         ENDIF
