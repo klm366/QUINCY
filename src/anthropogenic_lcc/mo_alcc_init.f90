@@ -167,9 +167,9 @@ CONTAINS
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year)  
     dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition)        ! Mingyue add dsl4jsb for transition vars
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_pfts)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_gain)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_loss)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_pfts)   ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_gain)   ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_loss)   ! Mingyue add dsl4jsb for transition vars
     !>
     !> Assertion: alcc process currently expects filenames with 4 digits
     !>
