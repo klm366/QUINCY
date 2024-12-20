@@ -35,6 +35,7 @@ MODULE mo_dfire_fuel_interface
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process, DFIRE_FUEL_
   USE mo_dfire_fuel,                  ONLY: update_dfire_fuel
+  USE mo_dfire_constants,             ONLY: dfire_pft_mask ! pfts to compute average
 
   dsl4jsb_Use_memory(DFIRE_FUEL_)
 
@@ -102,8 +103,6 @@ CONTAINS
     CLASS(t_jsb_aggregator),  POINTER         :: sum_agg, average_agg
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
-    LOGICAL, PARAMETER :: pftmask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., &
-                                          .FALSE., .FALSE., .FALSE.] ! todo: add to dfire_init (forestFlag and grassFlag = true)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -139,7 +138,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, forest_fract     , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, grass_fract      , sum_agg)
 
-    dsl4jsb_Aggregate_onChunk_masked(DFIRE_FUEL_, fuel_bulk_density   , average_agg, pftmask)
+    dsl4jsb_Aggregate_onChunk_masked(DFIRE_FUEL_, fuel_bulk_density , average_agg, dfire_pft_mask)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
