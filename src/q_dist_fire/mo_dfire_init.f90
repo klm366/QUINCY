@@ -46,7 +46,6 @@ CONTAINS
   !>
   SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -61,8 +60,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib !< land-cover-type library - parameter across pfts
-    INTEGER                                      :: iblk, ics, ice, nc
+    INTEGER                                      :: iblk, ics, ice, nc, npft
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
@@ -71,27 +69,26 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real2D_onChunk      :: pm_fire
-    dsl4jsb_Real2D_onChunk      :: precip_daytime
-    dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
-    dsl4jsb_Real2D_onChunk      :: precip_daily_mmd
-    dsl4jsb_Real2D_onChunk      :: precip_mavg
+    dsl4jsb_Real2D_onDomain      :: pm_fire
+    dsl4jsb_Real2D_onDomain      :: precip_daytime
+    dsl4jsb_Real2D_onDomain      :: precip_qc_mavg
+    dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
+    dsl4jsb_Real2D_onDomain      :: precip_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily_mmd)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daytime)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "dfire_init..."
     pm_fire = 0._wp
@@ -113,6 +110,8 @@ CONTAINS
       dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_qc_mavg)
     ENDIF
 
+    npft = tile%Get_no_of_children()
+    WRITE(*,*) "dfire_init:: npft=", npft
   END SUBROUTINE dfire_init
 #endif
 END MODULE mo_dfire_init
