@@ -265,6 +265,12 @@ macros = {
         ),
         r"CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)",
     ],
+    "aggregate_onchunk_masked": [
+        re.compile(
+            r"dsl4jsb_Aggregate_onChunk_masked *\((.*?)_ *, *(.*?) *, *(.*?), *(.*?)\)", re.IGNORECASE
+        ),
+        r"CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine,\4)",
+    ],
 }
 
 help_text = """

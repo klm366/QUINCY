@@ -1907,10 +1907,6 @@ CONTAINS
       routine = modname//':Aggregate_average_2d'
     END IF
 
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
-    END IF
-
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
 
@@ -1975,15 +1971,27 @@ CONTAINS
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             ! Multilply variable of the child with the weight and add it to the data sum
-            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-                & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
+            !this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+            !    & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
             ! -> The cache is a huge array of pointers with i iterating over the number of children
             !    (second dim: number of variables, third dim: number of processes).
             ! => Without gpu we would use
             !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
 
             ! Add weight to the weight sum
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp
+            IF (PRESENT(mask)) THEN
+              IF (mask(i)) THEN
+                ! Multilply variable of the child with the weight and add it to the data sum
+                this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                     & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
+                this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp
+              ENDIF
+            ELSE
+              ! Multilply variable of the child with the weight and add it to the data sum
+              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                        & + tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
+              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1._wp
+            ENDIF
           END DO
         ELSE IF (l_aggregate_all) THEN
           ! The variable is not defined on the this child tile, but we still want to consider its fraction
@@ -1991,9 +1999,9 @@ CONTAINS
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1.0_wp
-          END DO
-        END IF
-      END DO
+          END DO ! j = ics, ice
+        END IF ! var%child_idx(i) > 0 
+      END DO 
 
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
