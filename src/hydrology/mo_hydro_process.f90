@@ -686,11 +686,18 @@ CONTAINS
     ! Calculate evapotrans_to_parflow
     ! (positive contributions are already included in water_to_parflow)
     DO ic = 1, nc
-      evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
-        & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,1)/SUM(root_depth_sl(ic,:))) / dtime
-      DO is = 2, nsoil
-        evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
-      END DO
+      IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
+        evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
+          & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,1)/SUM(root_depth_sl(ic,:))) / dtime
+        DO is = 2, nsoil
+          evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
+        END DO
+      ELSE
+        evapotrans_to_parflow(ic,1) = MIN(evapo_soil_in_m(ic), 0.0_wp) / dtime
+        DO is = 2, nsoil
+          evapotrans_to_parflow(ic,is) = 0.0_wp
+        END DO
+      END IF
     END DO
 
     ! Calculation of vertical soil water movement for multiple soil layers
