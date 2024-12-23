@@ -115,7 +115,7 @@ CONTAINS
 
     USE mo_nlcc_process,   ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
-    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday
+    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday, get_day_length, get_previous_month_length
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
@@ -131,6 +131,8 @@ CONTAINS
     LOGICAL  :: lstart, init_running_means, init_mmtemp20
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
+    REAL(wp) :: seconds_day   ! number of seconds per day
+    REAL(wp) :: seconds_month ! number of seconds in previous month
     REAL(wp) :: dtime
     REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
@@ -166,8 +168,6 @@ CONTAINS
     dsl4jsb_Def_memory(DISTURB_)
 
     ! Declare pointers to variables in nlcc memory
-    dsl4jsb_Real2D_onChunk :: seconds_day
-    dsl4jsb_Real2D_onChunk :: seconds_month
     dsl4jsb_Real2D_onChunk :: temp_sum_day
     dsl4jsb_Real2D_onChunk :: temp_sum_month
     dsl4jsb_Real2D_onChunk :: min_mmtemp_of_yr
@@ -264,8 +264,6 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
@@ -293,6 +291,9 @@ CONTAINS
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
+
+    seconds_day   = get_day_length()
+    seconds_month = get_previous_month_length(options%current_datetime)
 
     ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))

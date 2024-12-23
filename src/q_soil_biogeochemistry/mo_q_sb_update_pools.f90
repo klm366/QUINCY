@@ -138,6 +138,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
     dsl4jsb_Real2D_onChunk :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production_c13
+    dsl4jsb_Real2D_onChunk :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
@@ -409,12 +411,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
     ENDIF
     ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                           ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                           ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c13)   ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c14)   ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
     ! VEG_ 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_,     num_sl_above_bedrock)        ! in
     ! SPQ_ 3D
@@ -654,7 +658,7 @@ CONTAINS
 
     !> 4.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-    f_myc_sl(:,:)          = root_fraction_sl(:,:)
+    f_myc_sl(:,:) = root_fraction_sl(:,:)
 
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
@@ -1129,6 +1133,10 @@ CONTAINS
     !>   see also 'update_veg_pools()'
     net_biosphere_production(:) = net_biosphere_production(:) &
       &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
+    net_biosphere_production_c13(:) = net_biosphere_production_c13(:) &
+      &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
+    net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
+      &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)

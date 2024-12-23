@@ -202,6 +202,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk      :: biological_n_fixation
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_n
@@ -361,6 +363,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)                ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n)                     ! out
@@ -909,6 +913,10 @@ CONTAINS
       ! (n_processing_respiration = n_fixation_respiration + n_transform_respiration)
       net_biosphere_production(ic) = net_biosphere_production(ic) &
         & + gross_assimilation(ic) - maint_respiration(ic) - growth_respiration(ic) - n_processing_respiration(ic)
+      net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) &
+        & + gross_assimilation_C13(ic) - maint_respiration_c13(ic) - growth_respiration_c13(ic) - n_processing_respiration_c13(ic)
+      net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) &
+        & + gross_assimilation_C14(ic) - maint_respiration_c14(ic) - growth_respiration_c14(ic) - n_processing_respiration_c14(ic)
 
       ! biological N fixation (VEG_ and SB_ processes)
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
@@ -916,6 +924,8 @@ CONTAINS
       IF (config_l_use_product_pools) THEN
         ! The product pool decay is a loss to the atmosphere (fprod_decay_mt unit is mol m-2 timestep-1)
         net_biosphere_production(ic) = net_biosphere_production(ic) - (fprod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (fprod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (fprod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP
