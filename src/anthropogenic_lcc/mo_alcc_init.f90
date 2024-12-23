@@ -97,7 +97,7 @@ CONTAINS
     REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
 
-    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks 
+    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks, ics, ice
     INTEGER :: idx, i, j, row, trans_idx, transition_prob, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
