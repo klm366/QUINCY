@@ -94,6 +94,7 @@ CONTAINS
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
+    dsl4jsb_Real3D_onChunk :: w_ice_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pot_sl
@@ -142,6 +143,7 @@ CONTAINS
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_,     t_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,     w_ice_sl)                    ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_fc_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_sat_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_,     w_soil_pot_sl)               ! in
@@ -168,8 +170,10 @@ CONTAINS
         rtm_desorption(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_desorption)
         rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_hsc)
 
-        rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_depolymerisation)
-        rmm_mic_uptake(ic, is)       = calc_oxygen_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_mic_uptake)
+        rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(w_soil_sl(ic, is), w_ice_sl(ic, is), &
+          &                                                      w_soil_fc_sl(ic, is), kmr_depolymerisation)
+        rmm_mic_uptake(ic, is)       = calc_oxygen_rate_modifier(w_soil_sl(ic, is), w_ice_sl(ic, is), &
+          &                                                      w_soil_fc_sl(ic, is), kmr_mic_uptake)
         rmm_sorption(ic, is)         = calc_convert_bulk_to_liquid(w_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption)
         rmm_desorption(ic, is)       = calc_convert_bulk_to_liquid(w_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption)
         rmm_hsc(ic, is)              = calc_substrate_rate_modifier(w_soil_sl(ic, is),w_soil_fc_sl(ic, is),kmr_hsc)
@@ -182,8 +186,8 @@ CONTAINS
         rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion)
         rmm_nitrification(ic, is)             = calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
         rmm_gasdiffusion(ic, is)              = 1.0_wp - calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
-        anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(w_soil_sl(ic, is), w_soil_sat_sl(ic, is), &
-          &                                     lambda_anvf, k_anvf)
+        anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(w_soil_sl(ic, is), w_ice_sl(ic, is), &
+          &                                     w_soil_sat_sl(ic, is), lambda_anvf, k_anvf)
 
         !>  2.1 N fixation model
         !>   Using the symbiotic T-function as no other data available
@@ -307,27 +311,30 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless)
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
+  FUNCTION calc_oxygen_rate_modifier(w_soil_sl, w_ice_sl, w_soil_fc_sl, param) RESULT(rate_modifier)
 
     USE mo_sb_constants,        ONLY: k1_afps
     USE mo_jsb_math_constants,  ONLY: eps8
+    USE mo_spq_constants,       ONLY: w_density, ice_density
 
     IMPLICIT NONE
     ! ---------------------------
     !0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl     !< soil moisture [m]
+    REAL(wp), INTENT(in)  :: w_ice_sl      !< soil ice water equivalent [m]
     REAL(wp), INTENT(in)  :: w_soil_fc_sl  !< soil moisture at field capacity [m]
     REAL(wp), INTENT(in)  :: param         !<
     REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)              :: air_filled_pore_space
-    REAL(wp)              :: hlp
+    REAL(wp)              :: air_filled_pore_space !< air filled pore fraction is the part of the soil matrix
+                                                   !< that is not filled by liquid water or ice [-]
+    REAL(wp)              :: hlp                   !< helper var
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
 
     IF(param>eps8) THEN
        IF(w_soil_fc_sl > eps8) THEN
-          air_filled_pore_space = (w_soil_fc_sl - w_soil_sl) / w_soil_fc_sl
+          air_filled_pore_space = (w_soil_fc_sl - (w_soil_sl + w_ice_sl * w_density / ice_density) ) / w_soil_fc_sl
           IF(air_filled_pore_space < 0.005_wp) air_filled_pore_space = 0.005_wp
           rate_modifier = (air_filled_pore_space**k1_afps) / (param + (air_filled_pore_space**k1_afps))
        ELSE
@@ -429,30 +436,33 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> Anaerobic fraction of the soil layer
   !!  according to Zaehle et al. 2011
-  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !!  revised to account for the volume fraction of the pore space occupied by liquid water and ice
   !!
   !! Input: soil moisture, sensitivity parameters
   !!
   !! Output: rate modifier (unitless)
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda,k) RESULT(rate_modifier)
+  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl, w_ice_sl, w_soil_sat_sl, lambda, k) RESULT(rate_modifier)
 
     USE mo_jsb_math_constants,    ONLY: eps4
+    USE mo_spq_constants,         ONLY: w_density, ice_density
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
+    REAL(wp), INTENT(in)  :: w_ice_sl            !< soil ice water equivalent [m]
     REAL(wp), INTENT(in)  :: w_soil_sat_sl       !< soil moisture at saturation [m]
     REAL(wp), INTENT(in)  :: lambda              !< lambda in Weibull function
     REAL(wp), INTENT(in)  :: k                   !< k in Weibull function
     REAL(wp)              :: rate_modifier       !< oxygen availability rate modifier [unitless]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)              :: air_filled_pore_space
+    REAL(wp)              :: air_filled_pore_space !< air filled pore fraction is the part of the soil matrix
+                                                   !< that is not filled by liquid water or ice [-]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_anaerobic_volume_fraction'
 
-    air_filled_pore_space = (w_soil_sat_sl - w_soil_sl ) / w_soil_sat_sl
+    air_filled_pore_space = (w_soil_sat_sl - (w_soil_sl + w_ice_sl * w_density / ice_density)) / w_soil_sat_sl
     IF(air_filled_pore_space > eps4) THEN
        rate_modifier = 1.0_wp - exp(-(lambda * (1.0_wp - air_filled_pore_space))**k)
     ELSE
