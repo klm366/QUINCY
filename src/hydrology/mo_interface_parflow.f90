@@ -18,12 +18,8 @@ MODULE mo_interface_parflow
   USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
   USE mo_model_domain,        ONLY: t_patch
-  USE mo_impl_constants,      ONLY: iaes
-  USE mo_mpi,                 ONLY: p_comm_work, p_sum
-  USE mo_run_config,          ONLY: iforcing
-  USE yac,                    ONLY: yac_fdef_field, yac_fdef_mask, &
+  USE yac,                    ONLY: yac_fdef_field,           &
        &                            yac_fput, yac_fget,       &
-       &                            YAC_LOCATION_CELL,        &
        &                            YAC_TIME_UNIT_ISO_FORMAT, &
        &                            YAC_ACTION_PUT_FOR_RESTART
   USE mo_time_config,         ONLY: time_config
@@ -42,17 +38,19 @@ MODULE mo_interface_parflow
   PUBLIC :: construct_parflow_coupling
 #endif
   PUBLIC :: interface_parflow
-  PUBLIC :: mask_checksum, field_id, is_valid_parflow, parflow_buffer
+  PUBLIC :: field_id
+  PUBLIC :: received_soil_water, is_valid_parflow, parflow_buffer
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_parflow'
 
-  INTEGER :: no_of_fields = 2
+  INTEGER :: no_of_fields = 3
+
+  LOGICAL :: received_fract_parflow = .FALSE.
 
   INTEGER, ALLOCATABLE :: field_id(:)
-  INTEGER, ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
+  LOGICAL, ALLOCATABLE, TARGET :: received_soil_water(:,:)
+  REAL(wp), ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
   REAL(wp), ALLOCATABLE, TARGET :: parflow_buffer(:,:,:)
-
-  INTEGER, SAVE :: mask_checksum = -1
 
 CONTAINS
 
@@ -63,11 +61,6 @@ CONTAINS
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
-    USE mo_coupling_utils,     ONLY: rla2rlarot, phi2phirot, zrpi18, zpir18, polgam
-    USE mo_coupling_config,    ONLY: config_parflow_rotpole, &
-      &                              config_parflow_rotpole_lon, config_parflow_rotpole_lat, &
-      &                              config_parflow_dom_nw_lon, config_parflow_dom_nw_lat, &
-      &                              config_parflow_dom_se_lon, config_parflow_dom_se_lat
 
     TYPE(t_patch), TARGET, INTENT(in) :: p_patch(:)
     INTEGER, INTENT(in)               :: comp_id           ! yac component id
@@ -83,21 +76,15 @@ CONTAINS
 
     TYPE(t_patch), POINTER :: patch_horz
 
-    INTEGER :: cell_mask_ids(1)
     INTEGER :: model_id
     INTEGER :: jg, jb, jc
     INTEGER :: nproma!, nblks
     INTEGER :: nsoil
 
-    LOGICAL,  ALLOCATABLE :: is_valid(:)
-    REAL(wp), ALLOCATABLE :: lsmnolake(:,:)
-
     CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
     CHARACTER(len=40), ALLOCATABLE :: field_name(:)
     INTEGER :: collection_size(no_of_fields)
-
-    REAL(wp) :: polphi, pollam, rot_lon, rot_lat
 
     dsl4jsb_Def_config(HYDRO_)
 
@@ -122,9 +109,6 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
 
-    polphi = config_parflow_rotpole_lat
-    pollam = config_parflow_rotpole_lon
-
     CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
     ALLOCATE(field_name(no_of_fields))
@@ -133,112 +117,30 @@ CONTAINS
     field_name(1)             = "water_to_parflow"
     collection_size(1)        = nsoil
 
-    field_name(2)             = "soil_water"
-    collection_size(2)        = nsoil
+    field_name(2)             = "fract_parflow"
+    collection_size(2)        = 1
 
-    ALLOCATE(is_valid(nproma*patch_horz%nblks_c))
-    ALLOCATE(lsmnolake(nproma,patch_horz%nblks_c))
+    field_name(3)             = "soil_water"
+    collection_size(3)        = nsoil
 
-    is_valid(:) = .FALSE.
-
+    ALLOCATE(received_soil_water(nproma,patch_horz%nblks_c))
     ALLOCATE(is_valid_parflow(nproma,patch_horz%nblks_c))
     ALLOCATE(parflow_buffer(nproma,nsoil,patch_horz%nblks_c))
-    
-    ! Define the mask for YAC
 
-    SELECT CASE ( iforcing )
-
-      CASE ( iaes )
-#ifdef __NO_AES__
-        CALL finish ('mo_interface_parflow:construct_parflow_coupling', &
-            & 'coupled model needs aes; remove --disable-aes and reconfigure')
-#else
-        !$OMP PARALLEL DO PRIVATE(jb,jc)
-        DO jb = 1, patch_horz%nblks_c
-            DO jc = 1, nproma
-              lsmnolake(jc,jb) = grid%lsf(jc,jb)
-            ENDDO
-        ENDDO
-        !$OMP END PARALLEL DO
-
-        mask_checksum = 0
-        !$OMP PARALLEL DO PRIVATE(jb,jc) REDUCTION(+:mask_checksum)
-        DO jb = 1, patch_horz%nblks_c
-          DO jc = 1, nproma
-            mask_checksum = mask_checksum + ABS( lsmnolake(jc,jb) )
-          ENDDO
-        ENDDO
-        !$OMP END PARALLEL DO
-
-        mask_checksum = p_sum(mask_checksum, comm=p_comm_work)
-
-        !
-        ! Define cell_mask_ids(1): all ocean and coastal points are valid
-        ! This is the standard for the coupling of atmospheric fields listed below
-        !
-        IF ( mask_checksum > 0 ) THEN
-          !$OMP PARALLEL DO PRIVATE(jb, jc)
-          DO jb = 1, patch_horz%nblks_c
-            DO jc = 1, nproma
-
-              rot_lon = rla2rlarot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam, polgam )
-              rot_lat = phi2phirot ( grid%lat(jc,jb), grid%lon(jc,jb), polphi, pollam )
-              IF ( lsmnolake(jc,jb) .GT. 0._wp &
-                & .AND. (rot_lon .GT. config_parflow_dom_nw_lon) & 
-                & .AND. (rot_lon .LT. config_parflow_dom_se_lon) &
-                & .AND. (rot_lat .LT. config_parflow_dom_nw_lat) &
-                & .AND. (rot_lat .GT. config_parflow_dom_se_lat) ) THEN
-                ! land point inside ParFlow domain
-                is_valid((jb-1)*nproma+jc) = .TRUE.
-                is_valid_parflow(jc,jb) = 1
-              ELSE
-                ! outside point
-                is_valid((jb-1)*nproma+jc) = .FALSE.
-                is_valid_parflow(jc,jb) = 0
-              ENDIF
-
-            ENDDO
-          ENDDO
-          !$OMP END PARALLEL DO
-        ELSE
-          !$OMP PARALLEL DO PRIVATE(jb, jc)
-          DO jb = 1, patch_horz%nblks_c
-            DO jc = 1, nproma
-              is_valid((jb-1)*nproma+jc) = .FALSE.
-              is_valid_parflow(jc,jb) = 0
-            ENDDO
-          ENDDO
-          !$OMP END PARALLEL DO
-        ENDIF
-#endif
-      CASE DEFAULT
-
-        CALL finish ('Please mask handling for new forcing.')
-
-    END SELECT
-
-    CALL yac_fdef_mask (       &
-      & grid_id,                  &
-      & patch_horz%n_patch_cells, &
-      & YAC_LOCATION_CELL,        &
-      & is_valid,                 &
-      & cell_mask_ids(1) )
+    received_soil_water(:,:) = .FALSE.
+    is_valid_parflow(:,:) = 0.0_wp
 
     DO jc = 1, no_of_fields
-      CALL yac_fdef_field_mask (       &
+      CALL yac_fdef_field (            &
         & TRIM(field_name(jc)),        &
         & comp_id,                     &
         & cell_point_ids,              &
-        & cell_mask_ids(1),            &
         & 1,                           &
         & collection_size(jc),         &
         & modelTimeStep,               &
         & YAC_TIME_UNIT_ISO_FORMAT,    &
         & field_id(jc) )
     ENDDO
-
-    DEALLOCATE(is_valid)
-    DEALLOCATE(lsmnolake)
 
   END SUBROUTINE construct_parflow_coupling
 #endif
@@ -287,6 +189,7 @@ CONTAINS
     !IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
     grid => Get_grid(model%grid_id)
+    nbr_hor_cells = grid%ntotal
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
@@ -298,15 +201,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, water_to_parflow)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, evapotrans_to_parflow)
 
+    ALLOCATE(buffer(grid%nproma * grid%nblks, nsoil))
+
     ! Send water_to_parflow
     ! --------------------
 
-    write_coupler_restart = .FALSE.
-
-    ALLOCATE(buffer(grid%nproma * grid%nblks, nsoil))
     !$OMP PARALLEL
     CALL init(buffer(:,:))
     !$OMP END PARALLEL
+
+    write_coupler_restart = .FALSE.
 
     !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
     DO iblk = 1, grid%nblks
@@ -338,7 +242,6 @@ CONTAINS
     END DO
     !$OMP END PARALLEL DO
 
-    nbr_hor_cells = grid%ntotal
 #ifdef YAC_coupling
     CALL yac_fput(field_id(1), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
     IF ( info == YAC_ACTION_PUT_FOR_RESTART ) write_coupler_restart = .TRUE.
@@ -348,6 +251,40 @@ CONTAINS
        CALL message(TRIM(routine), 'YAC says it is put for restart')
     END IF
 
+    ! Receive fract_parflow
+    ! --------------------
+
+    !$OMP PARALLEL
+    CALL init(buffer(:,:))
+    !$OMP END PARALLEL
+
+#ifdef YAC_coupling
+    IF ( .NOT. received_fract_parflow ) THEN
+      CALL yac_fget(field_id(2), nbr_hor_cells, 1, buffer(1:nbr_hor_cells,1:1), info, ierror)
+      IF ( info > 0 ) THEN
+        CALL message(TRIM(routine), 'Received fract_parflow')
+      END IF
+
+      IF ( info > 0 ) THEN
+        !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+        DO iblk = 1, grid%nblks
+          nn = (iblk - 1) * grid%nproma
+          IF (iblk /= grid%nblks) THEN
+            nlen = grid%nproma
+          ELSE
+            nlen = grid%npromz
+          END IF
+          DO n = 1, nlen
+            is_valid_parflow(n,iblk) = buffer(nn+n,1)
+          END DO
+        END DO
+        !$OMP END PARALLEL DO
+
+        received_fract_parflow = .TRUE.
+      END IF
+    END IF
+#endif
+
     ! Receive soil_water
     ! --------------------
 
@@ -356,7 +293,7 @@ CONTAINS
     !$OMP END PARALLEL
 
 #ifdef YAC_coupling
-    CALL yac_fget(field_id(2), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
+    CALL yac_fget(field_id(3), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
 
     IF ( info > 0 ) THEN
       !$OMP PARALLEL DO PRIVATE(is, iblk, nn, nlen, n)
@@ -375,7 +312,7 @@ CONTAINS
       END DO
       !$OMP END PARALLEL DO
 
-      is_valid_parflow = 2*is_valid_parflow
+      received_soil_water(:,:) = .TRUE. ! Put into loop!
     END IF
 #endif
 

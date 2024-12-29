@@ -1213,7 +1213,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_interface_parflow,      ONLY: is_valid_parflow, parflow_buffer
+    USE mo_interface_parflow,      ONLY: received_soil_water, is_valid_parflow, parflow_buffer
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1229,7 +1229,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
     dsl4jsb_Real2D_onChunk :: fract_parflow
     dsl4jsb_Real3D_onChunk :: change_by_parflow
     dsl4jsb_Real3D_onChunk :: tracked_diff_parflow
@@ -1249,8 +1249,10 @@ CONTAINS
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     LOGICAL :: l_fract(options%nc)
-    INTEGER, POINTER :: is_valid_onChunk(:)
+    LOGICAL, POINTER :: received_onChunk(:)
+    REAL(wp), POINTER :: is_valid_onChunk(:)
     REAL(wp), POINTER :: parflow_buffer_onChunk(:,:)
+    REAL(wp) :: soil_water_tmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1278,6 +1280,7 @@ CONTAINS
     area => grid%area(ics:ice, iblk)
     lat => grid%lat(ics:ice, iblk)
     lon => grid%lon(ics:ice, iblk)
+    IF (ALLOCATED(received_soil_water)) received_onChunk => received_soil_water(ics:ice, iblk)
     IF (ALLOCATED(is_valid_parflow)) is_valid_onChunk => is_valid_parflow(ics:ice, iblk)
     IF (ALLOCATED(parflow_buffer)) parflow_buffer_onChunk => parflow_buffer(ics:ice, :, iblk)
 
@@ -1294,7 +1297,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_parflow)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, change_by_parflow)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, tracked_diff_parflow)
@@ -1346,8 +1349,8 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
-      &                                wtr_soil_fc_sl(:,:),     &
+      &                                wtr_soil_sat_sl(:,:),    &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
@@ -1371,7 +1374,7 @@ CONTAINS
     ! PFL TODO
     IF (ALLOCATED(is_valid_parflow)) THEN
       DO ic = 1, nc
-        fract_parflow(ic) = REAL(is_valid_onChunk(ic))
+        fract_parflow(ic) = is_valid_onChunk(ic)
       END DO
     END IF
     ! If running with ParFlow, copy the values from the ParFlow buffer
@@ -1380,19 +1383,23 @@ CONTAINS
     IF (ALLOCATED(is_valid_parflow)) THEN
       change_by_parflow(:,:) = 0.0_wp
       DO ic = 1, nc
-        IF (is_valid_onChunk(ic) > 1) THEN
+        IF ( received_onChunk(ic) ) THEN
           DO is = 1, nsoil
-            IF ( parflow_buffer_onChunk(ic,is) > wtr_soil_fc_sl(ic,is) ) THEN
-              change_by_parflow(ic,is) = wtr_soil_fc_sl(ic,is) - wtr_soil_sl(ic,is)
-              tracked_diff_parflow(ic,is) = parflow_buffer_onChunk(ic,is) - wtr_soil_fc_sl(ic,is)
-              wtr_soil_sl(ic,is) = wtr_soil_fc_sl(ic,is)
+            soil_water_tmp = is_valid_onChunk(ic) * parflow_buffer_onChunk(ic,is) &
+              & + ( 1.0_wp - is_valid_onChunk(ic) ) * wtr_soil_sl(ic,is)
+
+            IF ( soil_water_tmp > wtr_soil_sat_sl(ic,is) ) THEN
+              change_by_parflow(ic,is) = wtr_soil_sat_sl(ic,is) - wtr_soil_sl(ic,is)
+              !tracked_diff_parflow(ic,is) = is_valid_onChunk(ic) * ( parflow_buffer_onChunk(ic,is) - wtr_soil_sat_sl(ic,is) )
+              tracked_diff_parflow(ic,is) = soil_water_tmp - wtr_soil_sat_sl(ic,is)
+              wtr_soil_sl(ic,is) = wtr_soil_sat_sl(ic,is)
             ELSE
-              change_by_parflow(ic,is) = parflow_buffer_onChunk(ic,is) - wtr_soil_sl(ic,is)
+              change_by_parflow(ic,is) = soil_water_tmp - wtr_soil_sl(ic,is)
               tracked_diff_parflow(ic,is) = 0.0_wp
-              wtr_soil_sl(ic,is) = parflow_buffer_onChunk(ic,is)
+              wtr_soil_sl(ic,is) = soil_water_tmp
             END IF
           END DO
-          is_valid_onChunk(ic) = 1
+          received_onChunk(ic) = .FALSE.
         END IF
       END DO
     END IF
