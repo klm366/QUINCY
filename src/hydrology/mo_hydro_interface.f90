@@ -1383,7 +1383,7 @@ CONTAINS
     IF (ALLOCATED(is_valid_parflow)) THEN
       change_by_parflow(:,:) = 0.0_wp
       DO ic = 1, nc
-        IF ( received_onChunk(ic) ) THEN
+        IF ( is_valid_onChunk(ic) > 0.0_wp .AND. received_onChunk(ic) ) THEN
           DO is = 1, nsoil
             soil_water_tmp = is_valid_onChunk(ic) * parflow_buffer_onChunk(ic,is) &
               & + ( 1.0_wp - is_valid_onChunk(ic) ) * wtr_soil_sl(ic,is)

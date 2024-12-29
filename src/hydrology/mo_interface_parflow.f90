@@ -312,7 +312,7 @@ CONTAINS
       END DO
       !$OMP END PARALLEL DO
 
-      received_soil_water(:,:) = .TRUE. ! Put into loop!
+      received_soil_water(:,:) = .TRUE.
     END IF
 #endif
 
