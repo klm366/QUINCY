@@ -48,8 +48,9 @@ CONTAINS
       &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
       &                                  t_opt_nitrification, lambda_anvf, k_anvf, &
       &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition, &
-      &                                  kmr_asymb_bnf
+      &                                  kmr_asymb_bnf, temp_freeze_window_bio
     USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf
+    USE mo_phy_schemes,            ONLY: calc_peaked_arrhenius_function
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(SPQ_)
@@ -157,18 +158,20 @@ CONTAINS
 
         !>  1.1 simple model
         !>
-        rtm_decomposition(ic, is)    = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), &
+        rtm_decomposition(ic, is)    = calc_peaked_arrhenius_function(t_soil_sl(ic, is), &
           &                                                          ea_decomposition, &
           &                                                          ed_decomposition, &
           &                                                          t_ref_decomposition)
         rmm_decomposition(ic, is)    = MAX(1._wp - w_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
         !>  1.2 JSM
         !>
-        rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_depolymerisation)
-        rtm_mic_uptake(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_mic_uptake)
-        rtm_sorption(ic, is)         = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_sorption)
-        rtm_desorption(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_desorption)
-        rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is),ea_hsc)
+        rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_depolymerisation, &
+          &                                                           temp_freeze_window_bio)
+        rtm_mic_uptake(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_mic_uptake, &
+          &                                                           temp_freeze_window_bio)
+        rtm_sorption(ic, is)         = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_sorption)
+        rtm_desorption(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_desorption)
+        rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_hsc)
 
         rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(w_soil_sl(ic, is), w_ice_sl(ic, is), &
           &                                                      w_soil_fc_sl(ic, is), kmr_depolymerisation)
@@ -180,10 +183,12 @@ CONTAINS
 
         !>2.0 nitrification-denitrification model
         !>
-        rtm_nitrification(ic, is)             = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_nitrification, &
-          &                                     ed_nitrification, t_opt_nitrification)
-        rtm_denitrification(ic, is)           = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_denitrification)
-        rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion)
+        rtm_nitrification(ic, is)             = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_nitrification, &
+          &                                                                    ed_nitrification, t_opt_nitrification)
+        rtm_denitrification(ic, is)           = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_denitrification, &
+          &                                                                    temp_freeze_window_bio)
+        rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion, &
+          &                                                                    temp_freeze_window_bio)
         rmm_nitrification(ic, is)             = calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
         rmm_gasdiffusion(ic, is)              = 1.0_wp - calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
         anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(w_soil_sl(ic, is), w_ice_sl(ic, is), &
@@ -192,13 +197,13 @@ CONTAINS
         !>  2.1 N fixation model
         !>   Using the symbiotic T-function as no other data available
         !>
-        rtm_asymb_bnf(ic, is) = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_symb_bnf, &
-          &                     ed_symb_bnf, t_opt_symb_bnf)
+        rtm_asymb_bnf(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_symb_bnf, &
+          &                                                    ed_symb_bnf, t_opt_symb_bnf)
         rmm_asymb_bnf(ic, is) = MAX(1._wp - w_soil_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_wp)
 
         !>3.0 root model
         !>
-        rtm_plant_uptake(ic, is) = calc_peaked_temperature_rate_modifier(t_soil_sl(ic, is), ea_decomposition, &
+        rtm_plant_uptake(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_decomposition, &
           &                        ed_decomposition, t_ref_decomposition)
         rmm_plant_uptake(ic, is) = MAX(1._wp - w_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
       ENDDO
@@ -209,95 +214,56 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM
   !
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> Calculates temperature response factor for various soil biogeochemical reactions
-  !!  according to the Arrhenius equation as defined in
-  !!  Wang, G., Post, W.M., Mayes, M.A., Frerichs, J.T., Sindhu, J., 2012.
-  !!  Parameter estimation for models of ligninolytic and cellulolytic enzyme kinetics.
-  !!  Soil Biology and Biochemistry 48, 28-38.
-  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
-  !!
-  !! Soil temperatures (t_soil_sl) lower eps8 are caught by using eps8 instead of t_soil_sl for calculations,
-  !!  that is, t_soil_sl is NOT modified in case: t_soil_sl < eps8
-  !!
-  !! Input: soil temperature, activiation energy
-  !!
-  !! Output: rate modifier (unitless)
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
+  !>  (!set to zero here at Tzero for biological variables!) according to the Arrhenius equation as defined in:
+  !>    Wang, G., Post, W.M., Mayes, M.A., Frerichs, J.T., Sindhu, J., 2012.
+  !>    Parameter estimation for models of ligninolytic and cellulolytic enzyme kinetics.
+  !>    Soil Biology and Biochemistry 48, 28-38.
+  !>
+  !>  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !>
+  !> Soil temperatures (t_soil_sl) lower eps8 are caught by using eps8 instead of t_soil_sl for calculations,
+  !>  that is, t_soil_sl is NOT modified in case: t_soil_sl < eps8
+  !>
+  !> Input: soil temperature, activiation energy (, temp_freeze_window_bio)
+  !>
+  !> Output: rate modifier (unitless)
+  !>
+  FUNCTION calc_temperature_rate_modifier(t_soil_sl, Ea, temp_freeze_window_bio) RESULT(rate_modifier)
 
     USE mo_jsb_physical_constants, ONLY: r_gas
     USE mo_jsb_math_constants,     ONLY: eps8
-    USE mo_sb_constants,           ONLY: t_ref_tresponse
+    USE mo_sb_constants,           ONLY: temp_ref_tresponse, temp_freeze_thres_bio
+    USE mo_jsb_physical_constants, ONLY: Tzero
 
     IMPLICIT NONE
-    ! ---------------------------
-    !0.1 InOut
-    REAL(wp), INTENT(in)  :: t_soil_sl     !< soil temperature [K]
-    REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
-    REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless]
-    ! ---------------------------
-    ! 0.2 Local
-    REAL(wp)              :: hlp           ! either t_soil_sl or eps8
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), INTENT(in)            :: t_soil_sl              !< soil temperature [K]
+    REAL(wp), INTENT(in)            :: Ea                     !< activation energy [J mol-1]
+    REAL(wp), OPTIONAL, INTENT(in)  :: temp_freeze_window_bio !< only provided for biological processes [K]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)                        :: rate_modifier          !< temperature rate modifier [unitless]
+    REAL(wp)                        :: frost_modifier         !< reduction of rate modifier when approaching -2 degC [-]
+                                                              !!  only for biological processes
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier_bio_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
 
-    ! temperature must not be negative in the below function
-    IF(t_soil_sl < eps8) THEN
-      hlp = eps8
-    ELSE
-      hlp = t_soil_sl
-    END IF
-
-    IF(Ea > eps8)THEN
-      rate_modifier = exp(-Ea/r_gas*(1._wp/hlp - 1._wp/t_ref_tresponse))
+    IF (Ea > eps8) THEN
+      ! temp_freeze_window_bio is only given to the function for biological processes
+      ! adjust rate modifier for the window of -2 degC to 2 degC
+      IF (PRESENT(temp_freeze_window_bio)) THEN
+        frost_modifier = MIN(MAX((t_soil_sl - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_wp), 1.0_wp)
+      ELSE
+        frost_modifier = 1.0_wp
+      END IF
+      rate_modifier = EXP(-Ea / r_gas * (1._wp / t_soil_sl - 1._wp / temp_ref_tresponse))
+      rate_modifier = rate_modifier * frost_modifier
     ELSE
       rate_modifier = 1._wp
-    ENDIF
+    END IF
 
   END FUNCTION calc_temperature_rate_modifier
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Functionality used by the SB module
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> Calculates temperature response factor for various soil biogeochemical reactions
-  !!  according to the peaked Arrhenius equation as defined in
-  !!  Medlyn et al. 2002, PCE, eq. 18
-  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
-  !!
-  !! Input: soil temperature, (de-)activiation energy, optimum temperature
-  !!
-  !! Output: rate modifier (unitless)
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
-
-    USE mo_jsb_physical_constants, ONLY: r_gas
-    USE mo_jsb_math_constants,     ONLY: eps8
-    USE mo_sb_constants,           ONLY: t_ref_tresponse
-
-    IMPLICIT NONE
-    ! ---------------------------
-    !0.1 InOut
-    REAL(wp), INTENT(in)  :: t_soil_sl     !< soil temperature [K]
-    REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
-    REAL(wp), INTENT(in)  :: Ed            !< deactivation energy [J mol-1]
-    REAL(wp), INTENT(in)  :: t_opt         !< optimum temperature [K]
-    REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless]
-    ! ---------------------------
-    ! 0.2 Local
-    REAL(wp)              :: hlp1, hlp2
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
-
-    IF(Ea>eps8)THEN
-       hlp1 = t_soil_sl - t_opt
-       hlp2 = t_soil_sl * t_opt * r_gas
-       rate_modifier = (Ed * exp(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._wp - exp(Ed * hlp1 / hlp2)))
-    ELSE
-       rate_modifier = 1._wp
-    ENDIF
-
-  END FUNCTION calc_peaked_temperature_rate_modifier
-
 
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM
