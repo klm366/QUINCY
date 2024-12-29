@@ -42,6 +42,7 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     REAL(wp)                    :: soil_awc_prescribe, &
                                    soil_theta_prescribe
+    REAL(wp)                    :: elevation
     REAL(wp)                    :: soil_sand            !< soil sand proportion - site specific from forcing info file
     REAL(wp)                    :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)                    :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
@@ -105,6 +106,7 @@ CONTAINS
                                    soil_depth
     REAL(wp)                    :: soil_awc_prescribe, &
                                    soil_theta_prescribe
+    REAL(wp)                    :: elevation
     REAL(wp)                    :: soil_sand       , &
                                    soil_silt       , &
                                    soil_clay
@@ -145,6 +147,7 @@ CONTAINS
                           soil_depth              , &
                           soil_awc_prescribe      , &
                           soil_theta_prescribe    , &
+                          elevation               , &
                           soil_sand               , &
                           soil_silt               , &
                           soil_clay               , &
@@ -184,6 +187,7 @@ CONTAINS
     soil_depth                    = 9.5_wp
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp
+    elevation                     = 0.0_wp
     soil_sand                     = 0.3_wp
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
@@ -258,6 +262,7 @@ CONTAINS
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
     config%soil_awc_prescribe        = soil_awc_prescribe
     config%soil_theta_prescribe      = soil_theta_prescribe
+    config%elevation                 = elevation
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
     config%soil_depth                = soil_depth
