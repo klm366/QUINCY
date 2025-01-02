@@ -116,6 +116,7 @@ CONTAINS
     nblks  = hgrid%nblks
     ics     = options%ics
     ice     = options%ice
+
     ! nc     = options%nc  nc = ice- ics + 1
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
