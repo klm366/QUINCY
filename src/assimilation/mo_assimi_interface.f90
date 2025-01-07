@@ -44,6 +44,7 @@ MODULE mo_assimi_interface
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_assimi_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -728,6 +729,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
 
@@ -778,6 +780,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -812,9 +815,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
-
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
-
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)           ! inout
+    END IF
     ! ---------------------------
     ! Go
 
@@ -869,13 +872,15 @@ CONTAINS
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
-    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
-    ! update_phenology_logrop at the beginning of each day.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+      ! update_phenology_logrop at the beginning of each day.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
