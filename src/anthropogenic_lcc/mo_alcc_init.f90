@@ -82,10 +82,12 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters ! Mingyue Zhang
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),           POINTER :: model
     TYPE(t_jsb_grid),            POINTER :: hgrid
     CLASS(t_jsb_tile_abstract),  POINTER :: tile, current_tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
 
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
