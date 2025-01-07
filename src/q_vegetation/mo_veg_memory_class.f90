@@ -21,7 +21,6 @@ MODULE mo_veg_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
-  USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
 
   USE mo_jsb_process_class,      ONLY: VEG_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
@@ -333,6 +332,8 @@ MODULE mo_veg_memory_class
     !      this is needed because the L2A_ var are not available at other tiles than the box tile (i.e., top tile)
     TYPE(t_jsb_var_real2d) ::       &
       & net_biosphere_production  , & !< Balance between carbon losses and gains [micro-mol CO2 m-2 s-1]
+      & net_biosphere_production_c13  , & !< Balance between carbon13 losses and gains [micro-mol CO2 m-2 s-1]
+      & net_biosphere_production_c14  , & !< Balance between carbon14 losses and gains [micro-mol CO2 m-2 s-1]
       & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
 
   CONTAINS
@@ -888,7 +889,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2849,6 +2850,28 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('net_biosphere_production_c14', mem%net_biosphere_production_c14, &
+        & hgrid, surface, &
+        & t_cf('net_biosphere_production_c14', '[micro-mol CO2 m-2 s-1]', 'Balance between carbon14 losses and gains'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('net_biosphere_production_c13', mem%net_biosphere_production_c13, &
+        & hgrid, surface, &
+        & t_cf('net_biosphere_production_c13', '[micro-mol CO2 m-2 s-1]', 'Balance between carbon13 losses and gains'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)

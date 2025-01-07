@@ -96,7 +96,7 @@ MODULE mo_rad_memory_class
                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
       & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun
       & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI
-      & snow_age,             &
+      & snow_age,             & ! Factor used to calculate snow ageing [-]
       !
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
@@ -434,9 +434,10 @@ CONTAINS
 
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
-        & t_cf('snow_age', '', ''),                                          &
+        & t_cf('snow_age', '-', 'Factor used to calculate snow ageing'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &

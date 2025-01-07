@@ -765,6 +765,11 @@ CONTAINS
     transpiration(:)    = -1._wp * fact_qsat_trans_srf(:) * evapopot(:)
     interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * evapopot(:)
     evaporation_snow(:) = -1._wp * fract_snow(:) * evapopot(:)
+    ! interception evaporation must be less than the total skin water
+    interception(:) = MIN(interception(:) * dtime / 1000._wp, w_skin(:)) * 1000._wp / dtime
+    ! snow evaparation must be less than the total snow water
+    evaporation_snow(:) = MIN(evaporation_snow(:) * dtime / 1000._wp, SUM(w_snow_snl(:,:),DIM=2)) * 1000._wp / dtime
+
     ! no dew into stomates or onto canopy
     DO ic = 1,nc
       IF (evapopot(ic) > 0.0_wp) THEN
@@ -823,8 +828,6 @@ CONTAINS
     DO ic = 1,nc
       IF (w_snow_snl(ic,1) < w_snow_min) THEN
         t_soil_sl(ic,1)      = t_srf_new(ic)
-        ! ensure there is no NaN passed to soil water, this should probably go somewhere else
-        snow_melt_to_soil(ic) = 0.0_wp
       END IF
     END DO
 
@@ -1772,7 +1775,14 @@ CONTAINS
       END IF
       ! 4.0 Snow latent heat
       ! 4.1 Consider snow evaporation that is calculated in calc_surface_energy()
-      w_snow_snl(ichunk,nsnow_top) = MAX(w_snow_snl(ichunk,nsnow_top)-evaporation_snow(ichunk) * dtime / 1000._wp,0.0_wp)
+      hlp1(ichunk) = evaporation_snow(ichunk) * dtime / 1000._wp
+      DO isnow = nsnow_top, 1, -1
+        IF (hlp1(ichunk) > 0.0_wp) THEN
+          hlp2(ichunk) = MIN(hlp1(ichunk), w_snow_snl(ichunk,isnow))
+          w_snow_snl(ichunk,isnow) = w_snow_snl(ichunk,isnow) - hlp2(ichunk)
+          hlp1(ichunk) = hlp1(ichunk) - hlp2(ichunk)
+        END IF
+      END DO
       ! 4.2 Snow melting
       snow_melt_snl(ichunk,:) = 0.0_wp
       ! snow melting

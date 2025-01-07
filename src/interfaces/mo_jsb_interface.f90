@@ -114,6 +114,8 @@ CONTAINS
     & nhx_n15_deposition,     & !< in
     & noy_n15_deposition,     & !< in
     & p_deposition,           & !< in
+    & CO2_mixing_ratio_c13,   &
+    & CO2_mixing_ratio_c14,   &
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
@@ -169,6 +171,8 @@ CONTAINS
       & nhx_n15_deposition(:), &
       & noy_n15_deposition(:), &
       & p_deposition      (:), &
+      & CO2_mixing_ratio_c13 (:), &
+      & CO2_mixing_ratio_c14 (:), &
       ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -341,7 +345,9 @@ CONTAINS
         & noy_deposition     = noy_deposition,        &
         & nhx_n15_deposition = nhx_n15_deposition,    &
         & noy_n15_deposition = noy_n15_deposition,    &
-        & p_deposition       = p_deposition          &
+        & p_deposition       = p_deposition,          &
+        & CO2_mixing_ratio_c13 = CO2_mixing_ratio_c13(:), &
+        & CO2_mixing_ratio_c14 = CO2_mixing_ratio_c14(:)  &
         ! For lakes
         ! & drag_wtr           = drag_wtr,              &
         ! & drag_ice           = drag_ice,              &
