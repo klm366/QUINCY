@@ -26,6 +26,7 @@ MODULE mo_alcc_init
   USE mo_jsb_time,          ONLY: get_year
   USE mo_jsb_control,       ONLY: debug_on
 
+
   dsl4jsb_Use_processes ALCC_
   dsl4jsb_Use_memory(ALCC_)
   dsl4jsb_Use_config(ALCC_)
@@ -78,16 +79,18 @@ CONTAINS
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
     USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch
+    USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
+
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters ! Mingyue Zhang
     ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),           POINTER :: model
-    TYPE(t_jsb_grid),            POINTER :: hgrid
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile, current_tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    TYPE(t_jsb_model),           POINTER       :: model
+    TYPE(t_jsb_grid),            POINTER       :: hgrid
+    CLASS(t_jsb_tile_abstract),  POINTER       :: tile, current_tile
+    TYPE(t_jsb_task_options),    INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
 
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
@@ -235,63 +238,59 @@ CONTAINS
       WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
 
-
       ! Loop over gridcell in the chunk to read in transition matrix data
-      DO ic = 1,nc   ! ic = ics,ice
-        ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
-        ! Read and set transition matrix
-        DO idx = 1, 9 
-           ! Calculate the original row (`i`) and column (`j`) positions from the 1D index `idx
-           i = (idx - 1) / 3 + 1
-           j = MOD(idx - 1, 3) + 1
-
-           ! Set diagonal elements to 0.0; otherwise, read from input
-           IF (i .EQ. j) THEN
-              cf_transition(ic, idx, :) = 0.0
-           ELSE
-            ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(i*j)), &
-            & fill_array = cf_transition(ic, idx, :) )
-           END IF
-        END DO
-     
-        ! Loop over all pairs of PFTs and extend the transition matrix for PFTs
-        DO idx = 1, npft * npft
-           ! Calculate the row (`i`) and column (`j`) indices in the `npft x npft` matrix
-           i = (idx - 1) / npft + 1
-           j = MOD(idx - 1, npft) + 1
-     
-           ! Use the mappings to access the corresponding element in `TransMtrxVec`
-           row = LC_type2LC_class_mapping(i)
-           col = LC_type2LC_class_mapping(j)
-           trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
-     
-           transition_prob = cf_transition(ic, trans_idx, :)
-     
-           ! Calculate transition probabilities for PFTs
-           cf_transition_pfts(ic, idx, :) = cf_current_year(ic, i, :) * transition_prob * cf_current_year(ic, j, :)
+      ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
+      ! Read and set transition matrix
+      DO idx = 1, 9 
+        ! Calculate the original row (`i`) and column (`j`) positions from the 1D index `idx
+        i = (idx - 1) / 3 + 1
+        j = MOD(idx - 1, 3) + 1
+      
+        ! Set diagonal elements to 0.0; otherwise, read from input
+        IF (i .EQ. j) THEN
+          cf_transition(:, idx, :) = 0.0
+        ELSE
+          ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(i*j)), &
+          & fill_array = cf_transition(:, idx, :) )
+        END IF
+      END DO
+      
+      ! Loop over all pairs of PFTs and extend the transition matrix for PFTs
+      DO idx = 1, npft * npft
+        ! Calculate the row (`i`) and column (`j`) indices in the `npft x npft` matrix
+        i = (idx - 1) / npft + 1
+        j = MOD(idx - 1, npft) + 1
+      
+        ! Use the mappings to access the corresponding element in `TransMtrxVec`
+        row = LC_type2LC_class_mapping(i)
+        col = LC_type2LC_class_mapping(j)
+        trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
+      
+        transition_prob = cf_transition(:, trans_idx, :)
+      
+        ! Calculate transition probabilities for PFTs
+        cf_transition_pfts(:, idx, :) = cf_current_year(:, i, :) * transition_prob * cf_current_year(:, j, :)
+      END DO
+      
+      ! Mingyue Zhang added for reading in transition data end
+      
+      ! Initialize transition gain and loss
+      cf_transition_gain = 0.0
+      cf_transition_loss = 0.0
+      
+      ! Calculate transition gain and loss of each PFT in one loop
+      DO pft_idx = 1, npft
+        ! Calculate gain(pft_idx)
+        cf_transition_gain(:, pft_idx, :) = 0.0
+        DO j = 1, npft
+          cf_transition_gain(:, pft_idx, :) = cf_transition_gain(:, pft_idx, :) + cf_current_year(:, j, :) * cf_transition_pfts(:, ((j - 1) * npft + pft_idx), :)
         END DO
       
-        !Mingyue Zhang added for reading in transition data end
-
-
-        ! Initialize transition gain and loss
-        cf_transition_gain = 0.0
-        cf_transition_loss = 0.0
-
-        ! ! Calculate transition gain and loss of each PFT in one loop
-        DO pft_idx = 1, npft
-          ! Calculate gain(pft_idx)
-          cf_transition_gain(ic, pft_idx, :) = 0.0
-          DO j = 1, npft
-             cf_transition_gain(ic, pft_idx, :) = cf_transition_gain(ic, pft_idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + pft_idx), :)
-          END DO
-     
-          ! Calculate loss(pft_idx) within the inner loop
-          cf_transition_loss(ic, pft_idx, :) = 0.0
-          DO j = 1, npft
-             cf_transition_loss(ic, pft_idx, :) = cf_transition_loss(ic, pft_idx, :) + cf_current_year(ic, pft_idx, :)  * cf_transition_pfts(ic, ((pft_idx - 1) * npft + j), :)
-          END DO
-        END DO 
+        ! Calculate loss(pft_idx) within the inner loop
+        cf_transition_loss(:, pft_idx, :) = 0.0
+        DO j = 1, npft
+          cf_transition_loss(:, pft_idx, :) = cf_transition_loss(:, pft_idx, :) + cf_current_year(:, pft_idx, :) * cf_transition_pfts(:, ((pft_idx - 1) * npft + j), :)
+        END DO
       END DO
 
       ! Loop over the vegetation grid to update the current year's cover fractions
