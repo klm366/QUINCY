@@ -245,7 +245,6 @@ CONTAINS
            i = (idx - 1) / 3 + 1
            j = MOD(idx - 1, 3) + 1
 
-     
            ! Set diagonal elements to 0.0; otherwise, read from input
            IF (i .EQ. j) THEN
               cf_transition(ic, idx, :) = 0.0
@@ -271,29 +270,29 @@ CONTAINS
            ! Calculate transition probabilities for PFTs
            cf_transition_pfts(ic, idx, :) = cf_current_year(ic, i, :) * transition_prob * cf_current_year(ic, j, :)
         END DO
-      END DO
-      !Mingyue Zhang added for reading in transition data end
+      
+        !Mingyue Zhang added for reading in transition data end
 
 
-      ! Initialize transition gain and loss
-      cf_transition_gain = 0.0
-      cf_transition_loss = 0.0
+        ! Initialize transition gain and loss
+        cf_transition_gain = 0.0
+        cf_transition_loss = 0.0
 
-      ! ! Calculate transition gain and loss of each PFT in one loop
-      DO pft_idx = 1, npft
-        ! Calculate gain(pft_idx)
-        cf_transition_gain(ic, pft_idx, :) = 0.0
-        DO j = 1, npft
-           cf_transition_gain(ic, pft_idx, :) = cf_transition_gain(ic, pft_idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + pft_idx), :)
-        END DO
+        ! ! Calculate transition gain and loss of each PFT in one loop
+        DO pft_idx = 1, npft
+          ! Calculate gain(pft_idx)
+          cf_transition_gain(ic, pft_idx, :) = 0.0
+          DO j = 1, npft
+             cf_transition_gain(ic, pft_idx, :) = cf_transition_gain(ic, pft_idx, :) + cf_current_year(ic, j, :) * cf_transition_pfts(ic, ((j - 1) * npft + pft_idx), :)
+          END DO
      
-        ! Calculate loss(pft_idx) within the inner loop
-        cf_transition_loss(ic, pft_idx, :) = 0.0
-        DO j = 1, npft
-           cf_transition_loss(ic, pft_idx, :) = cf_transition_loss(ic, pft_idx, :) + cf_current_year(ic, pft_idx, :)  * cf_transition_pfts(ic, ((pft_idx - 1) * npft + j), :)
-        END DO
-      END DO 
-    
+          ! Calculate loss(pft_idx) within the inner loop
+          cf_transition_loss(ic, pft_idx, :) = 0.0
+          DO j = 1, npft
+             cf_transition_loss(ic, pft_idx, :) = cf_transition_loss(ic, pft_idx, :) + cf_current_year(ic, pft_idx, :)  * cf_transition_pfts(ic, ((pft_idx - 1) * npft + j), :)
+          END DO
+        END DO 
+      END DO
 
       ! Loop over the vegetation grid to update the current year's cover fractions
       ! by subtracting transition losses and adding transition gains for each tile.
