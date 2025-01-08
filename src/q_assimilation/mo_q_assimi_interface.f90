@@ -186,13 +186,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation_boc                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, maint_respiration_leaf                , weighted_by_fract)
-    ! Q_ASSIMI_ 3D
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_cl                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation_cl                   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, maint_respiration_leaf_cl             , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_reset_q_assimi_fluxes
@@ -249,26 +242,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation_boc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, maint_respiration_leaf      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, aerodyn_cond                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, co2_conc_leaf               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_air                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soa                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_ps                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, t_jmax_opt                  , weighted_by_fract)
     ! Q_ASSIMI_ 3D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, net_assimilation_cl         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_cl       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, maint_respiration_leaf_cl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond_cl              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, co2_conc_leaf_cl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, jmax_cl                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, vcmax_cl                    , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE aggregate_canopy_fluxes
@@ -321,23 +297,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
-
-    ! Q_ASSIMI_
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soa_tphen_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_ps_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_ps_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_air_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_air_tcnl_mavg          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_air_daytime            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_ps_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_air_daytime_dacc       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_ps_daytime_dacc   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, beta_soil_gs_daytime_dacc   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_time_average_q_assimilation

@@ -21,6 +21,7 @@ MODULE mo_hd_interface
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
+  USE mo_fortran_tools,    ONLY: assert_acc_device_only
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -367,6 +368,8 @@ CONTAINS
 
     LOGICAL  :: debug_hd, use_bifurcated_rivers
 
+    CALL assert_acc_device_only(routine, lacc=.TRUE.)
+
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
     model => Get_model(tile%owner_model_id)
@@ -431,9 +434,9 @@ CONTAINS
     CASE ('full')
 
       ! Synchronize halos
-      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:), lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:), lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:), lacc=.TRUE.)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks

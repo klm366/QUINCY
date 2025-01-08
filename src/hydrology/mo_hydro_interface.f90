@@ -36,6 +36,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_impl_constants, ONLY: WB_IGNORE
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
@@ -458,14 +459,14 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & skinres_max,        &
       & skinres_canopy_max, &
-      & weq_rootzone,       &
-      & weq_rootzone_max,   &
-      & weq_soil,           &
+      & wpi_rootzone,       &
+      & wpi_rootzone_max,   &
+      & wtr_soil,           &
       & trans_tmp
     REAL(wp), DIMENSION(options%nc, options%nsoil_w) :: &
-      & weq_soil_sl_tmp,           &
-      & weq_wsat_soil_sl_tmp,      &
-      & weq_wres_soil_sl_tmp,      &
+      & wpi_soil_sl_tmp,           &
+      & wpi_wsat_soil_sl_tmp,      &
+      & wpi_wres_soil_sl_tmp,      &
       & ice_impedance_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
@@ -635,6 +636,9 @@ CONTAINS
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
+#ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#endif
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & ! in
           & dtime,                           & ! in
@@ -660,22 +664,22 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
     ELSE
-      !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
-      !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp(1:nc,1:nsoil), weq_soil(1:nc)) &
-      !$ACC   CREATE(weq_wsat_soil_sl_tmp(1:nc,1:nsoil), weq_wres_soil_sl_tmp(1:nc,1:nsoil)) &
+      !$ACC DATA CREATE(skinres_max, skinres_canopy_max, wpi_rootzone, wpi_rootzone_max) &
+      !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
+      !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO is = 1, nsoil
         DO  ic = 1, nc
-          weq_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
-          weq_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
+          wpi_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
+          wpi_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
           !       necessary. WHY?
-          IF (weq_wsat_soil_sl_tmp(ic,is) > 0._wp) THEN
-            weq_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
+          IF (wpi_wsat_soil_sl_tmp(ic,is) > 0._wp) THEN
+            wpi_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
           ELSE
-            weq_soil_sl_tmp(ic,is) = 0._wp
+            wpi_soil_sl_tmp(ic,is) = 0._wp
           END IF
         END DO
       END DO
@@ -683,7 +687,7 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO  ic = 1, nc
-        weq_soil(ic) = 0._wp
+        wtr_soil(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -692,7 +696,7 @@ CONTAINS
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
         DO  ic = 1, nc
-          weq_soil(ic) = weq_soil(ic) + weq_soil_sl_tmp(ic,is)
+          wtr_soil(ic) = wtr_soil(ic) + wtr_soil_sl(ic,is)
         END DO
       END DO
       !$ACC END PARALLEL
@@ -700,15 +704,15 @@ CONTAINS
       !$ACC WAIT(1)
 
       ! Compute actual and maximum total rootzone moisture as well as the total water amount in the soil (liquid + ice)
-      ! Note, here weq_rootzone_max is computed based on porosity, not field capacity. This is because it is used to
+      ! Note, here wpi_rootzone_max is computed based on porosity, not field capacity. This is because it is used to
       ! compute the bucket overflow in the ARNO scheme for infiltration and runoff, and therefore should consider the
       ! maximum amount of water that can fit into the rootzone.
-      CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
+      CALL get_amount_in_rootzone(wpi_soil_sl_tmp(:,:),                                                  &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
-        &  weq_rootzone(:))
-      CALL get_amount_in_rootzone(weq_wsat_soil_sl_tmp(:,:),                                             &
+        &  wpi_rootzone(:))
+      CALL get_amount_in_rootzone(wpi_wsat_soil_sl_tmp(:,:),                                             &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
-        &  weq_rootzone_max(:))
+        &  wpi_rootzone_max(:))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
@@ -737,8 +741,8 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%soilhydmodel,                                               &
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                                              &
         & nc, nsoil, soil_depth_sl(:,:),                                                     &
-        & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                &
-        & weq_wsat_soil_sl_tmp(:,:), weq_wres_soil_sl_tmp(:,:),                              &
+        & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
+        & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
         & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &
         & ice_impedance=ice_impedance_sl(:,:)                                                &
         )
@@ -769,9 +773,9 @@ CONTAINS
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
         & rain(:),                        & ! liquid precipitation [kg m-2 s-1]
         & snow(:),                        & ! solid precipitation [kg m-2 s-1]
-        & weq_rootzone(:),                & ! total rootzone water content [m]
-        & weq_rootzone_max(:),            & ! maximum total rootzone water content [m]
-        & weq_soil(:),                    & ! total column soil moisture [m]
+        & wpi_rootzone(:),                & ! water plus ice content of the rootzone [m]
+        & wpi_rootzone_max(:),            & ! maximum water plus ice content of the rootzone [m]
+        & wtr_soil(:),                    & ! soil layer aggregated water content until bedrock [m]
         & hyd_cond_sat_sl(:,1),           & ! saturated hydraulic conductivity of the top soil layer [m s-1]
         & ice_impedance_sl(:,1),          & ! ice impedance factor for top soil layer [-]
         ! inout
@@ -1189,6 +1193,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1345,10 +1350,11 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! Compute volumetric soil moisture (liquid + ice) in m3/m3 (= m/m) water equivalent
+    ! Note that the soil ice content needs to be converted to water equivalent first.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
       DO ic = 1, nc
-        vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)) / soil_w%dz(is)
+        vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * (rhoi / rhoh2o)) / soil_w%dz(is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -1548,14 +1554,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_act !< Actual supercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available liquid water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available liquid water content in root zone
-    dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
+    dsl4jsb_Real2D_onChunk :: wpi_rootzone_max       !< Maximum possible amount of water and/or ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w)
-    REAL(wp) :: weq_fcap_soil_sl(options%nc, options%nsoil_w)
+    REAL(wp) :: wpi_fcap_soil_sl(options%nc, options%nsoil_w)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1585,7 +1591,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wpi_rootzone_max)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
@@ -1602,7 +1608,7 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, weq_fcap_soil_sl)
+    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl)
 
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
@@ -1619,12 +1625,12 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO is = 1, nsoil
       DO  ic = 1, nc
-        weq_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+        wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    CALL get_amount_in_rootzone(weq_fcap_soil_sl(:,:),  &
-      &  soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
+    CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
+      &  soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
 
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       ! Supercooled water is not available to plants
@@ -1667,7 +1673,7 @@ CONTAINS
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
+        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
@@ -1675,13 +1681,13 @@ CONTAINS
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
+        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = weq_rootzone_max(ic)
+        wtr_rootzone_avail_max(ic) = wpi_rootzone_max(ic)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -1702,7 +1708,7 @@ CONTAINS
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
       ELSE
-        ! weq_rootzone_max is zero for glacier tiles
+        ! wpi_rootzone_max is zero for glacier tiles
         wtr_rootzone_rel(ic) = 0._wp
       END IF
     END DO
@@ -1750,7 +1756,7 @@ CONTAINS
 
     ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_rootzone_max,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wpi_rootzone_max,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_rootzone,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
@@ -2530,7 +2536,7 @@ CONTAINS
 
   SUBROUTINE update_water_balance( tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -2574,8 +2580,14 @@ CONTAINS
       & wb_threshold, &
       & weq_land_new
 
-    INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(wp), DIMENSION(options%nc) :: &
+      & weq_soil
+
+    INTEGER  :: iblk, ics, ice, nc, ic, is
+    INTEGER  :: n_errors, ie
+    INTEGER  :: error_idx(options%nc)
+
+    REAL(wp) :: dtime, ice2weq
     LOGICAL  :: is_experiment_start, tile_contains_soil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -2603,6 +2615,9 @@ CONTAINS
 
     tile_contains_soil = tile%contains_soil
 
+    ! Scaling factor to convert ice column into water equivalent
+    ice2weq = (rhoi / rhoh2o)
+
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
@@ -2625,8 +2640,29 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_count) ! inout
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(tile_area, weq_land_new)
+    n_errors = 0   ! initialize error counter
+
+    !$ACC DATA CREATE(weq_soil)
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+    ! Calculate total amout of soil water (liquid and frozen)
+    IF (tile_contains_soil) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        weq_soil(ic) = 0._wp
+      END DO
+
+      !$ACC LOOP SEQ
+      DO is = 1, SIZE(wtr_soil_sl, DIM=2)
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          weq_soil(ic) = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * ice2weq
+        END DO
+      END DO
+    END IF
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(tile_area, weq_land_new)
     DO ic=1,nc
       tile_area  = tile_fract(ic) * area(ic)
 
@@ -2634,7 +2670,7 @@ CONTAINS
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic))  &
           &              * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
@@ -2651,7 +2687,21 @@ CONTAINS
       wb_threshold = 1.0e-11_wp * tile_area * dtime
 
       IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
-        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
+        n_errors = n_errors + 1       ! Count number of water balance issues of this time step
+        error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
+        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp  ! Count water budget issues per grid cell
+      END IF
+#endif
+    END DO
+    !$ACC END PARALLEL
+    !$ACC END DATA
+
+#ifndef _OPENACC
+    IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+        tile_area  = tile_fract(ic) * area(ic)
+
         WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
           & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
           & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
@@ -2671,7 +2721,7 @@ CONTAINS
           END IF
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
-            & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
+            & 'Soil ice weq:       ', SUM(ice_soil_sl(ic,:)) * ice2weq * tile_area,    NEW_LINE('a'), &
             & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
             & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
         END IF
@@ -2680,10 +2730,9 @@ CONTAINS
         ELSE IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_LOGGING) THEN
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
-      END IF
+      END DO
+    END IF
 #endif
-    END DO
-    !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2733,7 +2782,6 @@ CONTAINS
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-    USE mo_jsb_impl_constants,    ONLY: WB_IGNORE
 
     ! Argument
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile

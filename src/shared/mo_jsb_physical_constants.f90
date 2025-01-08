@@ -16,10 +16,8 @@ MODULE mo_jsb_physical_constants
 
   USE mo_kind, ONLY: wp
 
-  ! Most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
-  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90:
-  !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  !   src/shared/mo_util_jsbach.f90         -> mo_physical_constants_iface -> mo_physical_constants.f90
+  ! Most constants are USEd from host model (ICON) via mo_physical_constants_iface in mo_util_jsbach.f90:
+  !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface
 
   IMPLICIT NONE
@@ -50,6 +48,7 @@ MODULE mo_jsb_physical_constants
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
     & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+
   REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
@@ -74,12 +73,6 @@ MODULE mo_jsb_physical_constants
     & AvogadroC_times_lambda_C14 = 6.022_wp * 3.8332_wp * 1.e11_wp , &  !< Avogadro Number * decay constant of C14 to
                                                                           !< reduce the use of the very large/small AvogadroC/lambda_C14
     & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
-
-#ifdef __QUINCY_STANDALONE__
-  ! compatibility with jsbach code
-  REAL(wp), PARAMETER :: &
-    & tmelt = Tzero
-#endif
 
 #endif
 END MODULE mo_jsb_physical_constants
