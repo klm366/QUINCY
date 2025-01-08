@@ -32,7 +32,7 @@ MODULE mo_jsb_time
             is_time_experiment_start, is_time_restart, is_time_ltrig_rad_m1, &
             get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
-            get_year, get_month, get_day, get_secs_of_day
+            get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
@@ -70,18 +70,11 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      ! TODO: remove #ifdef
-#ifdef __ICON__
       IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
       !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
       ! END IF
-#else
-      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN  ! present only for standalone model
-        CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
-      END IF
-#endif
 
       IF (PRESENT(model_shortname)) THEN
         CALL configure_time_and_events(model_shortname)
@@ -229,6 +222,42 @@ CONTAINS
     get_secs_of_day = NINT(3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp))
 
   END FUNCTION get_secs_of_day
+
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of seconds of the previous month
+  !
+  INTEGER FUNCTION get_previous_month_length(this_datetime)
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
+
+    INTEGER :: month, prev_month, year
+
+    CALL get_date_components(this_datetime, month=month, year=year)
+    IF (month == 1) THEN
+      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),wp))
+    ELSE
+      prev_month = month-1
+      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),wp) * REAL(get_day_length(),wp))
+    END IF
+
+  END FUNCTION get_previous_month_length
+
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of seconds of the previous year
+  !
+  INTEGER FUNCTION get_previous_year_length(this_datetime)
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
+
+    INTEGER :: year, prev_year
+
+    CALL get_date_components(this_datetime, year=year)
+    prev_year = year - 1
+    get_previous_year_length = NINT(REAL(get_year_length(prev_year),wp) * REAL(get_day_length(),wp))
+
+  END FUNCTION get_previous_year_length
 
   INTEGER FUNCTION get_year_at_model_start()
 

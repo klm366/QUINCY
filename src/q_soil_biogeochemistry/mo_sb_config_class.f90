@@ -111,17 +111,14 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
     ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
@@ -155,6 +152,7 @@ CONTAINS
     NAMELIST /jsb_sb_nml/                     &
 #endif
                       active                    , &
+                      lrestart_cont             , &
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
@@ -189,6 +187,7 @@ CONTAINS
 
     ! Set defaults
     active                      = .TRUE.
+    lrestart_cont               = .FALSE.    ! TRUE: Continue although SB variables are missing in restart file
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
@@ -230,6 +229,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                          = active
+    config%lrestart_cont                   = lrestart_cont
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename

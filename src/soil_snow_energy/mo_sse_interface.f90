@@ -130,6 +130,7 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -206,6 +207,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HYDRO_)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -519,6 +521,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & dsl4jsb_Config(HYDRO_)%enforce_water_budget, & ! Water balance check setting
         & t_soil_top                          (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
@@ -557,6 +560,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & dsl4jsb_Config(HYDRO_)%enforce_water_budget, & ! Water balance check setting
         & t_soil_top                          (:  ), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
@@ -780,41 +784,22 @@ CONTAINS
 
     ! On glacier tile, set variables and return
     IF (tile%is_glacier) THEN
-      IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
-        DO is = 1, nsoil
-          DO ic = 1, nc
-            vol_heat_cap_sl(ic,is) = 2.09e+6_wp
-            heat_cond_sl   (ic,is) = 2.508_wp
-          END DO
-        END DO
-        !$ACC END LOOP
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is = 1, nsoil
         DO ic = 1, nc
-          vol_heat_cap_snow(ic) = 634500._wp
-          heat_cond_snow   (ic) = 0.31_wp
+          vol_heat_cap_sl(ic,is) = vol_hcap_ice
+          heat_cond_sl   (ic,is) = hcond_ice
         END DO
-        !$ACC END LOOP
-        !$ACC END PARALLEL
-      ELSE
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-        !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
-        DO is = 1, nsoil
-          DO ic = 1, nc
-            vol_heat_cap_sl(ic,is) = vol_hcap_ice
-            heat_cond_sl   (ic,is) = hcond_ice
-          END DO
-        END DO
-        !$ACC END LOOP
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO ic = 1, nc
-          vol_heat_cap_snow(ic) = vol_hcap_snow
-          heat_cond_snow   (ic) = hcond_snow
-        END DO
-        !$ACC END LOOP
-        !$ACC END PARALLEL
-      END IF
+      END DO
+      !$ACC END LOOP
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        vol_heat_cap_snow(ic) = vol_hcap_snow
+        heat_cond_snow   (ic) = hcond_snow
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
       IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
       RETURN
     END IF
@@ -969,49 +954,40 @@ CONTAINS
       DEALLOCATE(fract_org_sl)
     END IF
 
-    IF (model%config%l_compat401) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        vol_heat_cap_snow(ic) = 634500._wp
-        heat_cond_snow(ic) = 0.31_wp
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-      IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-        IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-          dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-          DO ic = 1, nc
-            IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
-              vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
-              ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
-              ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
-              ! Calonne et al. (2011):
-              heat_cond_snow   (ic) = 2.5e-6_wp*snow_soil_dens(ic)**2._wp - 0.123e-3_wp*snow_soil_dens(ic) + 0.024_wp
-            ELSE                                         ! fresh snow
-              ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
-              ! vol_heat_cap_snow(:) = vol_hcap_snow_min
-              heat_cond_snow   (ic) = hcond_snow_min
-              vol_heat_cap_snow(ic) = ci * dens_snow_min
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-          DO ic = 1, nc
-            vol_heat_cap_snow(ic) = vol_hcap_snow  ! Use specific heat of snow (cs * dens_snow)
-            heat_cond_snow   (ic) = hcond_snow
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
+    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
+            vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
+            ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
+            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
+            ! Calonne et al. (2011):
+            heat_cond_snow   (ic) = 2.5e-6_wp*snow_soil_dens(ic)**2._wp - 0.123e-3_wp*snow_soil_dens(ic) + 0.024_wp
+          ELSE                                         ! fresh snow
+            ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
+            ! vol_heat_cap_snow(:) = vol_hcap_snow_min
+            heat_cond_snow   (ic) = hcond_snow_min
+            vol_heat_cap_snow(ic) = ci * dens_snow_min
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
-          vol_heat_cap_snow(ic) = vol_hcap_snow    ! Use specific heat of snow (cs * dens_snow)
+          vol_heat_cap_snow(ic) = vol_hcap_snow  ! Use specific heat of snow (cs * dens_snow)
           heat_cond_snow   (ic) = hcond_snow
         END DO
         !$ACC END PARALLEL LOOP
       END IF
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        vol_heat_cap_snow(ic) = vol_hcap_snow    ! Use specific heat of snow (cs * dens_snow)
+        heat_cond_snow   (ic) = hcond_snow
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

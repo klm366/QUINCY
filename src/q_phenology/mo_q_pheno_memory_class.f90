@@ -25,9 +25,6 @@ MODULE mo_q_pheno_memory_class
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  dsl4jsb_Use_processes Q_PHENO_
-  dsl4jsb_Use_config(Q_PHENO_)
-
   IMPLICIT NONE
   PRIVATE
 
@@ -95,7 +92,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

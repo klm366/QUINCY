@@ -14,6 +14,7 @@
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/soil_snow_energy/mo_sse_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
 MODULE mo_turb_interface
 #ifndef __NO_JSBACH__
@@ -789,19 +790,11 @@ CONTAINS
       END IF
 
       w_soil_wilt_fract_config = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
-      IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          mask(ic) = wtr_soil_sl(ic,1) > wtr_soil_pwp_sl(ic,1)
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc

@@ -42,12 +42,13 @@ MODULE mo_jsb_config_class
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
-    LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
+    LOGICAL                        :: read_deposition       !< If p and n deposition forcing should be read
+    LOGICAL                        :: read_c_isotopes       !< If c isotopes forcing should be read
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
     LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
@@ -81,6 +82,7 @@ MODULE mo_jsb_config_class
   ! Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
+    LOGICAL :: lrestart_cont                    ! TRUE: Continue although process variables are missing in the restart file
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
@@ -132,7 +134,6 @@ CONTAINS
     CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     INTEGER                       :: qmodel_id
-    LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
@@ -140,6 +141,8 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
 #ifndef __NO_QUINCY__
+    LOGICAL :: read_deposition            !< read p and n deposition forcing
+    LOGICAL :: read_c_isotopes            !< read c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_phosphorus         !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_carbon13           !< element variables in bgc_material (infrastructure)
@@ -161,7 +164,6 @@ CONTAINS
       use_glacier, &
       enforce_water_budget, &
       quincy_model, &
-      l_compat401, &
       usecase, &
       tpe_scheme, &
       hsm_mode, &
@@ -169,6 +171,8 @@ CONTAINS
       output_tiles, &
       relative_fractions_in_file, &
 #ifndef __NO_QUINCY__
+      read_deposition, &
+      read_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
       include_carbon13, &
@@ -209,7 +213,6 @@ CONTAINS
 #ifndef __NO_QUINCY__
     qmodel_id                  = QLAND
 #endif
-    l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
@@ -219,6 +222,8 @@ CONTAINS
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
+    read_deposition            = .TRUE.
+    read_c_isotopes            = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
     include_carbon13           = .TRUE.
@@ -275,12 +280,13 @@ CONTAINS
     model_config%use_glacier                = use_glacier
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
-    model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
+    model_config%read_deposition            = read_deposition
+    model_config%read_c_isotopes            = read_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen
     model_config%include_phosphorus         = include_phosphorus

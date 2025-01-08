@@ -44,7 +44,6 @@ MODULE mo_assimi_memory_class
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
       NPP_pot_rate_ca,            & ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
-      seconds_year,               & ! seconds till beginning of the current year
       NPP_sum_year,               & ! Net primary production sum of the current year
       NPP_mean_5year,             & ! Net primary production running average for 5 years
       land_cover_class,           & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
@@ -188,14 +187,6 @@ CONTAINS
     CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
       & hgrid, surface,                                                                   &
       & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var('seconds_year', mem%seconds_year,                                    &
-      & hgrid, surface,                                                                   &
-      & t_cf('seconds_year', 'sum of seconds in year', 'time sum year'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &

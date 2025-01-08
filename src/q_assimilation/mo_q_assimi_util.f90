@@ -45,15 +45,29 @@ CONTAINS
 
     dsl4jsb_Use_processes Q_ASSIMI_
     dsl4jsb_Use_memory(Q_ASSIMI_)
+    dsl4jsb_Use_config(Q_ASSIMI_)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model
-    INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: iblk, ics, ice, nc, ic
+    INTEGER                               :: icanopy, ncanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_q_assimi_fluxes'
 
     dsl4jsb_Def_memory(Q_ASSIMI_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
+
+    dsl4jsb_Real2D_onChunk :: gross_assimilation
+    dsl4jsb_Real2D_onChunk :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk :: net_assimilation
+    dsl4jsb_Real2D_onChunk :: net_assimilation_boc
+    dsl4jsb_Real2D_onChunk :: maint_respiration_leaf
+
+    dsl4jsb_Real3D_onChunk :: gross_assimilation_cl
+    dsl4jsb_Real3D_onChunk :: net_assimilation_cl
+    dsl4jsb_Real3D_onChunk :: maint_respiration_leaf_cl
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -70,24 +84,42 @@ CONTAINS
 
     ! Get process memories
     dsl4jsb_Get_memory(Q_ASSIMI_)
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
+    dsl4jsb_Get_config(Q_ASSIMI_)
+    ! -------------------------------------------------------------------------------------------------- !
     ! set zero all flux variables of the assimilation process
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, gross_assimilation)           = zero
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)       = zero
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C14)       = zero
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, net_assimilation)             = zero
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, net_assimilation_boc)         = zero
-    dsl4jsb_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)       = zero
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C14)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, net_assimilation_boc)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)
 
-    dsl4jsb_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)      = zero
-    dsl4jsb_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)        = zero
-    dsl4jsb_var3D_onChunk(Q_ASSIMI_, maint_respiration_leaf_cl)  = zero
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, maint_respiration_leaf_cl)
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      gross_assimilation(ic)           = zero
+      gross_assimilation_C13(ic)       = zero
+      gross_assimilation_C14(ic)       = zero
+      net_assimilation(ic)             = zero
+      net_assimilation_boc(ic)         = zero
+      maint_respiration_leaf(ic)       = zero
+    ENDDO
+    !$ACC END PARALLEL LOOP
+
+    ncanopy = dsl4jsb_Config(Q_ASSIMI_)%ncanopy
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO icanopy= 1, ncanopy
+      DO ic = 1, nc
+        gross_assimilation_cl(ic,icanopy)      = zero
+        net_assimilation_cl(ic,icanopy)        = zero
+        maint_respiration_leaf_cl(ic,icanopy)  = zero
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE reset_q_assimi_fluxes
@@ -116,8 +148,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER              :: model
-    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
-    REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
+    LOGICAL                                 :: l_growing_season     !< indicating if growing season or not
+    REAl(wp)                                :: hlp                  !< helper
     REAL(wp)                                :: dtime                !< timestep
     INTEGER                                 :: ic                   !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
@@ -201,37 +233,26 @@ CONTAINS
     ! Q_PHENO_
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)               ! in
 
-
-    !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
-    !>
-    DO ic = 1, nc
-      IF (growing_season(ic) > test_false_true) THEN
-        l_growing_season(ic) = .TRUE.
-      ELSE
-        l_growing_season(ic) = .FALSE.
-      END IF
-    END DO
-
     ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 daytime averages
     !>
     !>
 
-    !>  1.1 accumulate values - if light is available (i.e. daytime)
-    !>
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp, l_growing_season)
     DO ic = 1, nc
+      !>  1.1 accumulate values - if light is available (i.e. daytime)
+      !>
       IF (swpar_srf_down(ic) > eps8) THEN
         ! add values
         beta_air_daytime_dacc(ic)       = beta_air_daytime_dacc(ic)     + beta_air(ic)
         beta_soil_ps_daytime_dacc(ic)   = beta_soil_ps_daytime_dacc(ic) + beta_soil_ps(ic)
         beta_soil_gs_daytime_dacc(ic)   = beta_soil_gs_daytime_dacc(ic) + beta_soil_gs(ic)
       END IF
-    END DO
 
-    !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
-    !>
-    !>    calculate the average of the previous day and pass this value to the according variable
-    DO ic = 1, nc
+      !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
+      !>
+      !>    calculate the average of the previous day and pass this value to the according variable
       IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
@@ -244,46 +265,55 @@ CONTAINS
         beta_soil_ps_daytime_dacc(ic) = 0.0_wp
         beta_soil_gs_daytime_dacc(ic) = 0.0_wp
       END IF
+
+      ! ----------------------------------------------------------------------------------------------------- !
+      !>2.0 moving averages
+      !>
+      !>
+
+      ! docu:
+      ! calc_time_mavg(dtime, current average, new value, length of avg_period,  !
+      !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
+      !                RETURN(new current average)
+      ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
+
+      !>  2.1 tphen (averages at the time-scale of phenology)
+      !>
+      beta_soil_gs_tphen_mavg(ic) = calc_time_mavg(dtime, beta_soil_gs_tphen_mavg(ic), beta_soil_gs(ic), mavg_period_tphen)
+      beta_soa_tphen_mavg(ic)     = calc_time_mavg(dtime, beta_soa_tphen_mavg(ic), beta_soa(ic), mavg_period_tphen)
+
+      !>  2.2 soa time-scale
+      !>
+      hlp                         = t_air(ic) - Tzero     ! convert from Kelvin to deg Celsius
+      soa_tsoa_mavg(ic)           = calc_time_mavg(dtime, soa_tsoa_mavg(ic), hlp, mavg_period_tsoa)
+
+      !>  2.3 tfrac (averages at the time-scale of within-leaf N allocation fractions)
+      !>
+      beta_soil_ps_tfrac_mavg(ic) = calc_time_mavg(dtime, beta_soil_ps_tfrac_mavg(ic), beta_soil_ps_daytime(ic), &
+                                                  mavg_period_tfrac)
+      beta_soil_gs_tfrac_mavg(ic) = calc_time_mavg(dtime, beta_soil_gs_tfrac_mavg(ic), beta_soil_gs_daytime(ic), &
+                                                  mavg_period_tfrac)
+      beta_air_tfrac_mavg(ic)     = calc_time_mavg(dtime, beta_air_tfrac_mavg(ic), beta_air_daytime(ic), &
+                                                  mavg_period_tfrac)
+
+      !>  2.4 tcnl (averages at the time-scale of leaf N allocation fractions)
+      !>
+
+      ! transform REAL growing_season into LOGICAL l_growing_season
+      IF (growing_season(ic) > test_false_true) THEN
+        l_growing_season = .TRUE.
+      ELSE
+        l_growing_season = .FALSE.
+      END IF
+      beta_soil_ps_tcnl_mavg(ic)  = calc_time_mavg(dtime, beta_soil_ps_tcnl_mavg(ic), beta_soil_ps(ic), &
+                                                  mavg_period_tcnl, do_calc=l_growing_season)
+      beta_soil_gs_tcnl_mavg(ic)  = calc_time_mavg(dtime, beta_soil_gs_tcnl_mavg(ic), beta_soil_gs(ic), &
+                                                  mavg_period_tcnl, do_calc=l_growing_season)
+      beta_air_tcnl_mavg(ic)      = calc_time_mavg(dtime, beta_air_tcnl_mavg(ic), beta_air(ic), &
+                                                  mavg_period_tcnl, do_calc=l_growing_season)
     END DO
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !>2.0 moving averages
-    !>
-    !>
-
-    ! docu:
-    ! calc_time_mavg(dtime, current average, new value, length of avg_period,  !
-    !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
-    !                RETURN(new current average)
-    ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-
-    !>  2.1 tphen (averages at the time-scale of phenology)
-    !>
-    beta_soil_gs_tphen_mavg(:) = calc_time_mavg(dtime, beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
-    beta_soa_tphen_mavg(:)     = calc_time_mavg(dtime, beta_soa_tphen_mavg(:), beta_soa(:), mavg_period_tphen)
-
-    !>  2.2 soa time-scale
-    !>
-    hlp(:)                     = t_air(:) - Tzero     ! convert from Kelvin to deg Celsius
-    soa_tsoa_mavg(:)           = calc_time_mavg(dtime, soa_tsoa_mavg(:), hlp(:), mavg_period_tsoa)
-
-    !>  2.3 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !>
-    beta_soil_ps_tfrac_mavg(:) = calc_time_mavg(dtime, beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
-                                                mavg_period_tfrac)
-    beta_soil_gs_tfrac_mavg(:) = calc_time_mavg(dtime, beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &
-                                                mavg_period_tfrac)
-    beta_air_tfrac_mavg(:)     = calc_time_mavg(dtime, beta_air_tfrac_mavg(:), beta_air_daytime(:), &
-                                                mavg_period_tfrac)
-
-    !>  2.4 tcnl (averages at the time-scale of leaf N allocation fractions)
-    !>
-    beta_soil_ps_tcnl_mavg(:)  = calc_time_mavg(dtime, beta_soil_ps_tcnl_mavg(:), beta_soil_ps(:), &
-                                                mavg_period_tcnl, do_calc=l_growing_season(:))
-    beta_soil_gs_tcnl_mavg(:)  = calc_time_mavg(dtime, beta_soil_gs_tcnl_mavg(:), beta_soil_gs(:), &
-                                                mavg_period_tcnl, do_calc=l_growing_season(:))
-    beta_air_tcnl_mavg(:)      = calc_time_mavg(dtime, beta_air_tcnl_mavg(:), beta_air(:), &
-                                                mavg_period_tcnl, do_calc=l_growing_season(:))
+    !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
 
   END SUBROUTINE calculate_time_average_q_assimilation
 

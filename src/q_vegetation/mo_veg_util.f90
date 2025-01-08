@@ -56,9 +56,51 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER   :: model                !< the model
-    TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
-    INTEGER                           :: iblk, ics, ice, nc   !< dimensions
+    TYPE(t_jsb_model),      POINTER   :: model                  !< the model
+    TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store             !< the bgcm store of this tile
+    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: nr_of_veg_compartments !< number of compartments in veg bgcms
+    INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
+    INTEGER                           :: ic, id_elem
+    INTEGER                           :: ix_comp, ix_elem       !< loop index
+
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: n_transform_respiration
+    dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: npp
+    dsl4jsb_Real2D_onChunk      :: npp_c13
+    dsl4jsb_Real2D_onChunk      :: npp_c14
+    dsl4jsb_Real2D_onChunk      :: net_growth
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
+    dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_po4
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n15
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk      :: biological_n_fixation
+    dsl4jsb_Real2D_onChunk      :: delta_dens_ind
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -89,57 +131,114 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
+    nr_of_veg_compartments = SIZE(veg_litterfall_mt,1)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 bgcm fluxes
     !>
     ! set the bgcm matrices to zero
-    veg_growth_mt(:,:,:)      = zero
-    veg_litterfall_mt(:,:,:)  = zero
-    veg_establishment_mt(:,:) = zero
-    veg_exudation_mt(:,:)     = zero
-    veg_reserve_use_mt(:,:)   = zero
+    DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
+      IF (model%config%is_element_used(id_elem)) THEN
+        ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO ix_comp = 1, nr_of_veg_compartments
+          DO ic = 1, nc
+            veg_growth_mt(ix_comp,ix_elem,ic)      = zero
+            veg_litterfall_mt(ix_comp,ix_elem,ic)  = zero
+          END DO
+        END DO
+        !$ACC END PARALLEL
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          veg_establishment_mt(ix_elem,ic) = zero
+          veg_exudation_mt(ix_elem,ic)     = zero
+          veg_reserve_use_mt(ix_elem,ic)   = zero
+        END DO
+        !$ACC END PARALLEL
+      END IF
+    END DO
 
     !>2.0 variables
     !>
     ! flux variables
-    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_pot) = zero !< maintenance respiration (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, maint_respiration) = zero              !< maintenance respiration (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_c13) = zero          !< maintenance respiration (micro-mol 13CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_c14) = zero          !< maintenance respiration (micro-mol 14CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, growth_respiration) = zero             !< growth respiration (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, growth_respiration_c13) = zero         !< growth respiration (micro-mol 13CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, growth_respiration_c14) = zero         !< growth respiration (micro-mol 14CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_transform_respiration) = zero        !< respiration associated with N transformation (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_fixation_respiration) = zero         !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration) = zero       !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration_c13) = zero   !< respiration associated with N fixation (micro-mol 13CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration_c14) = zero   !< respiration associated with N fixation (micro-mol 14CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, npp) = zero                            !< net primary production (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, npp_c13) = zero                        !< net primary production (micro-mol 13CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, npp_c14) = zero                        !< net primary production (micro-mol 14CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, net_growth) = zero                     !< net growth (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4) = zero                     !< NH4 uptake (micro-mol N m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4_n15) = zero                 !< 15NH4 uptake (micro-mol N m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, uptake_no3) = zero                     !< NO3 uptake (micro-mol N m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, uptake_no3_n15) = zero                 !< 15NO3 uptake (micro-mol N m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, n_fixation) = zero                     !< ??
-    dsl4jsb_var2D_onChunk(VEG_, n_fixation_n15) = zero                 !< ??
-    dsl4jsb_var2D_onChunk(VEG_, uptake_po4) = zero                     !< ??
-    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n) = zero               !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n15) = zero             !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_p) = zero               !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n) = zero          !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n15) = zero        !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_p) = zero          !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n15) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_p) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production) = zero       !< diagnostic variable for atmosphere
-    dsl4jsb_var2D_onChunk(VEG_, biological_n_fixation) = zero          !< diagnostic variable for atmosphere
-    ! other variables
-    dsl4jsb_var2D_onChunk(VEG_, delta_dens_ind) = zero                 !< ??
-    dsl4jsb_var2D_onChunk(VEG_, unit_transpiration) = zero             !< ??
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+    dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      maint_respiration_pot(ic) = zero
+      maint_respiration(ic) = zero
+      maint_respiration_c13(ic) = zero
+      maint_respiration_c14(ic) = zero
+      growth_respiration(ic) = zero
+      growth_respiration_c13(ic) = zero
+      growth_respiration_c14(ic) = zero
+      n_transform_respiration(ic) = zero
+      n_fixation_respiration(ic) = zero
+      n_processing_respiration(ic) = zero
+      n_processing_respiration_c13(ic) = zero
+      n_processing_respiration_c14(ic) = zero
+      npp(ic) = zero
+      npp_c13(ic) = zero
+      npp_c14(ic) = zero
+      net_growth(ic) = zero
+      uptake_nh4(ic) = zero
+      uptake_nh4_n15(ic) = zero
+      uptake_no3(ic) = zero
+      uptake_no3_n15(ic) = zero
+      n_fixation(ic) = zero
+      n_fixation_n15(ic) = zero
+      uptake_po4(ic) = zero
+      recycling_leaf_n(ic) = zero
+      recycling_leaf_n15(ic) = zero
+      recycling_leaf_p(ic) = zero
+      recycling_fine_root_n(ic) = zero
+      recycling_fine_root_n15(ic) = zero
+      recycling_fine_root_p(ic) = zero
+      recycling_heart_wood_n(ic) = zero
+      recycling_heart_wood_n15(ic) = zero
+      recycling_heart_wood_p(ic) = zero
+      net_biosphere_production(ic) = zero
+      biological_n_fixation(ic) = zero
+      delta_dens_ind(ic) = zero
+      unit_transpiration(ic) = zero
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE reset_veg_fluxes
 
@@ -177,14 +276,16 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy_q_assimi  !< Vertical grid
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
     LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
-    REAl(wp), DIMENSION(options%nc)         :: hlp                    !< helper
-    LOGICAL,  DIMENSION(options%nc)         :: l_hlp                  !< helper
+    LOGICAL                                 :: l_hlp                  !< helper
+    REAl(wp)                                :: hlp_r                  !< helper
     REAl(wp)                                :: mavg_period_hlp        !< helper
     INTEGER                                 :: ic                     !< looping over chunk
     INTEGER                                 :: icanopy                !< looping
     INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc     !< dimensions
     REAL(wp)                                :: dtime                  !< timestep
+    REAL(wp)                                :: lctlib_tau_mycorrhiza  !< lctlib parameter (tau of mycorrhiza)
+    REAL(wp)                                :: lctlib_tau_fine_root   !< lctlib parameter (tau of fine roots)
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -311,6 +412,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_soil_root
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
@@ -347,8 +450,6 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -467,6 +568,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, rfr_ratio_boc_tvegdyn_mavg)         ! inout
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -480,23 +583,36 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    lctlib_tau_mycorrhiza = dsl4jsb_Lctlib_param(tau_mycorrhiza)
+    lctlib_tau_fine_root  = dsl4jsb_Lctlib_param(tau_fine_root)
+
+    ALLOCATE(l_growing_season_cl(nc, ncanopy))
+    !$ACC DATA CREATE(l_growing_season_cl, l_growing_season)
+
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
       IF (growing_season(ic) > test_false_true) THEN
         l_growing_season(ic)      = .TRUE.
-        l_growing_season_cl(ic,:) = .TRUE.
+        DO icanopy = 1, ncanopy
+          l_growing_season_cl(ic,icanopy) = .TRUE.
+        END DO
       ELSE
         l_growing_season(ic)      = .FALSE.
-        l_growing_season_cl(ic,:) = .FALSE.
+        DO icanopy = 1, ncanopy
+          l_growing_season_cl(ic,icanopy) = .FALSE.
+        END DO
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
     !>1.0 daytime averages
     !>
 
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
       IF (swpar_srf_down(ic) > eps8) THEN
         ! 1D var - add values
@@ -513,10 +629,12 @@ CONTAINS
         END DO
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
        IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
@@ -529,10 +647,14 @@ CONTAINS
           beta_sinklim_ps_daytime(ic)   = beta_sinklim_ps_daytime_dacc(ic)    / daytime_counter(ic)
           t_jmax_opt_daytime(ic)        = t_jmax_opt_daytime_dacc(ic)         / daytime_counter(ic)
           ! 2D
-          fleaf_sunlit_daytime_cl(ic,:) = fleaf_sunlit_daytime_dacc_cl(ic,:)  / daytime_counter(ic)
+          DO icanopy = 1, ncanopy
+            fleaf_sunlit_daytime_cl(ic,icanopy) = fleaf_sunlit_daytime_dacc_cl(ic,icanopy)  / daytime_counter(ic)
+          END DO
         ELSE
           ! if there was no daylight during the previous day, just leave previous values for most variables
-          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp
+          DO icanopy = 1, ncanopy
+            fleaf_sunlit_daytime_cl(ic,icanopy) = 0.0_wp
+          END DO
         END IF
         ! zero the accumulation variables after daily average has been calculated
         ! 1D
@@ -543,9 +665,12 @@ CONTAINS
         beta_sinklim_ps_daytime_dacc(ic)       = 0.0_wp
         t_jmax_opt_daytime_dacc(ic)            = 0.0_wp
         ! 2D
-        fleaf_sunlit_daytime_dacc_cl(ic,:)     = 0.0_wp
+        DO icanopy = 1, ncanopy
+          fleaf_sunlit_daytime_dacc_cl(ic,icanopy)     = 0.0_wp
+        END DO
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>2.0 moving averages
@@ -558,111 +683,142 @@ CONTAINS
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
 
-    !>  2.1 tlabile (averages at the timescale of the labile pool)
-    !>
-    gpp_tlabile_mavg(:)                = calc_time_mavg(dtime, gpp_tlabile_mavg(:), gross_assimilation(:), &
-                                                        mavg_period_tlabile)
-    maint_respiration_tlabile_mavg(:)  = calc_time_mavg(dtime, maint_respiration_tlabile_mavg(:), maint_respiration_pot(:), &
-                                                        mavg_period_tlabile)
-    growth_req_n_tlabile_mavg(:)       = calc_time_mavg(dtime, growth_req_n_tlabile_mavg(:), growth_req_n(:), &
-                                                        mavg_period_tlabile, do_calc=(growth_req_n(:) > eps8))
-    growth_req_p_tlabile_mavg(:)       = calc_time_mavg(dtime, growth_req_p_tlabile_mavg(:), growth_req_p(:), &
-                                                        mavg_period_tlabile, do_calc=(growth_req_p(:) > eps8))
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      !>  2.1 tlabile (averages at the timescale of the labile pool)
+      !>
+      gpp_tlabile_mavg(ic)                = calc_time_mavg(dtime, gpp_tlabile_mavg(ic), gross_assimilation(ic), &
+                                                          mavg_period_tlabile)
+      maint_respiration_tlabile_mavg(ic)  = calc_time_mavg(dtime, maint_respiration_tlabile_mavg(ic), maint_respiration_pot(ic), &
+                                                          mavg_period_tlabile)
+      growth_req_n_tlabile_mavg(ic)       = calc_time_mavg(dtime, growth_req_n_tlabile_mavg(ic), growth_req_n(ic), &
+                                                          mavg_period_tlabile, do_calc=(growth_req_n(ic) > eps8))
+      growth_req_p_tlabile_mavg(ic)       = calc_time_mavg(dtime, growth_req_p_tlabile_mavg(ic), growth_req_p(ic), &
+                                                          mavg_period_tlabile, do_calc=(growth_req_p(ic) > eps8))
 
-    !>  2.2 tphen (averages at the time-scale of phenology)
-    !>
-    t_air_tphen_mavg(:)                = calc_time_mavg(dtime, t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
-    t_soil_srf_tphen_mavg(:)           = calc_time_mavg(dtime, t_soil_srf_tphen_mavg(:), t_soil_sl(:,1), mavg_period_tphen)   ! one could also try taking the first few layers here
+      !>  2.2 tphen (averages at the time-scale of phenology)
+      !>
+      t_air_tphen_mavg(ic)                = calc_time_mavg(dtime, t_air_tphen_mavg(ic), t_air(ic), mavg_period_tphen)
+      t_soil_srf_tphen_mavg(ic)           = calc_time_mavg(dtime, t_soil_srf_tphen_mavg(ic), t_soil_sl(ic,1), mavg_period_tphen)   ! one could also try taking the first few layers here
 
 
-    !>  2.3 tuptake (averages at the nutrient-uptake demand time-scale)
-    !>
-    npp_tuptake_mavg(:)                 = calc_time_mavg(dtime, npp_tuptake_mavg(:), npp(:), mavg_period_tuptake,         &
-      &                                     do_calc=(veg_pool_mt(ix_fine_root,ixC,:) > eps8))
-    demand_uptake_n_tuptake_mavg(:)     = calc_time_mavg(dtime, demand_uptake_n_tuptake_mavg(:), f_n_demand(:),           &
-      &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,:) > eps8))
-    demand_uptake_p_tuptake_mavg(:)     = calc_time_mavg(dtime, demand_uptake_p_tuptake_mavg(:), f_p_demand(:),           &
-      &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,:) > eps8))
-    growth_req_n_tuptake_mavg(:)        = calc_time_mavg(dtime, growth_req_n_tuptake_mavg(:), growth_req_n(:), &
-                                                         mavg_period_tuptake, do_calc=(growth_req_n(:) > eps8))
-    growth_req_p_tuptake_mavg(:)        = calc_time_mavg(dtime, growth_req_p_tuptake_mavg(:), growth_req_p(:), &
-                                                         mavg_period_tuptake, do_calc=(growth_req_p(:) > eps8))
+      !>  2.3 tuptake (averages at the nutrient-uptake demand time-scale)
+      !>
+      npp_tuptake_mavg(ic)                 = calc_time_mavg(dtime, npp_tuptake_mavg(ic), npp(ic), mavg_period_tuptake,         &
+        &                                     do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+      demand_uptake_n_tuptake_mavg(ic)     = calc_time_mavg(dtime, demand_uptake_n_tuptake_mavg(ic), f_n_demand(ic),           &
+        &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+      demand_uptake_p_tuptake_mavg(ic)     = calc_time_mavg(dtime, demand_uptake_p_tuptake_mavg(ic), f_p_demand(ic),           &
+        &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+      growth_req_n_tuptake_mavg(ic)        = calc_time_mavg(dtime, growth_req_n_tuptake_mavg(ic), growth_req_n(ic), &
+                                                           mavg_period_tuptake, do_calc=(growth_req_n(ic) > eps8))
+      growth_req_p_tuptake_mavg(ic)        = calc_time_mavg(dtime, growth_req_p_tuptake_mavg(ic), growth_req_p(ic), &
+                                                           mavg_period_tuptake, do_calc=(growth_req_p(ic) > eps8))
 
-    !>  2.4 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !>
-    fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_time_mavg(dtime, fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
-                                                       mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
-    t_air_tfrac_mavg(:)               = calc_time_mavg(dtime, t_air_tfrac_mavg(:), t_air_daytime(:), &
-                                                       mavg_period_tfrac)
-    press_srf_tfrac_mavg(:)           = calc_time_mavg(dtime, press_srf_tfrac_mavg(:), press_srf_daytime(:), &
-                                                       mavg_period_tfrac)
-    co2_mixing_ratio_tfrac_mavg(:)    = calc_time_mavg(dtime, co2_mixing_ratio_tfrac_mavg(:), co2_mixing_ratio_daytime(:), &
-                                                       mavg_period_tfrac)
-    ga_tfrac_mavg(:)                  = calc_time_mavg(dtime, ga_tfrac_mavg(:), ga_daytime(:), &
-                                                       mavg_period_tfrac)
-    beta_sinklim_ps_tfrac_mavg(:)     = calc_time_mavg(dtime, beta_sinklim_ps_tfrac_mavg(:), beta_sinklim_ps_daytime(:), &
-                                                       mavg_period_tfrac)
+      !>  2.4 tfrac (averages at the time-scale of within-leaf N allocation fractions)
+      !>
+      DO icanopy = 1, ncanopy
+        fleaf_sunlit_tfrac_mavg_cl(ic,icanopy)   = calc_time_mavg(dtime, fleaf_sunlit_tfrac_mavg_cl(ic,icanopy), &
+          & fleaf_sunlit_daytime_cl(ic,icanopy), mavg_period_tfrac, do_calc=l_growing_season_cl(ic,icanopy))
+      END DO
 
-    !>  2.5 tcnl (averages at the time-scale of leaf N allocation fractions)
-    !>
-    fleaf_sunlit_tcnl_mavg_cl(:,:)   = calc_time_mavg(dtime, fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_cl(:,:), &
-                                                      mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
-    t_air_tcnl_mavg(:)               = calc_time_mavg(dtime, t_air_tcnl_mavg(:), t_air(:), &
-                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
-    press_srf_tcnl_mavg(:)           = calc_time_mavg(dtime, press_srf_tcnl_mavg(:), press_srf(:), &
-                                                      mavg_period_tcnl,  do_calc=l_growing_season(:))
-    co2_mixing_ratio_tcnl_mavg(:)    = calc_time_mavg(dtime, co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio(:), &
-                                                      mavg_period_tcnl,  do_calc=l_growing_season(:))
-    ga_tcnl_mavg(:)                  = calc_time_mavg(dtime, ga_tcnl_mavg(:), aerodyn_cond(:), &
-                                                      mavg_period_tcnl,  do_calc=l_growing_season(:))
-    uptake_n_tcnl_mavg               = calc_time_mavg(dtime, uptake_n_tcnl_mavg,                                 &
-      &                                  unit_uptake_n_pot(:) * veg_pool_mt(ix_fine_root,ixC,:) + n_fixation(:), &
-      &                                  mavg_period_tgrowth, do_calc=l_growing_season(:))
-    fmaint_rate_tcnl_mavg            = calc_time_mavg(dtime, fmaint_rate_tcnl_mavg, fmaint_rate_root(:), &
-                                                      mavg_period_tgrowth, do_calc=l_growing_season(:))
-    WHERE (growth_req_n(:) > 0._wp)
-      hlp(:) = 1._wp / growth_req_n(:)
-    ELSEWHERE
-      hlp(:) = 0._wp
-    ENDWHERE
-    growth_cn_tcnl_mavg(:)  = calc_time_mavg(dtime, growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
-    WHERE (growth_req_p(:) > 0._wp)
-      hlp(:) = 1._wp / growth_req_p(:)
-    ELSEWHERE
-      hlp(:) = 0._wp
-    ENDWHERE
-    growth_np_tcnl_mavg(:)  = calc_time_mavg(dtime, growth_np_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
-    hlp(:)                  = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - &
-                              growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
-    npp_tcnl_mavg(:)        = calc_time_mavg(dtime, npp_tcnl_mavg(:), hlp(:), mavg_period_tcnl, do_calc=l_growing_season(:))
+      t_air_tfrac_mavg(ic)               = calc_time_mavg(dtime, t_air_tfrac_mavg(ic), t_air_daytime(ic), &
+                                                         mavg_period_tfrac)
+      press_srf_tfrac_mavg(ic)           = calc_time_mavg(dtime, press_srf_tfrac_mavg(ic), press_srf_daytime(ic), &
+                                                         mavg_period_tfrac)
+      co2_mixing_ratio_tfrac_mavg(ic)    = calc_time_mavg(dtime, co2_mixing_ratio_tfrac_mavg(ic), co2_mixing_ratio_daytime(ic), &
+                                                         mavg_period_tfrac)
+      ga_tfrac_mavg(ic)                  = calc_time_mavg(dtime, ga_tfrac_mavg(ic), ga_daytime(ic), &
+                                                         mavg_period_tfrac)
+      beta_sinklim_ps_tfrac_mavg(ic)     = calc_time_mavg(dtime, beta_sinklim_ps_tfrac_mavg(ic), beta_sinklim_ps_daytime(ic), &
+                                                         mavg_period_tfrac)
 
-    labile_carbon_tcnl_mavg(:)        = calc_time_mavg(dtime, labile_carbon_tcnl_mavg(:), veg_pool_mt(ix_labile,ixC,:),     &
-      &                                   mavg_period_tcnl, do_calc=l_growing_season(:))
-    labile_nitrogen_tcnl_mavg(:)      = calc_time_mavg(dtime, labile_nitrogen_tcnl_mavg(:), veg_pool_mt(ix_labile,ixN,:),   &
-      &                                   mavg_period_tcnl, do_calc=l_growing_season(:))
-    labile_phosphorus_tcnl_mavg(:)    = calc_time_mavg(dtime, labile_phosphorus_tcnl_mavg(:), veg_pool_mt(ix_labile,ixP,:), &
-      &                                   mavg_period_tcnl, do_calc=l_growing_season(:))
+      !>  2.5 tcnl (averages at the time-scale of leaf N allocation fractions)
+      !>
+      DO icanopy = 1, ncanopy
+        fleaf_sunlit_tcnl_mavg_cl(ic,icanopy) = calc_time_mavg(dtime, fleaf_sunlit_tcnl_mavg_cl(ic,icanopy),  &
+          &                                                    fleaf_sunlit_cl(ic,icanopy), mavg_period_tcnl, &
+          &                                                    do_calc=l_growing_season_cl(ic,icanopy))
+      END DO
 
-    !>  2.6 talloc (time-scale of plant allocation calculation (veg process))
-    !>
-    hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - &
-                          growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
-    npp_talloc_mavg(:)  = calc_time_mavg(dtime, npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))
-    !Note: different than in IQ [changed in QS (!23)]
-    n_fixation_talloc_mavg(:)           = calc_time_mavg(dtime, n_fixation_talloc_mavg(:), n_fixation(:), &
-      &                                             mavg_period_talloc, do_calc=l_growing_season(:))
-    unit_npp_talloc_mavg(:)             = calc_time_mavg(dtime, unit_npp_talloc_mavg(:), unit_npp(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
-    transpiration_talloc_mavg(:)        = calc_time_mavg(dtime, transpiration_talloc_mavg(:), transpiration(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
-    unit_transpiration_talloc_mavg(:)   = calc_time_mavg(dtime, unit_transpiration_talloc_mavg(:), unit_transpiration(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
-    dphi_talloc_mavg(:)                 = calc_time_mavg(dtime, dphi_talloc_mavg(:), dphi(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
-    unit_uptake_n_talloc_mavg(:)        = calc_time_mavg(dtime, unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
-    unit_uptake_p_talloc_mavg(:)        = calc_time_mavg(dtime, unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
-                                                         mavg_period_talloc, do_calc=l_growing_season(:))
+      t_air_tcnl_mavg(ic)               = calc_time_mavg(dtime, t_air_tcnl_mavg(ic), t_air(ic), &
+                                                        mavg_period_tcnl, do_calc=l_growing_season(ic))
+      press_srf_tcnl_mavg(ic)           = calc_time_mavg(dtime, press_srf_tcnl_mavg(ic), press_srf(ic), &
+                                                        mavg_period_tcnl,  do_calc=l_growing_season(ic))
+      co2_mixing_ratio_tcnl_mavg(ic)    = calc_time_mavg(dtime, co2_mixing_ratio_tcnl_mavg(ic), co2_mixing_ratio(ic), &
+                                                        mavg_period_tcnl,  do_calc=l_growing_season(ic))
+      ga_tcnl_mavg(ic)                  = calc_time_mavg(dtime, ga_tcnl_mavg(ic), aerodyn_cond(ic), &
+                                                        mavg_period_tcnl,  do_calc=l_growing_season(ic))
+      uptake_n_tcnl_mavg(ic)               = calc_time_mavg(dtime, uptake_n_tcnl_mavg(ic),                                 &
+        &                                  unit_uptake_n_pot(ic) * veg_pool_mt(ix_fine_root,ixC,ic) + n_fixation(ic), &
+        &                                  mavg_period_tgrowth, do_calc=l_growing_season(ic))
+      fmaint_rate_tcnl_mavg(ic)            = calc_time_mavg(dtime, fmaint_rate_tcnl_mavg(ic), fmaint_rate_root(ic), &
+                                                        mavg_period_tgrowth, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF (growth_req_n(ic) > 0._wp) THEN
+        hlp_r = 1._wp / growth_req_n(ic)
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_cn_tcnl_mavg(ic)  = calc_time_mavg(dtime, growth_cn_tcnl_mavg(ic), hlp_r, &
+        &                                       mavg_period_tcnl,  do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF (growth_req_p(ic) > 0._wp) THEN
+        hlp_r = 1._wp / growth_req_p(ic)
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_np_tcnl_mavg(ic)  = calc_time_mavg(dtime, growth_np_tcnl_mavg(ic), hlp_r,   &
+        &                                       mavg_period_tcnl,  do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      hlp_r                    = gross_assimilation(ic) / MAX(eps8, beta_sinklim_ps(ic)) &
+        &                        - growth_respiration(ic) - maint_respiration(ic) - n_processing_respiration(ic)
+      npp_tcnl_mavg(ic)        = calc_time_mavg(dtime, npp_tcnl_mavg(ic), hlp_r, mavg_period_tcnl, do_calc=l_growing_season(ic))
+
+      labile_carbon_tcnl_mavg(ic)     = calc_time_mavg(dtime, labile_carbon_tcnl_mavg(ic), veg_pool_mt(ix_labile,ixC,ic),     &
+        &                                   mavg_period_tcnl, do_calc=l_growing_season(ic))
+      labile_nitrogen_tcnl_mavg(ic)   = calc_time_mavg(dtime, labile_nitrogen_tcnl_mavg(ic), veg_pool_mt(ix_labile,ixN,ic),   &
+        &                                   mavg_period_tcnl, do_calc=l_growing_season(ic))
+      labile_phosphorus_tcnl_mavg(ic) = calc_time_mavg(dtime, labile_phosphorus_tcnl_mavg(ic), veg_pool_mt(ix_labile,ixP,ic), &
+        &                                   mavg_period_tcnl, do_calc=l_growing_season(ic))
+
+      !>  2.6 talloc (time-scale of plant allocation calculation (veg process))
+      !>
+      hlp_r                = gross_assimilation(ic) / MAX(eps8, beta_sinklim_ps(ic)) &
+        &                    - growth_respiration(ic) - maint_respiration(ic) - n_processing_respiration(ic)
+      npp_talloc_mavg(ic)  = calc_time_mavg(dtime, npp_talloc_mavg(ic), hlp_r, mavg_period_talloc, do_calc=l_growing_season(ic))
+      !Note: different than in IQ [changed in QS (!23)]
+      n_fixation_talloc_mavg(ic)         = calc_time_mavg(dtime, n_fixation_talloc_mavg(ic), n_fixation(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      unit_npp_talloc_mavg(ic)           = calc_time_mavg(dtime, unit_npp_talloc_mavg(ic), unit_npp(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      transpiration_talloc_mavg(ic)      = calc_time_mavg(dtime, transpiration_talloc_mavg(ic), transpiration(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      unit_transpiration_talloc_mavg(ic) = calc_time_mavg(dtime, unit_transpiration_talloc_mavg(ic), unit_transpiration(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      dphi_talloc_mavg(ic)               = calc_time_mavg(dtime, dphi_talloc_mavg(ic), dphi(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      unit_uptake_n_talloc_mavg(ic)      = calc_time_mavg(dtime, unit_uptake_n_talloc_mavg(ic), unit_uptake_n_pot(ic), &
+        &                                                 mavg_period_talloc, do_calc=l_growing_season(ic))
+      unit_uptake_p_talloc_mavg(ic)      = calc_time_mavg(dtime, unit_uptake_p_talloc_mavg(ic), unit_uptake_p_pot(ic), &
+                                                          mavg_period_talloc, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>  2.7 talloc / talloc_dynamic
     !>
@@ -672,28 +828,37 @@ CONTAINS
     CASE ("dynamic")
       mavg_period_hlp = mavg_period_talloc_dynamic
     END SELECT
-    labile_carbon_talloc_mavg(:)        = calc_time_mavg(dtime, labile_carbon_talloc_mavg(:), veg_pool_mt(ix_labile,ixC,:),     &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    labile_nitrogen_talloc_mavg(:)      = calc_time_mavg(dtime, labile_nitrogen_talloc_mavg(:), veg_pool_mt(ix_labile,ixN,:),   &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    labile_phosphorus_talloc_mavg(:)    = calc_time_mavg(dtime, labile_phosphorus_talloc_mavg(:), veg_pool_mt(ix_labile,ixP,:), &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    reserve_carbon_talloc_mavg(:)       = calc_time_mavg(dtime, reserve_carbon_talloc_mavg(:), veg_pool_mt(ix_reserve,ixC,:),     &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    reserve_nitrogen_talloc_mavg(:)     = calc_time_mavg(dtime, reserve_nitrogen_talloc_mavg(:), veg_pool_mt(ix_reserve,ixN,:),   &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    reserve_phosphorus_talloc_mavg(:)   = calc_time_mavg(dtime, reserve_phosphorus_talloc_mavg(:), veg_pool_mt(ix_reserve,ixP,:), &
-      &                                     mavg_period_hlp, do_calc=l_growing_season(:))
-    ! avoid division by zero
+
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
-      IF (w_soil_root_fc(ic) > eps8) THEN
-        hlp(ic) = w_soil_root(ic) / w_soil_root_fc(ic)
-      ELSE
-        hlp(ic) = 0._wp
-      END IF
+      labile_carbon_talloc_mavg(ic)      = calc_time_mavg(dtime, labile_carbon_talloc_mavg(ic), veg_pool_mt(ix_labile,ixC,ic),   &
+        &                                     mavg_period_hlp, do_calc=l_growing_season(ic))
+      labile_nitrogen_talloc_mavg(ic)    = calc_time_mavg(dtime, labile_nitrogen_talloc_mavg(ic), veg_pool_mt(ix_labile,ixN,ic), &
+        &                                     mavg_period_hlp, do_calc=l_growing_season(ic))
+      labile_phosphorus_talloc_mavg(ic)  = calc_time_mavg(dtime, labile_phosphorus_talloc_mavg(ic),  &
+        &                                     veg_pool_mt(ix_labile,ixP,ic), mavg_period_hlp, do_calc=l_growing_season(ic))
+      reserve_carbon_talloc_mavg(ic)     = calc_time_mavg(dtime, reserve_carbon_talloc_mavg(ic), veg_pool_mt(ix_reserve,ixC,ic), &
+        &                                     mavg_period_hlp, do_calc=l_growing_season(ic))
+      reserve_nitrogen_talloc_mavg(ic)   = calc_time_mavg(dtime, reserve_nitrogen_talloc_mavg(ic), &
+        &                                     veg_pool_mt(ix_reserve,ixN,ic), mavg_period_hlp, do_calc=l_growing_season(ic))
+      reserve_phosphorus_talloc_mavg(ic) = calc_time_mavg(dtime, reserve_phosphorus_talloc_mavg(ic),  &
+        &                                     veg_pool_mt(ix_reserve,ixP,ic), mavg_period_hlp, do_calc=l_growing_season(ic))
     END DO
-    w_root_lim_talloc_mavg(:)           = calc_time_mavg(dtime, w_root_lim_talloc_mavg(:), hlp(:), &
-                                                         mavg_period_hlp, do_calc=l_growing_season(:))
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      ! avoid division by zero
+      IF (w_soil_root_fc(ic) > eps8) THEN
+        hlp_r = w_soil_root(ic) / w_soil_root_fc(ic)
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      w_root_lim_talloc_mavg(ic)           = calc_time_mavg(dtime, w_root_lim_talloc_mavg(ic), hlp_r, &
+        &                                                   mavg_period_hlp, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>  2.8 tgrowth / talloc_dynamic
     !>
@@ -703,95 +868,153 @@ CONTAINS
     CASE ("dynamic")
       mavg_period_hlp = mavg_period_talloc_dynamic
     END SELECT
-    WHERE(growth_req_n(:) > 0._wp)
-      hlp(:) = 1._wp / growth_req_n(:)
-    ELSEWHERE
-      hlp(:) = 0._wp
-    END WHERE
-    growth_cn_talloc_mavg(:) = calc_time_mavg(dtime, &
-      &                                       growth_cn_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
-    WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
-      hlp(:) = 1._wp / (growth_req_n(:) * growth_req_p(:))
-    ELSEWHERE
-      hlp(:) = 0._wp
-    END WHERE
-    growth_cp_talloc_mavg(:) = calc_time_mavg(dtime, &
-      &                                       growth_cp_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
-    WHERE(growth_req_p(:) > 0._wp)
-      hlp(:) = 1._wp / growth_req_p(:)
-    ELSEWHERE
-      hlp(:) = 0._wp
-    END WHERE
-    growth_np_talloc_mavg(:) = calc_time_mavg(dtime, &
-      &                                       growth_np_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
 
-    WHERE(labile_nitrogen_talloc_mavg(:) > 0._wp .AND. labile_phosphorus_talloc_mavg > 0._wp)
-      hlp(:) = growth_req_p_tuptake_mavg(:) * (labile_nitrogen_talloc_mavg(:)/labile_phosphorus_talloc_mavg(:))
-    ELSEWHERE
-      hlp(:) = 0._wp
-    END WHERE
-    growth_p_limit_based_on_n_mavg(:) = &
-      & calc_time_mavg(dtime, growth_p_limit_based_on_n_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF(growth_req_n(ic) > 0._wp) THEN
+        hlp_r = 1._wp / growth_req_n(ic)
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_cn_talloc_mavg(ic) = calc_time_mavg(dtime, growth_cn_talloc_mavg(ic), hlp_r, &
+        &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF(growth_req_n(ic) > 0._wp .AND. growth_req_p(ic) > 0._wp) THEN
+        hlp_r = 1._wp / (growth_req_n(ic) * growth_req_p(ic))
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_cp_talloc_mavg(ic) = calc_time_mavg(dtime, growth_cp_talloc_mavg(ic), hlp_r, &
+        &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF(growth_req_p(ic) > 0._wp) THEN
+        hlp_r = 1._wp / growth_req_p(ic)
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_np_talloc_mavg(ic) = calc_time_mavg(dtime, growth_np_talloc_mavg(ic), hlp_r, &
+        &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r)
+    DO ic = 1, nc
+      IF(labile_nitrogen_talloc_mavg(ic) > 0._wp .AND. labile_phosphorus_talloc_mavg(ic) > 0._wp) THEN
+        hlp_r = growth_req_p_tuptake_mavg(ic) * (labile_nitrogen_talloc_mavg(ic)/labile_phosphorus_talloc_mavg(ic))
+      ELSE
+        hlp_r = 0._wp
+      END IF
+      growth_p_limit_based_on_n_mavg(ic) = &
+        & calc_time_mavg(dtime, growth_p_limit_based_on_n_mavg(ic), hlp_r, mavg_period_hlp, do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>  2.9 various lctlib tau
     !>
-    exudation_c_tmyc_mavg(:) = calc_time_mavg(dtime, exudation_c_tmyc_mavg(:), veg_exudation_mt(ixC,:), &
-                                              lctlib%tau_mycorrhiza, avg_period_unit='year')
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
-      IF (veg_pool_mt(ix_fine_root,ixC,ic) > eps8) THEN
-        hlp(ic)   = veg_pool_mt(ix_leaf,ixC,ic) / veg_pool_mt(ix_fine_root,ixC,ic)
-      ELSE
-        hlp(ic)   = 0._wp
-      END IF
-      IF ((veg_pool_mt(ix_leaf,ixC,ic) > eps8) .AND. (veg_pool_mt(ix_fine_root,ixC,ic) > eps8)) THEN
-        l_hlp(ic) = .TRUE.
-      ELSE
-        l_hlp(ic) = .FALSE.
-      END IF
+      exudation_c_tmyc_mavg(ic) = calc_time_mavg(dtime, exudation_c_tmyc_mavg(ic), veg_exudation_mt(ixC,ic), &
+        &                                        lctlib_tau_mycorrhiza, avg_period_unit='year')
     END DO
-    leaf2root_troot_mavg(:)         = calc_time_mavg(dtime, leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
-                                                     do_calc=l_hlp(:), avg_period_unit='year')
-    unit_npp_troot_mavg(:)          = calc_time_mavg(dtime, unit_npp_troot_mavg(:), unit_npp(:), lctlib%tau_fine_root, &
-                                                     do_calc=l_growing_season(:), avg_period_unit='year')
-    unit_uptake_n_pot_troot_mavg(:) = calc_time_mavg(dtime, &
-      &                                              unit_uptake_n_pot_troot_mavg(:), unit_uptake_n_pot(:), lctlib%tau_fine_root, &
-                                                     do_calc=l_growing_season(:), avg_period_unit='year')
-    unit_uptake_p_pot_troot_mavg(:) = calc_time_mavg(dtime, &
-      &                                              unit_uptake_p_pot_troot_mavg(:), unit_uptake_p_pot(:), lctlib%tau_fine_root, &
-                                                     do_calc=l_growing_season(:), avg_period_unit='year')
-    fmaint_rate_troot_mavg(:)       = calc_time_mavg(dtime, fmaint_rate_troot_mavg(:), fmaint_rate_root(:), lctlib%tau_fine_root, &
-                                                     do_calc=l_growing_season(:), avg_period_unit='year')
+    !$ACC END PARALLEL LOOP
 
-    !>  2.10 tvegdyn (averages at the vegetation dynamics time-scale)
-    !>
-    an_boc_tvegdyn_mavg(:)     = calc_time_mavg(dtime, an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_monthly, &
-      &                                         do_calc=(veg_pool_mt(ix_leaf,ixC,:) > eps8))
-    net_growth_tvegdyn_mavg(:) = calc_time_mavg(dtime, net_growth_tvegdyn_mavg(:), net_growth(:), mavg_period_tvegdyn)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(hlp_r, l_hlp)
+    DO ic = 1, nc
+      l_hlp = .FALSE.
+      IF (veg_pool_mt(ix_fine_root,ixC,ic) > eps8) THEN
+        hlp_r   = veg_pool_mt(ix_leaf,ixC,ic) / veg_pool_mt(ix_fine_root,ixC,ic)
+        IF ((veg_pool_mt(ix_leaf,ixC,ic) > eps8)) THEN
+          l_hlp = .TRUE.
+        END IF
+      ELSE
+        hlp_r   = 0._wp
+      END IF
+
+      leaf2root_troot_mavg(ic)         = calc_time_mavg(dtime, leaf2root_troot_mavg(ic), hlp_r, &
+        &                                               lctlib_tau_fine_root, do_calc=l_hlp, avg_period_unit='year')
+      unit_npp_troot_mavg(ic)          = calc_time_mavg(dtime, unit_npp_troot_mavg(ic), unit_npp(ic), &
+        &                                               lctlib_tau_fine_root, do_calc=l_growing_season(ic), avg_period_unit='year')
+      unit_uptake_n_pot_troot_mavg(ic) = calc_time_mavg(dtime, unit_uptake_n_pot_troot_mavg(ic), unit_uptake_n_pot(ic), &
+        &                                               lctlib_tau_fine_root, do_calc=l_growing_season(ic), avg_period_unit='year')
+      unit_uptake_p_pot_troot_mavg(ic) = calc_time_mavg(dtime, unit_uptake_p_pot_troot_mavg(ic), unit_uptake_p_pot(ic), &
+        &                                               lctlib_tau_fine_root, do_calc=l_growing_season(ic), avg_period_unit='year')
+      fmaint_rate_troot_mavg(ic)       = calc_time_mavg(dtime, fmaint_rate_troot_mavg(ic), fmaint_rate_root(ic), &
+                                                        lctlib_tau_fine_root, do_calc=l_growing_season(ic), avg_period_unit='year')
+
+      !>  2.10 tvegdyn (averages at the vegetation dynamics time-scale)
+      !>
+      an_boc_tvegdyn_mavg(ic)     = calc_time_mavg(dtime, an_boc_tvegdyn_mavg(ic), net_assimilation_boc(ic), mavg_period_monthly, &
+        &                                          do_calc=(veg_pool_mt(ix_leaf,ixC,ic) > eps8))
+      net_growth_tvegdyn_mavg(ic) = calc_time_mavg(dtime, net_growth_tvegdyn_mavg(ic), net_growth(ic), mavg_period_tvegdyn)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(l_hlp)
     DO ic = 1, nc
       IF (lai(ic) > 0.1_wp) THEN
-        l_hlp(ic) = .TRUE.
+        l_hlp = .TRUE.
       ELSE
-        l_hlp(ic) = .FALSE.
+        l_hlp = .FALSE.
       END IF
+      lai_tvegdyn_mavg(ic) = calc_time_mavg(dtime, lai_tvegdyn_mavg(ic), lai(ic), mavg_period_tvegdyn, do_calc=l_hlp)
     END DO
-    lai_tvegdyn_mavg(:) = calc_time_mavg(dtime, lai_tvegdyn_mavg(:), lai(:), mavg_period_tvegdyn, do_calc=l_hlp(:))
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      rfr_ratio_boc_tvegdyn_mavg(ic) = calc_time_mavg(dtime, rfr_ratio_boc_tvegdyn_mavg(ic), rfr_ratio_boc(ic), &
+        &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(ix_leaf,ixC,ic) > eps8))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>  2.11 tacclim (averages at the respiration acclimation time-scale)
     !>    t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !>    this IF statement has a direct impact on mo_q_veg_respiration:temperature_response_respiration
     !>
     IF (dsl4jsb_Config(Q_ASSIMI_)%flag_t_resp_acclimation) THEN
-      t_air_tacclim_mavg(:)       = calc_time_mavg(dtime, t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
-      t_soil_root_tacclim_mavg(:) = calc_time_mavg(dtime, t_soil_root_tacclim_mavg(:), t_soil_root(:), mavg_period_tacclim)
+      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+      DO ic = 1, nc
+        t_air_tacclim_mavg(ic)       = calc_time_mavg(dtime, t_air_tacclim_mavg(ic), t_air(ic), mavg_period_tacclim)
+        t_soil_root_tacclim_mavg(ic) = calc_time_mavg(dtime, t_soil_root_tacclim_mavg(ic), t_soil_root(ic), mavg_period_tacclim)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
-    beta_sinklim_ps_tacclim_mavg(:)  = calc_time_mavg(dtime, beta_sinklim_ps_tacclim_mavg(:), beta_sinklim_ps(:), &
-                                                      mavg_period_tacclim,  do_calc=l_growing_season(:))
+
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      beta_sinklim_ps_tacclim_mavg(ic)  = calc_time_mavg(dtime, beta_sinklim_ps_tacclim_mavg(ic), beta_sinklim_ps(ic), &
+                                                      mavg_period_tacclim,  do_calc=l_growing_season(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !>  2.12 averages with a weekly, monthly timescale
     !>
-    t_air_week_mavg(:)  = calc_time_mavg(dtime, t_air_week_mavg(:), t_air(:), mavg_period_weekly)
-    t_air_month_mavg(:) = calc_time_mavg(dtime, t_air_month_mavg(:), t_air(:), mavg_period_monthly)
-    t_jmax_opt_mavg(:)  = calc_time_mavg(dtime, t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      t_air_week_mavg(ic)  = calc_time_mavg(dtime, t_air_week_mavg(ic), t_air(ic), mavg_period_weekly)
+      t_air_month_mavg(ic) = calc_time_mavg(dtime, t_air_month_mavg(ic), t_air(ic), mavg_period_monthly)
+      t_jmax_opt_mavg(ic)  = calc_time_mavg(dtime, t_jmax_opt_mavg(ic), t_jmax_opt_daytime(ic), mavg_period_weekly)
+    END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
+    !$ACC EXIT DATA DELETE(l_growing_season_cl)
+    DEALLOCATE(l_growing_season_cl)
+
+    !$ACC END DATA
 
   END SUBROUTINE calculate_time_average_vegetation
 

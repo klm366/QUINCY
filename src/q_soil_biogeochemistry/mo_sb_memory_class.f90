@@ -21,7 +21,6 @@ MODULE mo_sb_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
-  USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
 
   USE mo_jsb_process_class,      ONLY: SB_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
@@ -424,11 +423,11 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     dsl4jsb_Use_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !> SB_ memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !< SB_ memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),               POINTER :: model                       !< model
     TYPE(t_jsb_grid),                POINTER :: hgrid                       !< Horizontal grid
@@ -890,7 +889,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -901,7 +900,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -912,7 +911,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2298,7 +2297,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2309,7 +2308,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2320,7 +2319,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
