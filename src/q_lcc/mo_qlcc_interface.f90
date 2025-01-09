@@ -181,6 +181,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: pot_fpc
     dsl4jsb_Real3D_onChunk :: cover_fract_pot
     dsl4jsb_Real3D_onChunk :: cover_fract
+    dsl4jsb_Real3D_onChunk :: npp_5yr
+    dsl4jsb_Real3D_onChunk :: max_bio
     dsl4jsb_Real3D_onChunk :: bio_exist
     dsl4jsb_Real2D_onChunk :: gdd_sum_year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
@@ -282,6 +284,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(QLCC_, pot_fpc)          ! inout
     dsl4jsb_Get_var3D_onChunk(QLCC_, cover_fract_pot)  ! inout
     dsl4jsb_Get_var3D_onChunk(QLCC_, cover_fract)      ! inout
+    dsl4jsb_Get_var3D_onChunk(QLCC_, npp_5yr)          ! inout
+    dsl4jsb_Get_var3D_onChunk(QLCC_, max_bio)          ! inout
     dsl4jsb_Get_var3D_onChunk(QLCC_, bio_exist)        ! inout
     dsl4jsb_Get_var2D_onChunk(QLCC_, sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(QLCC_, desert_fpc)       ! inout
@@ -316,6 +320,12 @@ CONTAINS
 !       cover_fract_sum(:) = cover_fract_sum(:) + cover_fract(:,itile)
     END DO ! itile
 
+    ! set diagnostic 5 year NPP
+    DO itile = 1,no_children
+      npp_5yr(:,itile) = NPP_mean_5year(:,itile)
+      max_bio(:,itile) = max_green_bio(:,itile)
+    END DO ! itile
+
     ! scale cover_fract to fractions relative to the veg_tile
 !XXX modify to account for bare soil tile    ! XXX
 !     cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_wp)
@@ -334,18 +344,10 @@ CONTAINS
     ENDIF
 
     ! calculate climate buffer
-    ! init_mmtemp20 seems to be unused
-!     init_mmtemp20 = .TRUE.
-!     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
     CALL calc_q_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
                       seconds_day, seconds_month, temp_sum_day, temp_sum_month,                 &
                       min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20,           &
                       gdd_sum_year, gdd_prev_year)
-
-!     IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
-!        IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp)         &
-!           CALL message(TRIM(routine), 'initialisation of mmtemp20')
-!     ENDIF
 
     ! annual calculations
     IF (new_year) THEN
@@ -364,7 +366,6 @@ CONTAINS
                                    act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
 
        IF (.NOT. lstart) THEN
-
           ! new desert fraction
           CALL desert_fraction(nc, no_children, init_running_means, accelerate_qlcc,   &
                                is_woody(:,:), is_dynamic(:,:), is_bare(:,:),           &
@@ -378,7 +379,6 @@ CONTAINS
           CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:,:), is_woody(:,:), is_pasture(:,:), is_crop(:,:), &
                                               is_bare(:,:), cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
 
-!XXX modify to account for bare soil tile
           DO itile = 1,no_children
              ! Point to the correct pft
              IF (itile == 1) THEN
@@ -387,14 +387,8 @@ CONTAINS
                 ptr_tile => ptr_tile%Get_next_sibling_tile()
              END IF
              ! set cover fractions
-!              CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
              CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile))
           END DO ! itile
-
-!           !   calculate fract_fpc_max and hand it back to child tiles (pft tiles)
-!           ALLOCATE(fract_fpc_max(nc,no_children))
-!           fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
-!           CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
 
        ENDIF ! not lstart
 

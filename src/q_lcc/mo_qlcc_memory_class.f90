@@ -71,6 +71,8 @@ MODULE mo_qlcc_memory_class
       pot_fpc,                &
       cover_fract_pot,        &
       cover_fract,            &
+      npp_5yr,                &
+      max_bio,                &
       bio_exist
 
     ! Diagnostic global sums e.g. for monitoring (only available with ICON)
@@ -274,6 +276,23 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
+      & initval_r=0.0_wp )
+
+    ! diagnostic output variables
+    CALL mem%Add_var('npp_5yr', mem%npp_5yr,                                  &
+      & hgrid, pft_vgrid,                                                     &
+      & t_cf('npp_5yr', 'PFT NPP 5yr mean', 'npp 5yr'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL, lrestart_cont=.TRUE.,            &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_bio', mem%max_bio,                                  &
+      & hgrid, pft_vgrid,                                                     &
+      & t_cf('max_bio', 'Max green biomass', 'max bio'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL, lrestart_cont=.TRUE.,            &
       & initval_r=0.0_wp )
 
     ! disagnostics from pplcc
