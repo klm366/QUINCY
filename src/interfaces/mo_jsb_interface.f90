@@ -723,7 +723,7 @@ CONTAINS
 
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
-      CALL read_land_use_data(model_id, current_datetime)
+      CALL read_land_use_data(model_id, current_datetime)   !Mingyue Zhang add options
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
