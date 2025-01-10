@@ -69,9 +69,9 @@ CONTAINS
   !
   !> Reading of land use data
   !
-  SUBROUTINE read_land_use_data(model_id, current_datetime, options)   ! Mingyue Zhang added "options" as input argument
+  SUBROUTINE read_land_use_data(model_id, current_datetime)   
   
-    USE mo_kind,               ONLY: wp
+    USE mo_kind,                ONLY: wp
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_time_iface,      ONLY: t_datetime
@@ -102,7 +102,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
     REAL(wp), ALLOCATABLE   :: transition_prob(:,:)  ! Mingyue add for transition probability to extend transition matrix
 
-    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks, ics, ice
+    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks    !, ics, ice
     INTEGER :: idx, i, j, row, col, trans_idx, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
@@ -121,8 +121,8 @@ CONTAINS
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
-    ics     = options%ics
-    ice     = options%ice
+    !ics     = options%ics
+    !ice     = options%ice
 
     ! nc     = options%nc  nc = ice- ics + 1
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
