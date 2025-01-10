@@ -88,7 +88,7 @@ CONTAINS
     TYPE(t_jsb_model),           POINTER       :: model
     TYPE(t_jsb_grid),            POINTER       :: hgrid
     CLASS(t_jsb_tile_abstract),  POINTER       :: tile, current_tile
-    TYPE(t_jsb_task_options),    INTENT(in)    :: options  !< Additional run-time parameters
+    ! TYPE(t_jsb_task_options),    INTENT(in)    :: options  !< Additional run-time parameters  ! Mingyue Zhang
     ! -------------------------------------------------------------------------------------------------- !
 
     dsl4jsb_Def_config(ALCC_)
