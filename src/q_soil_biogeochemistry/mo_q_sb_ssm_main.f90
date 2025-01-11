@@ -1134,6 +1134,7 @@ CONTAINS
                                                                 km_dip_biochem_po4_act    !< actual km for soluble P control on biochem_mineralisation_po4
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, is
+    REAL(wp)                        :: hlp1
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_local_soil_profile_values'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1163,17 +1164,22 @@ CONTAINS
     !>
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
-        km1_uptake_nh4_act(ic, is) = km1_up_nh4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km1_uptake_no3_act(ic, is) = km1_up_no3 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km1_uptake_po4_act(ic, is) = km1_up_po4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is)) &
+        IF ((rtm_hsc(ic, is) * rmm_hsc(ic, is)) < eps8) THEN
+          hlp1 = eps8
+        ELSE
+          hlp1 = rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        END IF
+        km1_uptake_nh4_act(ic, is) = km1_up_nh4 / hlp1
+        km1_uptake_no3_act(ic, is) = km1_up_no3 / hlp1
+        km1_uptake_po4_act(ic, is) = km1_up_po4 / hlp1 &
           &                          / 1000._wp / (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km2_uptake_nh4_act(ic, is) = km2_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_no3_act(ic, is) = km2_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_po4_act(ic, is) = km2_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is) &
           &                          * 1000._wp * (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km_uptake_org_act(ic, is)          = km_up_org  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
+        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / hlp1
+        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / hlp1
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3

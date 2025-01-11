@@ -1022,16 +1022,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,              weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,              weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_can,             weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, appfd,                    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                   weighted_by_fract)
-      ! RAD_ 3D
-      dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_vis_cl,      weighted_by_fract)
 #ifndef __NO_QUINCY__
       ! get VEG_ memory
       dsl4jsb_Get_memory(VEG_)
@@ -1890,20 +1881,9 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_soil,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_can,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                 weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
-      ! RAD_ 3D
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_vis_cl,    weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_nir_cl,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_nir_cl,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_nir_cl,    weighted_by_fract)
     CASE (MODEL_JSBACH)
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step

@@ -28,8 +28,11 @@ MODULE mo_phy_schemes
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
-    & calc_peaked_arrhenius_function, &
     & sfc_exchange_coefficients
+#ifndef __NO_QUINCY__
+  PUBLIC :: calc_peaked_arrhenius_function
+#endif
+
     ! Note: nvhpc doesn't support function pointers
     ! & register_exchange_coefficients_procedure, exchange_coefficients, registered_exchange_coefficients_procedure
 
@@ -288,37 +291,47 @@ CONTAINS
   END FUNCTION heat_transfer_coef
 
   ! ======================================================================================================= !
-  !>Calculates temperature response factor according to the peaked Arrhenius equation as defined in
-  !>  Medlyn et al. 2002, PCE, eq. 18
-  !>  NB if sensitivity of zero is specified, 1 will be returned
+  !> Calculates temperature response factor for biological processes
+  !>   according to the peaked Arrhenius equation as defined in:
+  !>   Medlyn et al. 2002, PCE, eq. 18
+  !>
+  !>   NB if sensitivity of zero is specified, 1 will be returned
   !>
   !>  Input: temperature, (de-)activiation energy, optimum temperature
   !>
   !>  Output: rate modifier (unitless)
   !>
-  ELEMENTAL FUNCTION calc_peaked_arrhenius_function(temp,Ea,Ed,t_opt) RESULT(rate_modifier)
+#ifndef __NO_QUINCY__
+  ELEMENTAL FUNCTION calc_peaked_arrhenius_function(temp, Ea, Ed, temp_opt) RESULT(rate_modifier)
 
-    USE mo_jsb_physical_constants,  ONLY: r_gas
+    USE mo_jsb_physical_constants,  ONLY: r_gas, Tzero
     USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_sb_constants,            ONLY: temp_ref_tresponse, temp_freeze_thres_bio, temp_freeze_window_bio
+
     !------------------------------------------------------------------------------------------------------ !
-    REAL(wp), INTENT(in)  :: temp          !< temperature [K]
-    REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
-    REAL(wp), INTENT(in)  :: Ed            !< deactivation energy [J mol-1]
-    REAL(wp), INTENT(in)  :: t_opt         !< optimum temperature [K]
-    REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless]
+    REAL(wp), INTENT(in)  :: temp           !< temperature [K]
+    REAL(wp), INTENT(in)  :: Ea             !< activation energy [J mol-1]
+    REAL(wp), INTENT(in)  :: Ed             !< deactivation energy [J mol-1]
+    REAL(wp), INTENT(in)  :: temp_opt       !< optimum temperature [K]
+    REAL(wp)              :: rate_modifier  !< temperature rate modifier [unitless]
+    REAL(wp)              :: frost_modifier !< reduction of rate modifier when approaching -2 degC [-]
+                                            !!   only for biological processes
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp)              :: hlp1, hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_peaked_arrhenius_function'
 
-    IF(Ea > eps8) THEN
-      hlp1 = temp - t_opt
-      hlp2 = temp * t_opt * r_gas
-      rate_modifier = (Ed * EXP(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._wp - EXP(Ed * hlp1 / hlp2)))
+    IF (Ea > eps8) THEN
+      hlp1            = temp - temp_opt
+      hlp2            = temp * temp_opt * r_gas
+      frost_modifier  = MIN(MAX((temp - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_wp), 1.0_wp)
+      rate_modifier   = (Ed * EXP(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._wp - EXP(Ed * hlp1 / hlp2)))
+      rate_modifier   = rate_modifier * frost_modifier
     ELSE
       rate_modifier = 1._wp
-    ENDIF
+    END IF
 
   END FUNCTION calc_peaked_arrhenius_function
+#endif
 
   ! ======================================================================================================= !
   !>

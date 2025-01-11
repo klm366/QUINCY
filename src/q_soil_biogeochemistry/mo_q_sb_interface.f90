@@ -393,27 +393,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
 
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_decomposition              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_depolymerisation           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_mic_uptake                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_plant_uptake               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_sorption                   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_desorption                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_hsc                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_nitrification              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_denitrification            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rtm_gasdiffusion               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_decomposition              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_depolymerisation           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_mic_uptake                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_plant_uptake               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_sorption                   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_desorption                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_hsc                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_nitrification              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, rmm_gasdiffusion               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, anaerobic_volume_fraction_sl   , weighted_by_fract)
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_sb_rate_modifier
@@ -459,14 +438,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_,  emission_n2_n15                 , weighted_by_fract)
     ! SB_ 3D
     dsl4jsb_Aggregate_onChunk(SB_,  het_respiration                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration_c13             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration_c14             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_no3_sl             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_po4_sl             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -554,19 +526,9 @@ CONTAINS
 
     ! fluxes
     dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c13          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c14          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c13          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_respiration_c14          , weighted_by_fract)
     ! 2D
     dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
-    ! pools
-    dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, total_flux_nitrogen          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, total_flux_phosphorus        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon13          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon14          , weighted_by_fract)
+    ! 3D
     ! 3D
     dsl4jsb_Aggregate_onChunk(SB_, noy                          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, noy_n15                      , weighted_by_fract)
@@ -579,22 +541,10 @@ CONTAINS
     ! pools
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_n              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_p              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c13            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c14            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_n15            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_c      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_n      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_p      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_c13    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_c14    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_n15    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_c    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_n    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_p    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_c13  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_c14  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_n15  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_woody_litter_c       , weighted_by_fract)
 
     ! VEG_ fluxes
@@ -634,18 +584,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
 
-    dsl4jsb_Aggregate_onChunk(SB_, microbial_cue_eff_tmic_mavg    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, microbial_nue_eff_tmic_mavg    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, microbial_pue_eff_tmic_mavg    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_export_c_tmyc_mavg_sl      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_export_n_tmyc_mavg_sl      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_export_n_tlabile_mavg_sl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, myc_export_p_tlabile_mavg_sl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, dom_cn_mavg                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, dom_cp_mavg                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_c_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_n_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_p_mavg        , weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_c        , weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_n        , weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_p        , weighted_by_fract)
