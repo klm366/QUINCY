@@ -39,7 +39,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_glacier
     INTEGER                        :: enforce_water_budget !< Logging level of water balance violations (global default)
                                                            !    ignore (0=WB_IGNORE):   one-line warning,
-                                                           !    logging (1=WB_LOGGING): detailed output, 
+                                                           !    logging (1=WB_LOGGING): detailed output,
                                                            !    error (2=WB_ERROR):     detailed output and stop model
 CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)

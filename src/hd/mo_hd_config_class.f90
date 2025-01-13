@@ -32,7 +32,7 @@ MODULE mo_hd_config_class
      INTEGER                     :: enforce_water_budget    !< Logging level of water balance violations for the HD process; overwrites
                                                             !  global setting from model%config (see mo_jsb_config_class:t_jsb_model_config)
                                                             !    ignore (0=WB_IGNORE):   one-line warning,
-                                                            !    logging (1=WB_LOGGING): detailed output, 
+                                                            !    logging (1=WB_LOGGING): detailed output,
                                                             !    error (2=WB_ERROR):     detailed output and stop model
      CHARACTER(len=32)           :: routing_scheme          !< river_routing_scheme: full / weighted_to_coast / zero
      CHARACTER(len=filename_max) :: fract_filename          !< file name with fractions (land, ocean, etc)
