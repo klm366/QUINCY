@@ -60,8 +60,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
-    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
     REAL(wp)                          :: dtime                  !< timestep length
+
+    INTEGER  :: lctlib_phenology_type
+    REAL(wp) :: lctlib_beta_soil_flush, lctlib_cn_leaf, lctlib_np_leaf, lctlib_gdd_req_max, lctlib_k_gdd_dormance, &
+      &         lctlib_beta_soil_senescence, lctlib_t_air_senescence, lctlib_min_leaf_age
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_q_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -130,34 +135,49 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)        ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 
+    lctlib_phenology_type = dsl4jsb_Lctlib_param(phenology_type)
+    lctlib_beta_soil_flush = dsl4jsb_Lctlib_param(beta_soil_flush)
+    lctlib_cn_leaf = dsl4jsb_Lctlib_param(cn_leaf)
+    lctlib_np_leaf = dsl4jsb_Lctlib_param(np_leaf)
+    lctlib_gdd_req_max = dsl4jsb_Lctlib_param(gdd_req_max)
+    lctlib_k_gdd_dormance = dsl4jsb_Lctlib_param(k_gdd_dormance)
+    lctlib_beta_soil_senescence = dsl4jsb_Lctlib_param(beta_soil_senescence)
+    lctlib_t_air_senescence = dsl4jsb_Lctlib_param(t_air_senescence)
+    lctlib_min_leaf_age = dsl4jsb_Lctlib_param(min_leaf_age)
+
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !>
-    CALL calc_phenology(                     &
-      & dtime                              , &
-      & lctlib%phenology_type              , &  ! lctlib
-      & lctlib%beta_soil_flush             , &
-      & lctlib%cn_leaf                     , &
-      & lctlib%np_leaf                     , &
-      & lctlib%gdd_req_max                 , &
-      & lctlib%k_gdd_dormance              , &
-      & lctlib%beta_soil_senescence        , &
-      & lctlib%t_air_senescence            , &
-      & lctlib%min_leaf_age                , &  ! lctlib
-      & t_air(:)                           , &  ! in
-      & beta_soil_gs_tphen_mavg(:)         , &
-      & t_air_tphen_mavg(:)                , &
-      & t_soil_srf_tphen_mavg(:)           , &
-      & t_air_week_mavg(:)                 , &
-      & t_air_month_mavg(:)                , &
-      & mean_leaf_age(:)                   , &
-      & gpp_tlabile_mavg(:)                , &
-      & maint_respiration_tlabile_mavg(:)  , &  ! in
-      & growing_season(:)                  , &  ! inout
-      & growth_req_n_tlabile_mavg(:)       , &
-      & growth_req_p_tlabile_mavg(:)       , &
-      & nd_dormance(:)                     , &
-      & gdd(:)                             , &
-      & root_phenology_type(:)             )    ! inout
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      CALL calc_phenology(                      &
+        & dtime                               , &
+        & lctlib_phenology_type               , &  ! lctlib
+        & lctlib_beta_soil_flush              , &
+        & lctlib_cn_leaf                      , &
+        & lctlib_np_leaf                      , &
+        & lctlib_gdd_req_max                  , &
+        & lctlib_k_gdd_dormance               , &
+        & lctlib_beta_soil_senescence         , &
+        & lctlib_t_air_senescence             , &
+        & lctlib_min_leaf_age                 , &  ! lctlib
+        & t_air(ic)                           , &  ! in
+        & beta_soil_gs_tphen_mavg(ic)         , &
+        & t_air_tphen_mavg(ic)                , &
+        & t_soil_srf_tphen_mavg(ic)           , &
+        & t_air_week_mavg(ic)                 , &
+        & t_air_month_mavg(ic)                , &
+        & mean_leaf_age(ic)                   , &
+        & gpp_tlabile_mavg(ic)                , &
+        & maint_respiration_tlabile_mavg(ic)  , &  ! in
+        & growing_season(ic)                  , &  ! inout
+        & growth_req_n_tlabile_mavg(ic)       , &
+        & growth_req_p_tlabile_mavg(ic)       , &
+        & nd_dormance(ic)                     , &
+        & gdd(ic)                             , &
+        & root_phenology_type(ic)               )  ! inout
+    END DO
+    !$ACC END PARALLEL LOOP
+
   END SUBROUTINE update_q_phenology
 
   ! ======================================================================================================= !
@@ -189,6 +209,9 @@ CONTAINS
     & nd_dormance                     , &
     & gdd                             , &
     & root_phenology_type)
+
+    !$ACC ROUTINE SEQ
+
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero

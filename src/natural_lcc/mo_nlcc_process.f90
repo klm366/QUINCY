@@ -56,9 +56,9 @@ CONTAINS
     LOGICAL, INTENT(in) :: new_month ! firest time step in a month
     LOGICAL, INTENT(in) :: new_year ! first time step in a year
     REAL(wp), INTENT(in) :: delta_time ! time step length [s]
+    REAL(wp), INTENT(in) :: seconds_day ! lenght of a day [s]
+    REAL(wp), INTENT(in) :: seconds_month ! length of the previous month [s]
     REAL(wp), INTENT(in) :: t_air ! air temperature of lowest atmosphere level [K]
-    REAL(wp), INTENT(inout) :: seconds_day ! sum of seconds till new_day
-    REAL(wp), INTENT(inout) :: seconds_month ! sum of seconds till new_month
     REAL(wp), INTENT(inout) :: temp_sum_day
     REAL(wp), INTENT(inout) :: temp_sum_month
     REAL(wp), INTENT(inout) :: min_mmtemp_of_yr ! temperature of coldest month of previous year [K]
@@ -109,12 +109,6 @@ CONTAINS
           max_mmtemp_of_yr = -1000._wp
        END IF ! new_year
     END IF ! new_month
-
-    ! count time in seconds that has passed till summing of variables started
-    seconds_day = seconds_day + delta_time
-    IF (new_day) seconds_day = delta_time
-    seconds_month = seconds_month + delta_time
-    IF (new_month) seconds_month = delta_time
 
   END SUBROUTINE calc_climbuf
 

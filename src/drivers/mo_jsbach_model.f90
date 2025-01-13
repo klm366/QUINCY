@@ -470,7 +470,7 @@ CONTAINS
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics
+      CALL update_statistics(lacc=i_am_accel_node)
       ! --
       IF (output_mode%l_nml) THEN
           CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
@@ -626,7 +626,7 @@ CONTAINS
       END DO
 
       ! update accumulated values
-      CALL update_statistics
+      CALL update_statistics(lacc=i_am_accel_node)
 
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep, lacc=i_am_accel_node)
@@ -779,9 +779,12 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
+    USE mo_fortran_tools,             ONLY: assert_acc_host_only
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_quincy_model_config,       ONLY: QCANOPY
+    USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_config(SPQ_)
@@ -822,17 +825,20 @@ CONTAINS
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_config(SPQ_)
 
+    dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
+    dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c13
+    dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c14
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
-
 #endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
+    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
 
+    REAL(wp) :: hlp1   ! Temporary scalar for mixing ratio calculations
     LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
     LOGICAL :: l_first_forcing_file    = .TRUE.
     LOGICAL :: l_shift_one_timestep    = .TRUE.
@@ -920,8 +926,8 @@ CONTAINS
       coslat => grid%coslat
       sinlat => grid%sinlat
 
-      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air_mol)
-      dsl4jsb_Get_var2d_onDomain(A2L_,   co2_air)
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air)
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
@@ -931,6 +937,7 @@ CONTAINS
       ! -> would only be required if no Qair forcing is given and qair needs to be calculated from temperature!
       ALLOCATE(evapo_act2pot(nproma, nblks))
       !$ACC ENTER DATA CREATE(evapo_act2pot)
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_memory(HYDRO_)
@@ -960,6 +967,13 @@ CONTAINS
 
         END IF
       CASE (MODEL_QUINCY)
+
+       ! Allocate and enter data for C13 and C14 based on configuration flags
+        ALLOCATE(co2_air_dc13(nproma, nblks))
+        !$ACC ENTER DATA CREATE(co2_air_dc13)
+        ALLOCATE(co2_air_Dc14(nproma, nblks))
+        !$ACC ENTER DATA CREATE(co2_air_Dc14)
+
         ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
         !       which so far never is the case), this would need to be calculated
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -1043,7 +1057,9 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
           & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
           & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, p_deposition)                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, p_deposition),                                &
+          & co2_air_dc13,                                                              &
+          & co2_air_Dc14                                                               &
           & )
 #endif
       END SELECT
@@ -1062,37 +1078,72 @@ CONTAINS
       ENDDO
       !$ACC END PARALLEL LOOP
 
+      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
+      !> if the ICON-Land QUINCY model is selected to run.
+      !>
+#ifdef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) &
+        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
+#endif
 #ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-#ifdef _OPENACC
-        CALL finish(routine, 'QUINCY standalone not ported to GPU, yet. Stop.')
-#endif
+
+        IF (model%config%qmodel_id /= QCANOPY) THEN
+          CALL assert_acc_host_only( &
+            & 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model, lacc=i_am_accel_node)
+        ENDIF
+
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+        dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            dsl4jsb_var_ptr(A2L_, CO2_mixing_ratio)(ic, iblk) = dsl4jsb_var_ptr(A2L_, CO2_air_mol)(ic, iblk) * 1000000._wp
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
+        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
+        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
+            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+            hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
+            CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+
+        !$ACC WAIT(1)
+        !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
+        DEALLOCATE(co2_air_dc13, co2_air_Dc14)
 
         ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
         global_seconds_day = get_secs_of_day(datetime_new)
-        CALL update_local_time_and_daytime_counter( &
-          &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            CALL update_local_time_and_daytime_counter( &
+              &     global_seconds_day, dtime, lon(ic, iblk), swpar_srf_down(ic, iblk), &
+              &     daytime_counter(ic, iblk), local_time_day_seconds(ic, iblk))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
 
         IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
           dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
 
           ! in most years the spin-up will not be accelerated
-          !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
           DO iblk = 1, nblks
             DO ic = 1, nproma
               slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
@@ -1106,7 +1157,8 @@ CONTAINS
             accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
             accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
             accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
-            !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
+
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
             DO iblk = 1, nblks
               DO ic = 1, nproma
                 CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
@@ -1176,6 +1228,7 @@ CONTAINS
     CALL deallocateDatetime(datetime_old_old)
     CALL deallocateDatetime(datetime_forcing)
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE run_one_timestep

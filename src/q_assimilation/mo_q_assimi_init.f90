@@ -34,17 +34,21 @@ CONTAINS
   !> Run assimilation init
   !>
   SUBROUTINE q_assimi_init(tile)
-    USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_process_class,     ONLY: Q_ASSIMI_
-    USE mo_q_assimi_parameters,   ONLY: t_jmax_opt_min
+    USE mo_jsb_class,           ONLY: Get_model
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_model_class,     ONLY: t_jsb_model
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_process_class,   ONLY: Q_ASSIMI_
+    USE mo_q_assimi_parameters, ONLY: t_jmax_opt_min
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
     dsl4jsb_Use_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER                     :: nblks, ib, nproma, ic
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_assimi_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -75,6 +79,7 @@ CONTAINS
       &                          TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -99,30 +104,40 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soil_gs_tcnl_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, t_jmax_opt)
     ! ----------------------------------------------------------------------------------------------------- !
+    nproma = grid%nproma
+    nblks  = grid%nblks
 
-    beta_air(:,:)                     = 1.0_wp
-    beta_soa(:,:)                     = 1.0_wp
-    soa_tsoa_mavg(:,:)                = -10.0_wp
-    beta_soa_tphen_mavg(:,:)          = 1.0_wp
-    beta_soil_ps(:,:)                 = 1.0_wp
-    beta_soil_gs(:,:)                 = 1.0_wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO ib = 1,nblks
+      DO ic = 1,nproma
 
-    beta_air_daytime(:,:)             = 1.0_wp
-    beta_air_daytime_dacc(:,:)        = 1.0_wp
-    beta_soil_ps_daytime(:,:)         = 1.0_wp
-    beta_soil_ps_daytime_dacc(:,:)    = 1.0_wp
-    beta_soil_gs_daytime(:,:)         = 1.0_wp
-    beta_soil_gs_daytime_dacc(:,:)    = 1.0_wp
+        beta_air(ic,ib)                     = 1.0_wp
+        beta_soa(ic,ib)                     = 1.0_wp
+        soa_tsoa_mavg(ic,ib)                = -10.0_wp
+        beta_soa_tphen_mavg(ic,ib)          = 1.0_wp
+        beta_soil_ps(ic,ib)                 = 1.0_wp
+        beta_soil_gs(ic,ib)                 = 1.0_wp
 
-    beta_air_tfrac_mavg(:,:)          = 1.0_wp
-    beta_air_tcnl_mavg(:,:)           = 1.0_wp
-    beta_soil_ps_tfrac_mavg(:,:)      = 1.0_wp
-    beta_soil_ps_tcnl_mavg(:,:)       = 1.0_wp
-    beta_soil_gs_tphen_mavg(:,:)      = 1.0_wp
-    beta_soil_gs_tfrac_mavg(:,:)      = 1.0_wp
-    beta_soil_gs_tcnl_mavg(:,:)       = 1.0_wp
+        beta_air_daytime(ic,ib)             = 1.0_wp
+        beta_air_daytime_dacc(ic,ib)        = 1.0_wp
+        beta_soil_ps_daytime(ic,ib)         = 1.0_wp
+        beta_soil_ps_daytime_dacc(ic,ib)    = 1.0_wp
+        beta_soil_gs_daytime(ic,ib)         = 1.0_wp
+        beta_soil_gs_daytime_dacc(ic,ib)    = 1.0_wp
 
-    t_jmax_opt(:,:)                   = t_jmax_opt_min
+        beta_air_tfrac_mavg(ic,ib)          = 1.0_wp
+        beta_air_tcnl_mavg(ic,ib)           = 1.0_wp
+        beta_soil_ps_tfrac_mavg(ic,ib)      = 1.0_wp
+        beta_soil_ps_tcnl_mavg(ic,ib)       = 1.0_wp
+        beta_soil_gs_tphen_mavg(ic,ib)      = 1.0_wp
+        beta_soil_gs_tfrac_mavg(ic,ib)      = 1.0_wp
+        beta_soil_gs_tcnl_mavg(ic,ib)       = 1.0_wp
+
+        t_jmax_opt(ic,ib)                   = t_jmax_opt_min
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
   END SUBROUTINE q_assimi_init
 
 #endif

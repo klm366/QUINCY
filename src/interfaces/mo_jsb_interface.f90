@@ -30,7 +30,7 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
   USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
-  USE mo_quincy_model_config, ONLY: QLAND
+  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
@@ -114,6 +114,8 @@ CONTAINS
     & nhx_n15_deposition,     & !< in
     & noy_n15_deposition,     & !< in
     & p_deposition,           & !< in
+    & CO2_mixing_ratio_c13,   &
+    & CO2_mixing_ratio_c14,   &
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
@@ -169,6 +171,8 @@ CONTAINS
       & nhx_n15_deposition(:), &
       & noy_n15_deposition(:), &
       & p_deposition      (:), &
+      & CO2_mixing_ratio_c13 (:), &
+      & CO2_mixing_ratio_c14 (:), &
       ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -305,6 +309,14 @@ CONTAINS
           &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
       ENDIF
 
+#ifdef _OPENACC
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+
+      IF (model%config%qmodel_id /= QCANOPY) THEN
+        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      ENDIF
+#endif
+
       CALL update_atm2land_quincy(                    &
         & tile,                                       &
         & model%options(no_omp_thread),               &
@@ -333,7 +345,9 @@ CONTAINS
         & noy_deposition     = noy_deposition,        &
         & nhx_n15_deposition = nhx_n15_deposition,    &
         & noy_n15_deposition = noy_n15_deposition,    &
-        & p_deposition       = p_deposition          &
+        & p_deposition       = p_deposition,          &
+        & CO2_mixing_ratio_c13 = CO2_mixing_ratio_c13(:), &
+        & CO2_mixing_ratio_c14 = CO2_mixing_ratio_c14(:)  &
         ! For lakes
         ! & drag_wtr           = drag_wtr,              &
         ! & drag_ice           = drag_ice,              &

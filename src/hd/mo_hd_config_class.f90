@@ -58,6 +58,7 @@ CONTAINS
     CLASS(t_hd_config),INTENT(inout) :: config
 
     LOGICAL                       :: active                  !< hd module is active
+    LOGICAL                       :: lrestart_cont           !< continue although HD variables are missing in restart file
     CHARACTER(len=filename_max)   :: ic_filename             !< file with initial conditions
     CHARACTER(len=filename_max)   :: bc_filename             !< file with boundary conditions
     CHARACTER(len=filename_max)   :: fract_filename          !< file with fractions
@@ -70,6 +71,7 @@ CONTAINS
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
+      lrestart_cont,               &
       ic_filename, bc_filename,    &
       fract_filename,              &
       debug_hd,                    &
@@ -89,6 +91,7 @@ CONTAINS
 
     ! Set defaults
     active                  = .FALSE.
+    lrestart_cont           = .FALSE.   ! TRUE: Continue although HD variables are missing in restart file
     ic_filename             = 'ic_land_hd.nc'
     bc_filename             = 'bc_land_hd.nc'
     fract_filename          = 'bc_land_frac.nc'
@@ -107,6 +110,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%fract_filename            = fract_filename

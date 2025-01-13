@@ -35,7 +35,7 @@ MODULE mo_sb_constants
 
   ! temperature and moisture rate modifiers
   REAL(wp), SAVE :: &
-      t_ref_tresponse, &      !< reference temperature for temperature response function [K]
+      temp_ref_tresponse, &   !< reference temperature for temperature response function [K]
       ea_depolymerisation, &  !< activation energy for depolymerisation [J mol-1]
       ea_mic_uptake, &        !< activation energy for microbial uptake [J mol-1]
       ea_sorption, &          !< activation energy for sorption to mineral surfaces [J mol-1]
@@ -52,6 +52,11 @@ MODULE mo_sb_constants
       kmr_sorption, &         !< scaling factor for the sensitivity of surface adsorption to moisture limitation
       kmr_decomposition, &    !< minimum water potential for decomposition
       kmr_asymb_bnf           !< minimum water potential for nfixation
+
+    ! temperature response
+  REAL(wp), SAVE :: &
+    & temp_freeze_thres_bio, &      !< temperature threshold below which biological temperature response function is zero [K]
+    & temp_freeze_window_bio        !< range around 0 degC at which temperature response function declines to zero, i.e., -2 degC to 2 degC [K]
 
   ! transport and sorption parameters
   REAL(wp), SAVE :: &
@@ -343,7 +348,7 @@ CONTAINS
     tau_biomineralisation = 5._wp * one_year * one_day      ! Thum et al. 2019, GMD
 
     ! temperature and moisture rate modifiers
-    t_ref_tresponse       = 293.15_wp                       ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
+    temp_ref_tresponse    = 293.15_wp                       ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
     ea_depolymerisation   = 53000._wp                       ! B. Ahrens, pers. comm. 2016
     ea_mic_uptake         = 47000._wp                       ! B. Ahrens, pers. comm. 2016
     ea_sorption           = 5000._wp                        ! B. Ahrens, pers. comm. 2016
@@ -360,6 +365,10 @@ CONTAINS
     kmr_sorption          = 0.001_wp                        ! Thum et al. 2019, GMD ???
     kmr_decomposition     = -2.0_wp                         ! Thum et al. 2019, GMD
     kmr_asymb_bnf         = -1.5_wp                         ! set to correspond to the permanent wilting point, SZ, 21/01/22
+
+    ! temperature response
+    temp_freeze_thres_bio  = 2.0_wp           !< tuned for biological processes being not/active in frozen soils at about Tzero
+    temp_freeze_window_bio = 4.0_wp           !< tuned for biological processes being not/active in frozen soils at about Tzero
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
     k_diff_org                = 0.15_wp / one_year / one_day                                ! Koven et al. 2013, BG [m2 (kg m-3) s-1]

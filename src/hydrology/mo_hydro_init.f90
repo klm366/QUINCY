@@ -125,7 +125,7 @@ MODULE mo_hydro_init
       & soil_depth       (:,:) => NULL(), & !< soil depth until bedrock
       & vol_porosity     (:,:) => NULL(), & !< volumetric soil porosity
       & hyd_cond_sat     (:,:) => NULL(), & !< saturated hydraulic conductivity
-      & matric_pot       (:,:) => NULL(), & !< Saturated matric potential
+      & matric_pot       (:,:) => NULL(), & !< saturated matric potential
       & bclapp           (:,:) => NULL(), & !< Clapp and Hornberger exponent b
       & pore_size_index  (:,:) => NULL(), & !< pore size distribution index
       & vol_field_cap    (:,:) => NULL(), & !< volumetric soil field capacity
@@ -930,20 +930,19 @@ CONTAINS
 
       !> - Set maximum root zone soil moisture
       !>   _Note1: This corresponds to water content at field capacity.
-      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = &
+      dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = &
         & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth
       !>   _Note2_: Uses [[t_hydro_config:w_soil_limit]] > 0 as upper limit but this is disabled per default.
-        IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
-          & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
+      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
+        dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MIN( &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
       !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth))       &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl))    &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
-
-    END IF ! contains_vegetation
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max))
+    END IF
 
   END SUBROUTINE hydro_init_bc
 
@@ -1137,34 +1136,33 @@ CONTAINS
       !>
       !> - Re-compute maximum root zone moisture based on soil parameters modified by organic fractions
       !>
-      !>   _Note: All plant related computations use weq_rootzone_max reduced by ice and supercooled water content,
+      !>   _Note: All plant related computations use wpi_rootzone_max reduced by ice and supercooled water content,
       !>          which represents the unfrozen part of the soil.
       !>          This assumes that plants retract/extents their roots immediately if the soil freezes/thaws.
       !
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max), 2)
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max), 2)
           CALL get_amount_in_rootzone( &
           & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max) (:,  i)  )
+          & dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max) (:,  i)  )
       END DO
-
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max)) ASYNC(1)
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max)) ASYNC(1)
       !$ACC WAIT(1)
       ! -------------------------------------------------------------------------------------------------- !
       !>
       !> - Set maximum root zone moisture to 0.2 for glacier and ocean areas
       !>
-      ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where weq_rootzone_max == 0)
-      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MERGE(       &
-          & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), 0.2_wp, &
-          & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp )
+      ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where wpi_rootzone_max == 0)
+      dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MERGE(       &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), 0.2_wp, &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) > 0._wp )
       ! DOCU not used by default
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
-        & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
+        dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MIN( &
+        & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max)) ASYNC(1)
 
       ! Initialization of relative root zone soil moisture (only water, not ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
@@ -1188,21 +1186,21 @@ CONTAINS
       !$ACC HOST(dsl4jsb_var_ptr(HYDRO_, ice_rootzone))
       !$ACC WAIT(1)
 
-      ! Make sure wtr_rootzone is smaller than weq_rootzone_max - ice_rootzone.
+      ! Make sure wtr_rootzone is smaller than wpi_rootzone_max - ice_rootzone.
       ! Note: this corresponds to the maximum possible amount of liquid water in the root zone.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > &
-        & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
+        & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = MAX(0._wp, &
-        & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
+        & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
       END WHERE
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) ASYNC(1)
 
       ! Initialization of wtr_rootzone_rel
       !   This is re-calculated every time step in [[mo_hydro_interface:update_water_stress]].
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
           &  dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / &
-          & (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
+          & (dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
@@ -1382,13 +1380,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_sanitize_state'
 
-    REAL(wp), PARAMETER :: warn_level_weq_soil_excess = 1.05_wp
+    REAL(wp), PARAMETER :: warn_level_wpi_soil_excess = 1.05_wp
                            !< If water content exceeds field capacity by more than this factor prior
                            !< to sanitization, a warning is issued.
     REAL(wp), PARAMETER :: zfcmin = 1.e-10_wp
                            !< minimum field capacity (or rather epsilon?)
 
-    INTEGER :: maxloc_weq_soil_excess(3)
+    INTEGER :: maxloc_wpi_soil_excess(3)
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     dsl4jsb_Def_memory(HYDRO_) !< memory of `HYDRO_` process
@@ -1422,14 +1420,14 @@ CONTAINS
     IF (tile%contains_soil) THEN
 
       ! Issue a warning if current soil water anywherer exceeds saturation capacity by more than a factor of
-      ! `warn_level_weq_soil_excess`.
-      IF (ANY(wtr_soil_sl(:,:,:) > warn_level_weq_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
-        maxloc_weq_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
-        WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_weq_soil_excess(:), &
+      ! `warn_level_wpi_soil_excess`.
+      IF (ANY(wtr_soil_sl(:,:,:) > warn_level_wpi_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
+        maxloc_wpi_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
+        WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_wpi_soil_excess(:), &
           & ': wtr_soil_sl = ',                                                                                 &
-          & wtr_soil_sl    (maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3)),   &
+          & wtr_soil_sl    (maxloc_wpi_soil_excess(1), maxloc_wpi_soil_excess(2), maxloc_wpi_soil_excess(3)),   &
           & ', wtr_soil_sat_sl = ',                                                                             &
-          & wtr_soil_sat_sl(maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3))
+          & wtr_soil_sat_sl(maxloc_wpi_soil_excess(1), maxloc_wpi_soil_excess(2), maxloc_wpi_soil_excess(3))
         CALL warning(routine, message_text)
       END IF
       ! Limit soil water and soil ice to saturation amounts.

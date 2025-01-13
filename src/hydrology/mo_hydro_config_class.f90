@@ -95,7 +95,7 @@ CONTAINS
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
@@ -106,6 +106,7 @@ CONTAINS
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
+      & lrestart_cont,              &
       & ic_filename,                &
       & bc_filename,                &
       & bc_sso_filename,            &
@@ -148,6 +149,7 @@ CONTAINS
     CASE (MODEL_JSBACH)
       active                 = .TRUE.
     END SELECT
+    lrestart_cont          = .FALSE.   ! TRUE: Continue although HYDRO variables are missing in restart file
     bc_filename            = 'bc_land_hydro.nc'
     ic_filename            = 'ic_land_hydro.nc'
     bc_sso_filename        = 'bc_land_sso.nc'
@@ -178,6 +180,7 @@ CONTAINS
 
     ! add values form namelist to config, and write messages to logfile
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%bc_sso_filename     = bc_sso_filename

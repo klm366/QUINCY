@@ -30,6 +30,7 @@ MODULE mo_jsb_model_class
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
+  !USE mo_util,              ONLY: report_memory_usage, toupper
 
   IMPLICIT NONE
   PRIVATE
@@ -288,6 +289,7 @@ CONTAINS
           IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_start(timer_process_msg(this%id))
           CALL this%Process_message(msg, l_debug)
           IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_stop(timer_process_msg(this%id))
+          !CALL report_memory_usage(toupper(Get_process_name(task%process_id))//': '//task%name)
         END IF
       END ASSOCIATE
 

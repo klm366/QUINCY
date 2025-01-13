@@ -65,16 +65,19 @@ CONTAINS
   SUBROUTINE q_pheno_init_bc(tile)
 
     ! see also the USE statements in the module header
-    USE mo_q_pheno_constants,     ONLY: ievergreen
-    USE mo_jsb_impl_constants,    ONLY: false, true
-
+    USE mo_q_pheno_constants,   ONLY: ievergreen
+    USE mo_jsb_impl_constants,  ONLY: false, true
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),       POINTER  :: model
-
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
+    INTEGER                     :: nblks, ib, nproma, ic
+    REAL(wp)                    :: config_lai_max, lctlib_phenology_type, lctlib_lai_max
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_pheno_init_bc'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -92,6 +95,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model => get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
     ! Get process config
     dsl4jsb_Get_config(Q_PHENO_)
     ! Get process memories
@@ -100,32 +104,52 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_PHENO_, growing_season)
     dsl4jsb_Get_var2D_onDomain(Q_PHENO_, lai_max)
 
+    nproma = grid%nproma
+    nblks  = grid%nblks
+
     !> 1.0 init
     !>
     ! init growing_season and lai_max
-    ! in case the confgi%lai_max value is less than zero, the lctlib value is used
-    !
-    ! work with lctlib only if the present tile is a pft
     IF (tile%lcts(1)%lib_id /= 0) THEN
-      IF (dsl4jsb_Config(Q_PHENO_)%lai_max > 0.0_wp) THEN ! value is set in config script
-        ! use configuration script value but constrain to plausbile values between 0.1 and 10
-        lai_max(:,:) = MAX(0.1_wp, MIN(10.0_wp, dsl4jsb_Config(Q_PHENO_)%lai_max))
-      ELSE ! use lctlib parameter if config%lai_max was not set (i.e., -1.0)
-        lai_max(:,:) = dsl4jsb_Lctlib_param(lai_max)
-      END IF
+      ! work with lctlib only if the present tile is a pft
 
-      ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
-      ! NOTE: false and true are of type REAL(wp)
-      IF(dsl4jsb_Lctlib_param(phenology_type) == ievergreen) THEN
-        growing_season(:,:) = true
-      ELSE
-        growing_season(:,:) = false
-      ENDIF
+      config_lai_max        = dsl4jsb_Config(Q_PHENO_)%lai_max
+      lctlib_lai_max        = dsl4jsb_Lctlib_param(lai_max)
+      lctlib_phenology_type = dsl4jsb_Lctlib_param(phenology_type)
+
+      ! in case the confgi%lai_max value is less than zero, the lctlib value is used
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO ib = 1,nblks
+        DO ic = 1,nproma
+          IF (config_lai_max > 0.0_wp) THEN ! value is set in config script
+            ! use configuration script value but constrain to plausbile values between 0.1 and 10
+            lai_max(ic,ib) = MAX(0.1_wp, MIN(10.0_wp, config_lai_max))
+          ELSE ! use lctlib parameter if config%lai_max was not set (i.e., -1.0)
+            lai_max(ic,ib) = lctlib_lai_max
+          END IF
+
+          ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
+          ! NOTE: false and true are of type REAL(wp)
+          IF (lctlib_phenology_type == ievergreen) THEN
+            growing_season(ic,ib) = true
+          ELSE
+            growing_season(ic,ib) = false
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       ! default for non-PFT tiles
-      lai_max(:,:)        = 1.0_wp
-      growing_season(:,:) = false
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO ib = 1,nblks
+        DO ic = 1,nproma
+          lai_max(ic,ib)        = 1.0_wp
+          growing_season(ic,ib) = false
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDIF
+
   END SUBROUTINE q_pheno_init_bc
 
 #endif

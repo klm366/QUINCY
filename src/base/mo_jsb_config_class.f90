@@ -50,6 +50,8 @@ CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - sel
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
+    LOGICAL                        :: read_deposition       !< If p and n deposition forcing should be read
+    LOGICAL                        :: read_c_isotopes       !< If c isotopes forcing should be read
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
     LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
@@ -83,6 +85,7 @@ CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - sel
   ! Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
+    LOGICAL :: lrestart_cont                    ! TRUE: Continue although process variables are missing in the restart file
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
@@ -141,6 +144,8 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
 #ifndef __NO_QUINCY__
+    LOGICAL :: read_deposition            !< read p and n deposition forcing
+    LOGICAL :: read_c_isotopes            !< read c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_phosphorus         !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_carbon13           !< element variables in bgc_material (infrastructure)
@@ -169,6 +174,8 @@ CONTAINS
       output_tiles, &
       relative_fractions_in_file, &
 #ifndef __NO_QUINCY__
+      read_deposition, &
+      read_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
       include_carbon13, &
@@ -218,6 +225,8 @@ CONTAINS
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
+    read_deposition            = .TRUE.
+    read_c_isotopes            = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
     include_carbon13           = .TRUE.
@@ -279,6 +288,8 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
+    model_config%read_deposition            = read_deposition
+    model_config%read_c_isotopes            = read_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen
     model_config%include_phosphorus         = include_phosphorus
