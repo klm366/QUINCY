@@ -482,6 +482,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  asymb_n_fixation_n15            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  k_bioturb                       , weighted_by_fract)
+	dsl4jsb_Aggregate_onChunk(SB_,  dom_cn_mavg                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  dom_cp_mavg                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  fact_n_status_mic_c_growth      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  fact_p_status_mic_c_growth      , weighted_by_fract)
+
     ! SB_BGCM_ 3D
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_n        , weighted_by_fract)
