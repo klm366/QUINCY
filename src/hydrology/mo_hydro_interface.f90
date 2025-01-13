@@ -2073,7 +2073,7 @@ CONTAINS
         DO ic=1,nc
           q_air              = q_bcoef(ic)                              !< Old moisture at lowest atmospheric level
           heat_tcoef         = ch(ic)                                   !< Transfer coefficient
-          q_air_eff          = q_effective( 0._wp, q_air, 1._wp, 0._wp) !< 
+          q_air_eff          = q_effective( 0._wp, q_air, 1._wp, 0._wp) !<
           qsat_srf_eff       = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))
           evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  !< Evapotranspiration
           evapotrans(ic)     = evapotrans_lnd(ic)                       !< Evapotranspiration
@@ -2529,13 +2529,13 @@ CONTAINS
 
   END SUBROUTINE aggregate_snow_and_wet_fraction
 
-  !> ensure the amounts of incomming (from the atmosphere, rain and snow) 
+  !> ensure the amounts of incomming (from the atmosphere, rain and snow)
   !>   and outgoing water (drainage, evapotranspiration, runoff) is consistent
-  !> 
+  !>
   !> also includes skin, soil and surface water
-  !> 
+  !>
   !> output is only diagnostic and error values
-  !> 
+  !>
   SUBROUTINE update_water_balance( tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -2700,7 +2700,7 @@ CONTAINS
   END SUBROUTINE update_water_balance
 
   !> Does not aggregate the variables but calls water balance check on each tile
-  !> 
+  !>
   SUBROUTINE aggregate_water_balance(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

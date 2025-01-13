@@ -831,7 +831,7 @@ CONTAINS
       !>     - Volumetric field capacity
       dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
       !>     - Get water content at field capacity by multiplying volumetric field capacity with
-      !>       soil layer thicknesses  
+      !>       soil layer thicknesses
       !>       _Note_: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
@@ -841,7 +841,7 @@ CONTAINS
       ! TODO: Do we need this for bare soil tiles?
       dsl4jsb_var_ptr(HYDRO_, vol_p_wilt) = hydro_init_vars%vol_p_wilt
       !>     - Get permanent wilting point by multiplying volumetric permanent wilting point
-      !>       with soil layer thicknesses  
+      !>       with soil layer thicknesses
       !>       _Note_: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
@@ -879,7 +879,7 @@ CONTAINS
       END DO
 
       !>     - Get water holding capacity (water content at saturation) by multiplying volumetric porosity
-      !>       with soil layer thicknesses  
+      !>       with soil layer thicknesses
       !>       _Note_: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
@@ -1049,7 +1049,7 @@ CONTAINS
       !>
       !> - If [[t_hydro_config:l_organic]] == .TRUE. but [[t_hydro_config:l_socmap]] == .FALSE., initialize
       !>   organic soil layer fractions `fract_org_sl` on vegetated tiles in upper layer from forest fraction
-      !>   and set them to zero elsewhere.  
+      !>   and set them to zero elsewhere.
       !>   _Note_: At the moment, `fract_org_sl` doesn't change over time, but it could.
       !>
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
