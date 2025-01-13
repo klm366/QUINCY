@@ -36,6 +36,7 @@ MODULE mo_jsb_model_class
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
+  PUBLIC :: MODEL_JSBACH, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -90,7 +91,9 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
-    PROCEDURE :: Associate_var_pointers
+#ifndef __NO_QUINCY__
+    PROCEDURE :: Write_back_to_bgcms
+#endif
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -106,6 +109,15 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+
+  !>model schemes
+  !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
+  !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
+  ENUM, BIND(C)
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_QUINCY
+  END ENUM
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
@@ -214,13 +226,18 @@ CONTAINS
 
   END SUBROUTINE Configure_model_processes
 
+  ! ======================================================================================================= !
+  !>
+  !> Checks if there is an active process that changes fractions on this tile
+  !>
   FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_model), INTENT(inout) :: this                 !< tile to check
     LOGICAL                           :: l_fractions_change
-
+      !< true if there is any active land cover change (lcc) process
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: iproc
-
+    ! -------------------------------------------------------------------------------------------------- !
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
@@ -235,36 +252,6 @@ CONTAINS
 
   END FUNCTION Any_process_changes_fractions
 
-!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
-!!$
-!!$    CLASS(t_jsb_model), INTENT(in) :: this
-!!$    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
-!!$
-!!$    INTEGER :: iproc
-!!$
-!!$    ALLOCATE(return_ptr(SIZE(this%processes)))
-!!$    DO iproc=1,SIZE(this%processes)
-!!$      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-!!$        return_ptr(iproc)%p => this%processes(iproc)%p%config
-!!$      ELSE
-!!$        return_ptr(iproc)%p => NULL()
-!!$      END IF
-!!$    END DO
-!!$
-!!$  END FUNCTION Get_process_configs
-  !
-  ! State machine engine
-  !
-!!$  ! Just a stub to the real engine hsm%Process_message
-!!$  SUBROUTINE Process_task(this, task)
-!!$
-!!$    CLASS(t_jsb_model),    INTENT(inout) :: this
-!!$    CLASS(t_jsb_task_msg), INTENT(in)    :: msg
-!!$
-!!$    CALL this%Process_message(msg)
-!!$
-!!$  END SUBROUTINE Process_task
-!!$
 
   SUBROUTINE Run_tasks(this, debug)
 
@@ -288,6 +275,7 @@ CONTAINS
 
     msg => t_Message('', this%Get_action('INTEGRATE'))
 
+    ! loop over all tasks in the task queue
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
 
@@ -303,6 +291,7 @@ CONTAINS
         END IF
       END ASSOCIATE
 
+      ! go to the next task
       current_queue_element => current_queue_element%next
 
     END DO
@@ -451,7 +440,8 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc, &
+    &                    nsoil_e, nsoil_w, nsnow_e)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -465,6 +455,9 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
     INTEGER,          OPTIONAL,          INTENT(in)    :: nc
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_e
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_w
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsnow_e
 
     INTEGER :: no_omp_thread
 
@@ -478,6 +471,11 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
     IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
+    ! Set number of soil and snow layers to options on all threads
+    ! Note: The assign_if_present interface does not support assigning a value to a vector.
+    IF (PRESENT(nsoil_e)) this%options(:)%nsoil_e = nsoil_e
+    IF (PRESENT(nsoil_w)) this%options(:)%nsoil_w = nsoil_w
+    IF (PRESENT(nsnow_e)) this%options(:)%nsnow_e = nsnow_e
 
   END SUBROUTINE Set_options
 
@@ -517,72 +515,62 @@ CONTAINS
       jsbach_subsets(this%id)%sub(no_omp_thread)%ice  =  0
       jsbach_subsets(this%id)%sub(no_omp_thread)%nb   =  grid%nblks
       jsbach_subsets(this%id)%sub(no_omp_thread)%nc   =  grid%nproma
-    END SELECT 
-    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type   
+    END SELECT
+    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type
 
   END SUBROUTINE Set_subset
 
-  SUBROUTINE Associate_var_pointers(this, ic_start, ic_end, iblk_start, iblk_end)
-
+#ifndef __NO_QUINCY__
+  ! ====================================================================================================== !
+  !>
+  !> Write all values from matrices back to the bgcms for all tiles that have a bgcm store
+  !>
+  SUBROUTINE Write_back_to_bgcms(this)
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+    USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
     USE mo_jsb_subset,        ONLY: ON_DOMAIN, ON_CHUNK
     USE mo_jsb_process_class, ONLY: INHERIT_
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model), INTENT(inout) :: this
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_end
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_end
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-
-    INTEGER :: iproc, ivar, itype, no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Associate_var_pointers'
-
-    no_omp_thread = Get_omp_thread()
-
-    IF (iblk_start == iblk_end) THEN
-      itype = ON_CHUNK
-    ELSE
-      itype = ON_DOMAIN
+    TYPE(t_jsb_grid),  POINTER          :: grid       ! Horizontal grid
+    INTEGER                             :: startblk, endblk, iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL this%Reset()
+    CALL this%Reset_tiles()
     CALL this%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
+    grid  => get_grid(this%grid_id)
+    startblk = grid%Get_blk_start()
+    endblk   = grid%Get_blk_end()
+
     DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL this%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      DO iproc=1,SIZE(tile%mem)
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
-        IF (tile%process_action(iproc) == INHERIT_) CYCLE
-        DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
-          CLASS IS (t_jsb_var_real2d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          CLASS IS (t_jsb_var_real3d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END SELECT
-        END DO
-
-      END DO
+      IF (ASSOCIATED(tile%bgcm_store)) THEN
+        DO iblk = startblk, endblk
+          ! index of gridcell at start of the chunk
+          ics = grid%Get_col_start(iblk)
+          ! index of gridcell at end of the chunk
+          ice = grid%Get_col_end(iblk)
+          CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, ics, ice, iblk)
+        ENDDO
+      ENDIF
 
       CALL this%Goto_next_tile(tile)
-
     END DO
 
-  END SUBROUTINE Associate_var_pointers
+  END SUBROUTINE Write_back_to_bgcms
+#endif
 
-    !>
+  ! ====================================================================================================== !
+  !>
   !! Destructor method for model instance.
   !!
   !! Subroutine to delete model instance from memory.

@@ -52,7 +52,7 @@ MODULE mo_hd_memory_class
       nres_overlflow  , &  !< number of overland flow reservoirs
       nres_baseflow   , &  !< number of baseflow reservoirs
       nres_riverflow  , &  !< number of riverflow reservoirs
-      nsplit          , &  !< number of channels river splits into 
+      nsplit          , &  !< number of channels river splits into
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
@@ -294,7 +294,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
@@ -307,7 +306,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp )
     ENDIF
-#endif
 
   END SUBROUTINE Init_hd_memory
 

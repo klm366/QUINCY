@@ -23,7 +23,7 @@ MODULE mo_seb_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -47,7 +47,7 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks, global_seb_diagnostics
+  PUBLIC :: Register_seb_tasks, global_seb_diagnostics, seb_check_temperature_range
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -277,7 +277,8 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !> Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
+  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.
@@ -301,6 +302,8 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: snowmelt
+    dsl4jsb_Real2D_onChunk :: pond_freeze
+    dsl4jsb_Real2D_onChunk :: pond_melt
     dsl4jsb_Real2D_onChunk :: hcap_grnd_old
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
@@ -317,8 +320,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & heat_cap
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    INTEGER                    :: nsnow !,  nsoil
+    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    INTEGER                    :: nsnow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
@@ -328,6 +331,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsnow = options%nsnow_e
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -344,11 +348,6 @@ CONTAINS
 
     soil_e => Get_vgrid('soil_depth_energy')
     dz1 = soil_e%dz(1)
-    !nsoil = soil_e%n_levels
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      snow_e => Get_vgrid('snow_depth_energy')
-      nsnow = snow_e%n_levels
-    END IF
 
     IF (tile%contains_lake) THEN
       ! No correction for lake tile
@@ -365,6 +364,8 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl) ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl)   ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)       ! in
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
@@ -372,22 +373,26 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
 
-          ! Correction for snowmelt
-          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic) * dtime * alf / hcap_grnd_old(ic)
+          ! Correction for snowmelt and pond melting/freezing
+          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          IF (.NOT. tile%is_glacier) THEN
+            t_unfilt(ic) = t_unfilt(ic) - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            t_unfilt(ic) = t_unfilt(ic) + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
-          IF (l_freeze_config .AND. .NOT. tile%is_glacier) THEN
-            heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
-            IF (l_snow_config) THEN
-              IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-                ! Correction for melting of ice in soil layers
-                t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-              END IF
-            ELSE   ! No snow layers present
-              IF (heat_cap(ic) > 0._wp) THEN
-                ! Correction for melting of ice in soil layers
-                t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+            IF (l_freeze_config) THEN
+              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+              IF (l_snow_config) THEN
+                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
+                  ! Correction for melting of ice in soil layers
+                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              ELSE   ! No snow layers present
+                IF (heat_cap(ic) > 0._wp) THEN
+                  ! Correction for melting of ice in soil layers
+                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
               END IF
             END IF
           END IF
@@ -607,20 +612,80 @@ CONTAINS
   END SUBROUTINE aggregate_surface_fluxes
 
   !-----------------------------------------------------------------------------------------------------
+  !> Make sure temperature is within a realistic range and finish the simulation with a meaningfull
+  !! message if not.
+  !!
+  !! The routine is called at the beginning and at the end of each time step.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE seb_check_temperature_range(model_id, no_omp_thread)
+
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_parallel,        ONLY: Get_omp_thread
+
+    ! Argument
+    INTEGER, INTENT(in) :: model_id, no_omp_thread
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER           :: model
+    TYPE(t_jsb_grid),  POINTER           :: grid
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+
+    dsl4jsb_Def_memory(SEB_)
+
+    INTEGER                       :: iblk, ic
+    REAL(wp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
+
+    dsl4jsb_Real2D_onDomain :: t
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(:,:)
+    lon   => grid%lon(:,:)
+
+    !vg no_omp_thread = Get_omp_thread()
+
+    CALL model%Get_top_tile(tile)
+    DO WHILE (ASSOCIATED(tile))
+      IF (tile%visited(no_omp_thread) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      dsl4jsb_Get_memory(SEB_)
+      dsl4jsb_Get_var2D_onDomain(SEB_, t)
+
+      tile_fract => tile%fract(:,:)
+      IF (ANY(t(:,:) < 50._wp .OR. t(:,:) > 400._wp)) THEN
+        DO iblk = 1, grid%nblks
+          DO ic = 1, grid%nproma
+            IF ((t(ic,iblk) < 50._wp .OR. t(ic,iblk) > 400._wp) .AND. tile_fract(ic,iblk) > 0._wp) THEN
+              WRITE (message_text,*) 'Temperature out of bound: ', t(ic,iblk), 'K',             NEW_LINE('a'), &
+                & 'on ',TRIM(tile%name),' tile at', lat(ic,iblk), 'N and ', lon(ic,iblk), 'E',  NEW_LINE('a'), &
+                & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:', tile_fract(ic,iblk),'):',          NEW_LINE('a'), &
+                & 'One thing to check: consistency of land-sea mask and forcing.'
+              CALL finish(TRIM(routine), TRIM(message_text))
+            END IF
+          END DO
+        END DO
+      END IF
+
+      CALL model%Goto_next_tile(tile)
+    ENDDO
+
+  END SUBROUTINE seb_check_temperature_range
+
+  !-----------------------------------------------------------------------------------------------------
   !> Calculations of diagnostic global land mean output
   !!
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_seb_diagnostics(tile)
-
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
 
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
@@ -688,7 +753,6 @@ CONTAINS
       DEALLOCATE (scaling, in_domain)
     END IF
 
-#endif
   END SUBROUTINE global_seb_diagnostics
 
   !

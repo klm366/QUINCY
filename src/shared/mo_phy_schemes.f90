@@ -1,4 +1,4 @@
-!> Contains some functions for physcial schemes
+!> Routines for physical schemes
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,8 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!>#### Contains some routines for physical schemes
 !>
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
@@ -26,6 +28,7 @@ MODULE mo_phy_schemes
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
+    & calc_peaked_arrhenius_function, &
     & sfc_exchange_coefficients
     ! Note: nvhpc doesn't support function pointers
     ! & register_exchange_coefficients_procedure, exchange_coefficients, registered_exchange_coefficients_procedure
@@ -172,7 +175,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
-  !! 
+  !!
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION q_effective(qsat, qair, fsat, fair)
@@ -191,7 +194,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION surface_dry_static_energy
-  !! 
+  !!
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf, cpd_or_cvd, jsb_standalone)
@@ -222,7 +225,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION thermal_radiation
-  !! 
+  !!
   !! out: thermal_radiation
   !-----------------------------------------------------------------------------------------------------
 #ifndef _OPENACC
@@ -243,14 +246,14 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION lwnet_from_lwdown
-  !! 
+  !!
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
     !$ACC ROUTINE SEQ
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 
@@ -264,7 +267,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION heat_transfer_coef
-  !! 
+  !!
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) FUNCTION heat_transfer_coef(drag, steplen, alpha)

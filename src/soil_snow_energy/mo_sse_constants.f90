@@ -14,8 +14,8 @@
 MODULE mo_sse_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
-  USE mo_jsb_physical_constants, ONLY: ks, ki, clw, cs, ci, rhoh2o, dens_snow, dens_ice
+  USE mo_kind,                    ONLY: wp
+  USE mo_jsb_physical_constants,  ONLY: ks, ki, clw, cs, ci, rhoh2o, dens_snow, dens_ice
 
   IMPLICIT NONE
   PUBLIC
@@ -51,6 +51,8 @@ MODULE mo_sse_constants
     & hcond_snow         = ks,              & !< =0.31 Thermal conductivity of snow                           [W/m/K]
     ! @todo: hcond_snow_min is 0.1 in jsbach3
     & hcond_snow_min     = 0.03_wp            !< Minimum thermal conductivity fo snow (fresh snow)            [W/m/K]
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 #endif
 END MODULE mo_sse_constants

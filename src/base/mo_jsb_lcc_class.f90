@@ -23,20 +23,26 @@ MODULE mo_jsb_lcc_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
-    
+  USE mo_jsb_math_constants,  ONLY: one_year
+
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: min_cf_change, min_tolerated_fract_mismatch, min_tolerated_cf_mismatch,       &
-    & t_jsb_lcc_proc, t_jsb_lcc_proc_p, t_jsb_lcc_var, t_jsb_lcc_var_p,                   &
-    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk, &
+  PUBLIC :: min_daily_cf_change, min_annual_cf_change, min_tolerated_fract_mismatch, min_tolerated_cf_mismatch,       &
+    & t_jsb_lcc_proc, t_jsb_lcc_proc_p, t_jsb_lcc_var, t_jsb_lcc_var_p,                                               &
+    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk,                             &
     & copy_from_active_to_passive_var_onChunk
 
-  REAL(wp), PARAMETER :: min_cf_change = 1.0E-16_wp
-  REAL(wp), PARAMETER :: min_tolerated_fract_mismatch = 1.0E-14_wp
+  REAL(wp), PARAMETER :: min_daily_cf_change = 1.0E-16_wp
+    !< min change in cover fractions for daily lcc, i.e. if the change is smaller than this threshold the lcc is not applied
+  REAL(wp), PARAMETER :: min_annual_cf_change = min_daily_cf_change * one_year
+    !< min change in cover fractions for annual lcc, i.e. if the change is smaller than this threshold the lcc is not applied
   REAL(wp), PARAMETER :: min_tolerated_cf_mismatch = 1.0E-11_wp
+    !< min mismatch in cover fractions which is tolerated when comparing different cover fraction sums
+  REAL(wp), PARAMETER :: min_tolerated_fract_mismatch = 1.0E-14_wp
+    !< minimum tolearated mismatch in forest age fraction sums (only used when running with FAGE)
 
-  !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation 
+  !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation
   TYPE :: t_jsb_lcc_var
     CHARACTER(len=VARNAME_LEN)    :: name             !< Name of the variable
 !    INTEGER :: type_id = -1     !< one of the CQ_TYPEs ( mo_jsb_cqt_class ) -- JN-TODO: required -> also in encompassing type...
@@ -49,26 +55,26 @@ MODULE mo_jsb_lcc_class
 
   !> Type used on lcc processes to collect conserved quantities with active and passive relocations
   TYPE :: t_jsb_lcc_proc
-    CHARACTER(len=:), ALLOCATABLE :: name !< Name of the structure: process + _lcc 
+    CHARACTER(len=:), ALLOCATABLE :: name !< Name of the structure: process + _lcc
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: tile_names(:) !< Names of the tiles involved with this lcc process
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: unique_proc_names_active_vars(:)
         !< Collection of unique names of the processes carrying variables that are actively relocated by this lcc process
-    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: active_vars_names(:) 
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: active_vars_names(:)
         !< List of active var names - same order as other lists for active vars
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: passive_vars_names(:)
         !< List of passive var names - same order as other lists for passive vars
-    INTEGER, ALLOCATABLE :: active_vars_cqt(:)  ! JN-TODO: required? 
-    INTEGER, ALLOCATABLE :: passive_vars_cqt(:) ! JN-TODO: required? 
+    INTEGER, ALLOCATABLE :: active_vars_cqt(:)  ! JN-TODO: required?
+    INTEGER, ALLOCATABLE :: passive_vars_cqt(:) ! JN-TODO: required?
     INTEGER, ALLOCATABLE :: active_vars_process_id(:)  !< id of the process carrying the corresponding active var
     INTEGER, ALLOCATABLE :: passive_vars_process_id(:) !< id of the process carrying the corresponding passive var
     INTEGER :: nr_of_tiles = 0          !< Number of tiles involved with this lcc process
-    INTEGER :: nr_of_procs_with_active_vars = 0      
+    INTEGER :: nr_of_procs_with_active_vars = 0
         !< Number of processes carrying variables that are actively or passively relocated by this lcc process
     INTEGER :: nr_of_active_vars = 0    !< Number of variables with active relocation in the encompassing lcc process
     INTEGER :: nr_of_passive_vars = 0   !< Number of variables with passive relocation in the encompassing lcc process
     TYPE(t_jsb_lcc_var_p), ALLOCATABLE :: active_vars(:)
         !< Collection of lcc var types that are actively relocated for the encompassing lcc process
-    TYPE(t_jsb_lcc_var_p), ALLOCATABLE :: passive_vars(:) 
+    TYPE(t_jsb_lcc_var_p), ALLOCATABLE :: passive_vars(:)
         !< Collection of lcc var types that are passively relocated for the encompassing lcc process
   END TYPE t_jsb_lcc_proc
 
@@ -236,7 +242,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),                   INTENT(INOUT) :: collected_matter(:) 
+    REAL(wp),                   INTENT(INOUT) :: collected_matter(:)
         !< array on which the matter shall be collected
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
         !< lcc structure of the calling lcc process from which the matter is collected
@@ -244,7 +250,7 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
     INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
     INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
-    CHARACTER(VARNAME_LEN),     INTENT(IN)    :: active_var_names(:) 
+    CHARACTER(VARNAME_LEN),     INTENT(IN)    :: active_var_names(:)
         !< active vars from which the matter shall be collected
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_matter_of_active_vars_onChunk'

@@ -15,7 +15,7 @@
 !>#### Contains conserved quantity types (CQTs) and the type for cqt collection (used on tiles)
 !>
 !> NOTE: currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
-!>       these will have to specially be dealt with in the concept and thus need to be 
+!>       these will have to specially be dealt with in the concept and thus need to be
 !>       identified with an onw cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>       Furthermore, integration of pool-structure might need some additional work.
 !>
@@ -23,7 +23,7 @@ MODULE mo_jsb_cqt_class
 #ifndef __NO_JSBACH__
 
   USE mo_util,                ONLY: int2string
-  USE mo_exception,           ONLY: finish  
+  USE mo_exception,           ONLY: finish
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
 
   IMPLICIT NONE
@@ -51,7 +51,7 @@ MODULE mo_jsb_cqt_class
     INTEGER :: no_of_vars = 0   !< number of vars - required for allocation of cq_vars_2D
     INTEGER :: last_index_used = 0 !< last index used - required for filling of cq_vars_2D
     INTEGER, ALLOCATABLE :: associated_process(:) !< process to which each CQ in cq_vars_2D belongs
-    TYPE(t_jsb_var_p), ALLOCATABLE :: cq_vars_2D(:) 
+    TYPE(t_jsb_var_p), ALLOCATABLE :: cq_vars_2D(:)
         !< collection of all variables of a certain CQT potentially from different process memories
   END TYPE t_jsb_consQuan
   TYPE :: t_jsb_consQuan_p
@@ -74,7 +74,7 @@ CONTAINS
     last_type_id = LAST_CQ_TYPE
 
   END FUNCTION Get_number_of_types
- 
+
   ! ====================================================================================================== !
   !
   !> Returns the name for this id - restricted length (max_cqt_name_length)
@@ -103,7 +103,7 @@ CONTAINS
       CASE DEFAULT
         CALL finish(TRIM(routine), 'No name specified for cq type of id '//int2string(id))
     END SELECT
-    
+
   END FUNCTION Get_cqt_name
 
 #endif
