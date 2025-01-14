@@ -254,6 +254,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p
+	dsl4jsb_Real3D_onChunk      :: fact_mic_c_uptake_rescal
+    dsl4jsb_Real3D_onChunk      :: fact_mic_n_uptake_rescal
+    dsl4jsb_Real3D_onChunk      :: fact_mic_p_uptake_rescal
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_nue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_pue_eff_tmic_mavg
@@ -275,6 +278,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
+	dsl4jsb_Real3D_onChunk      :: fact_mic_c_uptake_rescal_mavg
+    dsl4jsb_Real3D_onChunk      :: fact_mic_n_uptake_rescal_mavg
+    dsl4jsb_Real3D_onChunk      :: fact_mic_p_uptake_rescal_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -304,6 +310,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c)                 ! in
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n)                 ! in
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p)                 ! in
+	dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_c_uptake_rescal)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_n_uptake_rescal)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_p_uptake_rescal)                  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_nue_eff_tmic_mavg)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_pue_eff_tmic_mavg)        ! out
@@ -316,6 +325,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)            ! out
+	dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_c_uptake_rescal_mavg)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_n_uptake_rescal_mavg)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,  fact_mic_p_uptake_rescal_mavg)      ! out
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_var3D_onChunk(SB_,  residue_som_c_form_mavg_sl)         ! out
       dsl4jsb_Get_var3D_onChunk(SB_,  residue_som_c14_form_mavg_sl)       ! out
@@ -385,7 +397,16 @@ CONTAINS
     enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(dtime, enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
                                                   mavg_period_tenzyme)
 
-    !>  1.5 tresidual (memory time-scale for som spinup accelarator)
+    !>  1.5 tmic (debugger)
+    !>
+    fact_mic_c_uptake_rescal_mavg(:,:) = calc_time_mavg(dtime, fact_mic_c_uptake_rescal_mavg(:,:), fact_mic_c_uptake_rescal(:,:), &
+                                                      mavg_period_tmic)
+    fact_mic_n_uptake_rescal_mavg(:,:) = calc_time_mavg(dtime, fact_mic_n_uptake_rescal_mavg(:,:), fact_mic_n_uptake_rescal(:,:), &
+                                                      mavg_period_tmic)
+    fact_mic_p_uptake_rescal_mavg(:,:) = calc_time_mavg(dtime, fact_mic_p_uptake_rescal_mavg(:,:), fact_mic_p_uptake_rescal(:,:), &
+                                                      mavg_period_tmic)
+
+    !>  1.6 tresidual (memory time-scale for som spinup accelarator)
     !>
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       residue_som_c_form_mavg_sl(:,:)         = calc_time_mavg(dtime, residue_som_c_form_mavg_sl(:,:),        &

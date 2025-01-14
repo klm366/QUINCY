@@ -31,7 +31,7 @@ MODULE mo_q_sb_jsm_processes
     &       calc_bulk_soil_carbon, &
     &       calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
     &       calc_sorption_desorption_of_org_material, calc_depolymerisation_SESAM, &
-    &       calc_sinking_flux, calc_sourcing_flux, &
+    &       calc_sinking_flux, calc_sourcing_flux, recalc_sinking_flux, &
     &       calc_fast_po4, calc_nitri_denitri_partitioning_rate, &
     &       calc_Psorption_parameter
 
@@ -381,14 +381,16 @@ CONTAINS
     &                                        rtm_nit_denit_fication, rmm_nit_denit_fication, &        ! in
     &                                        anaerobic_volume_fraction, km_adsorpt_sl, &              ! in
     &                                        avail_soil_surface_sorption_capacity_sl, &               ! in
+	&                                        mic_uptake_demand, &                                     ! in
     &                                        solute_available, &                                      ! in
     &                                        vmax_nitri_denitri, &      ! OPTIONAL (in)
     &                                        solute_alternative, &      ! OPTIONAL (in)
     &                                        microbial_uptake, &        ! inout
     &                                        plant_uptake, &            ! out
-    &                                        plant_uptake_pot, &        ! out
+    ! &                                        plant_uptake_pot, &        ! inout
     &                                        fast_adsorpt, &            ! OPTIONAL (out)
-    &                                        flux_nitri_denitri)        ! OPTIONAL (out)
+    &                                        flux_nitri_denitri, &      ! OPTIONAL (out)
+    &                                        eca_downscale)             ! out
 
     USE mo_sb_constants
     ! ----------------------------------------------------------------------------------------------------- !
@@ -415,13 +417,15 @@ CONTAINS
     REAL(wp)          , INTENT(in)    :: solute                    !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp)          , INTENT(in)    :: avail_soil_surface_sorption_capacity_sl  !< available sorption sites [mol / m3]
     REAL(wp)          , INTENT(in)    :: solute_available                         !< available solvent for all the sinking processes (mol / m3)
+	REAL(wp)          , INTENT(in)    :: mic_uptake_demand                        !< moving average of microbial uptake demand [0~1]
     REAL(wp), OPTIONAL, INTENT(in)    :: vmax_nitri_denitri                       !< maximum nitrification/denitrification rate, for eca_none
     REAL(wp), OPTIONAL, INTENT(in)    :: solute_alternative                       !< concentration of the alternative solvent to be taken up by plant (mol / m3)
     REAL(wp)          , INTENT(inout) :: microbial_uptake                         !< microbial uptake flux (micro-mol / m3 / s)
     REAL(wp)          , INTENT(out)   :: plant_uptake                             !< plant uptake flux (micro-mol / m3 / s)
-    REAL(wp)          , INTENT(out)   :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
+    ! REAL(wp)          , INTENT(inout) :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
     REAL(wp), OPTIONAL, INTENT(out)   :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
     REAL(wp), OPTIONAL, INTENT(out)   :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
+    REAL(wp)          , INTENT(out)   :: eca_downscale                            !< downscaling factor due to substrate limitation
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                        :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
                                        hlp1, hlp2, hlp3
@@ -585,7 +589,9 @@ CONTAINS
     !> 2.0
     !! check the availability of solute considering all sinking fluxes
 
-    fast_desorpt = (solute_available - solute) * k_desorpt_f * 1.e6_wp
+    fast_desorpt  = (solute_available - solute) * k_desorpt_f * 1.e6_wp
+    eca_downscale = 1._wp
+	! microbial_uptake = microbial_uptake * mic_uptake_demand
     SELECT CASE (substrate)
       CASE("po4")
         hlp1 = microbial_uptake + plant_uptake
@@ -598,19 +604,20 @@ CONTAINS
         hlp2 = MAX(0._wp, (solute) / dtime * 1.e6_wp)
     END SELECT
     IF (hlp1 > hlp2 .AND. hlp1 > 0._wp) THEN
-      microbial_uptake   = microbial_uptake   * hlp2 / hlp1
-      plant_uptake       = plant_uptake       * hlp2 / hlp1
+      eca_downscale = hlp2 / hlp1
+      microbial_uptake   = microbial_uptake   * eca_downscale
+      plant_uptake       = plant_uptake       * eca_downscale
       SELECT CASE (substrate)
         CASE("po4")
           fast_adsorpt       = fast_adsorpt
         CASE("nh4")
           fast_adsorpt       = fast_adsorpt
-          flux_nitri_denitri = flux_nitri_denitri * hlp2 / hlp1
+          flux_nitri_denitri = flux_nitri_denitri * eca_downscale
         CASE("no3")
-          flux_nitri_denitri = flux_nitri_denitri * hlp2 / hlp1
+          flux_nitri_denitri = flux_nitri_denitri * eca_downscale
       END SELECT
     ENDIF
-    plant_uptake_pot = plant_uptake
+    ! plant_uptake_pot = plant_uptake_pot + plant_uptake
   END SUBROUTINE calc_sinking_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -747,8 +754,8 @@ CONTAINS
     !>  Fractional of N and P in microbial necromass is recycled to DOM,
     !>    regulated by the microbial nutritional scalors following exponential decline curve
     !>
-    n_res2dom(:,:) = fc_n_res2dom * MIN(1._wp, EXP(fact_n_status_mic_c_growth(:,:) * (-1._wp)) ** k_n_recyc_corr)
-    p_res2dom(:,:) = fc_p_res2dom * MIN(1._wp, EXP(fact_p_status_mic_c_growth(:,:) * (-1._wp)) ** k_p_recyc_corr)
+    n_res2dom(:,:) = fc_n_res2dom * MIN(1._wp, EXP((10._wp**fact_n_status_mic_c_growth(:,:)) * (-1._wp)) ** k_n_recyc_corr)
+    p_res2dom(:,:) = fc_p_res2dom * MIN(1._wp, EXP((10._wp**fact_p_status_mic_c_growth(:,:)) * (-1._wp)) ** k_p_recyc_corr)
 
     !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
     !>
@@ -879,6 +886,9 @@ CONTAINS
     & asymb_n_fixation, &
     & fact_n_status_mic_c_growth, &
     & fact_p_status_mic_c_growth, &
+	& fact_mic_c_uptake_rescal, &
+    & fact_mic_n_uptake_rescal, &
+	& fact_mic_p_uptake_rescal, &
     & sb_loss_mt, &
     & sb_formation_mt )
 
@@ -919,6 +929,9 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: asymb_n_fixation             !< current effective CUE given NP constraints
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
+	REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_mic_c_uptake_rescal     !< downscaling factor of microbial C uptake due to N/P limitation
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_mic_n_uptake_rescal     !< downscaling factor of microbial N uptake due to C/P limitation
+	REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_mic_p_uptake_rescal     !< downscaling factor of microbial P uptake due to C/N limitation
     REAL(wp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)          !< bgcm flux: sb_loss [mol/m3/timestep]
     REAL(wp),                           INTENT(inout) :: sb_formation_mt(:,:,:,:)     !< bgcm flux: sb_formation [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
@@ -934,7 +947,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_c
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_n
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_p
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: scal
+    ! REAL(wp), DIMENSION(nc, nsoil_sb)                :: scal
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: gross_mineralisation_nh4
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: gross_mineralisation_nh4_n15
     INTEGER                                          :: isoil
@@ -978,13 +991,12 @@ CONTAINS
                      microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
     growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
                       microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
-
-    WHERE (growth_c(:,:) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, :, :) > (min_mic_biomass + eps8))
-      fact_n_status_mic_c_growth(:,:) = growth_n(:,:) / growth_c(:,:)
-      fact_p_status_mic_c_growth(:,:) = growth_p(:,:) / growth_c(:,:)
+    WHERE (growth_c(:,:) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, :, :) > (min_mic_biomass + eps8) .AND. growth_n(:,:) > eps8 .AND. growth_p(:,:) > eps8)
+      fact_n_status_mic_c_growth(:,:) = log10(growth_n(:,:) / growth_c(:,:))
+      fact_p_status_mic_c_growth(:,:) = log10(growth_p(:,:) / growth_c(:,:))
     ELSEWHERE
-      fact_n_status_mic_c_growth(:,:) = 1._wp
-      fact_p_status_mic_c_growth(:,:) = 1._wp
+      fact_n_status_mic_c_growth(:,:) = 0._wp
+      fact_p_status_mic_c_growth(:,:) = 0._wp
     ENDWHERE
     WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
       ! carbon uptake is limiting
@@ -1024,17 +1036,21 @@ CONTAINS
     ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:) .AND. sb_pool_mt(ix_dom, ixC, :, :) > eps8)
       ! nitrogen uptake is limiting
       ! calculate uptake rate that satisfies N constraint and CUE
+	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
         &             ((asymb_n_fixation(:,:) + microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn) / &
         &             (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - &
         &              microbial_nue * sb_pool_mt(ix_dom, ixN, :, :) * microbial_cn)))
+      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:) 
     ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:) .AND. sb_pool_mt(ix_dom, ixC, :, :) > eps8)
       ! phosphorus uptake is limiting
       ! calculate uptake rate that satisfies P constraint and CUE
+	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
         &             (microbial_uptake_po4_sl(:,:) * microbial_np * microbial_cn) / &
         &             (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - &
         &              microbial_pue * sb_pool_mt(ix_dom, ixP, :, :) * microbial_np * microbial_cn)))
+	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:) 
     ELSEWHERE
       f_uptake(:,:) = 0.0_wp
     ENDWHERE
@@ -1046,6 +1062,15 @@ CONTAINS
                      microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
     growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
                      microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
+    
+	! Option 1-2
+    ! WHERE (growth_c(:,:) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, :, :) > (min_mic_biomass + eps8))
+      ! fact_n_status_mic_c_growth(:,:) = log10(growth_n(:,:) / growth_c(:,:))
+      ! fact_p_status_mic_c_growth(:,:) = log10(growth_p(:,:) / growth_c(:,:))
+    ! ELSEWHERE
+      ! fact_n_status_mic_c_growth(:,:) = 0._wp
+      ! fact_p_status_mic_c_growth(:,:) = 0._wp
+    ! ENDWHERE
 
     !> 2.2 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
     !!     and calculate gross mineralisation rate (and its isotopic signature)
@@ -1055,14 +1080,14 @@ CONTAINS
       ! by design, N fixation is not larger than the deficit
       hlp1(:,:) = MAX(growth_c(:,:) / microbial_cn - microbial_nue * uptake_n(:,:) - asymb_n_fixation(:,:),0.0_wp)
       WHERE((microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) > eps8)
-        scal(:,:) = hlp1(:,:) / (microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:))
+        fact_mic_n_uptake_rescal(:,:) = hlp1(:,:) / (microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:))
       ELSEWHERE
-        scal(:,:) = 0.0_wp
+        fact_mic_n_uptake_rescal(:,:) = 1.0_wp
       ENDWHERE
-      microbial_uptake_nh4_sl(:,:)     = microbial_uptake_nh4_sl(:,:)     * scal(:,:)
-      microbial_uptake_nh4_n15_sl(:,:) = microbial_uptake_nh4_n15_sl(:,:) * scal(:,:)
-      microbial_uptake_no3_sl(:,:)     = microbial_uptake_no3_sl(:,:)     * scal(:,:)
-      microbial_uptake_no3_n15_sl(:,:) = microbial_uptake_no3_n15_sl(:,:) * scal(:,:)
+      microbial_uptake_nh4_sl(:,:)     = microbial_uptake_nh4_sl(:,:)     * fact_mic_n_uptake_rescal(:,:)
+      microbial_uptake_nh4_n15_sl(:,:) = microbial_uptake_nh4_n15_sl(:,:) * fact_mic_n_uptake_rescal(:,:)
+      microbial_uptake_no3_sl(:,:)     = microbial_uptake_no3_sl(:,:)     * fact_mic_n_uptake_rescal(:,:)
+      microbial_uptake_no3_n15_sl(:,:) = microbial_uptake_no3_n15_sl(:,:) * fact_mic_n_uptake_rescal(:,:)
       WHERE(uptake_n(:,:) > eps8)
         microbial_nue_eff(:,:) = MIN(microbial_nue, &
           &                      ( growth_c(:,:) / &
@@ -1080,13 +1105,28 @@ CONTAINS
     microbial_pue_eff(:,:) = microbial_pue
     WHERE(growth_c(:,:) < growth_p(:,:))
       ! inorganic P immobilisation flux, in agreement with C and N uptake
-      microbial_uptake_po4_sl(:,:) = MAX(growth_c(:,:) / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0_wp)
+	  hlp1(:,:) = MAX(growth_c(:,:) / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0_wp)
+	  WHERE(microbial_uptake_po4_sl(:,:)  > eps8)
+        fact_mic_p_uptake_rescal(:,:) = hlp1(:,:) / microbial_uptake_po4_sl(:,:)
+      ELSEWHERE
+        fact_mic_p_uptake_rescal(:,:) = 1.0_wp
+      ENDWHERE
+      microbial_uptake_po4_sl(:,:) = microbial_uptake_po4_sl(:,:) * fact_mic_p_uptake_rescal(:,:)
       ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
       WHERE(uptake_p(:,:) > eps8)
         microbial_pue_eff(:,:) = ( growth_c(:,:) / microbial_cn / microbial_np - microbial_uptake_po4_sl(:,:) ) / uptake_p(:,:)
       ENDWHERE
     ENDWHERE
     gross_mineralisation_po4(:,:) = gross_mineralisation_po4(:,:) + (1._wp - microbial_pue_eff(:,:)) * uptake_p(:,:)
+
+    ! Option 1-1
+    ! WHERE (growth_c(:,:) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, :, :) > (min_mic_biomass + eps8))
+      ! fact_n_status_mic_c_growth(:,:) = log10(growth_n(:,:) / growth_c(:,:))
+      ! fact_p_status_mic_c_growth(:,:) = log10(growth_p(:,:) / growth_c(:,:))
+    ! ELSEWHERE
+      ! fact_n_status_mic_c_growth(:,:) = 0._wp
+      ! fact_p_status_mic_c_growth(:,:) = 0._wp
+    ! ENDWHERE
 
     !>3.0 update fluxes
     !>  note that loss and formation of organic matter is in [mol/m3/timestep]
@@ -1249,6 +1289,7 @@ CONTAINS
     & nc, nsoil_sb, dtime, &
     & rtm_hsc,rmm_hsc,rtm_depolymerisation,rmm_depolymerisation, &
     & enzyme_depoly, microbial_cue_mavg, microbial_nue_mavg, microbial_pue_mavg, &
+	& mic_c_uptake_rescal_mavg, mic_n_uptake_rescal_mavg, mic_p_uptake_rescal_mavg, &
     & fact_n_status_mic_c_growth, fact_p_status_mic_c_growth, &
     & sb_pool_mt, &
     & enzyme_frac_poly, enzyme_frac_residue, enzyme_frac_AP, &
@@ -1271,6 +1312,9 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_cue_mavg           !< microbial cue moving average
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_nue_mavg           !< microbial nue moving average
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_pue_mavg           !< microbial pue moving average
+	REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: mic_c_uptake_rescal_mavg     !< microbial DOC uptake rescaling factor MAVG
+    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: mic_n_uptake_rescal_mavg     !< microbial inorganic N uptake rescaling factor MAVG
+    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: mic_p_uptake_rescal_mavg     !< microbial inorganic P uptake rescaling factor MAVG
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
     REAL(wp),                          INTENT(in)    :: sb_pool_mt(:,:,:,:)          !< bgcm sb_pool [mol/m3]
@@ -1417,30 +1461,196 @@ CONTAINS
     hlp1(:,:) = depoly_c(:,:) * microbial_cue_mavg
     hlp2(:,:) = depoly_n(:,:) * microbial_cn * microbial_nue_mavg
     hlp3(:,:) = depoly_p(:,:) * microbial_cn * microbial_np * microbial_pue_mavg
+	! by default, microbial is maximizing investment to acquire C
     enz_AP_direction(:,:) = 1._wp
+	! hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
+	! opttion 3: use microbial uptake rescaling factor for enzyme allocation
     WHERE (hlp1(:,:) > 0.0_wp .AND. hlp2(:,:) > 0.0_wp .AND. hlp3(:,:) > 0.0_wp)
-      WHERE (fact_n_status_mic_c_growth(:,:) > 1._wp .AND. fact_p_status_mic_c_growth(:,:) > 1._wp)
-        hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
-      ELSEWHERE (fact_n_status_mic_c_growth(:,:) > 1._wp .AND. fact_p_status_mic_c_growth(:,:) <= 1._wp)
-        hlp_depoly(:,:)       = enzyme_frac_poly_c_mavg(:,:)
-        enz_AP_direction(:,:) = -1._wp
-      ELSEWHERE (fact_n_status_mic_c_growth(:,:) <= 1._wp .AND. fact_p_status_mic_c_growth(:,:) > 1._wp)
-        hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
-      ELSEWHERE
-        hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
-        WHERE (fact_n_status_mic_c_growth(:,:) > fact_p_status_mic_c_growth(:,:))
-          enz_AP_direction(:,:) = -1._wp
-        ENDWHERE
-      ENDWHERE
+	   WHERE (mic_c_uptake_rescal_mavg(:,:) > 0.99_wp)
+		  WHERE (fact_n_status_mic_c_growth(:,:) > 0._wp .AND. fact_p_status_mic_c_growth(:,:) > 0._wp)
+			hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
+		  ELSEWHERE (fact_n_status_mic_c_growth(:,:) > 0._wp .AND. fact_p_status_mic_c_growth(:,:) <= 0._wp)
+			hlp_depoly(:,:)       = enzyme_frac_poly_c_mavg(:,:)
+			enz_AP_direction(:,:) = -1._wp
+		  ELSEWHERE (fact_n_status_mic_c_growth(:,:) <= 0._wp .AND. fact_p_status_mic_c_growth(:,:) > 0._wp)
+			hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
+		  ELSEWHERE
+			hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
+			WHERE (fact_n_status_mic_c_growth(:,:) > fact_p_status_mic_c_growth(:,:))
+			  enz_AP_direction(:,:) = -1._wp
+			ENDWHERE
+		  ENDWHERE
+	   ELSEWHERE
+          hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
+	   ENDWHERE
     ELSEWHERE
       hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
     ENDWHERE
+
+	! original scheme based on microbial nutrition status
+    ! WHERE (hlp1(:,:) > 0.0_wp .AND. hlp2(:,:) > 0.0_wp .AND. hlp3(:,:) > 0.0_wp)
+      ! WHERE (fact_n_status_mic_c_growth(:,:) > 0._wp .AND. fact_p_status_mic_c_growth(:,:) > 0._wp)
+        ! hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
+      ! ELSEWHERE (fact_n_status_mic_c_growth(:,:) > 0._wp .AND. fact_p_status_mic_c_growth(:,:) <= 0._wp)
+        ! hlp_depoly(:,:)       = enzyme_frac_poly_c_mavg(:,:)
+        ! enz_AP_direction(:,:) = -1._wp
+      ! ELSEWHERE (fact_n_status_mic_c_growth(:,:) <= 0._wp .AND. fact_p_status_mic_c_growth(:,:) > 0._wp)
+        ! hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
+      ! ELSEWHERE
+        ! hlp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
+        ! WHERE (fact_n_status_mic_c_growth(:,:) > fact_p_status_mic_c_growth(:,:))
+          ! enz_AP_direction(:,:) = -1._wp
+        ! ENDWHERE
+      ! ENDWHERE
+    ! ELSEWHERE
+      ! hlp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
+    ! ENDWHERE
     enzyme_frac_poly(:,:)    = MIN( MAX(enzyme_frac_poly(:,:) + (hlp_depoly(:,:) - enzyme_frac_poly(:,:)) / &
       &                        mavg_period_tenzyme / one_day * dtime, min_enzyme_fraction), (1._wp - min_enzyme_fraction))
     enzyme_frac_residue(:,:) = 1._wp - enzyme_frac_poly(:,:)
     enzyme_frac_AP           = MIN( MAX(enzyme_frac_AP * (1._wp - enz_AP_direction / mavg_period_tenzyme / one_day * dtime), &
       &                        min_enzyme_fraction), max_enzyme_fraction)
   END SUBROUTINE calc_depolymerisation_SESAM
+
+  ! ======================================================================================================= !
+  !> recalculate the potential plant uptake, fast adsorption rates of nh4 and po4, nitrification rate
+  !! update the rates after microbial growth
+  !!
+  !! Input: solute concentration, microbial biomass, fine root biomass, rate modifiers, km values, \n
+  !!        sorption capacity and available sorption sites (po4, nh4)
+  !!
+  !! Output: microbial and plant inorganic uptake rates, fast adsorption rates (po4, nh4), \n
+  !!         nitrification/denitrification rates (nh4/no3)
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE recalc_sinking_flux( &
+    & nc, nsoil_sb, &
+    & fine_root_carbon_sl, &
+    & root_fraction_sl, &
+    & microbial_uptake_no3_sl, &       ! in
+    & microbial_uptake_nh4_sl, &
+    & microbial_uptake_po4_sl, &
+    & fact_mic_n_uptake_rescal, &
+	& fact_mic_p_uptake_rescal, &
+    & plant_uptake_no3_sl, &           ! inout
+    & denitrification_n2, &            ! inout
+    & eca_downscale_fact_no3, &          ! in
+    & plant_uptake_nh4_sl, &           ! inout
+    & nitrification_no3, &             ! inout
+    & eca_downscale_fact_nh4, &        ! in
+    & plant_uptake_po4_sl, &           ! inout
+    & eca_downscale_fact_po4, &        ! out
+    & unit_uptake_n_pot, &             ! out
+    & unit_uptake_p_pot)               ! out
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER,                            INTENT(in)    :: nc                           !< dimensions
+    INTEGER,                            INTENT(in)    :: nsoil_sb                     !< number of soil layers
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: fine_root_carbon_sl          !< carbon of fine roots per soil layer, [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: root_fraction_sl             !< fraction of fine roots per soil layer, [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: microbial_uptake_nh4_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: microbial_uptake_no3_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: microbial_uptake_po4_sl      !< microbial uptake rate [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: fact_mic_n_uptake_rescal     !< downscaling factor of microbial N uptake due to C/P limitation
+	REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: fact_mic_p_uptake_rescal     !< downscaling factor of microbial P uptake due to C/N limitation
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: plant_uptake_nh4_sl          !< plant uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: plant_uptake_no3_sl          !< plant uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: plant_uptake_po4_sl          !< plant uptake rate [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: denitrification_n2           !< denitrification to N2 [micro-mol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: nitrification_no3            !< nitrification to NO3 [micro-mol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: eca_downscale_fact_no3       !< downscaling factor of no3 in ECA calculation
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: eca_downscale_fact_nh4       !< downscaling factor of nh4 in ECA calculation
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: eca_downscale_fact_po4       !< downscaling factor of po4 in ECA calculation
+    REAL(wp), DIMENSION(nc),            INTENT(out)   :: unit_uptake_n_pot            !< potential N uptake per fine root [micro-mol N / mol C fine-root / s]
+    REAL(wp), DIMENSION(nc),            INTENT(out)   :: unit_uptake_p_pot            !< potential P uptake per fine root [micro-mol N / mol C fine-root / s]
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), DIMENSION(nc, nsoil_sb)   :: pot_mic_uptake                             !< potential microbial uptake rate in ECA
+    REAL(wp), DIMENSION(nc, nsoil_sb)   :: pot_sinking_flux                           !< potential sinking flux: plant and nitrification/denitrification
+    REAL(wp), DIMENSION(nc, nsoil_sb)   :: rescal_fact                                !< rescaling factor
+    REAL(wp), DIMENSION(nc, nsoil_sb)   :: hlp1, hlp2
+
+    INTEGER                             :: ic, isoil
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':recalc_sinking_flux'
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 0.9 initialize potential N/P uptake (micro-mol N/P / mol C fine-root / s)
+    !>
+    unit_uptake_n_pot(:) = 0.0_wp
+    unit_uptake_p_pot(:) = 0.0_wp
+
+    !> 1.0 no3 and nh4 recalculation
+    !> 
+    !> 1.1 no3
+    rescal_fact(:,:) = 1._wp
+	DO ic = 1,nc
+      DO isoil = 1,nsoil_sb	
+		IF (eca_downscale_fact_no3(ic,isoil) < 1._wp .AND. eca_downscale_fact_no3(ic,isoil) > eps8 &
+        & .AND. fact_mic_n_uptake_rescal(ic,isoil) > eps8 ) THEN
+		  pot_mic_uptake(ic,isoil)   = microbial_uptake_no3_sl(ic,isoil) / fact_mic_n_uptake_rescal(ic,isoil)
+		  pot_sinking_flux(ic,isoil) = (plant_uptake_no3_sl(ic,isoil) + denitrification_n2(ic,isoil)) &
+		     &                         / eca_downscale_fact_no3(ic,isoil)
+		  hlp1(ic,isoil) = pot_mic_uptake(ic,isoil) - microbial_uptake_no3_sl(ic,isoil)
+		  hlp2(ic,isoil) = pot_sinking_flux(ic,isoil) - (plant_uptake_no3_sl(ic,isoil) + denitrification_n2(ic,isoil))
+		  IF ( hlp1(ic,isoil) < hlp2(ic,isoil) .AND. pot_sinking_flux(ic,isoil) > eps8 ) THEN
+			rescal_fact(ic,isoil) = (hlp1(ic,isoil) + plant_uptake_no3_sl(ic,isoil) + denitrification_n2(ic,isoil)) &
+			   &                    / pot_sinking_flux(ic,isoil)
+		  ENDIF
+		  plant_uptake_no3_sl(ic,isoil) = plant_uptake_no3_sl(ic,isoil) / eca_downscale_fact_no3(ic,isoil) * rescal_fact(ic,isoil)
+		  denitrification_n2(ic,isoil)  = denitrification_n2(ic,isoil)  / eca_downscale_fact_no3(ic,isoil) * rescal_fact(ic,isoil)
+		ENDIF
+      ENDDO
+    ENDDO  
+    
+    !> 1.2 nh4
+    rescal_fact(:,:) = 1._wp	
+	DO ic = 1,nc
+      DO isoil = 1,nsoil_sb
+		IF (eca_downscale_fact_nh4(ic,isoil) < 1._wp .AND. eca_downscale_fact_nh4(ic,isoil) > eps8 &
+        & .AND. fact_mic_n_uptake_rescal(ic,isoil) > eps8 ) THEN
+		  pot_mic_uptake(ic,isoil)   = microbial_uptake_nh4_sl(ic,isoil) / fact_mic_n_uptake_rescal(ic,isoil)
+		  pot_sinking_flux(ic,isoil) = (plant_uptake_nh4_sl(ic,isoil) + nitrification_no3(ic,isoil)) &
+		     &                         / eca_downscale_fact_nh4(ic,isoil)
+		  hlp1(ic,isoil) = pot_mic_uptake(ic,isoil)- microbial_uptake_nh4_sl(ic,isoil)
+		  hlp2(ic,isoil) = pot_sinking_flux(ic,isoil) - (plant_uptake_nh4_sl(ic,isoil) + nitrification_no3(ic,isoil))
+		  IF ( hlp1(ic,isoil) < hlp2(ic,isoil) .AND. pot_sinking_flux(ic,isoil) > eps8 ) THEN
+			rescal_fact(ic,isoil) = (hlp1(ic,isoil) + plant_uptake_nh4_sl(ic,isoil) + nitrification_no3(ic,isoil)) &
+			  &                     / pot_sinking_flux(ic,isoil)
+		  ENDIF
+		  plant_uptake_nh4_sl(ic,isoil) = plant_uptake_nh4_sl(ic,isoil) / eca_downscale_fact_nh4(ic,isoil) * rescal_fact(ic,isoil)
+		  nitrification_no3(ic,isoil)   = nitrification_no3(ic,isoil)   / eca_downscale_fact_nh4(ic,isoil) * rescal_fact(ic,isoil)
+		ENDIF
+      ENDDO
+    ENDDO   	
+    !> 2.0 po4 recalculation
+    !> 
+    rescal_fact(:,:) = 1._wp
+	DO ic = 1,nc
+      DO isoil = 1,nsoil_sb		
+		IF (eca_downscale_fact_po4(ic,isoil) < 1._wp .AND. eca_downscale_fact_po4(ic,isoil) > eps8 &
+        & .AND. fact_mic_p_uptake_rescal(ic,isoil) > eps8 ) THEN
+		  pot_mic_uptake(ic,isoil)   = microbial_uptake_po4_sl(ic,isoil) / fact_mic_p_uptake_rescal(ic,isoil)
+		  pot_sinking_flux(ic,isoil) = plant_uptake_po4_sl(ic,isoil)     / eca_downscale_fact_po4(ic,isoil)
+		  hlp1(ic,isoil) = pot_mic_uptake(ic,isoil)   - microbial_uptake_po4_sl(ic,isoil)
+		  hlp2(ic,isoil) = pot_sinking_flux(ic,isoil) - plant_uptake_po4_sl(ic,isoil) 
+		  IF ( hlp1(ic,isoil) < hlp2(ic,isoil) .AND. pot_sinking_flux(ic,isoil) > eps8 ) THEN
+			rescal_fact(ic,isoil) = (hlp1(ic,isoil) + plant_uptake_po4_sl(ic,isoil)) / pot_sinking_flux(ic,isoil)
+		  ENDIF
+		  plant_uptake_po4_sl(ic,isoil) = plant_uptake_po4_sl(ic,isoil) / eca_downscale_fact_po4(ic,isoil) * rescal_fact(ic,isoil)
+		ENDIF
+      ENDDO
+    ENDDO      
+    
+    !! calculate potential N/P uptake (micro-mol N/P / mol C fine-root / s), weighted by root distribution
+    DO ic = 1,nc
+      DO isoil = 1,nsoil_sb
+        IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
+          unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + plant_uptake_po4_sl(ic,isoil) &
+            &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
+          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + (plant_uptake_no3_sl(ic,isoil) + plant_uptake_nh4_sl(ic,isoil)) &
+            &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
+        ENDIF
+      ENDDO
+    ENDDO    
+  END SUBROUTINE recalc_sinking_flux
 
   ! ======================================================================================================= !
   !>calculates the bulk density of the soil corrected by its organic component

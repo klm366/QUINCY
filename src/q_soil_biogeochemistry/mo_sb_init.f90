@@ -190,6 +190,12 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: dom_cp
     dsl4jsb_Real3D_onDomain :: fact_n_status_mic_c_growth
     dsl4jsb_Real3D_onDomain :: fact_p_status_mic_c_growth
+	dsl4jsb_Real3D_onDomain :: fact_mic_c_uptake_rescal
+    dsl4jsb_Real3D_onDomain :: fact_mic_n_uptake_rescal
+	dsl4jsb_Real3D_onDomain :: fact_mic_p_uptake_rescal		
+    dsl4jsb_Real3D_onDomain :: fact_mic_c_uptake_rescal_mavg
+    dsl4jsb_Real3D_onDomain :: fact_mic_n_uptake_rescal_mavg
+    dsl4jsb_Real3D_onDomain :: fact_mic_p_uptake_rescal_mavg	
     dsl4jsb_Real3D_onDomain :: enzyme_frac_AP
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
@@ -270,6 +276,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    dom_cp)
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_n_status_mic_c_growth)
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_p_status_mic_c_growth)
+	dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_c_uptake_rescal)
+	dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_n_uptake_rescal)
+	dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_p_uptake_rescal)
+	dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_c_uptake_rescal_mavg)      ! out
+    dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_n_uptake_rescal_mavg)      ! out
+    dsl4jsb_Get_var3D_onDomain(SB_,    fact_mic_p_uptake_rescal_mavg)      ! out
     dsl4jsb_Get_var3D_onDomain(SB_,    enzyme_frac_AP)
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -330,6 +342,12 @@ CONTAINS
     dom_cp(:,:,:)                       = microbial_cn * microbial_np
     fact_n_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
     fact_p_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
+	fact_mic_c_uptake_rescal(:,:,:)     = 1._wp                           !< ... docu ...
+	fact_mic_n_uptake_rescal(:,:,:)     = 1._wp                           !< ... docu ...
+	fact_mic_p_uptake_rescal(:,:,:)     = 1._wp                           !< ... docu ...
+	fact_mic_c_uptake_rescal_mavg(:,:,:)     = 1._wp                           !< ... docu ...
+	fact_mic_n_uptake_rescal_mavg(:,:,:)     = 1._wp                           !< ... docu ...
+	fact_mic_p_uptake_rescal_mavg(:,:,:)     = 1._wp                           !< ... docu ...
 
 #ifdef __QUINCY_STANDALONE__
     !------------------------------------------------------------------------------------------------------ !

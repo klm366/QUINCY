@@ -284,15 +284,19 @@ MODULE mo_sb_memory_class
                             microbial_nue_eff_tmic_mavg, &        !< time-averaged microbial NUE given NP constraints [unitless]
                             microbial_pue_eff, &                  !< instantaneous microbial PUE given NP constraints [unitless]
                             microbial_pue_eff_tmic_mavg, &        !< time-averaged microbial PUE given NP constraints [unitless]
-                            fact_n_status_mic_c_growth, &         !< microbial N status, used to scale up/down certain microbial
-                                                                  !< processes (enzyme allocation and nutrient recycling) [unitless]
-                            fact_p_status_mic_c_growth, &         !< microbial P status, used to scale up/down certain microbial
-                                                                  !< processes (enzyme allocation and nutrient recycling) [unitless]
-                            enzyme_frac_AP, &                     !< fraction of Acid (alkaline) phosphatase of the total enzyme [unitless]
-                            dom_cn, &                             !< C:N ratio of DOM pool [mol mol-1]
-                            dom_cp, &                             !< C:P ratio of DOM pool [mol mol-1]
-                            dom_cn_mavg, &                        !< time-averaged C:N ratio of DOM pool [mol mol-1]
-                            dom_cp_mavg, &                        !< time-averaged C:P ratio of DOM pool [mol mol-1]
+                            fact_n_status_mic_c_growth, &         !< microbial N status, used to scale up/down certain microbial processes (enzyme allocation and nutrient recycling)
+                            fact_p_status_mic_c_growth, &         !< microbial P status, used to scale up/down certain microbial processes (enzyme allocation and nutrient recycling)
+							fact_mic_c_uptake_rescal, &           !< microbial C uptake rescaling factor due to N/P limitation
+							fact_mic_c_uptake_rescal_mavg, &      !< time-averaged microbial C uptake rescaling factor due to N/P limitation
+							fact_mic_n_uptake_rescal, &           !< microbial N uptake rescaling factor due to C/P limitation
+							fact_mic_n_uptake_rescal_mavg, &      !< time-averaged microbial N uptake rescaling factor due to C/P limitation
+							fact_mic_p_uptake_rescal, &           !< microbial P uptake rescaling factor due to C/N limitation
+							fact_mic_p_uptake_rescal_mavg, &      !< time-averaged microbial P uptake rescaling factor due to C/N limitation
+                            enzyme_frac_AP, &                     !< fraction of Acid (alkaline) phosphatase of the total enzyme
+                            dom_cn, &                             !< dom CN ratio
+                            dom_cp, &                             !< dom CP ratio
+                            dom_cn_mavg, &                        !< time-averaged dom CN ratio
+                            dom_cp_mavg, &                        !< time-averaged dom CP ratio
                             residue_som_c_form_mavg_sl, &         !< time-averaged residual som C formation rate [micro-mol m-3 s-1]
                             residue_som_c14_form_mavg_sl, &       !< time-averaged residual som C14 formation rate [micro-mol m-3 s-1]
                             residue_assoc_som_c_form_mavg_sl, &   !< time-averaged associated residual som C formation rate [micro-mol m-3 s-1]
@@ -2588,6 +2592,72 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('fact_mic_c_uptake_rescal', mem%fact_mic_c_uptake_rescal, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_c_uptake_rescal', '', 'microbial C uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+		
+      CALL mem%Add_var('fact_mic_n_uptake_rescal', mem%fact_mic_n_uptake_rescal, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_n_uptake_rescal', '', 'microbial N uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fact_mic_p_uptake_rescal', mem%fact_mic_p_uptake_rescal, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_p_uptake_rescal', '', 'microbial P uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fact_mic_c_uptake_rescal_mavg', mem%fact_mic_c_uptake_rescal_mavg, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_c_uptake_rescal_mavg', '', 'MAVG microbial C uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+		
+      CALL mem%Add_var('fact_mic_n_uptake_rescal_mavg', mem%fact_mic_n_uptake_rescal_mavg, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_n_uptake_rescal_mavg', '', 'MVAG microbial N uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fact_mic_p_uptake_rescal_mavg', mem%fact_mic_p_uptake_rescal_mavg, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('fact_mic_p_uptake_rescal_mavg', '', 'microbial P uptake downscaling factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)		
+		
       CALL mem%Add_var('enzyme_frac_AP', mem%enzyme_frac_AP, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('enzyme_frac_AP', unitless, 'fraction of Acid (alkaline) phosphatase of the total enzyme'), &
