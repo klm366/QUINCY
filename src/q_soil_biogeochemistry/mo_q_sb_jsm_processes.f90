@@ -1036,21 +1036,21 @@ CONTAINS
     ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:) .AND. sb_pool_mt(ix_dom, ixC, :, :) > eps8)
       ! nitrogen uptake is limiting
       ! calculate uptake rate that satisfies N constraint and CUE
-	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
+      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
         &             ((asymb_n_fixation(:,:) + microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn) / &
         &             (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - &
         &              microbial_nue * sb_pool_mt(ix_dom, ixN, :, :) * microbial_cn)))
-      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:) 
+      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:)
     ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:) .AND. sb_pool_mt(ix_dom, ixC, :, :) > eps8)
       ! phosphorus uptake is limiting
       ! calculate uptake rate that satisfies P constraint and CUE
-	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
+      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:)
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
         &             (microbial_uptake_po4_sl(:,:) * microbial_np * microbial_cn) / &
         &             (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - &
         &              microbial_pue * sb_pool_mt(ix_dom, ixP, :, :) * microbial_np * microbial_cn)))
-	  fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:) 
+      fact_mic_c_uptake_rescal(:,:) = f_uptake(:,:) / fact_mic_c_uptake_rescal(:,:)
     ELSEWHERE
       f_uptake(:,:) = 0.0_wp
     ENDWHERE
@@ -1062,8 +1062,8 @@ CONTAINS
                      microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
     growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
                      microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
-    
-	! Option 1-2
+
+    ! Option 1-2
     ! WHERE (growth_c(:,:) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, :, :) > (min_mic_biomass + eps8))
       ! fact_n_status_mic_c_growth(:,:) = log10(growth_n(:,:) / growth_c(:,:))
       ! fact_p_status_mic_c_growth(:,:) = log10(growth_p(:,:) / growth_c(:,:))
@@ -1578,7 +1578,7 @@ CONTAINS
     unit_uptake_p_pot(:) = 0.0_wp
 
     !> 1.0 no3 and nh4 recalculation
-    !> 
+    !>
     !> 1.1 no3
     rescal_fact(:,:) = 1._wp
 	DO ic = 1,nc
@@ -1598,8 +1598,8 @@ CONTAINS
 		  denitrification_n2(ic,isoil)  = denitrification_n2(ic,isoil)  / eca_downscale_fact_no3(ic,isoil) * rescal_fact(ic,isoil)
 		ENDIF
       ENDDO
-    ENDDO  
-    
+    ENDDO
+
     !> 1.2 nh4
     rescal_fact(:,:) = 1._wp	
 	DO ic = 1,nc
@@ -1621,7 +1621,7 @@ CONTAINS
       ENDDO
     ENDDO   	
     !> 2.0 po4 recalculation
-    !> 
+    !>
     rescal_fact(:,:) = 1._wp
 	DO ic = 1,nc
       DO isoil = 1,nsoil_sb		
@@ -1630,15 +1630,15 @@ CONTAINS
 		  pot_mic_uptake(ic,isoil)   = microbial_uptake_po4_sl(ic,isoil) / fact_mic_p_uptake_rescal(ic,isoil)
 		  pot_sinking_flux(ic,isoil) = plant_uptake_po4_sl(ic,isoil)     / eca_downscale_fact_po4(ic,isoil)
 		  hlp1(ic,isoil) = pot_mic_uptake(ic,isoil)   - microbial_uptake_po4_sl(ic,isoil)
-		  hlp2(ic,isoil) = pot_sinking_flux(ic,isoil) - plant_uptake_po4_sl(ic,isoil) 
+		  hlp2(ic,isoil) = pot_sinking_flux(ic,isoil) - plant_uptake_po4_sl(ic,isoil)
 		  IF ( hlp1(ic,isoil) < hlp2(ic,isoil) .AND. pot_sinking_flux(ic,isoil) > eps8 ) THEN
 			rescal_fact(ic,isoil) = (hlp1(ic,isoil) + plant_uptake_po4_sl(ic,isoil)) / pot_sinking_flux(ic,isoil)
 		  ENDIF
 		  plant_uptake_po4_sl(ic,isoil) = plant_uptake_po4_sl(ic,isoil) / eca_downscale_fact_po4(ic,isoil) * rescal_fact(ic,isoil)
 		ENDIF
       ENDDO
-    ENDDO      
-    
+    ENDDO
+
     !! calculate potential N/P uptake (micro-mol N/P / mol C fine-root / s), weighted by root distribution
     DO ic = 1,nc
       DO isoil = 1,nsoil_sb
@@ -1649,7 +1649,7 @@ CONTAINS
             &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
         ENDIF
       ENDDO
-    ENDDO    
+    ENDDO
   END SUBROUTINE recalc_sinking_flux
 
   ! ======================================================================================================= !

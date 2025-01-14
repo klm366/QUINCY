@@ -953,7 +953,7 @@ CONTAINS
       & sb_formation_mt(:,:,:,:) )                ! inout
 
     !> 10.3 recaculate potential plant uptake, fast adsorption, and nitrification fluxes based on actual microbial uptake
-    !> 
+    !>
     CALL recalc_sinking_flux(nc, &
       & nsoil_sb, &                               ! in
       & fine_root_carbon_sl(:,:), &
@@ -1038,7 +1038,7 @@ CONTAINS
       & denitrification_noy_n15(:,:), &       ! output var that get unit coverted
       & denitrification_n2o_n15(:,:), &       ! output var that get unit coverted
       & denitrification_n2_n15(:,:) )         ! output var that get unit coverted
-    
+
     !------------------------------------------------------------------------------------------------------ !
     ! de-allocate local allocatable variables
     DEALLOCATE(arr_hlp1)
