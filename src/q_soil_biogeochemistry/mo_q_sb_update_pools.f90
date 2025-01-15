@@ -1152,14 +1152,15 @@ CONTAINS
             IF (debug_on() .AND. iblk == 1 .AND. ic == 1) &
               & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...')
 
-            ! fasten the spinup for residual pool
-            CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:),&
-                                                      & model%config%slow_sb_pool_spinup_accelerator_length, &
-                                                      & residue_som_c_form_mavg_sl(ic,:), &
-                                                      & residue_som_c14_form_mavg_sl(ic,:), &
-                                                      & residue_som_c_loss_mavg_sl(ic,:), &
-                                                      & sb_pool_mt(ix_residue,:,ic,:))
-            IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+            IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+              ! fasten the spinup for residual pool
+              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:),&
+                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
+                                                        & residue_som_c_form_mavg_sl(ic,:), &
+                                                        & residue_som_c14_form_mavg_sl(ic,:), &
+                                                        & residue_som_c_loss_mavg_sl(ic,:), &
+                                                        & sb_pool_mt(ix_residue,:,ic,:))
+            ELSEIF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
               ! fasten the spinup for the associated residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:), &
                                                         & model%config%slow_sb_pool_spinup_accelerator_length, &
