@@ -432,7 +432,7 @@ CONTAINS
     km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 10._wp    ! calibrated, from Yu et al. 2020
     enzyme_frac_total             = 0.005_wp
     fc_p_res2dom                  = 0._wp                                         ! Yu et al. 2020, GMD
-    fc_n_res2dom                  = 0._wp                                        ! Yu et al. 2020, GMD
+    fc_n_res2dom                  = 0.8_wp                                        ! Yu et al. 2020, GMD
     k_p_recyc_corr                = 0.3_wp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
     k_n_recyc_corr                = 0.1_wp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
 
