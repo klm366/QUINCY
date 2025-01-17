@@ -11,13 +11,13 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Initialize soil properties and initial conditions on tiles for the hydrology process
+!>#### Initialize soil properties and initial conditions for the hydrology process
 !>
 !> Soil properties are set in [[hydro_init_bc]] by reading external parameters from the file given by the
-!> [[t_hydro_config:bc_filename]] config/namelist parameter.
-!> IF [[t_hydro_config:l_soil_texture]] == .FALSE. these parameters are read directly from the pre-processed
-!> corresponding fields. Otherwise, soil textures for sand, silt (loam), clay and organic matter (peat)
-!> are read from the input file and used to derive the properties from a lookup table.
+!> [[t_hydro_config:bc_filename]] namelist parameter.
+!> The properties are either read directly from the corresponding fields or, with
+!> [[t_hydro_config:l_soil_texture]]=true, soil textures for sand, silt (loam), clay and organic
+!> matter (peat) are read from the input file and used to derive the properties from a lookup table.
 !>
 !> Standard deviation of topography (and elevation for the standalone model) is read from the file given
 !> by [[t_hydro_config:bc_sso_filename]].
@@ -63,56 +63,56 @@ MODULE mo_hydro_init
   ! Parameters for sand, loam (here called silt), clay, peat (here called oc) are used from the TERRA
   ! land model in ICON (see src/lnd_phy_schemes/sfc_terra_data.f90 in ICON)
 
-  ! Pore volume (fraction of volume, called cporv in TERRA)
-  REAL(wp), PARAMETER ::  porosity_sand = 0.364_wp
-  REAL(wp), PARAMETER ::  porosity_silt = 0.455_wp
-  REAL(wp), PARAMETER ::  porosity_clay = 0.507_wp
-  REAL(wp), PARAMETER ::  porosity_oc   = 0.863_wp
+  ! Pore volume (called cporv in TERRA)
+  REAL(wp), PARAMETER ::  porosity_sand = 0.364_wp      !< pore volume of sand [vol. fraction]
+  REAL(wp), PARAMETER ::  porosity_silt = 0.455_wp      !< pore volume of loam [vol. fraction]
+  REAL(wp), PARAMETER ::  porosity_clay = 0.507_wp      !< pore volume of clay [vol. fraction]
+  REAL(wp), PARAMETER ::  porosity_oc   = 0.863_wp      !< pore volume of peat [vol. fraction]
 
-  ! Field capacity (fraction of volume, called cfcap in TERRA)
-  REAL(wp), PARAMETER ::  field_cap_sand = 0.196_wp
-  REAL(wp), PARAMETER ::  field_cap_silt = 0.340_wp
-  REAL(wp), PARAMETER ::  field_cap_clay = 0.463_wp
-  REAL(wp), PARAMETER ::  field_cap_oc   = 0.763_wp
+  ! Field capacity (called cfcap in TERRA)
+  REAL(wp), PARAMETER ::  field_cap_sand = 0.196_wp     !< field capacity of sand [vol. fraction]
+  REAL(wp), PARAMETER ::  field_cap_silt = 0.340_wp     !< field capacity of loam [vol. fraction]
+  REAL(wp), PARAMETER ::  field_cap_clay = 0.463_wp     !< field capacity of clay [vol. fraction]
+  REAL(wp), PARAMETER ::  field_cap_oc   = 0.763_wp     !< field capacity of peat [vol. fraction]
 
-  ! Hydraulic conductivity at saturation ([m/s], called ckw0 in TERRA)
-  REAL(wp), PARAMETER ::  hyd_cond_sand = 4.79e-5_wp
-  REAL(wp), PARAMETER ::  hyd_cond_silt = 5.31e-6_wp
-  REAL(wp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp
-  REAL(wp), PARAMETER ::  hyd_cond_oc   = 5.80e-8_wp
+  ! Hydraulic conductivity at saturation (called ckw0 in TERRA)
+  REAL(wp), PARAMETER ::  hyd_cond_sand = 4.79e-5_wp    !< hydraulic conductivity at saturation of sand [m/s]
+  REAL(wp), PARAMETER ::  hyd_cond_silt = 5.31e-6_wp    !< hydraulic conductivity at saturation of loam [m/s]
+  REAL(wp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp    !< hydraulic conductivity at saturation of clay [m/s]
+  REAL(wp), PARAMETER ::  hyd_cond_oc   = 5.80e-8_wp    !< hydraulic conductivity at saturation of peat [m/s]
 
-  ! Wilting point (fraction of volume, called cpwp in TERRA)
-  REAL(wp), PARAMETER ::  wilt_sand = 0.042_wp
-  REAL(wp), PARAMETER ::  wilt_silt = 0.11_wp
-  REAL(wp), PARAMETER ::  wilt_clay = 0.257_wp
-  REAL(wp), PARAMETER ::  wilt_oc   = 0.265_wp
+  ! Wilting point (called cpwp in TERRA)
+  REAL(wp), PARAMETER ::  wilt_sand = 0.042_wp          !< wilting point of sand [vol. fraction]
+  REAL(wp), PARAMETER ::  wilt_silt = 0.11_wp           !< wilting point of loam [vol. fraction]
+  REAL(wp), PARAMETER ::  wilt_clay = 0.257_wp          !< wilting point of clay [vol. fraction]
+  REAL(wp), PARAMETER ::  wilt_oc   = 0.265_wp          !< wilting point of peat [vol. fraction]
 
   ! Pore size index
-  REAL(wp), PARAMETER :: pore_size_index_sand = 0.35_wp
-  REAL(wp), PARAMETER :: pore_size_index_silt = 0.2_wp
-  REAL(wp), PARAMETER :: pore_size_index_clay = 0.13_wp
-  REAL(wp), PARAMETER :: pore_size_index_oc   = 0.65_wp
+  REAL(wp), PARAMETER :: pore_size_index_sand = 0.35_wp !< pore size index of sand []
+  REAL(wp), PARAMETER :: pore_size_index_silt = 0.2_wp  !< pore size index of loam []
+  REAL(wp), PARAMETER :: pore_size_index_clay = 0.13_wp !< pore size index of clay []
+  REAL(wp), PARAMETER :: pore_size_index_oc   = 0.65_wp !< pore size index of loam []
 
-  ! Clapp & Hornberger (see Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  bclapp_sand = 3.39_wp   ! (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_silt = 4.98_wp   ! (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_clay = 10.38_wp  ! (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_oc   = 4._wp       ! (type 12 in Beringer)
+  ! Clapp & Hornberger exponent b (see Beringer et al. 2001)
+  REAL(wp), PARAMETER ::  bclapp_sand = 3.39_wp   !< Clapp & Hornberger exponent b for sand (type 1 in Beringer et al. 2001)
+  REAL(wp), PARAMETER ::  bclapp_silt = 4.98_wp   !< Clapp & Hornberger exponent b for loam (type 5 in Beringer et al. 2001)
+  REAL(wp), PARAMETER ::  bclapp_clay = 10.38_wp  !< Clapp & Hornberger exponent b for clay (type 10 in Beringer et al. 2001)
+  REAL(wp), PARAMETER ::  bclapp_oc   = 4._wp     !< Clapp & Hornberger exponent b for peat (type 12 in Beringer et al. 2001)
 
-  ! Soil matric potential (s. Beringer et al 2001)
-  REAL(wp), PARAMETER ::  matric_pot_sand = -0.04729_wp ! (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  matric_pot_silt = -0.45425_wp ! (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  matric_pot_clay = -0.633_wp   ! (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  matric_pot_oc = -0.12_wp      ! (type 12 in Beringer)
+  ! Soil matric potential (see Beringer et al. 2001)
+  REAL(wp), PARAMETER ::  matric_pot_sand = -0.04729_wp !< soil matric potential of sand (type 1 in Beringer at al. 2001)
+  REAL(wp), PARAMETER ::  matric_pot_silt = -0.45425_wp !< soil matric potential of loam (type 5 in Beringer at al. 2001)
+  REAL(wp), PARAMETER ::  matric_pot_clay = -0.633_wp   !< soil matric potential of clay (type 10 in Beringer at al. 2001)
+  REAL(wp), PARAMETER ::  matric_pot_oc = -0.12_wp      !< soil matric potential of peat (type 12 in Beringer at al. 2001)
 
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
                           !< factor to compensate profile of hyd_cond_sat with depth in TERRA
 
-  ! Residual soil moisture (fraction of volume; Maidment, Handbook of Hydrology, 1993)
-  REAL(wp), PARAMETER ::  wres_sand = 0.020_wp  ! (type sand)
-  REAL(wp), PARAMETER ::  wres_silt = 0.015_wp  ! (type silt loam)
-  REAL(wp), PARAMETER ::  wres_clay = 0.090_wp  ! (type clay)
-  REAL(wp), PARAMETER ::  wres_oc   = 0.150_wp  ! (Letts et al., 2000)
+  !> Residual soil moisture (fraction of volume; Maidment, Handbook of Hydrology, 1993)
+  REAL(wp), PARAMETER ::  wres_sand = 0.020_wp          !< residual soil moisture (type sand) [vol. fraction]
+  REAL(wp), PARAMETER ::  wres_silt = 0.015_wp          !< residual soil moisture (type silt loam) [vol. fraction]
+  REAL(wp), PARAMETER ::  wres_clay = 0.090_wp          !< residual soil moisture (type clay) [vol. fraction]
+  REAL(wp), PARAMETER ::  wres_oc   = 0.150_wp          !< residual soil moisture (Letts et al., 2000)
 
   !
   ! -------------------------------------------------------------------------------------------------- !
@@ -130,11 +130,11 @@ MODULE mo_hydro_init
       & pore_size_index  (:,:) => NULL(), & !< pore size distribution index
       & vol_field_cap    (:,:) => NULL(), & !< volumetric soil field capacity
       & vol_p_wilt       (:,:) => NULL(), & !< volumetric wilting point
-      & vol_wres         (:,:) => NULL(), &
+      & vol_wres         (:,:) => NULL(), & !< volumetric residual water content
       & root_depth       (:,:) => NULL(), & !< root depth
       & weq_snow_soil    (:,:) => NULL(), & !< initial water equivalent of snow on surface
-      & fract_pond_max   (:,:) => NULL(), &
-      & depth_pond_max   (:,:) => NULL(), &
+      & fract_pond_max   (:,:) => NULL(), & !< maximum pond fraction
+      & depth_pond_max   (:,:) => NULL(), & !< maximum pond depth
       & wtr_soil_sl    (:,:,:) => NULL(), & !< initial soil moisture within soil layers
       & fract_org_sl   (:,:,:) => NULL(), & !< fraction of soil organic matter within soil layers
       & fr_sand          (:,:) => NULL(), & !< fraction of sand for soil index
@@ -147,45 +147,54 @@ MODULE mo_hydro_init
       & ifs_weq_snow     (:,:) => NULL()    !< water equivalent of snow on surface from IFS
   END TYPE t_hydro_init_vars
 
-  !> Module variable holding input fields
-  TYPE(t_hydro_init_vars) :: hydro_init_vars
+  TYPE(t_hydro_init_vars) :: hydro_init_vars                !< Module variable holding input fields
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_init'  !< Name of this module
 
 CONTAINS
 
   ! ====================================================================================================== !
-  !
+  !>
   !> Intialize hydrology process
-  !
+  !>
   SUBROUTINE hydro_init(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model                             !< this model instance
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
     model => Get_model(tile%owner_model_id)
 
-    ! IF this is the top tile, read variables from inital files.
-    ! Note: this requires that the init routines are called in the model init starting from the top tile!
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    !> Read hydrology initial and boundary condition data
+    ! The initial data is read only once - by the top tile - and is made avilable to the other tiles.
+    ! Note: this requires that the init routines in [[mo_jsb_model_init:jsbach_init]] are called starting
+    !       from the top tile!
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN  ! This is the top tile.
       CALL hydro_read_init_vars(tile)
     END IF
 
-    ! Set soil properties
+    !> Set soil properties (on all tiles)
     CALL hydro_init_bc(tile)
-    ! Set soil initial conditions
+
+    !> Set soil initial condition (on all tiles)
     CALL hydro_init_ic(tile)
 
+    !> Finalize hydrology initialization after the last tile has been initialized
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
 
   END SUBROUTINE hydro_init
 
+  ! ====================================================================================================== !
+  !>
+  !> Finalize hydrology initialization
+  !>
   SUBROUTINE hydro_finalize_init_vars
+
+    !> Deallocation of the variables that had only been needed for initialization
 
     DEALLOCATE( &
       & hydro_init_vars%oro_stddev      ,       &
@@ -219,7 +228,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Read variables from initial files
+  !>#### Read variables from initial files
   !>
   !> Soil parameters and initial conditions for the hydrology process need to be set for all tiles where
   !> the `HYDRO_` process is active and which contain soil. However, in order to avoid opening and reading
@@ -396,7 +405,7 @@ CONTAINS
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
-        !>     - reads maps if not using the soil texture for calculating the soil properties
+        !>     - Reads maps if not using the soil texture for calculating the soil properties
 
         ! Volumetric soil porosity
         IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -950,8 +959,8 @@ CONTAINS
   !
   !> Set initial conditions for hydrology process on tiles
   !>
-  !> This subroutine uses the input variables already read from [[mo_hydro_init:hydro_init_vars]]
-  !> in [[hydro_read_init_vars]].
+  !> This subroutine uses the input variables stored in [[mo_hydro_init:hydro_init_vars]] that had been
+  !> read in [[hydro_read_init_vars]].
   !
   SUBROUTINE hydro_init_ic(tile)
 
