@@ -12,7 +12,7 @@ set -e
 # using iLamb (see https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2018MS001354)
 # -----------------------------------------------------------------------------------------------------
 
-VARLIST='albedo,biomass,co2,cSoil,evspsbl,gpp,hfls,hfss,lai,mrro,mrsos,pr,reco,rhums,rlds,rlns,rlus,rns,rsds,rsns,rsus,swe,tas,twsa'
+VARLIST='albedo,biomass,co2,cSoil,evspsbl,gpp,hfdsl,hfls,hfss,lai,mrro,mrsos,pr,reco,rhums,rlds,rlns,rlus,rns,rsds,rsns,rsus,swe,tas,twsa'
 TRGGRID='r192x96'
 MOL2G_C=12.01
 GM2_2_MGHA=0.01
@@ -82,6 +82,7 @@ for VAR in $(echo ${VARLIST//,/ }); do
     case $VAR in
         # *** Radiation and Energy Cycle
         albedo  ) echo "albedo  = (a2l_swvis_srf_down_box + a2l_swnir_srf_down_box - rad_sw_srf_net_box) / (a2l_swvis_srf_down_box + a2l_swnir_srf_down_box);" >> $TASKLIST ;;
+        hfdsl   ) echo "hfdsl   = - sse_grnd_hflx_box;" >> $TASKLIST ;;
         hfls    ) echo "hfls    = seb_latent_hflx_box * -1;"   >> $TASKLIST ;;
         hfss    ) echo "hfss    = seb_sensible_hflx_box * -1;" >> $TASKLIST ;;
         rlds    ) echo "rlds    = a2l_lw_srf_down_box;" >> $TASKLIST ;;
@@ -97,7 +98,7 @@ for VAR in $(echo ${VARLIST//,/ }); do
         mrro    ) echo "mrro    = hydro_runoff_box + hydro_drainage_box;" >> $TASKLIST ;;
         mrsos   ) echo "mrsos   = ((sellevel(hydro_wtr_soil_sl_box,0.0325) + sellevel(hydro_ice_soil_sl_box,0.0325)) + 0.1378 * (sellevel(hydro_wtr_soil_sl_box,0.192) + sellevel(hydro_ice_soil_sl_box,0.192))) * 1000;"       >> $TASKLIST ;;
         pr      ) echo "pr      = a2l_rain_box + a2l_snow_box;"           >> $TASKLIST ;;
-        rhums   ) echo "rhums   = (a2l_q_air_box / seb_qsat_star_box) * 100;" >> $TASKLIST ;;
+        rhums   ) echo "rhums   = disturb_q_air_clim_yday_box;" >> $TASKLIST ;;
         swe     ) echo "swe     = hydro_weq_snow_box;"                    >> $TASKLIST ;;
         twsa    ) echo "twsa    = (vertsum(hydro_wtr_soil_sl_box) + vertsum(hydro_ice_soil_sl_box) + hydro_weq_snow_box) * 1000;" >> $TASKLIST ;;
         # *** Ecosystem and Carbon Cycle
@@ -106,7 +107,7 @@ for VAR in $(echo ${VARLIST//,/ }); do
         cSoil   ) echo "cSoil   = (carbon_c_sum_litter_bg_ta_box + carbon_c_sum_humus_ta_box) * ${MOL2G_C} / 1000;" >> $TASKLIST ;;
         gpp     ) echo "gpp     = carbon_gpp_ydaymean_ta_box * ${MOL2G_C} * 86400;"      >> $TASKLIST ;;
         lai     ) echo "lai     = pheno_lai_box;"                                        >> $TASKLIST ;;
-        reco    ) echo "reco    = carbon_co2_l2a_resp_ta_box * 1000 * 86400;"            >> $TASKLIST ;;
+        reco    ) echo "reco    = ( - carbon_soil_respiration_ta_box + assimi_dark_respiration_box) * ${MOL2G_C} * 86400 + carbon_co2_l2a_herb_ta_box * 1000 * 86400;"            >> $TASKLIST ;;
         # *** Capture missing variables
         *       ) echo "Postprocessing for variable ${VAR} not yet implemented in $0" && exit 1 ;;
     esac
@@ -146,6 +147,11 @@ cat > $PARTAB << EOF
   name = gpp
   long_name = "Gross primary productivity"
   units = "g m-2 d-1"
+/
+&parameter
+  name = hfdsl
+  long_name = "Downward Soil Heat Flux"
+  units = "W m-2"
 /
 &parameter
   name = hfls
