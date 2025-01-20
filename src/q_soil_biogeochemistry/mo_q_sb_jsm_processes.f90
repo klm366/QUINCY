@@ -1023,7 +1023,6 @@ CONTAINS
       f_uptake(:,:) = f_uptake(:,:)
     ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:) .AND. &
 	         (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - microbial_nue * sb_pool_mt(ix_dom, ixN, :, :) * microbial_cn) > eps8)
-																																				   
       ! nitrogen uptake is limiting
       ! calculate uptake rate that satisfies N constraint and CUE
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
@@ -1032,7 +1031,6 @@ CONTAINS
         &              microbial_nue * sb_pool_mt(ix_dom, ixN, :, :) * microbial_cn)))
     ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:) .AND. &
 	         (microbial_cue_eff_tmic_mavg(:,:) * sb_pool_mt(ix_dom, ixC, :, :) - microbial_pue * sb_pool_mt(ix_dom, ixP, :, :) * microbial_np * microbial_cn) > eps8)
-																																								  
       ! phosphorus uptake is limiting
       ! calculate uptake rate that satisfies P constraint and CUE
       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
