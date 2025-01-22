@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # JN 06.12.16, script to aggregate and prepre LUH2 mass harvest variables for JSBACH
 # (julia.nabel@mpimet.mpg.de)
 # SF 18.05.22, add config file to load nco and cdo versions in MAIN

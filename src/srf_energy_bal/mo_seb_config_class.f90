@@ -1,17 +1,16 @@
+!> Contains structures and methods for seb config
 !>
-!! @brief Contains structures and methods for seb config
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_seb_config_class
 #ifndef __NO_JSBACH__
 
@@ -30,7 +29,11 @@ MODULE mo_seb_config_class
      CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
      REAL(wp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
      REAL(wp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
+     REAL(wp)                    :: coef_ril_tm1           !< Weighting factor for Richardson numbers at different steps ...
+     REAL(wp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
+     REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
+     INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -45,19 +48,25 @@ CONTAINS
 
     CLASS(t_seb_config), INTENT(inout) :: config
 
-    LOGICAL  :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
-    REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth
+    REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
+    INTEGER                     :: niter_tmx
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
+      lrestart_cont,               &
       ic_filename, bc_filename,    &
       scheme_albedo,               &
       lake_mixed_layer_depth,      &
       lake_min_ice_depth,          &
-      l_ice_on_lakes
+      coef_ril_tm1,                &
+      coef_ril_t,                  &
+      coef_ril_tp1,                &
+      l_ice_on_lakes,              &
+      niter_tmx
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -67,12 +76,17 @@ CONTAINS
 
     ! Set defaults
     active          = .TRUE.
+    lrestart_cont   = .FALSE.  ! TRUE: Continue although SEB variables are missing in restart file
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
+    coef_ril_tm1    = 0.50_wp
+    coef_ril_t      = 0.25_wp
+    coef_ril_tp1    = 0.25_wp
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
+    niter_tmx       = 0
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -80,12 +94,17 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_seb_nml)
 
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%scheme_albedo             = scheme_albedo
     config%lake_mixed_layer_depth    = lake_mixed_layer_depth
     config%lake_min_ice_depth        = lake_min_ice_depth
+    config%coef_ril_tm1              = coef_ril_tm1
+    config%coef_ril_t                = coef_ril_t
+    config%coef_ril_tp1              = coef_ril_tp1
     config%l_ice_on_lakes            = l_ice_on_lakes
+    config%niter_tmx                 = niter_tmx
 
     CALL close_nml(nml_handler)
 

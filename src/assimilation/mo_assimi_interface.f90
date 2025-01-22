@@ -1,385 +1,24 @@
+!> Contains the interfaces to the assimi process
 !>
-!! @brief Contains the interfaces to the assimi process
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-05-30)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
-#ifdef __QUINCY_STANDALONE__
-! ========================================================================================================= !
+!> ICON-Land
 !>
-!> @brief Contains the interfaces to the assimi process of the QUINCY standalone model
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-MODULE mo_assimi_interface
-
-  USE mo_kind,                ONLY: wp
-  USE mo_jsb_control,         ONLY: debug_on
-  USE mo_exception,           ONLY: message
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_class,           ONLY: Get_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_process_class,   ONLY: t_jsb_process
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
-
-  dsl4jsb_Use_processes ASSIMI_
-  dsl4jsb_Use_config(ASSIMI_)
-  dsl4jsb_Use_memory(ASSIMI_)
-
-  IMPLICIT NONE
-  PRIVATE
-  PUBLIC ::  Register_assimi_tasks
-  PUBLIC ::  update_canopy_fluxes, update_reset_assimi_fluxes, update_time_average_assimilation
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_interface'
-
-  ! ======================================================================================================= !
-  !> Type definition: reset_assimi_fluxes task
-  !>  
-  !>   MODEL_QUINCY
-  !>  
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_assimi_fluxes
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_reset_assimi_fluxes     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_reset_assimi_fluxes  !< Aggregates computed task variables
-  END TYPE tsk_reset_assimi_fluxes
-  !> Constructor interface: reset_assimi_fluxes task
-  !>
-  INTERFACE tsk_reset_assimi_fluxes
-    PROCEDURE Create_task_reset_assimi_fluxes         !< Constructor function for task
-  END INTERFACE tsk_reset_assimi_fluxes
-
-  ! ======================================================================================================= !
-  !> Type definition: canopy_fluxes task
-  !>  
-  !>   MODEL_QUINCY
-  !>  
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_fluxes
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_canopy_fluxes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_fluxes !< Aggregates computed task variables
-  END TYPE tsk_canopy_fluxes
-  !> Constructor interface: update_canopy_fluxes task
-  !>
-  INTERFACE tsk_canopy_fluxes
-    PROCEDURE Create_task_canopy_fluxes         !< Constructor function for task
-  END INTERFACE tsk_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !> Type definition: time_average_assimilation task
-  !>  
-  !>   MODEL_QUINCY
-  !>  
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_assimilation
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_time_average_assimilation    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_assimilation !< Aggregates computed task variables
-  END TYPE tsk_time_average_assimilation
-  !> Constructor interface: time_average_assimilation task
-  !>
-  INTERFACE tsk_time_average_assimilation
-    PROCEDURE Create_task_time_average_assimilation         !< Constructor function for task
-  END INTERFACE tsk_time_average_assimilation
-
-CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: reset_assimi_fluxes task
-  !>
-  FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_reset_assimi_fluxes::return_ptr)
-    CALL return_ptr%Construct(name='reset_assimi_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_reset_assimi_fluxes
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: update_canopy_fluxes task
-  !> 
-  FUNCTION Create_task_canopy_fluxes(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_canopy_fluxes::return_ptr)
-    CALL return_ptr%Construct(name='canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !> Constructor: tsk_time_average_assimilation task
-  !> 
-  FUNCTION Create_task_time_average_assimilation(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_time_average_assimilation::return_ptr)
-    CALL return_ptr%Construct(name='tavrg_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_time_average_assimilation
-
-  ! ======================================================================================================= !
-  !> Register tasks for assimi process
-  !>
-  SUBROUTINE Register_assimi_tasks(this, model_id)
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
-
-    CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,                 INTENT(in) :: model_id
-
-    TYPE(t_jsb_model), POINTER :: model
-
-    model => Get_model(model_id)
-
-    CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
-    CALL this%Register_task(tsk_canopy_fluxes(model_id))
-    CALL this%Register_task(tsk_time_average_assimilation(model_id))
-  END SUBROUTINE Register_assimi_tasks
-
-  ! ======================================================================================================= !
-  !> Implementation of "update": reset_assimi_fluxes task
-  !>
-  SUBROUTINE update_reset_assimi_fluxes(tile, options)
-
-    USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes
-    dsl4jsb_Use_processes ASSIMI_
-  
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_assimi_fluxes'
-
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-
-    iblk = options%iblk
-
-    IF (debug_on()) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL real_reset_assimi_fluxes(tile, options)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_reset_assimi_fluxes
-
-  ! ======================================================================================================= !
-  !> Implementation of "aggregate": reset_assimi_fluxes task
-  !> 
-  SUBROUTINE aggregate_reset_assimi_fluxes(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_assimi_fluxes'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-
-    ! ASSIMI_ 2D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C13                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C14                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_boc                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf                , weighted_by_fract)
-    ! ASSIMI_ 3D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl                   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf_cl             , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_reset_assimi_fluxes
-  
-  ! ======================================================================================================= !
-  !> Implementation of "update": canopy_fluxes task - QUINCY
-  !>
-  SUBROUTINE update_canopy_fluxes(tile, options)
-
-    USE mo_assimi_update_canopy_fluxes, ONLY: real_update_canopy_fluxes => update_canopy_fluxes
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
-
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-
-    iblk = options%iblk
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL real_update_canopy_fluxes(tile, options)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !> Implementation of "aggregate": canopy_fluxes task
-  !>
-  SUBROUTINE aggregate_canopy_fluxes(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    ! dsl4jsb_Def_memory(A2L_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-    ! dsl4jsb_Get_memory(A2L_)
-
-    ! ASSIMI_ 2D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_boc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, t_jmax_opt                  , weighted_by_fract)
-    ! ASSIMI_ 3D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf_cl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf_cl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, jmax_cl                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, vcmax_cl                    , weighted_by_fract)
-    ! A2l_
-    ! not aggregated because A2L_ only runs at box tile and at runtime the error occurs:
-    ! "FATAL ERROR in mo_jsb_tile_class:Aggregate_weighted_by_fract_2d: ERROR - child_idx of ga on tile veg not allocated"
-    ! hence, 'ga' may be moved to VEG_ memory or any other that is running at veg tile
-    !dsl4jsb_Aggregate_onChunk(A2L_, ga                             , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE aggregate_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !> calculate time moving averages and daytime averages for ASSIMI_
-  !>
-  SUBROUTINE update_time_average_assimilation(tile, options)
-
-    USE mo_jsb_control,         ONLY: debug_on
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_assimi_util,         ONLY: calculate_time_average_assimilation
-    dsl4jsb_Use_processes ASSIMI_
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_assimilation'
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
-    IF (debug_on() .AND. options%iblk == 1) &
-      & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL calculate_time_average_assimilation(tile, options)
-    
-    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_time_average_assimilation
-
-  ! ======================================================================================================= !
-  !> Implementation of "aggregate": time_average_assimilation task
-  !>
-  SUBROUTINE aggregate_time_average_assimilation(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_assimilation'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-
-    ! ASSIMI_ 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa_tphen_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tcnl_mavg          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime_dacc       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc   , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_time_average_assimilation
-
-END MODULE mo_assimi_interface
-
-! ========================================================================================================= !
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!> @brief Contains the interfaces to the assimi process of ICON-Land
-!>
-#else
+
+!NEC$ options "-finline-functions"
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/assimilation/mo_assimi_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/hydrology/mo_hydro_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+!NEC$ options "-finline-max-function-size=100"
+
 MODULE mo_assimi_interface
 #ifndef __NO_JSBACH__
 
@@ -388,7 +27,7 @@ MODULE mo_assimi_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, get_previous_year_length
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
@@ -405,13 +44,14 @@ MODULE mo_assimi_interface
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_assimi_memory)
+  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -419,146 +59,78 @@ MODULE mo_assimi_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC ::  Register_assimi_tasks !,t_assimi_process
+  PUBLIC ::  Register_assimi_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_interface'
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation_scaling_factors task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_assimilation_scaling_factors
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation_scaling_factors    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation_scaling_factors !< Aggregates computed task variables
   END TYPE   tsk_assimilation_scaling_factors
+
   !> Constructor interface for assimilation_scaling_factors task
-  !>
   INTERFACE   tsk_assimilation_scaling_factors
     PROCEDURE Create_task_assimilation_scaling_factors         !< Constructor function for task
   END INTERFACE   tsk_assimilation_scaling_factors
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_unstressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_unstressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_unstressed
+
   !> Constructor interface for canopy_cond_unstressed task
-  !>
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_unstressed
 
-  ! ======================================================================================================= !
   !> Type definition for canopy_cond_stressed task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_stressed
+
   !> Constructor interface for canopy_cond_stressed task
-  !>
   INTERFACE tsk_canopy_cond_stressed
     PROCEDURE Create_task_canopy_cond_stressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_stressed
 
-  ! ======================================================================================================= !
   !> Type definition for assimilation task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_assimilation
     PROCEDURE Create_task_assimilation     !< Constructor function for task
   END INTERFACE tsk_assimilation
 
-  ! ======================================================================================================= !
   !> Type definition for NPP buffer task
-  !>
-  !>   MODEL_JSBACH
-  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_npp_buffer
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_npp_buffer    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_npp_buffer !< Aggregates computed task variables
   END TYPE tsk_npp_buffer
+
   !> Constructor interface for assimilation task
-  !>
   INTERFACE tsk_npp_buffer
     PROCEDURE Create_task_npp_buffer     !< Constructor function for task
   END INTERFACE tsk_npp_buffer
 
-  ! ======================================================================================================= !
-  !> Type definition: reset_assimi_fluxes task
-  !>
-  !>   MODEL_QUINCY
-  !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_assimi_fluxes
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_reset_assimi_fluxes     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_reset_assimi_fluxes  !< Aggregates computed task variables
-  END TYPE tsk_reset_assimi_fluxes
-  !> Constructor interface: reset_assimi_fluxes task
-  !>
-  INTERFACE tsk_reset_assimi_fluxes
-    PROCEDURE Create_task_reset_assimi_fluxes         !< Constructor function for task
-  END INTERFACE tsk_reset_assimi_fluxes
-
-  ! ======================================================================================================= !
-  !> Type definition: canopy_fluxes task
-  !>
-  !>   MODEL_QUINCY
-  !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_fluxes
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_canopy_fluxes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_fluxes !< Aggregates computed task variables
-  END TYPE tsk_canopy_fluxes
-  !> Constructor interface: update_canopy_fluxes task
-  !>
-  INTERFACE tsk_canopy_fluxes
-    PROCEDURE Create_task_canopy_fluxes         !< Constructor function for task
-  END INTERFACE tsk_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !> Type definition: time_average_assimilation task
-  !>
-  !>   MODEL_QUINCY
-  !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_assimilation
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_time_average_assimilation    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_assimilation !< Aggregates computed task variables
-  END TYPE tsk_time_average_assimilation
-  !> Constructor interface: time_average_assimilation task
-  !>
-  INTERFACE tsk_time_average_assimilation
-    PROCEDURE Create_task_time_average_assimilation         !< Constructor function for task
-  END INTERFACE tsk_time_average_assimilation
-
 CONTAINS
 
   ! ------------------------------------------------------------------------------------------------------- !
-  !>Constructors for tasks
+  !> Constructors for tasks
   !>
-  
+
   ! ======================================================================================================= !
-  !>Constructor for assimilation_scaling_factors task
+  !> Constructor for assimilation_scaling_factors task
   !
   ! @param[in]     model_id     Model id
   ! @return        return_ptr   Instance of process task "assimi"
@@ -636,83 +208,31 @@ CONTAINS
 
   END FUNCTION Create_task_npp_buffer
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: reset_assimi_fluxes task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_reset_assimi_fluxes::return_ptr)
-    CALL return_ptr%Construct(name='reset_assimi_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_reset_assimi_fluxes
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: update_canopy_fluxes task
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_canopy_fluxes(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_canopy_fluxes::return_ptr)
-    CALL return_ptr%Construct(name='canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_canopy_fluxes
-
   ! ======================================================================================================= !
-  !>Constructor: tsk_time_average_assimilation task
+  !> Register tasks for assimi process
   !>
-  FUNCTION Create_task_time_average_assimilation(model_id) RESULT(return_ptr)
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_time_average_assimilation::return_ptr)
-    CALL return_ptr%Construct(name='tavrg_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
-  END FUNCTION Create_task_time_average_assimilation
-
-
-
-  ! ======================================================================================================= !
-  !>Register tasks for assimi process
-  !>
-  ! docu:
+  ! TODO docu:
   !
   ! @param[in,out] this      Instance of assimi process class
   ! @param[in]     model_id  Model id
   SUBROUTINE Register_assimi_tasks(this, model_id)
-
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
 
     ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    ! local
-    TYPE(t_jsb_model), POINTER :: model
-
-    ! get var / objects
-    model => Get_model(model_id)
-
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH)
-      CALL this%Register_task(tsk_assimilation_scaling_factors(model_id))
-      CALL this%Register_task(tsk_canopy_cond_unstressed(model_id))
-      CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
-      CALL this%Register_task(tsk_assimilation(model_id))
-      CALL this%Register_task(tsk_npp_buffer(model_id))
-    CASE (MODEL_QUINCY)
-      CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
-      CALL this%Register_task(tsk_canopy_fluxes(model_id))
-      CALL this%Register_task(tsk_time_average_assimilation(model_id))
-    END SELECT
-
+    CALL this%Register_task(tsk_assimilation_scaling_factors(model_id))
+    CALL this%Register_task(tsk_canopy_cond_unstressed(model_id))
+    CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
+    CALL this%Register_task(tsk_assimilation(model_id))
+    CALL this%Register_task(tsk_npp_buffer(model_id))
   END SUBROUTINE Register_assimi_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to calculate the height scaling factors of plant enzyms for assimilation
+  !> Implementation to calculate the height scaling factors of plant enzyms for assimilation
   !! Task "assimi" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -735,7 +255,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
-    INTEGER                      :: iblk, ics, ice !, nc
+    INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp),          POINTER   :: lat(:)
     REAL(wp)                     :: declination ! Solar Declination angle
     INTEGER                      :: i
@@ -757,7 +277,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
@@ -790,7 +310,9 @@ CONTAINS
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
-        !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_scaling_factors_1 tile_name=tile%name canopy_lvl=i
+#       ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#       endif
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -800,8 +322,15 @@ CONTAINS
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
-      !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name
-      scaling_fact_cl(:,:) = 1._wp
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO i=1,ncanopy
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          scaling_fact_cl(ic,i) = 1._wp
+        END DO
+      END DO
+      !$ACC END PARALLEL
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -849,7 +378,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of task canopy_cond_unstressed
+  !> Implementation of task canopy_cond_unstressed
   !! Task "canopy_cond_unstressed" calculates the carbon assimilation of plants and canopy conductance without water stress.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -866,7 +395,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
     !REAL(wp)                                  :: dtime
-    INTEGER                                   :: iblk, ics, ice !, nc
+    INTEGER                                   :: iblk, ics, ice, nc, ic
     INTEGER                                   :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
@@ -875,16 +404,16 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     !dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
 
     dsl4jsb_Def_config(ASSIMI_)
 
     ! Declare pointers to variables in memory
-    INTEGER :: ncanopy                 ! number of canopy layers
-
-    !dsl4jsb_Real2D_onChunk :: C4flag ! Photosynthetic pathway (C3: 0; C4: 1)
-                                      ! R: nur falls man C4flag doch als REAL haben wollte
+    INTEGER :: ncanopy              ! number of canopy layers
+    REAL(wp) :: &
+      & CarboxRate, &
+      & ETransport
+    LOGICAL :: C4Flag
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
@@ -897,7 +426,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
-    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index per canopy layer [-]
+    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
 
     ! Get local variables from options argument
@@ -905,7 +434,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
@@ -918,7 +447,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     !dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
     ! Get process variables
@@ -927,33 +455,51 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      CO2_air_mol)             ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(PHENO_,    lai_cl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
-    ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
+    ncanopy     = dsl4jsb_Config(ASSIMI_)%ncanopy
+    C4Flag      = dsl4jsb_Lctlib_param(C4Flag)
+    CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
+    ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
-    DO icanopy=1,ncanopy
-      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterunlimited_1 tile_name=tile%name canopy_lvl=icanopy
-      CALL calc_assimilation_waterunlimited( &
-        & dsl4jsb_Lctlib_param(C4Flag),      &
-        & dsl4jsb_Lctlib_param(CarboxRate),  &
-        & dsl4jsb_Lctlib_param(ETransport),  &
-        & t_air(:),                          & ! in
-        & press_srf(:),                      & ! in
-        & par_down_mol(:),                   & ! in
-        & apar_per_lai_cl(:,icanopy),        & ! in
-        & CO2_air_mol(:),                    & ! in
-        & scaling_fact_cl(:,icanopy),        & ! in
-        & canopy_cond_cl(:,icanopy)          & ! out
-        & )
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = 0._wp
     END DO
 
-    ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_unstressed_expand_0 tile_name=tile%name
-    canopy_cond_unlimited(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
+    !$ACC LOOP SEQ
+    DO icanopy=1,ncanopy
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
+        & C4Flag,                      &
+        & CarboxRate,                  &
+        & ETransport,                  &
+        & t_air(ic),                   &
+        & press_srf(ic),               &
+        & par_down_mol(ic),            &
+        & apar_per_lai_cl(ic,icanopy), &
+        & CO2_air_mol(ic),             &
+        & scaling_fact_cl(ic,icanopy)  &
+        & )
+
+        canopy_cond_unlimited(ic) =    &
+          &  canopy_cond_unlimited(ic) + canopy_cond_cl(ic,icanopy) * lai_cl(ic,icanopy)
+      END DO
+    END DO
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
+    END DO
+    !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1003,7 +549,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !> Implementation of "update" for task "canopy_cond_stressed"
   !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1015,7 +561,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat
+    USE mo_phy_schemes,   ONLY: qsat_water
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1038,10 +584,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice, nc, ic
     INTEGER :: icanopy, ncanopy
-    ! LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
-    LOGICAL, ALLOCATABLE :: q_air_gt_qsat_tmp(:)
+    REAL(wp) :: ratio_lim_over_unlim(options%nc)
+    LOGICAL :: q_air_gt_qsat_tmp
+    LOGICAL :: use_tmx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
@@ -1055,6 +602,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    use_tmx = model%config%use_tmx
 
     dsl4jsb_Get_config(ASSIMI_)
 
@@ -1076,27 +625,38 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
-    !$cla$w acc data create(q_air_gt_qsat_tmp)
-    ALLOCATE(q_air_gt_qsat_tmp(nc))
-    !$claw acc enter data create(q_air_gt_qsat_tmp)
-    !$claw expand parallel update savepoint=ser_jsb_assimi_update_canopy_cond_stressed_expand_0 tile_name=tile%name
-    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))
-    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
-                                                    water_stress(:),           & ! in, water stress factor
-                                                    q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?
-                                                    )
-    !$claw end expand
-    !$cla$w acc end data
-    !$claw acc exit data delete(q_air_gt_qsat_tmp)
-    DEALLOCATE(q_air_gt_qsat_tmp)
+    !$ACC DATA CREATE(ratio_lim_over_unlim)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(q_air_gt_qsat_tmp)
+    DO ic = 1, nc
+      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      canopy_cond_limited(ic) = &
+        &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
+                                  water_stress(ic),          & ! in, water stress factor
+                                  q_air_gt_qsat_tmp          & ! in, atmosphere saturated?
+                                 )
+      ratio_lim_over_unlim(ic) = canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
     ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_stressed_expand_1 tile_name=tile%name canopy_lvl=icanopy
-      canopy_cond_cl(:,icanopy) = canopy_cond_cl(:,icanopy) * canopy_cond_limited(:) / canopy_cond_unlimited(:)
+      !$ACC LOOP VECTOR
+      DO ic=1,nc
+        ! canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * canopy_cond_limited(ic) / canopy_cond_unlimited(ic)
+         canopy_cond_cl(ic,icanopy) = canopy_cond_cl(ic,icanopy) * ratio_lim_over_unlim(ic)
+      END DO
+      !$ACC END LOOP
     END DO
-    !$claw end expand
+    !$ACC END LOOP
+    !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1141,7 +701,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of assimilation for water-limited conditions
+  !> Implementation of assimilation for water-limited conditions
   !! Task "assimilation" calculates the carbon assimilation of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1149,7 +709,7 @@ CONTAINS
   !!
   SUBROUTINE update_assimilation(tile, options)
 
-    USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
+    USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1157,7 +717,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    INTEGER                    :: iblk, ics, ice !, nc
+    INTEGER                    :: iblk, ics, ice, nc, ic
     REAL(wp)                   :: dtime
     INTEGER                    :: icanopy
 
@@ -1169,6 +729,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
 
@@ -1200,14 +761,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
-    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index per canopy layer [-]
+    dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
 
     ! Set local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    !nc      = options%nc
+    nc      = options%nc
     dtime   = options%dtime
 
     ! If process is not to be calculated on this tile, do nothing
@@ -1219,6 +780,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -1234,8 +796,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)               ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
-    dsl4jsb_Get_var3D_onChunk(PHENO_,    lai_cl)                  ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
@@ -1253,19 +815,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
-
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
-
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)           ! inout
+    END IF
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder fuer assimilation noch wo anderst
-    !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
-    ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
-    !                                                             CO2_conc_leaf_cl * dtime
-
     DO icanopy=1,ncanopy
-      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterlimited_1 tile_name=tile%name canopy_lvl=icanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
@@ -1287,39 +843,44 @@ CONTAINS
         & )
     END DO
 
-    !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_expand_0 tile_name=tile%name
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      gross_assimilation_ca(ic) = 0._wp
+      dark_respiration_ca(ic) = 0._wp
+    END DO
 
-    ! Same for gross_assimilation_ca
-    ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !gross_assimilation(:) = 0._wp
-    !DO icanopy=1,ncanopy
-    !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
-    !END DO
+    !$ACC LOOP SEQ
+    DO icanopy=1,ncanopy
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        ! convert from leaf area of layer to canopy ground area
+        gross_assimilation_ca(ic) =    &
+          & gross_assimilation_ca(ic) + gross_assimilation_cl(ic,icanopy) * lai_cl(ic,icanopy)
+        dark_respiration_ca(ic) =      &
+          & dark_respiration_ca(ic) + dark_respiration_cl(ic,icanopy) * lai_cl(ic,icanopy)
+      END DO
+    END DO
 
-    ! convert from leaf area of layer to canopy ground area
-    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2)
-    ! convert from canopy area to tile box area
-    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) * fract_fpc_max(:)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      ! convert from canopy area to tile box area
+      gross_assimilation(ic) = gross_assimilation_ca(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
+      dark_respiration(ic)   = dark_respiration_ca(ic)   * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL
 
-    ! Same for dark_respiration_ca
-    ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !dark_respiration_ca(:) = 0._wp
-    !DO icanopy=1,ncanopy
-    !   dark_respiration_ca(:) =  dark_respiration_ca(:) + dark_respiration_cl(:,icanopy) * lai_cl(:,icanopy)
-    !END DO
-
-    dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
-    ! convert from canopy area to tile box area
-    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
-    !$claw end expand
-
-    !$claw sca forward update savepoint=ser_jsb_assim_calc_npp_pot_rate_1 tile_name=tile%name
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
-    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
-    ! update_phenology_logrop at the beginning of each day.
-    !$claw expand parallel update savepoint=ser_jsb_assim_day_npp_sum_expand_0 tile_name=tile%name
-    day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+      ! update_phenology_logrop at the beginning of each day.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1377,7 +938,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of NPP buffer
+  !> Implementation of NPP buffer
   !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the NLCC process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -1395,6 +956,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice !, nc
+    REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
     REAL(wp)                   :: dtime
     LOGICAL                    :: lstart, init_running_means, init_npp, new_year
 
@@ -1407,7 +969,6 @@ CONTAINS
     ! Declare pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: seconds_year
     dsl4jsb_Real2D_onChunk :: NPP_sum_year
     dsl4jsb_Real2D_onChunk :: NPP_mean_5year
     dsl4jsb_Real2D_onChunk :: land_cover_class
@@ -1441,7 +1002,6 @@ CONTAINS
     ! Get process variables
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)         ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   seconds_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_sum_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_mean_5year)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   land_cover_class)        ! out
@@ -1455,6 +1015,7 @@ CONTAINS
     ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
+    seconds_year = get_previous_year_length(options%current_datetime)
 
     init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
     init_NPP = .TRUE.
@@ -1467,13 +1028,13 @@ CONTAINS
     ENDIF
 
     ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
-    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass))
-    bclimit_min_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp))
-    bclimit_max_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp))
-    bclimit_max_warm_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp))
-    bclimit_min_temprange(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_temprange))
-    bclimit_min_gdd(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_gdd))
-    tau_c_woods(:) = REAL(dsl4jsb_Lctlib_param(tau_c_woods))
+    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), wp)
+    bclimit_min_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp)
+    bclimit_max_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp)
+    bclimit_max_warm_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp)
+    bclimit_min_temprange(:) = dsl4jsb_Lctlib_param(bclimit_min_temprange)
+    bclimit_min_gdd(:) = dsl4jsb_Lctlib_param(bclimit_min_gdd)
+    tau_c_woods(:) = dsl4jsb_Lctlib_param(tau_c_woods)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1513,7 +1074,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, seconds_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_sum_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_mean_5year,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, land_cover_class,         weighted_by_fract)
@@ -1528,240 +1088,5 @@ CONTAINS
 
   END SUBROUTINE aggregate_npp_buffer
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "update": reset_assimi_fluxes task
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_reset_assimi_fluxes(tile, options)
-
-    USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes
-    dsl4jsb_Use_processes ASSIMI_
-    
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_assimi_fluxes'
-
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-
-    iblk = options%iblk
-
-    IF (debug_on()) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL real_reset_assimi_fluxes(tile, options)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_reset_assimi_fluxes
-
-  ! ======================================================================================================= !
-  !>Implementation of "aggregate": reset_assimi_fluxes task
-  !>
-  SUBROUTINE aggregate_reset_assimi_fluxes(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_assimi_fluxes'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-
-    ! ASSIMI_ 2D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C13                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C14                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_boc                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf                , weighted_by_fract)
-    ! ASSIMI_ 3D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl                   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf_cl             , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_reset_assimi_fluxes
-  
-  ! ======================================================================================================= !
-  !>Implementation of "update": canopy_fluxes task - QUINCY
-  !>
-  SUBROUTINE update_canopy_fluxes(tile, options)
-
-    USE mo_assimi_update_canopy_fluxes, ONLY: real_update_canopy_fluxes => update_canopy_fluxes
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
-
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-
-    iblk = options%iblk
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL real_update_canopy_fluxes(tile, options)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_canopy_fluxes
-
-  ! ======================================================================================================= !
-  !>Implementation of "aggregate": canopy_fluxes task
-  !>
-  SUBROUTINE aggregate_canopy_fluxes(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(A2L_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(A2L_)
-
-    ! ASSIMI_ 2D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_boc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, t_jmax_opt                  , weighted_by_fract)
-    ! ASSIMI_ 3D
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf_cl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf_cl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, jmax_cl                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, vcmax_cl                    , weighted_by_fract)
-    ! A2l_
-    ! not aggregated because A2L_ only runs at box tile and at runtime the error occurs:
-    ! "FATAL ERROR in mo_jsb_tile_class:Aggregate_weighted_by_fract_2d: ERROR - child_idx of ga on tile veg not allocated"
-    ! hence, 'ga' may be moved to VEG_ memory or any other that is running at veg tile
-    !dsl4jsb_Aggregate_onChunk(A2L_, ga                             , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE aggregate_canopy_fluxes
-
-
-  ! ======================================================================================================= !
-  !> calculate time moving averages and daytime averages for ASSIMI_
-  !>
-  SUBROUTINE update_time_average_assimilation(tile, options)
-
-    USE mo_jsb_control,         ONLY: debug_on
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_assimi_util,         ONLY: calculate_time_average_assimilation
-    dsl4jsb_Use_processes ASSIMI_
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_assimilation'
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
-    IF (debug_on() .AND. options%iblk == 1) &
-      & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL calculate_time_average_assimilation(tile, options)
-    
-    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_time_average_assimilation
-
-
-  ! ======================================================================================================= !
-  !> Implementation of "aggregate": time_average_assimilation task
-  !>
-  SUBROUTINE aggregate_time_average_assimilation(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER                :: model
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_assimilation'
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(ASSIMI_)
-
-    ! ASSIMI_
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa_tphen_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tcnl_mavg          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime_dacc       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc   , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_time_average_assimilation
-
-
 #endif
 END MODULE mo_assimi_interface
-#endif

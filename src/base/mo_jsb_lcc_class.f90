@@ -1,18 +1,17 @@
-!> Summary: Types for lcc processes
+!> Types for lcc processes
 !>
-!>### Contains types required for dealing with actively or passively relocated conserved quantities upon lcc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-04-12 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Contains types required for dealing with actively or passively relocated conserved quantities upon lcc
 !>
 MODULE mo_jsb_lcc_class
 #ifndef __NO_JSBACH__
@@ -24,18 +23,24 @@ MODULE mo_jsb_lcc_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
+  USE mo_jsb_math_constants,  ONLY: one_year
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: min_cf_change, min_tolerated_fract_mismatch, min_tolerated_cf_mismatch,       &
-    & t_jsb_lcc_proc, t_jsb_lcc_proc_p, t_jsb_lcc_var, t_jsb_lcc_var_p,                   &
-    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk, &
+  PUBLIC :: min_daily_cf_change, min_annual_cf_change, min_tolerated_fract_mismatch, min_tolerated_cf_mismatch,       &
+    & t_jsb_lcc_proc, t_jsb_lcc_proc_p, t_jsb_lcc_var, t_jsb_lcc_var_p,                                               &
+    & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk,                             &
     & copy_from_active_to_passive_var_onChunk
 
-  REAL(wp), PARAMETER :: min_cf_change = 1.0E-16_wp
-  REAL(wp), PARAMETER :: min_tolerated_fract_mismatch = 1.0E-14_wp
+  REAL(wp), PARAMETER :: min_daily_cf_change = 1.0E-16_wp
+    !< min change in cover fractions for daily lcc, i.e. if the change is smaller than this threshold the lcc is not applied
+  REAL(wp), PARAMETER :: min_annual_cf_change = min_daily_cf_change * one_year
+    !< min change in cover fractions for annual lcc, i.e. if the change is smaller than this threshold the lcc is not applied
   REAL(wp), PARAMETER :: min_tolerated_cf_mismatch = 1.0E-11_wp
+    !< min mismatch in cover fractions which is tolerated when comparing different cover fraction sums
+  REAL(wp), PARAMETER :: min_tolerated_fract_mismatch = 1.0E-14_wp
+    !< minimum tolearated mismatch in forest age fraction sums (only used when running with FAGE)
 
   !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation
   TYPE :: t_jsb_lcc_var
@@ -146,7 +151,7 @@ CONTAINS
       this_conversion_fact = 1.0
     ENDIF
 
-    ! Add to be transferred fraction of active content to passive var,
+    ! Add fraction of active content to be transferred to passive var,
     ! potentially converting to the unit of the passive var
     lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk)       &
       & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
@@ -174,7 +179,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations !< lcc structure of the calling lcc process
     INTEGER,                    INTENT(in)    :: i_tile
-        !< index of the tile in the lcc structure for which the actoon should be conducted
+        !< index of the tile in the lcc structure for which the action should be conducted
     INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
     INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
     INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
@@ -183,7 +188,7 @@ CONTAINS
     REAL(wp),  INTENT(in), OPTIONAL :: copy_fract
         !< fraction of matter copied from active to passive var - if not given: 1.0 is assumed
     REAL(wp),  INTENT(in), OPTIONAL :: conversion_fact
-        !< conversion fraction if active var has different unit then passive var - if not given: 1.0 is assumed
+        !< conversion factor if active var has different unit then passive var - if not given: 1.0 is assumed
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':copy_from_active_to_passive_var_onChunk'
 
@@ -227,7 +232,7 @@ CONTAINS
     ! Add active content to passive var
     lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
       & = lcc_relocations%passive_vars(i_passive)%p%relocate_this(ics:ice,i_tile,iblk) &
-      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) * this_copy_fract * conversion_fact)
+      & + (lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) * this_copy_fract * this_conversion_fact)
 
   END SUBROUTINE copy_from_active_to_passive_var_onChunk
 

@@ -1,17 +1,16 @@
+!> Initialization of the the carbon memory.
 !>
-!! @brief Initialization of the the carbon memory.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-04-12)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_carbon_init
 #ifndef __NO_JSBACH__
 
@@ -22,7 +21,6 @@ MODULE mo_carbon_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time,          ONLY: get_time_dt
   USE mo_jsb_control,       ONLY: debug_on
 
   dsl4jsb_Use_processes CARBON_
@@ -38,59 +36,32 @@ MODULE mo_carbon_init
 
 CONTAINS
 
-  !
-  !> Intialize carbon process (after memory has been set up)
-  !
   SUBROUTINE carbon_init(tile)
-
+    !-----------------------------------------------------------------------
+    !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    !TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp)                                  :: dtime
+
+    !-----------------------------------------------------------------------
+    !  LOCAL VARIABLES
+    !TYPE(t_jsb_model),       POINTER :: model
+    !dsl4jsb_Def_memory(CARBON_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init'
 
-    dsl4jsb_Def_memory(CARBON_)
-    !dsl4jsb_Def_config(CARBON_)
-
-    dsl4jsb_Real3D_onChunk :: F_pseudo_temp
-    dsl4jsb_Real3D_onChunk :: N_pseudo_temp
-    dsl4jsb_Real3D_onChunk :: F_pseudo_precip
-    dsl4jsb_Real3D_onChunk :: N_pseudo_precip
+    !-----------------------------------------------------------------------
+    ! CONTENT
 
     !model => get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(CARBON_)
-    !dsl4jsb_Get_config(CARBON_)
+    ! Get carbon memory of the tile
+    !dsl4jsb_Get_memory(CARBON_)
 
-    dtime = get_time_dt(tile%owner_model_id)
+    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
-    !CALL carbon_init_ic(tile)
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting  carbon boundary conditions for tile '//TRIM(tile%name))
+
+    CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
-
-    ! R: This should stand here because these variables are more technical constants (only depending on dtime)
-    !    than a part of the carbon process parametrization. Furthermore they should be calculated only once when a simulation
-    !    is started or restarted and not for each tile and for each time step again!
-    !    It is not necessary to write and read them to/from the restart files.
-    !    It is not necessary to write them to the output file.
-    !    However, we could think about to kick them also out of the memory...
-    !    AND we should make them 1D, later, as soon as we do not want them in the output for debugging!
-
-     !dsl4jsb_Get_var2D_onChunk(CARBON_,   F_pseudo_temp)    ! for this we would need iblk, but we want the whole field!
-     F_pseudo_temp   => carbon__mem%F_pseudo_temp%ptr(:,:)   ! out
-     N_pseudo_temp   => carbon__mem%N_pseudo_temp%ptr(:,:)   ! out
-     F_pseudo_precip => carbon__mem%F_pseudo_precip%ptr(:,:) ! out
-     N_pseudo_precip => carbon__mem%N_pseudo_precip%ptr(:,:) ! out
-
-    ! R: Note, I changed the "writing style" as compared to JSBACH3.
-    ! F_pseudo_temp and N_pseudo_temp are constants used for updating the pseudo-15-day mean temperature.
-    ! These constants define the contributions of t_air and pseudo_temp to the new pseudo_temp.
-    F_pseudo_temp = EXP(-dtime / (15._wp * 86400._wp))   ! F_pseudo_temp decreases expotentially from 1 with higher
-                                                         ! (dtime/15DaysInSeconds). For (dtime/15DaysInSeconds)
-                                                         !  =1 it would be 0.368 and =0.5 it would be 0.607.
-    N_pseudo_temp = 1._wp - F_pseudo_temp                ! Rises with the same amout as F_pseudo_temp falls.
-
-    F_pseudo_precip = EXP(-dtime / (15._wp * 86400._wp))
-    N_pseudo_precip = 1._wp - F_pseudo_precip
 
   END SUBROUTINE carbon_init
 
@@ -123,18 +94,15 @@ CONTAINS
   END SUBROUTINE carbon_init_bc
 
   SUBROUTINE carbon_init_ic(tile)
-
-    !USE mo_carbon_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial
-
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    !TYPE(t_jsb_model),         POINTER :: model
-    !dsl4jsb_Def_config(CARBON_)
-    !dsl4jsb_Def_memory(CARBON_)
+    TYPE(t_jsb_model),         POINTER :: model
+
+    dsl4jsb_Def_config(CARBON_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init_ic'
 
@@ -145,12 +113,10 @@ CONTAINS
 
    IF (debug_on()) CALL message(TRIM(routine), 'Initializing carbon memory for tile '//TRIM(tile%name))
 
-   !model => Get_model(tile%owner_model_id)
+   model => get_model(tile%owner_model_id)
 
-   ! Get carbon memory of the tile
-   !dsl4jsb_Get_memory(CARBON_)
-
-   ! R: nothing to do in the moment ...
+   dsl4jsb_Get_config(CARBON_)
+   IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
 
   END SUBROUTINE carbon_init_ic
 
@@ -199,20 +165,6 @@ CONTAINS
       &                         ' from '//TRIM(dsl4jsb_Config(CARBON_)%ic_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
-
-    ! TBD: adapt names of variables in input files to names in memory
-
-    ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and
-    !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
-
-    ! If we do not want to read carbon pools for each tile we would have to add this
-    ! case construct to choose the behaviour for each tile:
-    !SELECT CASE(tile%name)
-    !CASE (box)
-    !CASE (land)
-    !CASE (veg)
-    !CASE (pft01)
-    ! ...
 
     DO i=1,npools
       invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)

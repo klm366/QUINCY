@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # JN 11.11.16, script to scale crop and pasture fractions up ("CMIP6 way")
 # - scales crop and pasture up with a given veg_ratio_max
 # - reduces natural vegetation accordingly -- first reducing primary, then secondary vegetation

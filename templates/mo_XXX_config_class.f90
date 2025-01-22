@@ -1,31 +1,28 @@
+!> Contains structures and methods for <PROCESS_NAME_LOWER_CASE> config
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
 ! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "seb" for surface energy balance                              ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementation points (Implementation:) that you     ===
 ! === have to adapt to your process.                                                                                          ===
 ! ===                                                                                                                         ===
-! === Finally delete this header.                                                                                             ===
+! === Finally delete this header section.                                                                                     ===
 ! ===============================================================================================================================
-
-
+!>#### Contains namelist information of <PROCESS_NAME_LOWER_CASE>
 !>
-!! @brief Contains structures and methods for <PROCESS_NAME_LOWER_CASE> config
-!!
-!! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------

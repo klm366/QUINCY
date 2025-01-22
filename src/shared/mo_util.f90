@@ -1,27 +1,40 @@
+!> Some utility functions
 !>
-!! @par Copyright
-!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-!! @brief diverse subroutines and functions for tile & forcing variables
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2014-03-17)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Various helper routines for ICON-Land
+!>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
+#ifdef __QUINCY_STANDALONE__
+#else
+  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+                                               !      libmath-support is an external library
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage
+    &       report_memory_usage, soil_init_from_texture
+
+#ifdef __QUINCY_STANDALONE__
+#else
+  PUBLIC :: tdma_solver_vec
+#endif
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -32,14 +45,9 @@ MODULE mo_util
 
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
-  !!
-  !! in: soil_depth (until bedrock) and soil-layer thicknesses
-  !!
-  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
-  !-----------------------------------------------------------------------------------------------------
+  !
+  !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
+  !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -48,6 +56,7 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -67,39 +76,6 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> conversion: uppercase -> lowercase
-  !!
-  !! implemented based on mo_util:toupper in jsbach4.1
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION tolower(string) RESULT(stringlower)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    CHARACTER(len=*), INTENT(in) :: string
-    CHARACTER(len=LEN_TRIM(string)) :: stringlower
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
-    INTEGER :: i
-
-    DO i = 1, LEN_TRIM(string)
-      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
-        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
-      ELSE
-        stringlower(i:i) = string(i:i)
-      ENDIF
-    ENDDO
-  END FUNCTION tolower
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> ifs2soil
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
     REAL(wp), INTENT(in) :: &
@@ -172,13 +148,72 @@ CONTAINS
 
   END SUBROUTINE ifs2soil
 
+  !> Calculate mineral soil parameters fom soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
+    & fraction_sand, fraction_silt, fraction_clay,                  &
+    & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
+    & parameter_from_texture)
+
+    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(wp), INTENT(in)  ::                                      &
+      fraction_sand, fraction_silt, fraction_clay,                &
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
+    REAL(wp), INTENT(out)  ::  parameter_from_texture
+
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
+
+  END SUBROUTINE soil_init_from_texture
+
+
   !-----------------------------------------------------------------------------------------------------
-  !> conversion: lowercase -> uppercase
-  !! 
-  !! Copied from ICON module shared/mo_util_string
-  !! 
-  !! 
+  !> conversion: uppercase -> lowercase
+  !!
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !!
   !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
+  !
+  !> Conversion: Lowercase -> Uppercase
+  !
+  !  Copied from ICON module shared/mo_util_string
+  !
   FUNCTION toupper (lowercase)
     CHARACTER(len=*), INTENT(in) :: lowercase
     CHARACTER(len=LEN_TRIM(lowercase)) :: toupper
@@ -305,7 +340,9 @@ CONTAINS
     !
   END FUNCTION logical2string
 
-  SUBROUTINE report_memory_usage()
+  SUBROUTINE report_memory_usage(msg)
+
+    CHARACTER(len=*), INTENT(in), OPTIONAL:: msg     ! Message tag to be added to the origial OOM message
 
     INTEGER           :: size=0, resident=0, share=0, text=0, lib=0, data=0, dt=0, oom_score=0
     INTEGER           :: ierr=0
@@ -320,10 +357,17 @@ CONTAINS
     IF (ierr < 0) THEN
       CALL message('', 'Problem reading /proc/self/statm')
     ELSE
-      CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
-        &                             ' resident='//TRIM(int2string(resident))// &
-        &                             ' data='//TRIM(int2string(data))// &
-        &                             ' oom_score='//TRIM(int2string(oom_score)))
+      IF (PRESENT(msg)) THEN
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score))//' - '//msg)
+      ELSE
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score)))
+      END IF
     END IF
 
   END SUBROUTINE report_memory_usage

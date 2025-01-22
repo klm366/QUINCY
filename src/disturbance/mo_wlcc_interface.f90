@@ -1,19 +1,15 @@
-!> Summary: interface to the wlcc process (lcc due to wind)
+!> Interface to the wlcc process (lcc due to wind)
 !>
-!>### Contains the interface to the wlcc process (lcc due to wind)
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2022 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> First version and ongoing changes   by Julia Nabel (2022-01-06)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_wlcc_interface
 #ifndef __NO_JSBACH__
@@ -24,19 +20,18 @@ MODULE mo_wlcc_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes WLCC_, DISTURB_, CARBON_
+  dsl4jsb_Use_processes WLCC_, DISTURB_, CARBON_, FAGE_
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_wlcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_wlcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'wlcc'
 
   !> Type definition for wlcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_wlcc
@@ -63,7 +58,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "wlcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_wlcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=WLCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='wlcc', process_id=WLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_wlcc
 
@@ -90,15 +85,13 @@ CONTAINS
   SUBROUTINE update_wlcc(tile, options)
 
     USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_lcc_class,     ONLY: min_cf_change, t_jsb_lcc_proc, copy_from_active_to_passive_var_onChunk
+    USE mo_jsb_lcc_class,     ONLY: min_daily_cf_change, t_jsb_lcc_proc, copy_from_active_to_passive_var_onChunk
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
     USE mo_carbon_constants,  ONLY: sec_per_day
     USE mo_fage_interface,    ONLY: recalc_fract_per_age_upon_disturbance
 
     dsl4jsb_Use_memory(DISTURB_)
     dsl4jsb_Use_config(WLCC_)
-
-    IMPLICIT NONE
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
@@ -150,13 +143,13 @@ CONTAINS
     ! Assertion: wlcc is currently implemented to run on
     ! - the veg tile in the pft use case
     ! - the pfts or pftXX_fcXX tiles (if running with age classes)
-    IF(.NOT. INDEX(tile%name, 'pft') > 0) THEN
-      IF(.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN
+    IF (.NOT. INDEX(tile%name, 'pft') > 0) THEN
+      IF (.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN
         CALL finish(TRIM(routine), 'Violation of assertion: wlcc (currently) is implemented to run on ' &
-        & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the ' &
+        & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the '          &
         & //' acs (if with age classes), but tried to run for: ' // trim(tile%name) // '. Please check.')
-      ENDIF
-    ENDIF
+      END IF
+    END IF
 
     !>
     !> 1. Get lcc structure
@@ -186,30 +179,30 @@ CONTAINS
     ELSE ! not in a do loop but all at once    => 2a
       nr_of_lcc_events = 1
       nr_of_combined_tiles = nr_of_tiles
-    ENDIF
+    END IF
 
     ! initiate pointers, logicals and indices to enable lcc, particularly if running with forest age classes
     d_tile_is_ac = .FALSE.
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       d_tile => tile%Get_first_child_tile()
-      IF(d_tile%Has_children()) THEN
+      IF (d_tile%Has_children()) THEN
         CALL finish(TRIM(routine), 'Violation of assertion: wlcc (currently) is not implemented to run on ' &
           & //'a hierarchy level with more descendants than direct children. Tried to run on ' &
           & // trim(tile%name) // '. Please check.')
-      ENDIF
-      IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+      END IF
+      IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
         ! Assert: for wlcc (currently) first age class is expected first in the list of involved tiles
         IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(1))) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: for wlcc (currently) the first age class is ' &
             & //'expected to be listed as first involved tile, instead found: '// trim(d_tile%name))
-        ENDIF
+        END IF
         first_ac => d_tile
         i_first_ac = 1
         d_tile_is_ac = .TRUE.
-      ENDIF
+      END IF
     ELSE
       d_tile => tile%self_tile
-    ENDIF
+    END IF
 
     DO i = 1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle
       ! Collect initial area of all involved tiles
@@ -231,13 +224,13 @@ CONTAINS
           i_tile = j
         ENDIF
 
-        IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+        IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
           ! Assertion: if running with age classes all classes are expected to be involved with wlcc
           IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(i_tile))) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: for wlcc (currently) all age classes are expected ' &
               & //'to be listed as involved, but found not involved age-class: '// trim(d_tile%name))
-          ENDIF
-        ENDIF
+          END IF
+        END IF
 
         ! - add damaged area of current child to lost area
         CALL d_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -245,17 +238,17 @@ CONTAINS
         dsl4jsb_Get_var2d_onChunk_tile_name(DISTURB_, damaged_fract, d_tile)
 
         lost_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
-        WHERE(lost_area(:,i_tile) < min_cf_change)
+        WHERE(lost_area(:,i_tile) < min_daily_cf_change)
           lost_area(:,i_tile) = 0.0_wp
         END WHERE
 
-        IF(ANY(lost_area(:,i_tile) > 0._wp)) THEN
+        IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
           ! - care for the gained area  -> @todo change when bare land tile available
           ! ... if forest age classes are used the area of any disturbed age class is added to the first class
-          IF(d_tile_is_ac) THEN
+          IF (d_tile_is_ac) THEN
             gained_area(:,i_first_ac) = gained_area(:,i_first_ac) + lost_area(:,i_tile)
             ! for all but the first age class thus the fractions need to be adapted
-            IF(.NOT. d_tile%Is_first_child()) THEN
+            IF (.NOT. d_tile%Is_first_child()) THEN
               current_fract(:) = current_fract(:) -  lost_area(:,i_tile)
               CALL d_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
               CALL first_ac%Get_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -265,13 +258,13 @@ CONTAINS
               ! Updated tracked age
               CALL recalc_fract_per_age_upon_disturbance(tile, options, i_tile, lost_area(:,i_tile))
 
-            ENDIF
+            END IF
 
           ELSE
             ! else (currently) back to the tile itself
             gained_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
-          ENDIF
-        ENDIF
+          END IF
+        END IF
 
         ! - go to next tile (if associated)
         d_tile => d_tile%Get_next_sibling_tile()
@@ -299,7 +292,7 @@ CONTAINS
           current_tile => tile%Get_first_child_tile()
         ELSE
           current_tile => tile%self_tile
-        ENDIF
+        END IF
 
         i_tile = 0
         DO WHILE (i_tile < nr_of_tiles)
@@ -317,15 +310,15 @@ CONTAINS
                 & 'c_green', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
                 & 'c_reserve', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
-            ENDIF
+            END IF
             ! 4b -- general transfer of active vars
             CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
-          ENDIF
+          END IF
 
           ! - go to next tile (if associated)
           current_tile => current_tile%Get_next_sibling_tile()
 
-        ENDDO
+        END DO
 
         !>
         !> 5. Each lcc process needs to call end lcc to make the passive matter transfer
@@ -350,23 +343,33 @@ CONTAINS
   !
   SUBROUTINE aggregate_wlcc(tile, options)
 
+    dsl4jsb_Use_memory(FAGE_)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk
+    INTEGER  :: iblk, ics, ice
     !X if necessary: REAL(wp) :: dtime, steplen
+    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
+    dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_wlcc'
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !> Currently nothing to do
+    IF(tile%Is_process_active(FAGE_)) THEN
+      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+      dsl4jsb_Get_memory(FAGE_)
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

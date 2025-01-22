@@ -1,17 +1,16 @@
+!> Contains process class
 !>
-!! @brief Contains process class
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2015-09-01)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
@@ -28,7 +27,8 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+    &       PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    &       Q_PHENO_, Q_ASSIMI_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -53,7 +53,8 @@ MODULE mo_jsb_process_class
 
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
-      &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+      &           FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+      &           Q_PHENO_, Q_ASSIMI_
   END ENUM
 
   ! Process actions
@@ -88,8 +89,12 @@ CONTAINS
       return_value = 'rad'
     CASE (ASSIMI_)
       return_value = 'assimi'
+    CASE (Q_ASSIMI_)
+      return_value = 'q_assimi'
     CASE (PHENO_)
       return_value = 'pheno'
+    CASE (Q_PHENO_)
+      return_value = 'q_pheno'
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       return_value = 'hd'
@@ -102,10 +107,6 @@ CONTAINS
       return_value = 'fuel'
     CASE (PPLCC_)
       return_value = 'pplcc'
-    CASE (TLCC_)
-      return_value = 'tlcc'
-    CASE (TCQ_)
-      return_value = 'tcq'
     CASE (FAGE_)
       return_value = 'fage'
     CASE (ALCC_)
@@ -150,8 +151,12 @@ CONTAINS
       return_value = RAD_
     CASE ('assimi')
       return_value = ASSIMI_
+    CASE ('q_assimi')
+      return_value = Q_ASSIMI_
     CASE ('pheno')
       return_value = PHENO_
+    CASE ('q_pheno')
+      return_value = Q_PHENO_
 #ifndef __NO_JSBACH_HD__
     CASE ('hd')
       return_value = HD_
@@ -164,10 +169,6 @@ CONTAINS
       return_value = FUEL_
     CASE ('pplcc')
       return_value = PPLCC_
-    CASE ('tlcc')
-      return_value = TLCC_
-    CASE ('tcq')
-      return_value = TCQ_
     CASE ('fage')
       return_value = FAGE_
     CASE ('alcc')

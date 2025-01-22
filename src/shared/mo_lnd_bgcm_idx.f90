@@ -1,31 +1,22 @@
+!> declare and define indices for bgc material
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief provides index varaibles for bgc_material compartments and elements in the bgcm_store
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena
-!!
-!! @par Revision History
-!!   First version by Jan Engel, MPI-BGC (2023-05-02)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### provides index variables for bgc material compartments and elements in the bgcm_store
+!>
 MODULE mo_lnd_bgcm_idx
+#ifndef __NO_QUINCY__
 
   USE mo_veg_config_class,        ONLY: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, &
     &                                   VEG_PART_SAP_WOOD_IDX, VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, &
@@ -43,9 +34,9 @@ MODULE mo_lnd_bgcm_idx
   PUBLIC :: ixC, ixN, ixP, ixC13, ixC14, ixN15
   PUBLIC :: FIRST_ELEM_ID, LAST_ELEM_ID
   PUBLIC :: set_bgcm_element_idx
-  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit, ix_seed_bed    
+  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit, ix_seed_bed
   PUBLIC :: ix_dom, ix_dom_assoc, ix_soluable_litter, ix_polymeric_litter, ix_woody_litter, ix_fungi, ix_mycorrhiza, &
-    &       ix_microbial, ix_residue, ix_residue_assoc    
+    &       ix_microbial, ix_residue, ix_residue_assoc
 
   ! elements
   INTEGER, SAVE :: ixC   = -1
@@ -103,4 +94,5 @@ CONTAINS
     ixN15 = elements_index_map(ELEM_N15_ID)
   END SUBROUTINE set_bgcm_element_idx
 
+#endif
 END MODULE mo_lnd_bgcm_idx

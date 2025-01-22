@@ -1,20 +1,22 @@
-!> Summary: Contains types and definitions for storing and providing bgc materials
+!> Summary: provides types and definitions for storing and providing bgc materials
 !>
-!>### Contains definitions and types to ease working with bgc materials
+!> ICON-Land
 !>
-!> Copyright (c) 2022 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2022-12-14 - present)
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### License
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### provides types and definitions for storing and providing bgc materials
 !>
 MODULE mo_lnd_bgcm_store_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_pool_class,      ONLY: t_jsb_pool
@@ -27,9 +29,11 @@ MODULE mo_lnd_bgcm_store_class
   PUBLIC :: t_lnd_bgcm_store_abstract
   PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &       SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
-  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
-    &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,              &
-    &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID
+  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,               &
+    &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                            &
+    &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
+    &       VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
+    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_FPROD_DECAY_ID
 
   ! ======================================================================================================= !
   !>
@@ -49,7 +53,14 @@ MODULE mo_lnd_bgcm_store_class
       & VEG_BGCM_FRAC_ALLOC_ID,     &   !< vegetation bgcm frac_alloc
       & VEG_BGCM_EXUDATION_ID,      &   !< vegetation bgcm exudation
       & VEG_BGCM_ESTABLISHMENT_ID,  &   !< vegetation bgcm establishment
-      & VEG_BGCM_RESERVE_USE_ID         !< vegetation bgcm reserve_use
+      & VEG_BGCM_RESERVE_USE_ID,    &   !< vegetation bgcm reserve_use
+      & VEG_BGCM_PP_FUEL_ID,        &   !< vegetation bgcm fuel product pool
+      & VEG_BGCM_PP_PAPER_ID,       &   !< vegetation bgcm paper product pool
+      & VEG_BGCM_PP_FIBERBOARD_ID,  &   !< vegetation bgcm fiberboard product pool
+      & VEG_BGCM_PP_OIRW_ID,        &   !< vegetation bgcm other industrial roundwood product pool
+      & VEG_BGCM_PP_PV_ID,          &   !< vegetation bgcm plywood and veneer product pool
+      & VEG_BGCM_PP_SAWNWOOD_ID,    &   !< vegetation bgcm sawnwood product pool
+      & VEG_BGCM_FPROD_DECAY_ID         !< vegetation bgcm flux from product pool decay
   END ENUM
 
   ! ======================================================================================================= !

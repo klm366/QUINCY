@@ -1,16 +1,18 @@
+!> Contains process task class
 !>
-!! @brief Contains process task class
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2015-09-01)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
@@ -35,12 +37,15 @@ MODULE mo_jsb_task_class
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
     REAL(wp)                  :: steplen = -1._wp
-    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor (differs between standalone and coupled simulations)
+    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
     INTEGER                   :: ics     = -1  ! Index of chunk start
     INTEGER                   :: ice     = -1  ! Index of chunk end
     INTEGER                   :: nc      = -1  ! Length of chunk
+    INTEGER                   :: nsoil_e = -1  !< Number of soil layers for energy
+    INTEGER                   :: nsoil_w = -1  !< Number of soil layers for water
+    INTEGER                   :: nsnow_e = -1  !< Number of snow layers for energy
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg

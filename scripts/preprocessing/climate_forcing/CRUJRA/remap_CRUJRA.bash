@@ -1,5 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
 #
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#-----------------------------------------------------------------------------
 # Script to remap CRUJRA climate data from 0.5deg (r720x360)
 #
 # The script is based on remap_to_T63_common_weight_TRENDY_v10.bash down to remap_to_T63_TRENDY_v4.bash, which in turn were based on
@@ -10,10 +22,6 @@
 # and then remaps all files with given postfix and creates new files with prefix "crujra_v2.2_T63_"
 # ++ in contrast to cruncep no grid creation of shifts are required 
 #    (cruncep climate data did not suit the 'r720x360' cdo grid at all, seems as crujra does)
-#
-#
-#------------------------------------------------------------------------------
-# Julia E.M.S. Nabel, August 2022 (julia.nabel@mpimet.mpg.de)
 #
 #----------------------------------------------------------------------------
 # submit as a serial job -> adapt wall_clock_limit to your needs!

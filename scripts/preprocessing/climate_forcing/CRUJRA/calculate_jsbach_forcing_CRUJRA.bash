@@ -1,5 +1,17 @@
 #!/bin/bash 
+
+# ICON-Land
 #
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#-----------------------------------------------------------------------------
 # Script to calculate jsbach forcing data from crujra data
 #
 # The script is based on calculate_jsbach_forcing_with_common_slm_from_remapped_crujra_TRENDY_v9.bash, which were based on 
@@ -7,9 +19,6 @@
 # and preprocessing_change_time_unit_in_forcing_file.ksh by JN
 #
 # NOTE: new: unit same for both shortwave ("W m-2") and longwave (W/m^2) 
-#
-#------------------------------------------------------------------------------
-# Julia E.M.S. Nabel, July 2021 (julia.nabel@mpimet.mpg.de)
 #
 #----------------------------------------------------------------------------
 # submit as a serial job to mistral -> adapt wall_clock_limit to your needs!

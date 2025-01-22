@@ -1,7 +1,17 @@
 #!/bin/bash
-# Julia E.M.S. Nabel, July 2017 (julia.nabel@mpimet.mpg.de)
-#------------------------------------------------------------------------------
-#----------------------------------------------------------------------------
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#-----------------------------------------------------------------------------
 # submit as a serial job to mistral -> adapt wall_clock_limit to your needs!
 # ==> NOTE: unfortunately wget seems not to be installed on the nodes - i.e. execute interactively...
 # ===> hmmm, wget does work when reserving a node for interactive work ... 

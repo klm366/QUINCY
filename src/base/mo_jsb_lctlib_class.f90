@@ -1,20 +1,22 @@
+!> Contains function to read the landcover library file
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 !>
 !! This module provides the data from the landcover library file, which contains additional information on the
 !! landcover data used in a particular run of JSBACH.
 !! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
 !! keyword "LCT_FILE".
 !!
-!! Authors: Reiner Schnur, 7/2003
-!!          Christian H. Reick, 8/2003
-!!
-!! @par Revision History
-!! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
-!!                           (derive maxLAI from biomass via allometric relationships)
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
@@ -151,6 +153,8 @@ MODULE mo_jsb_lctlib_class
     INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
+    REAL(wp) :: lai_max
+    REAL(wp) :: vegetation_height
     REAL(wp) :: sla
     REAL(wp) :: sigma_vis
     REAL(wp) :: sigma_nir
@@ -217,7 +221,10 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: k_root_dist
+    REAL(wp) :: &
+      & k_root_dist                   , &
+      & k_som_fast_init               , &
+      & k_som_slow_init
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
   END TYPE t_lctlib_element
@@ -261,15 +268,18 @@ CONTAINS
     !
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
+#ifndef __NO_QUINCY__
 #ifdef __QUINCY_STANDALONE__
     USE mo_util,        ONLY: tolower
+#endif
+    USE mo_util_string, ONLY: tolower
+    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 #else
     USE mo_util_string, ONLY: tolower
 #endif
-    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
-    USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
@@ -287,6 +297,9 @@ CONTAINS
     CHARACTER(len=2)   :: blank_set = " "//achar(9) !< the blank characters: BLANK and TAB
     INTEGER,ALLOCATABLE:: itmp(:)                   !< temporary array used for input of logicals
     INTEGER            :: apu
+
+    INTEGER :: i
+    INTEGER :: nlct, npft
 
     LOGICAL            :: exist_LctNumber              = .FALSE.
     LOGICAL            :: exist_LctName                = .FALSE.
@@ -364,6 +377,8 @@ CONTAINS
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.
     LOGICAL            :: exists_phenology_type = .FALSE.
+    LOGICAL            :: exists_lai_max = .FALSE.
+    LOGICAL            :: exists_vegetation_height = .FALSE.
     LOGICAL            :: exists_sla = .FALSE.
     LOGICAL            :: exists_sigma_vis = .FALSE.
     LOGICAL            :: exists_sigma_nir = .FALSE.
@@ -419,11 +434,12 @@ CONTAINS
     LOGICAL            :: exists_c0_allom = .FALSE.
     LOGICAL            :: exists_fstore_target = .FALSE.
     LOGICAL            :: exists_k_root_dist = .FALSE.
+    LOGICAL            :: exists_k_som_fast_init = .FALSE.
+    LOGICAL            :: exists_k_som_slow_init = .FALSE.
+    LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     ! quincy model - end
-    INTEGER            :: i, j
-    INTEGER            :: nlct, npft
 
-    !>Read lctlib data and eventually allocate also memory for lctlib data on io-processor
+    !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
     !>
     IF (my_process_is_stdio()) THEN
 
@@ -472,36 +488,37 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
 
-       REWIND(unit=lctlib_file_unit) ! Go back to beginning of landcover library file
+      REWIND(unit=lctlib_file_unit) ! Go back to beginning of landcover library file
 
-       ALLOCATE(itmp(nlct))
+      ALLOCATE(itmp(nlct))
 
-       DO
-          READ(lctlib_file_unit,'(A256)', IOSTAT=read_status) line
-          IF (read_status /= 0) EXIT                   ! Finished reading
+      DO
+        READ(lctlib_file_unit,'(A256)', IOSTAT=read_status) line
+        IF (read_status /= 0) EXIT                   ! Finished reading
 
-          ! Look for comment
-          pos_comment = SCAN(line,"#")                 ! Start position of comment, 0 if none present
-          IF (pos_comment > 1) THEN
-             line = TRIM(ADJUSTL(line(1:pos_comment))) ! Disregard everything to the right of "#", ..
-             ! .. adjust to the left and trim to the right
-          ELSE IF (pos_comment == 1) THEN
-             CYCLE                                     ! Disregard whole line
-          ELSE
-             line = TRIM(ADJUSTL(line))                ! Only disregard blanks to the left and right
-          ENDIF
-          length=LEN_TRIM(line)
-          IF(length== 0) CYCLE                 ! Line is empty
+        ! Look for comment
+        pos_comment = SCAN(line,"#")                 ! Start position of comment, 0 if none present
+        IF (pos_comment > 1) THEN
+          line = TRIM(ADJUSTL(line(1:pos_comment))) ! Disregard everything to the right of "#", ..
+          ! .. adjust to the left and trim to the right
+        ELSE IF (pos_comment == 1) THEN
+          CYCLE                                     ! Disregard whole line
+        ELSE
+          line = TRIM(ADJUSTL(line))                ! Only disregard blanks to the left and right
+        END IF
+        length=LEN_TRIM(line)
+        IF(length== 0) CYCLE                 ! Line is empty
 
-          pos = SCAN(line,blank_set)                   ! Position of first blank character
-          IF(pos == 0)   CALL finish('init_lctlib',"Wrong syntax in lctlib definitions")
+        pos = SCAN(line,blank_set)                   ! Position of first blank character
+        IF(pos == 0)   CALL finish('init_lctlib',"Wrong syntax in lctlib definitions")
 
-          READ(line(1:pos-1),'(A)') key
-          key = tolower(key)
+        READ(line(1:pos-1),'(A)') key
+        key = tolower(key)
 
-          IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
+        IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
 
-          ! read the jsabch4 lctLib parameter
+        ! read the JSBACH lctLib parameter
+        IF (model_scheme_char == "jsbach") THEN
           SELECT CASE (TRIM(key))
           CASE ('lctnumber')
             READ(line(pos:length),*) lctlib(1:nlct)%LctNumber
@@ -773,203 +790,230 @@ CONTAINS
           CASE default
             ! nothing to do
           END SELECT
-          ! ------------------------------------------------------------------
-          ! read the quincy lctLib parameter
-          IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
-            SELECT CASE (TRIM(key))
-            CASE ('growthform')
-              READ(line(pos:length),*) lctlib(1:nlct)%growthform
-              exists_growthform = .TRUE.
-            CASE ('ps_pathway')
-              READ(line(pos:length),*) lctlib(1:nlct)%ps_pathway
-              exists_ps_pathway = .TRUE.
-            CASE ('phenology_type')
-              READ(line(pos:length),*) lctlib(1:nlct)%phenology_type
-              exists_phenology_type = .TRUE.
-            CASE ('sla')
-              READ(line(pos:length),*) lctlib(1:nlct)%sla
-              exists_sla = .TRUE.
-            CASE ('sigma_vis')
-              READ(line(pos:length),*) lctlib(1:nlct)%sigma_vis
-              exists_sigma_vis = .TRUE.
-            CASE ('sigma_nir')
-              READ(line(pos:length),*) lctlib(1:nlct)%sigma_nir
-              exists_sigma_nir = .TRUE.
-            CASE ('omega_clumping')
-              READ(line(pos:length),*) lctlib(1:nlct)%omega_clumping
-              exists_omega_clumping = .TRUE.
-            CASE ('crown_shape_factor')
-              READ(line(pos:length),*) lctlib(1:nlct)%crown_shape_factor
-              exists_crown_shape_factor = .TRUE.
-            CASE ('cn_leaf')
-              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf
-              exists_cn_leaf = .TRUE.
-            CASE ('cn_leaf_min')
-              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_min
-              exists_cn_leaf_min = .TRUE.
-            CASE ('cn_leaf_max')
-              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_max
-              exists_cn_leaf_max = .TRUE.
-            CASE ('np_leaf')
-              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf
-              exists_np_leaf = .TRUE.
-            CASE ('np_leaf_min')
-              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_min
-              exists_np_leaf_min = .TRUE.
-            CASE ('np_leaf_max')
-              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_max
-              exists_np_leaf_max = .TRUE.
-            CASE ('k0_fn_struc')
-              READ(line(pos:length),*) lctlib(1:nlct)%k0_fn_struc
-              exists_k0_fn_struc = .TRUE.
-            CASE ('fn_oth_min')
-              READ(line(pos:length),*) lctlib(1:nlct)%fn_oth_min
-              exists_fn_oth_min = .TRUE.
-            CASE ('t_jmax_opt')
-              READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_opt
-              exists_t_jmax_opt = .TRUE.
-            CASE ('t_jmax_omega')
-              READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_omega
-              exists_t_jmax_omega = .TRUE.
-            CASE ('g0')
-              READ(line(pos:length),*) lctlib(1:nlct)%g0
-              exists_g0 = .TRUE.
-            CASE ('g1_medlyn')
-              READ(line(pos:length),*) lctlib(1:nlct)%g1_medlyn
-              exists_g1_medlyn = .TRUE.
-            CASE ('g1_bberry')
-              READ(line(pos:length),*) lctlib(1:nlct)%g1_bberry
-              exists_g1_bberry = .TRUE.
-            CASE ('gmin')
-              READ(line(pos:length),*) lctlib(1:nlct)%gmin
-              exists_gmin = .TRUE.
+        END IF ! jsbach
+        ! ------------------------------------------------------------------
+        ! read the quincy lctLib parameter
+        IF (model_scheme_char == "quincy") THEN
+          SELECT CASE (TRIM(key))
+          CASE ('lctnumber')
+            READ(line(pos:length),*) lctlib(1:nlct)%LctNumber
+            exist_LctNumber = .TRUE.
+          CASE ('lctname')                                           ! Name of landcover type
+            READ(line(pos:length),*) lctlib(1:nlct)%LctName
+            exist_LctName = .TRUE.
+          CASE ('landcoverclass')                                    ! Landcover class
+            READ(line(pos:length),*) lctlib(1:nlct)%LandcoverClass
+            exist_LandcoverClass = .TRUE.
+          !
+          CASE ('growthform')
+            READ(line(pos:length),*) lctlib(1:nlct)%growthform
+            exists_growthform = .TRUE.
+          CASE ('ps_pathway')
+            READ(line(pos:length),*) lctlib(1:nlct)%ps_pathway
+            exists_ps_pathway = .TRUE.
+          CASE ('phenology_type')
+            READ(line(pos:length),*) lctlib(1:nlct)%phenology_type
+            exists_phenology_type = .TRUE.
+          CASE ('lai_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%lai_max
+            exists_lai_max = .TRUE.
+          CASE ('vegetation_height')
+            READ(line(pos:length),*) lctlib(1:nlct)%vegetation_height
+            exists_vegetation_height = .TRUE.
+          CASE ('sla')
+            READ(line(pos:length),*) lctlib(1:nlct)%sla
+            exists_sla = .TRUE.
+          CASE ('sigma_vis')
+            READ(line(pos:length),*) lctlib(1:nlct)%sigma_vis
+            exists_sigma_vis = .TRUE.
+          CASE ('sigma_nir')
+            READ(line(pos:length),*) lctlib(1:nlct)%sigma_nir
+            exists_sigma_nir = .TRUE.
+          CASE ('omega_clumping')
+            READ(line(pos:length),*) lctlib(1:nlct)%omega_clumping
+            exists_omega_clumping = .TRUE.
+          CASE ('crown_shape_factor')
+            READ(line(pos:length),*) lctlib(1:nlct)%crown_shape_factor
+            exists_crown_shape_factor = .TRUE.
+          CASE ('cn_leaf')
+            READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf
+            exists_cn_leaf = .TRUE.
+          CASE ('cn_leaf_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_min
+            exists_cn_leaf_min = .TRUE.
+          CASE ('cn_leaf_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_max
+            exists_cn_leaf_max = .TRUE.
+          CASE ('np_leaf')
+            READ(line(pos:length),*) lctlib(1:nlct)%np_leaf
+            exists_np_leaf = .TRUE.
+          CASE ('np_leaf_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_min
+            exists_np_leaf_min = .TRUE.
+          CASE ('np_leaf_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_max
+            exists_np_leaf_max = .TRUE.
+          CASE ('k0_fn_struc')
+            READ(line(pos:length),*) lctlib(1:nlct)%k0_fn_struc
+            exists_k0_fn_struc = .TRUE.
+          CASE ('fn_oth_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%fn_oth_min
+            exists_fn_oth_min = .TRUE.
+          CASE ('t_jmax_opt')
+            READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_opt
+            exists_t_jmax_opt = .TRUE.
+          CASE ('t_jmax_omega')
+            READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_omega
+            exists_t_jmax_omega = .TRUE.
+          CASE ('g0')
+            READ(line(pos:length),*) lctlib(1:nlct)%g0
+            exists_g0 = .TRUE.
+          CASE ('g1_medlyn')
+            READ(line(pos:length),*) lctlib(1:nlct)%g1_medlyn
+            exists_g1_medlyn = .TRUE.
+          CASE ('g1_bberry')
+            READ(line(pos:length),*) lctlib(1:nlct)%g1_bberry
+            exists_g1_bberry = .TRUE.
+          CASE ('gmin')
+            READ(line(pos:length),*) lctlib(1:nlct)%gmin
+            exists_gmin = .TRUE.
+          !
+          CASE ('tau_leaf')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_leaf
+            exists_tau_leaf = .TRUE.
+          CASE ('tau_fine_root')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_fine_root
+            exists_tau_fine_root = .TRUE.
+          CASE ('tau_coarse_root')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_coarse_root
+            exists_tau_coarse_root = .TRUE.
+          CASE ('tau_branch')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_branch
+            exists_tau_branch = .TRUE.
+          CASE ('tau_sap_wood')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_sap_wood
+            exists_tau_sap_wood = .TRUE.
+          CASE ('tau_fruit')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_fruit
+            exists_tau_fruit = .TRUE.
+          CASE ('tau_seed_litter')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_litter
+            exists_tau_seed_litter = .TRUE.
+          CASE ('tau_seed_est')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_est
+            exists_tau_seed_est = .TRUE.
+          CASE ('tau_mycorrhiza')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_mycorrhiza
+            exists_tau_mycorrhiza = .TRUE.
+          !
+          CASE ('vmax_uptake_n')
+            READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_n
+            exists_vmax_uptake_n = .TRUE.
+          CASE ('vmax_uptake_p')
+            READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_p
+            exists_vmax_uptake_p = .TRUE.
+          CASE ('bnf_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
+            exists_bnf_base = .TRUE.
+          !
+          CASE ('lambda_est_light')
+            READ(line(pos:length),*) lctlib(1:nlct)%lambda_est_light
+            exists_lambda_est_light = .TRUE.
+          CASE ('k_est_light')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_est_light
+            exists_k_est_light = .TRUE.
+          CASE ('seed_size')
+            READ(line(pos:length),*) lctlib(1:nlct)%seed_size
+            exists_seed_size = .TRUE.
+          CASE ('k1_mort_greff')
+            READ(line(pos:length),*) lctlib(1:nlct)%k1_mort_greff
+            exists_k1_mort_greff = .TRUE.
+          !
+          CASE ('beta_soil_flush')
+            READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_flush
+            exists_beta_soil_flush = .TRUE.
+          CASE ('beta_soil_senescence')
+            READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_senescence
+            exists_beta_soil_senescence = .TRUE.
+          CASE ('gdd_req_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%gdd_req_max
+            exists_gdd_req_max = .TRUE.
+          CASE ('k_gdd_dormance')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_gdd_dormance
+            exists_k_gdd_dormance = .TRUE.
+          CASE ('t_air_senescence')
+            READ(line(pos:length),*) lctlib(1:nlct)%t_air_senescence
+            exists_t_air_senescence = .TRUE.
+          CASE ('min_leaf_age')
+            READ(line(pos:length),*) lctlib(1:nlct)%min_leaf_age
+            exists_min_leaf_age = .TRUE.
+          !
+          CASE ('frac_sapwood_branch')
+            READ(line(pos:length),*) lctlib(1:nlct)%frac_sapwood_branch
+            exists_frac_sapwood_branch = .TRUE.
+          CASE ('wood_density')
+            READ(line(pos:length),*) lctlib(1:nlct)%wood_density
+            exists_wood_density = .TRUE.
+          CASE ('k_latosa')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_latosa
+            exists_k_latosa = .TRUE.
+          CASE ('k_crtos')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_crtos
+            exists_k_crtos = .TRUE.
+          CASE ('k_rtos')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_rtos
+            exists_k_rtos = .TRUE.
+          CASE ('k2_fruit_alloc')
+            READ(line(pos:length),*) lctlib(1:nlct)%k2_fruit_alloc
+            exists_k2_fruit_alloc = .TRUE.
+          CASE ('allom_k1')
+            READ(line(pos:length),*) lctlib(1:nlct)%allom_k1
+            exists_allom_k1 = .TRUE.
+          CASE ('allom_k2')
+            READ(line(pos:length),*) lctlib(1:nlct)%allom_k2
+            exists_allom_k2 = .TRUE.
+          CASE ('phi_leaf_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%phi_leaf_min
+            exists_phi_leaf_min = .TRUE.
+          CASE ('k_root')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_root
+            exists_k_root = .TRUE.
+          CASE ('k_sapwood')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_sapwood
+            exists_k_sapwood = .TRUE.
+          CASE ('c0_allom')
+            READ(line(pos:length),*) lctlib(1:nlct)%c0_allom
+            exists_c0_allom = .TRUE.
+          CASE ('fstore_target')
+            READ(line(pos:length),*) lctlib(1:nlct)%fstore_target
+            exists_fstore_target = .TRUE.
+          !
+          CASE ('k_root_dist')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist
+            exists_k_root_dist = .TRUE.
+          CASE ('k_som_fast_init')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_som_fast_init
+            exists_k_som_fast_init = .TRUE.
+          CASE ('k_som_slow_init')
+            READ(line(pos:length),*) lctlib(1:nlct)%k_som_slow_init
+            exists_k_som_slow_init = .TRUE.
+          ! jsbach parameter
+          CASE ('albedolittervis')
+            READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterVIS
+            exists_AlbedoLitterVIS = .TRUE.
+          CASE default
+            ! nothing to do
+          END SELECT
+        END IF
+        ! quincy end
+        ! ------------------------------------------------------------------
+      END DO
+      DEALLOCATE(itmp)
 
-            CASE ('tau_leaf')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_leaf
-              exists_tau_leaf = .TRUE.
-            CASE ('tau_fine_root')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_fine_root
-              exists_tau_fine_root = .TRUE.
-            CASE ('tau_coarse_root')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_coarse_root
-              exists_tau_coarse_root = .TRUE.
-            CASE ('tau_branch')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_branch
-              exists_tau_branch = .TRUE.
-            CASE ('tau_sap_wood')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_sap_wood
-              exists_tau_sap_wood = .TRUE.
-            CASE ('tau_fruit')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_fruit
-              exists_tau_fruit = .TRUE.
-            CASE ('tau_seed_litter')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_litter
-              exists_tau_seed_litter = .TRUE.
-            CASE ('tau_seed_est')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_est
-              exists_tau_seed_est = .TRUE.
-            CASE ('tau_mycorrhiza')
-              READ(line(pos:length),*) lctlib(1:nlct)%tau_mycorrhiza
-              exists_tau_mycorrhiza = .TRUE.
-
-            CASE ('vmax_uptake_n')
-              READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_n
-              exists_vmax_uptake_n = .TRUE.
-            CASE ('vmax_uptake_p')
-              READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_p
-              exists_vmax_uptake_p = .TRUE.
-            CASE ('bnf_base')
-              READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
-              exists_bnf_base = .TRUE.
-
-            CASE ('lambda_est_light')
-              READ(line(pos:length),*) lctlib(1:nlct)%lambda_est_light
-              exists_lambda_est_light = .TRUE.
-            CASE ('k_est_light')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_est_light
-              exists_k_est_light = .TRUE.
-            CASE ('seed_size')
-              READ(line(pos:length),*) lctlib(1:nlct)%seed_size
-              exists_seed_size = .TRUE.
-            CASE ('k1_mort_greff')
-              READ(line(pos:length),*) lctlib(1:nlct)%k1_mort_greff
-              exists_k1_mort_greff = .TRUE.
-
-            CASE ('beta_soil_flush')
-              READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_flush
-              exists_beta_soil_flush = .TRUE.
-            CASE ('beta_soil_senescence')
-              READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_senescence
-              exists_beta_soil_senescence = .TRUE.
-            CASE ('gdd_req_max')
-              READ(line(pos:length),*) lctlib(1:nlct)%gdd_req_max
-              exists_gdd_req_max = .TRUE.
-            CASE ('k_gdd_dormance')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_gdd_dormance
-              exists_k_gdd_dormance = .TRUE.
-            CASE ('t_air_senescence')
-              READ(line(pos:length),*) lctlib(1:nlct)%t_air_senescence
-              exists_t_air_senescence = .TRUE.
-            CASE ('min_leaf_age')
-              READ(line(pos:length),*) lctlib(1:nlct)%min_leaf_age
-              exists_min_leaf_age = .TRUE.
-
-            CASE ('frac_sapwood_branch')
-              READ(line(pos:length),*) lctlib(1:nlct)%frac_sapwood_branch
-              exists_frac_sapwood_branch = .TRUE.
-            CASE ('wood_density')
-              READ(line(pos:length),*) lctlib(1:nlct)%wood_density
-              exists_wood_density = .TRUE.
-            CASE ('k_latosa')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_latosa
-              exists_k_latosa = .TRUE.
-            CASE ('k_crtos')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_crtos
-              exists_k_crtos = .TRUE.
-            CASE ('k_rtos')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_rtos
-              exists_k_rtos = .TRUE.
-            CASE ('k2_fruit_alloc')
-              READ(line(pos:length),*) lctlib(1:nlct)%k2_fruit_alloc
-              exists_k2_fruit_alloc = .TRUE.
-            CASE ('allom_k1')
-              READ(line(pos:length),*) lctlib(1:nlct)%allom_k1
-              exists_allom_k1 = .TRUE.
-            CASE ('allom_k2')
-              READ(line(pos:length),*) lctlib(1:nlct)%allom_k2
-              exists_allom_k2 = .TRUE.
-            CASE ('phi_leaf_min')
-              READ(line(pos:length),*) lctlib(1:nlct)%phi_leaf_min
-              exists_phi_leaf_min = .TRUE.
-            CASE ('k_root')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_root
-              exists_k_root = .TRUE.
-            CASE ('k_sapwood')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_sapwood
-              exists_k_sapwood = .TRUE.
-            CASE ('c0_allom')
-              READ(line(pos:length),*) lctlib(1:nlct)%c0_allom
-              exists_c0_allom = .TRUE.
-            CASE ('fstore_target')
-              READ(line(pos:length),*) lctlib(1:nlct)%fstore_target
-              exists_fstore_target = .TRUE.
-
-            CASE ('k_root_dist')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist
-              exists_k_root_dist = .TRUE.
-            CASE default
-              ! nothing to do
-            END SELECT
-          END IF
-          ! quincy end
-          ! ------------------------------------------------------------------
-       END DO
-       DEALLOCATE(itmp)
-
-       !> test if the lctLib parameter could be read, if not finish()
+       !> Test if the lctLib parameter could be read, if not finish()
        !>
 
-       ! three main parameters
+       ! Three main parameters
        IF(.NOT. exist_LctNumber) &
             CALL finish('init_lctlib','No data for LctNumber found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_LctName) &
@@ -979,8 +1023,8 @@ CONTAINS
        IF(.NOT. exist_LandcoverClass) &
             CALL finish('init_lctlib','No data for LandcoverClass found in '//TRIM(lctlib_file_name))
 
-       ! model scheme: jsbach / jsbach_quincy
-       IF (model_scheme_char == "jsbach" .OR. model_scheme_char == "jsbach_quincy") THEN
+       ! model scheme: jsbach
+       IF (model_scheme_char == "jsbach") THEN
          IF(.NOT. exist_AlbedoSnowVisMin) &
               CALL finish('init_lctlib','No data for AlbedoSnowVisMin found in '//TRIM(lctlib_file_name))
          IF(.NOT. exist_AlbedoSnowVisMax) &
@@ -1133,14 +1177,19 @@ CONTAINS
          !------------------------------------------------------------------------------------------
        END IF
 
-       ! model scheme: jsbach_quincy / quincy
-       IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
+#ifndef __NO_QUINCY__
+       ! model scheme: quincy
+       IF (model_scheme_char == "quincy") THEN
         IF(.NOT. exists_growthform) &
           CALL finish('init_lctlib','No data for growthform found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_ps_pathway) &
           CALL finish('init_lctlib','No data for ps_pathway found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_phenology_type) &
           CALL finish('init_lctlib','No data for phenology_type found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_lai_max) &
+          CALL finish('init_lctlib','No data for lai_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_vegetation_height) &
+          CALL finish('init_lctlib','No data for vegetation_height found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_sla) &
           CALL finish('init_lctlib','No data for sla found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_sigma_vis) &
@@ -1251,85 +1300,88 @@ CONTAINS
           CALL finish('init_lctlib','No data for fstore_target found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_root_dist) &
           CALL finish('init_lctlib','No data for k_root_dist found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_som_fast_init) &
+          CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_som_slow_init) &
+          CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_AlbedoLitterVIS) &
+          CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
+#endif
 
        CLOSE(unit=lctlib_file_unit) ! Closing access to lctlib file
 
+#ifndef __NO_QUINCY__
        !------------------------------------------------------------------------------------------
        !>Modify the input values of some quincy lctlib parameters
        !>
-       !>  loop over vegetation lct:
-       !>    'jsbach_lite' & 'jsbach_pfts': calculations are applied to vegetation only; the lct = 1 is glacier (and has no values, i.e. is 0, in the quincy lctlib part)!
-       !>    'quincy_eight_pfts':           calculations are applied to all 8 PFT
-       IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
-         IF (usecase == 'quincy_eight_pfts') THEN
-           j = 1
-         ELSE
-           j = 2
-         END IF
-
+       !>  TODO QUINCY: calculations may not need to be applied for
+       !>               bare soil and urban area in usecases quincy_11_pfts / quincy_14_pfts
+       !>  TODO - is there any reason why you have an own loop for each parameter?
+       !>
+       IF (model_scheme_char == "quincy") THEN
        ! sla
-         DO i = j,nlct
+         DO i = 1,nlct
              lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
          END DO
        ! cn_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
          END DO
        ! cn_leaf_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
          END DO
        ! cn_leaf_max
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
          END DO
        ! np_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                 lctlib(i)%np_leaf
          END DO
        ! np_leaf_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_min
          END DO
        ! np_leaf_max
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_max
          END DO
        ! fn_oth_min
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
          END DO
        ! tau_leaf
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
          END DO
        ! bnf_base
-         DO i = j,nlct
+         DO i = 1,nlct
           lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
          END DO
        ! t_air_senescence
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + Tzero
          END DO
        ! wood_density
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
          END DO
        ! k_root
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
          END DO
        ! k_sapwood
-         DO i = j,nlct
+         DO i = 1,nlct
            lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
          END DO
         ! k_rtos
-         DO i = j,nlct
+         DO i = 1,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
               !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
@@ -1339,7 +1391,7 @@ CONTAINS
            END IF
          END DO
          ! c0_allom
-         DO i = j,nlct
+         DO i = 1,nlct
            IF(lctlib(i)%growthform == itree) THEN
              lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
                                        lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
@@ -1348,8 +1400,8 @@ CONTAINS
              lctlib(i)%c0_allom = 0.0_wp
            END IF
          END DO
-       END IF
-       ! quincy
+       END IF ! (model_scheme_char == "quincy")
+#endif
 
        !------------------------------------------------------------------------------------------
 
@@ -1448,8 +1500,8 @@ CONTAINS
       CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)
-      ! model scheme: jsbach / jsbach_quincy
-      IF (model_scheme_char == "jsbach" .OR. model_scheme_char == "jsbach_quincy") THEN
+      ! model scheme: jsbach
+      IF (model_scheme_char == "jsbach") THEN
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMin, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMax, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoSnowNirMin, p_io, mpi_comm)
@@ -1522,11 +1574,14 @@ CONTAINS
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
       END IF
-      ! model schmeme: jsbach_quincy / quincy
-      IF (model_scheme_char == "jsbach_quincy" .OR. model_scheme_char == "quincy") THEN
+#ifndef __NO_QUINCY__
+      ! model schmeme: quincy
+      IF (model_scheme_char == "quincy") THEN
         CALL p_bcast(lctlib(:)%growthform, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ps_pathway, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%phenology_type, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%lai_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%vegetation_height, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%sla, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%sigma_vis, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%sigma_nir, p_io, mpi_comm)
@@ -1582,19 +1637,24 @@ CONTAINS
         CALL p_bcast(lctlib(:)%c0_allom, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%fstore_target, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
       END IF
+#endif
     END IF
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
 
-    !>Throw away values for glacier (first column) for some model usecases (mo_jsb_usecases)
+    !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
-    ! quincy model with 8 PFT tiles
-    CASE ('quincy_eight_pfts')
+#ifndef __NO_QUINCY__
+    ! quincy model with 8 / 11 PFT tiles
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
-
+#endif
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1

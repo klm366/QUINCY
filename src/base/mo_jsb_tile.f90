@@ -1,6 +1,17 @@
-!> Summary: Contains concrete class and methods for tiles
+!> Contains concrete tile class that contains the surface structure and memory state.
 !>
-!>### Definition of concrete class and methods for tiles 
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>### Definition of concrete class and methods for tiles
 !> This module implements `t_jsb_tile` as an extension of `[[mo_jsb_tile_class:t_jsb_tile_abstract]]` and
 !>   implements, among others, the methods
 !>
@@ -9,20 +20,8 @@
 !> - Init_vars => [[Init_vars_on_tile]]
 !> - Handler => [[Process_task_on_tile]]
 !>
-!>#### Revision History
-!> 2013-04-04 First version, but heavily modified over time afterwards, by Reiner Schnur  
-!> 2015-10-01 Major re-structuring of infrastructure, fully object-oriented and polymorphic memory and tile
-!>            structure, by Reiner Schnur
-!>
-!>#### Copyright and License
-!>
-!> Copyright 2013 to 2023, MPI-M, MPI-BGC, Reiner Schnur, Julia Nabel
-!>
-!> BSD 3-Clause
-!> spdx-id: BSD-3-Clause
-!>
-!>
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
@@ -62,15 +61,17 @@ MODULE mo_jsb_tile
                  !< Initialize tile fractions
     PROCEDURE :: Init_vars                        => Init_vars_on_tile
                  !< Store variable positions in memory of child tiles
-    PROCEDURE :: Print                            => Print_tile
-    PROCEDURE :: Handler                          => Process_task_on_tile
     PROCEDURE :: Is_process_calculated            => Is_process_calculated_on_tile
     PROCEDURE :: Is_process_active                => Is_process_active_on_tile
     PROCEDURE :: Has_process_memory               => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
+#ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
+#endif
+    PROCEDURE :: Print                            => Print_tile
+    PROCEDURE :: Handler                          => Process_task_on_tile
   END TYPE t_jsb_tile
 
   !> Used to create a vector of tiles
@@ -303,7 +304,6 @@ CONTAINS
     INTEGER,           INTENT(in)    :: grid_id           !< Grid id
     LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
     ! -------------------------------------------------------------------------------------------------- !
-
     INTEGER                               :: iproc
     TYPE(t_jsb_model), POINTER            :: model
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -328,7 +328,7 @@ CONTAINS
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
-    !$acc enter data create(this%mem)
+    !$ACC ENTER DATA CREATE(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
     parent_tile => this%parent_tile       ! Defined for convenience
@@ -346,7 +346,9 @@ CONTAINS
 
       ! Not all processes need memory (compare process_factory):
       ! Only create / link memory for processes that have a memory
-      IF (.NOT. model%processes(iproc)%p%has_memory) CYCLE
+      IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+        IF (.NOT. model%processes(iproc)%p%has_memory) CYCLE
+      END IF
 
       process_name = Get_process_name(iproc)
 
@@ -386,15 +388,20 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
-        !$acc update device(this%mem(iproc)%p)
-        !$acc enter data create(this%mem(iproc)%p%vars)
+        IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+          IF (this%Has_process_memory(iproc)) THEN
+            this%mem(iproc)%p%lrestart_cont = model%processes(iproc)%p%config%lrestart_cont
+          END IF
+        END IF
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
+        !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$acc update device(this%mem(iproc)%p%vars)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -404,18 +411,18 @@ CONTAINS
           IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
             parent_tile%mem(iproc)%p%no_of_children = no_of_children    !TODO: this line is probably not needed
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
-            !$acc enter data create(parent_tile%mem(iproc)%p%children)
+            !$ACC ENTER DATA CREATE(parent_tile%mem(iproc)%p%children)
           END IF
           child_no = this%path(this%level)                ! Index of the child (i.e. the current tile; comes from state machine)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$acc update device(parent_tile%mem(iproc)%p%children(child_no)%p)
+          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF
 
     END DO
-    !$acc update device(this%mem)
+    !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
 
   END SUBROUTINE Init_tile
 
@@ -482,8 +489,6 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    !$acc enter data copyin(this)
-
     ! Note: uses a much simpler add_var routine than process variables do
     ! Further, the fractions are direct components of the tile class and do not 'live' on a process memory
     ! Therefore, as opposed to the process variables a temporal pointer (tmp_fract) is used here,
@@ -494,20 +499,19 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
     CALL this%Set_fract_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
-    ! And reuse tmp_fract
-    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                                 &
-      & hgrid, surface,                                                                                        &
+    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
+      & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                     &
-      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE., &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -517,13 +521,13 @@ CONTAINS
     ! Initialize fraction(s) of this tile from input file
 
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
-    this%l_fract_children_changed(:,:) = .TRUE. ! l_fract_children_changed=.true. is default, i.e. fraction of tile is changing
+    this%l_fract_children_changed(:,:) = .TRUE. ! default: fraction of tile is changing
 
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN ! fract_varname == 'equal' ==> each child tile gets the same fraction
-      IF (ASSOCIATED(this%parent_tile)) THEN ! tile is not the box tile,
-                                             ! fraction of the tile is set to the fraction of the parent tile divided by
-                                             ! the number of children of the parent tile (i.e. number of sibling tiles + 1)
+      IF (ASSOCIATED(this%parent_tile)) THEN ! The tile is not the box tile.
+        ! The tile fraction is set to the fraction of the parent tile divided by
+        ! the number of children of the parent tile (i.e. number of sibling tiles + 1)
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
       ELSE ! tile is the box tile, fraction of the tile is set to 1
@@ -531,20 +535,19 @@ CONTAINS
       END IF
       ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
-    ELSEIF (this%fract_varname == 'allFirst') THEN
-        IF(ASSOCIATED(this%parent)) THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          IF (.NOT. this%Is_first_child()) THEN
-            tmp_fract(:,:) = 0._wp
-          END IF
-        ELSE
-          tmp_fract(:,:) = 1._wp
+    ELSE IF (this%fract_varname == 'allFirst') THEN
+      IF(ASSOCIATED(this%parent_tile)) THEN
+        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        IF (.NOT. this%Is_first_child()) THEN
+          tmp_fract(:,:) = 0._wp
         END IF
-        CALL this%Set_fraction(fract=tmp_fract(:,:))
-    ELSE ! fract_varname /= 'equal' OR 'allFirst' ==> fraction of the tile is read from input file
-      ! Open the input file
+      ELSE
+        tmp_fract(:,:) = 1._wp
+      END IF
+      CALL this%Set_fraction(fract=tmp_fract(:,:))
+    ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
-      ! Determine name_loc, which is the name of the variable (for the fraction of the tile) in the input file
+      ! Determine the name of the tile fraction variable in the input file
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -568,6 +571,9 @@ CONTAINS
         CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
         CALL this%Set_fraction(fract=return_pointer(:,:))
+        CALL this%Get_fraction(fract=hgrid%lsf(:,:))
+        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
+        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
       END IF
       ! Close the input file
       CALL input_file%Close()
@@ -606,7 +612,7 @@ CONTAINS
     ! i.e. allocate memory for the current tile and all its children
     ! ( lcts(:) are a part of TYPE(t_jsb_tile_abstract) defined in mo_jsb_tile_class.f90 (s. comments there)
     ! and lcts(:) are TYPE(t_jsb_lct) defined in mo_jsb_lct_class.f90 )
-    !$acc enter data create(this%lcts)
+    !$ACC ENTER DATA CREATE(this%lcts)
     DO ilct=1,SIZE(this%lcts)
 
       !! !$acc enter data create(this%lcts(ilct)%fract)
@@ -615,7 +621,7 @@ CONTAINS
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
+        & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                                 &
         & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
@@ -626,7 +632,7 @@ CONTAINS
   END SUBROUTINE Init_fractions_on_tile
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Initialise the child_idx vector for each variable on each process running on child tiles
   !> - this vector then collects the process memory position of the according var on each child of the tile
   !>
@@ -665,13 +671,16 @@ CONTAINS
 
       ! Do the bookkeeping for all variables on this process (find positions of the vars on the children)
       mem => this%mem(iproc)%p
+      __acc_attach(mem)
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
         ! child_idx gets allocated on first use
-        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-          & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) THEN
+          ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+          !$ACC ENTER DATA CREATE(mem%vars(i)%p%child_idx)
+        END IF
         DO child_no=1,no_of_children
-          ! Check if this child has this memory 
+          ! Check if this child has this memory
           IF (ASSOCIATED(mem%children(child_no)%p)) THEN
             ! Get the position from the linked list
             mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
@@ -680,8 +689,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$acc enter data copyin(mem%vars(i)%p%child_idx)
-        ! __acc_attach(mem%vars(i)%p%child_idx)
+        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx) ASYNC(1)
       END DO
 
     END DO
@@ -728,7 +736,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Check if the tile has memory for the process: i.e. if the process action on this tile is not SKIP_
+  !> Check if the tile has memory for the process
   !
   LOGICAL FUNCTION Has_process_memory_on_tile(this, iproc)
     ! -------------------------------------------------------------------------------------------------- !
@@ -737,9 +745,11 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Has_process_memory_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
-    Has_process_memory_on_tile = (.NOT. this%process_action(iproc) == SKIP_)
+    Has_process_memory_on_tile = ASSOCIATED(this%mem(iproc)%p)
+
   END FUNCTION Has_process_memory_on_tile
 
+#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
@@ -905,6 +915,7 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE Collect_bgc_materials_on_tile
+#endif
 
   ! ======================================================================================================= !
   !>
@@ -974,9 +985,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Count_conserved_quantities_on_tile
-
-
-
 
   ! ======================================================================================================= !
   !>
@@ -1056,7 +1064,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Task handler function for tile (HSM message handler)
-  !> Updates only one process on only one tile 
+  !> Updates only one process on only one tile
   !>
   FUNCTION Process_task_on_tile(this, msg_in) RESULT(return_ptr)
 
@@ -1109,7 +1117,8 @@ CONTAINS
           &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
       END IF
     END IF
-    !> Here the naviagtion through the tile tree is handled
+
+    !> Here the naviagtion through the tile tree is handled.
     !> 1. INTEGRATE: On the way downward [from the top tile] to leave level all INTEGRATE actions are performed
     !> this%visited TRUE marks the pathway downwards
     !> INTEGRATE can also be performed 'on_tile'
@@ -1130,7 +1139,7 @@ CONTAINS
           CALL model%Start_state(this%next_sibling_tile)
         END IF
       END IF
-    CASE ('INTEGRATE')  
+    CASE ('INTEGRATE')
       !@TODO: this test on "if we should do anything?" could be 'more' save/obvious e.g. using a function or the like
       !       ++ is this == AGGREGATE_?
       IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
@@ -1187,7 +1196,7 @@ CONTAINS
     END IF
 
     !> Debug option: only output at 2. or 3. level
-    !> l_debug is TRUE if user-chosen debug level is 'hsm' 
+    !> l_debug is TRUE if user-chosen debug level is 'hsm'
     !> [3. level] Write info about action and openmp threat
     !> [2. level] Write entry info for first block only
     IF (l_debug) THEN

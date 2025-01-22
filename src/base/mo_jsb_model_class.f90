@@ -1,16 +1,18 @@
+!> Contains main JSBACH model class.
 !>
-!! @brief Contains main JSBACH model class.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_var_class.pp-jsb.f90"
 
 MODULE mo_jsb_model_class
 #ifndef __NO_JSBACH__
@@ -28,13 +30,14 @@ MODULE mo_jsb_model_class
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
+  !USE mo_util,              ONLY: report_memory_usage, toupper
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
-  PUBLIC :: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  PUBLIC :: MODEL_JSBACH, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -89,7 +92,9 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
-    PROCEDURE :: Associate_var_pointers
+#ifndef __NO_QUINCY__
+    PROCEDURE :: Write_back_to_bgcms
+#endif
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -111,7 +116,7 @@ MODULE mo_jsb_model_class
   !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
   !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
   ENUM, BIND(C)
-    ENUMERATOR :: MODEL_JSBACH=1, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_QUINCY
   END ENUM
 
 
@@ -241,7 +246,7 @@ CONTAINS
           IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
             l_fractions_change = .TRUE.
             EXIT
-          ENDIF
+          END IF
         END IF
       END IF
     END DO
@@ -284,6 +289,7 @@ CONTAINS
           IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_start(timer_process_msg(this%id))
           CALL this%Process_message(msg, l_debug)
           IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_stop(timer_process_msg(this%id))
+          !CALL report_memory_usage(toupper(Get_process_name(task%process_id))//': '//task%name)
         END IF
       END ASSOCIATE
 
@@ -436,7 +442,8 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc, &
+    &                    nsoil_e, nsoil_w, nsnow_e)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -450,6 +457,9 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
     INTEGER,          OPTIONAL,          INTENT(in)    :: nc
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_e
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_w
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsnow_e
 
     INTEGER :: no_omp_thread
 
@@ -463,6 +473,11 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
     IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
+    ! Set number of soil and snow layers to options on all threads
+    ! Note: The assign_if_present interface does not support assigning a value to a vector.
+    IF (PRESENT(nsoil_e)) this%options(:)%nsoil_e = nsoil_e
+    IF (PRESENT(nsoil_w)) this%options(:)%nsoil_w = nsoil_w
+    IF (PRESENT(nsnow_e)) this%options(:)%nsnow_e = nsnow_e
 
   END SUBROUTINE Set_options
 
@@ -507,70 +522,57 @@ CONTAINS
 
   END SUBROUTINE Set_subset
 
-  SUBROUTINE Associate_var_pointers(this, ic_start, ic_end, iblk_start, iblk_end)
-
+#ifndef __NO_QUINCY__
+  ! ====================================================================================================== !
+  !>
+  !> Write all values from matrices back to the bgcms for all tiles that have a bgcm store
+  !>
+  SUBROUTINE Write_back_to_bgcms(this)
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+    USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
     USE mo_jsb_subset,        ONLY: ON_DOMAIN, ON_CHUNK
     USE mo_jsb_process_class, ONLY: INHERIT_
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model), INTENT(inout) :: this
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: ic_end
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_start
-    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_end
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-
-    INTEGER :: iproc, ivar, itype, no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Associate_var_pointers'
-
-    no_omp_thread = Get_omp_thread()
-
-    IF (iblk_start == iblk_end) THEN
-      itype = ON_CHUNK
-    ELSE
-      itype = ON_DOMAIN
+    TYPE(t_jsb_grid),  POINTER          :: grid       ! Horizontal grid
+    INTEGER                             :: startblk, endblk, iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL this%Reset()
+    CALL this%Reset_tiles()
     CALL this%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
+    grid  => get_grid(this%grid_id)
+    startblk = grid%Get_blk_start()
+    endblk   = grid%Get_blk_end()
+
     DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL this%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      DO iproc=1,SIZE(tile%mem)
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
-        IF (tile%process_action(iproc) == INHERIT_) CYCLE
-        DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          ASSOCIATE (var => tile%mem(iproc)%p%vars(ivar)%p)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END ASSOCIATE
-        END DO
-
-        ! mem%pools
-        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
-          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
-        ! mem%bgc_material
-        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
-          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
-
-      END DO
+      IF (ASSOCIATED(tile%bgcm_store)) THEN
+        DO iblk = startblk, endblk
+          ! index of gridcell at start of the chunk
+          ics = grid%Get_col_start(iblk)
+          ! index of gridcell at end of the chunk
+          ice = grid%Get_col_end(iblk)
+          CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, ics, ice, iblk)
+        ENDDO
+      ENDIF
 
       CALL this%Goto_next_tile(tile)
-
     END DO
 
-  END SUBROUTINE Associate_var_pointers
+  END SUBROUTINE Write_back_to_bgcms
+#endif
 
-    !>
+  ! ====================================================================================================== !
+  !>
   !! Destructor method for model instance.
   !!
   !! Subroutine to delete model instance from memory.
@@ -660,16 +662,16 @@ CONTAINS
           CYCLE
         END SELECT
 
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$acc update host(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$acc update host(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
@@ -680,6 +682,8 @@ CONTAINS
       CALL this%Goto_next_tile(tile)
 
     END DO
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE Sync_vars_from_gpu_to_cpu
 
@@ -723,16 +727,16 @@ CONTAINS
           CYCLE
         END SELECT
 
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+        IF (.NOT. tile%Has_process_memory(iproc)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$acc update device(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$acc update device(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           END IF
         END DO
