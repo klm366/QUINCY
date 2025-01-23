@@ -40,6 +40,7 @@ MODULE mo_dfire_fuel
   USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
                                       t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
+  USE mo_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
                                       t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &
@@ -93,13 +94,8 @@ CONTAINS
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
-    INTEGER                               :: ifc
-
-    REAL(wp) :: dead_fuel(options%nc,sf_fuel_dead_fuel_nr,sf_fuel_classes_nr) !< (#nc,#dead pools,#fuel classes) [g DM m-2]
-    REAL(wp) :: live_fuel(options%nc,sf_fuel_live_fuel_nr,sf_fuel_classes_nr) !< (#nc,#live pools,#fuel classes) [g DM m-2]
-
-    REAL(wp) :: tile_fract(options%nc) !  [%]
-    REAL(wp), ALLOCATABLE :: dead_fuel_cls(:,:) ! Dead fuel (#nc,#fuel classes) [g DM m -2]
+    REAL(wp)                              :: tile_fract(options%nc) !  [%]
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:) ! Dead fuel (#nc,#fuel classes) [g DM m -2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -113,15 +109,8 @@ CONTAINS
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr    ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr
-    dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr
-
-    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr    ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr
-    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr
-    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr
+    dsl4jsb_Real3D_onChunk      :: dead_fuel          ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_fuel          ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk      :: forest_fract
     dsl4jsb_Real2D_onChunk      :: grass_fract
@@ -146,15 +135,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)         ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)
-
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr)         ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr)
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr)
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr)
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)             ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)          ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)
@@ -186,43 +168,24 @@ CONTAINS
     !ELSE ! ignore
     END IF
 
-    ! dead fuel from sb_pool
-    DO ifc = 1, sf_fuel_classes_nr
-      dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,ifc) = sb_pool_mt(ix_woody_litter,ixC,:,1) * sf_slow_fuel(ifc)
-      dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,ifc) = sb_pool_mt(ix_polymeric_litter,ixC,:,1) * sf_fast_fuel(ifc)
-    ENDDO
+    ! dead fuel (from sb_pool and live grass)
+    dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
+    dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl)
 
-    IF (lctlib%ForestFlag) THEN
-      DO ifc = 1, sf_fuel_classes_nr ! live fuel from veg_pool (tree)
-        live_fuel(:,t_sf_fuel_live_fuel_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
-        live_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
-        live_fuel(:,t_sf_fuel_live_fuel_labile_ix,ifc) = veg_pool_mt(ix_labile,ixC,:) * sf_slow_fuel(ifc)
-        live_fuel(:,t_sf_fuel_live_fuel_reserve_ix,ifc) = veg_pool_mt(ix_reserve,ixC,:) * sf_slow_fuel(ifc)
-        live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_slow_fuel(ifc)
-        live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix,ifc) = veg_pool_mt(ix_heart_wood,ixC,:) * sf_slow_fuel(ifc)
-      ENDDO
-    ELSE IF (lctlib%GrassFlag) THEN
-      DO ifc = 1, sf_fuel_classes_nr ! dead fuel from veg_pool (grass)
-        dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,ifc) = veg_pool_mt(ix_leaf,ixC,:) * sf_fast_fuel(ifc)
-        dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifc) = veg_pool_mt(ix_fruit,ixC,:) * sf_fast_fuel(ifc)
-        dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,ifc) = veg_pool_mt(ix_labile,ixC,:) * sf_fast_fuel(ifc)
-        dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifc) = veg_pool_mt(ix_reserve,ixC,:) * sf_fast_fuel(ifc)
-        dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,ifc) = veg_pool_mt(ix_sap_wood,ixC,:) * sf_fast_fuel(ifc)
-      END DO
-    !ELSE ! something unexpected
-      !CALL finish(routine, "Unexpected growth form found")
+    IF (lctlib%GrassFlag) THEN ! dead fuel
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
+      dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
+    ELSE IF (lctlib%ForestFlag) THEN ! live fuel
+      live_fuel(:,t_sf_fuel_live_fuel_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
+      live_fuel(:,t_sf_fuel_live_fuel_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
+      live_fuel(:,t_sf_fuel_live_fuel_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
+      live_fuel(:,t_sf_fuel_live_fuel_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
+      live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
+      live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix) = veg_pool_mt(ix_heart_wood,ixC,:)
     END IF
-
-    dead_fuel_1hr = dead_fuel(:,:,1) !< 1 = 1hr fuel class index
-    dead_fuel_10hr = dead_fuel(:,:,2)
-    dead_fuel_100hr = dead_fuel(:,:,3)
-    dead_fuel_1000hr = dead_fuel(:,:,4)
-    !WRITE(*,*) "(fuel) dead fuel (woody)=", dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix,:)
-
-    live_fuel_1hr = live_fuel(:,:,1)
-    live_fuel_10hr = live_fuel(:,:,2)
-    live_fuel_100hr = live_fuel(:,:,3)
-    live_fuel_1000hr = live_fuel(:,:,4)
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
