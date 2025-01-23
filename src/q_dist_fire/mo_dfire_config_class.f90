@@ -36,9 +36,8 @@ MODULE mo_dfire_config_class
   USE mo_kind,              ONLY: wp
   USE mo_util,              ONLY: tolower
   USE mo_jsb_config_class,  ONLY: t_jsb_config
-!  USE mo_dfire_constants,   ONLY: t_sf_fuel_live_fuel_nr
-!  USE mo_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_nr_max
-!  USE mo_dfire_constants,   ONLY: df_sf_omegas_nr
+  USE mo_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+  USE mo_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name
 
   IMPLICIT NONE
   PRIVATE
@@ -108,6 +107,8 @@ CONTAINS
     CHARACTER(len=20)             :: dfire_precip_method_name !< precipitation method name, from namelist
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
 
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
+
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
@@ -167,10 +168,16 @@ CONTAINS
     dfire_precip_method_id        = Get_Precip_Method_id(TRIM(config%dfire_precip_method_name))
     config%dfire_precip_method_id = dfire_precip_method_id
     ! ----------------------------------------------------------------------------------------------------- !
-!    vgrid_fuel_class  => new_vgrid(df_sf_vgrid_fuel_class_name, zaxis_generic, df_sf_fc_full_nr, &
-!            longname='Fuel classes (1,10,100,1000)', &
-!            & units='hours')
-!    CALL register_vgrid(vgrid_fuel_class)
+    vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, sf_fuel_dead_fuel_nr, &
+                                        longname='Dead fuel pools', &
+                                        units='-')
+
+    vgrid_live_fuel_pools  => new_vgrid(df_sf_vgrid_live_fuel_pools_name, zaxis_generic, sf_fuel_live_fuel_nr, &
+                                        longname='Live fuel pools', &
+                                        units='-')
+
+    CALL register_vgrid(vgrid_dead_fuel_pools)
+    CALL register_vgrid(vgrid_live_fuel_pools)
   END SUBROUTINE Init_dfire_config
 
 

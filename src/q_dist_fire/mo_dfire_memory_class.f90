@@ -33,6 +33,9 @@ MODULE mo_dfire_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
+  USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
+                                      df_sf_vgrid_live_fuel_pools_name
+
   IMPLICIT NONE
 
   PRIVATE
@@ -45,15 +48,22 @@ MODULE mo_dfire_memory_class
   !> Type definition for dfire memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_memory
-    !TYPE(t_jsb_var_real3d)               :: fuel_moisture      !< moisture in fuel [0 to 1]
-    !TYPE(t_jsb_var_real2d)               :: nesterov_index     !< cumulative function of tmax and tdew [C2]
-
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
-
     TYPE(t_jsb_var_real2d)               :: pm_fire             !< Tree probability of mortality of tree [-]
+
+    ! dead fuel
+    TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_10hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_100hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1000hr !< [g DM m-2]
+    ! live fuel
+    TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_10hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_100hr !< [g DM m-2]
+    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1000hr !< [g DM m-2]
 
     !< Precipitation
     !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
@@ -90,13 +100,17 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                            !> Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                    !> Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools            !> Dead fuel pools grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools            !> Live fuel pools grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
     table         =  tables(1)
     hgrid         => Get_grid(model%grid_id)
-    vgrid_surface         => Get_vgrid('surface')
+    vgrid_surface => Get_vgrid('surface')
+    vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
+    vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     ! ----------------------------------------------------------------------------------------------------- !
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
@@ -183,6 +197,26 @@ CONTAINS
     CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
         & hgrid, vgrid_surface, &
         & t_cf('pot_burn_area', 'm2', 'Potential burnable area (forest and grass area)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dead_fuel_consumption_1hr', mem%dead_fuel_consumption_1hr, &
+        & hgrid, vgrid_dead_fuel_pools, &
+        & t_cf('dead_fuel_consumption_1hr', 'g DM m-2', '1 hour dead fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('live_fuel_consumption_1hr', mem%live_fuel_consumption_1hr, &
+        & hgrid, vgrid_live_fuel_pools, &
+        & t_cf('live_fuel_consumption_1hr', 'g DM m-2', '1 hour live fuel consumption'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
