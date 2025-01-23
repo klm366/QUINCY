@@ -47,15 +47,8 @@ MODULE mo_dfire_fuel_memory_class
   !> Type definition for dfire memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_fuel_memory
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_1hr       !< 1hr dead fuel (#nc, #ndeadpools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_10hr      !< 10hr dead fuel (#nc, #ndeadpools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_100hr     !< 100hr dead fuel (#nc, #ndeadpools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_1000hr    !< 1000hr dead fuel (#nc, #ndeadpools) [gDM m-2]
-
-    TYPE(t_jsb_var_real3d)  :: live_fuel_1hr       !< 1hr live fuel (#nc, #nlivepools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: live_fuel_10hr      !< 10hr live fuel (#nc, #nlivepools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: live_fuel_100hr     !< 100hr live fuel (#nc, #nlivepools) [gDM m-2]
-    TYPE(t_jsb_var_real3d)  :: live_fuel_1000hr    !< 1000hr live fuel (#nc, #nlivepools) [gDM m-2]
+    TYPE(t_jsb_var_real3d)  :: dead_fuel           !< Dead fuel (#nc, #ndeadpools) [gDM m-2]
+    TYPE(t_jsb_var_real3d)  :: live_fuel           !< Live fuel (#nc, #nlivepools) [gDM m-2]
 
     TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
     TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%]

@@ -229,6 +229,9 @@ CONTAINS
     ab_moisture = 0._wp
     pm_fire = 0._wp
 
+    ! todo: veg_pool -> change units from molsC/m2 to gDM/m2
+    ! todo: sb_pool -> change units from molsC/m3 to gDM/m2
+
     write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !

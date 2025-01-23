@@ -38,6 +38,9 @@ MODULE mo_dfire_constants
   !>
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_dfire_constants'
 
+  !> soil top layers to consider in spitfire
+  INTEGER, PARAMETER :: df_sf_spq_layer_top_sl = 1
+
   !< Top Soil layers to account for moisture in fuel
   INTEGER, PARAMETER :: df_sf_sl_dims_nr=2   !< soil moisture layer dimension from w_soil_sl(dim1, dim2)
   INTEGER, PARAMETeR :: df_sf_sl_indices(df_sf_sl_dims_nr) = [1,2]!< Select soil moisture layer to use
