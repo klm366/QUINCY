@@ -28,6 +28,7 @@ MODULE mo_dfire_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
+  USE mo_veg_constants,        ONLY: carbon_per_dryweight_leaf
 
   IMPLICIT NONE
 
@@ -59,6 +60,30 @@ MODULE mo_dfire_constants
                   t_sf_fuel_dead_fuel_grass_fruit_ix, &           !< from veg_pool_mt
                   t_sf_fuel_dead_fuel_polymeric_ix                !< from sb_pool_mt ( Optional)
   END ENUM
+
+  !< Conversion factor from carbon to biomass
+  REAL(wp), SAVE :: df_sf_carbon_to_biomass_factor
+
+  ! Kelvin vs Celsius conversion
+  REAL(wp), PARAMETER :: df_sf_units_c_to_k = 273.15_wp               !< conversion from degrees Celsius to kelvin
+  REAL(wp), PARAMETER :: df_sf_units_k_to_c = -df_sf_units_c_to_k     !< conversion from degrees kelvin to Celsius
+
+  ! Kg/m2/s to mm/day units conversion (precipitation)
+  INTEGER, PARAMETER :: df_sk_units_kgm2s_to_mmday = 60*60*24         !<
+
+  ! Grams to Kilograms conversions
+  REAL(wp), PARAMETER :: df_sf_units_g_to_kg = 0.001                  !<
+
+  ! Seconds to minutes conversions
+  REAL(wp), PARAMETER :: df_sf_units_sec_to_min = 60.0_wp
+
+  ! Seconds to minutes conversions
+  !REAL(wp), PARAMETER :: df_sf_units_m_to_cm = 100.0_wp
+
+  ! km2 to ha conversion
+  REAL(wp), PARAMETER :: df_sf_units_km2_to_ha = 100._wp
+
+  !REAL(wp), PARAMETER :: df_sf_units_m2_to_cm2 = 10000._wp  !< units conversion from m-2 to cm-2
 
   !< "Live" fuel array indices from t_sf_fuel_class
   INTEGER, PARAMETER, PUBLIC :: sf_fuel_live_fuel_nr = 6 !< (veg_pool tree) leaf, sap wood, heart wood, labile, reserve, fruit
@@ -97,6 +122,7 @@ CONTAINS
   SUBROUTINE init_dfire_constants
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_dfire_constants'
     ! ----------------------------------------------------------------------------------------------------- !
+    df_sf_carbon_to_biomass_factor    = 1._wp / carbon_per_dryweight_leaf
   END SUBROUTINE init_dfire_constants
 
 #endif
