@@ -390,8 +390,9 @@ CONTAINS
       !-- science
       IF(model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(DFIRE_FUEL_, "dfire_fuel")        ! LAND ONLY
+          CALL model%Queue_task(DFIRE_FUEL_, "dfire_fuel")        ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
           CALL model%Queue_task(DFIRE_, "dfire_spitfire")         ! LAND ONLY
+          CALL model%Queue_task(DFIRE_FUEL_, "dfire_sf_post")     ! LAND ONLY
         ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF

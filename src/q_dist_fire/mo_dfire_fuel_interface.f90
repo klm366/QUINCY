@@ -63,6 +63,24 @@ MODULE mo_dfire_fuel_interface
     PROCEDURE Create_task_dfire_fuel         !< Constructor function for task
   END INTERFACE tsk_dfire_fuel
 
+  ! ======================================================================================================= !
+  !>
+  !> Type definition: tsk_dfire_sf_post task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_dfire_sf_post
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_dfire_sf_post      !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggr_dfire_sf_post        !< Aggregates computed task variables
+  END TYPE tsk_dfire_sf_post
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor interface: tsk_dfire_sf_post task
+  !>
+  INTERFACE tsk_dfire_sf_post
+    PROCEDURE Create_task_dfire_sf_post         !< Constructor function for task
+  END INTERFACE tsk_dfire_sf_post
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_fuel_interface'
 
 CONTAINS
@@ -76,6 +94,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_dfire_fuel(model_id))
+    CALL this%Register_task(tsk_dfire_post(model_id))
   END SUBROUTINE Register_dfire_fuel_tasks
 
   ! ======================================================================================================= !
@@ -135,6 +154,52 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor: dfire_sf_fuel task
+  !>
+  FUNCTION Create_task_dfire_sf_post(model_id) RESULT(return_ptr)
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_dfire_fuel::return_ptr)
+    CALL return_ptr%Construct(name='dfire_sf_post', process_id=DFIRE_FUEL_, owner_model_id=model_id)
+  END FUNCTION Create_task_dfire_sf_post
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of "aggregate": dfire_fuel task
+  !>
+  SUBROUTINE aggr_dfire_sf_post(tile, options)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),        POINTER         :: model
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice, nc
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(DFIRE_FUEL_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(DFIRE_FUEL_)
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Go aggregate
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+  END SUBROUTINE aggr_dfire_sf_post
 
 
 #endif
