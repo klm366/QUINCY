@@ -118,7 +118,7 @@ scratch_dir_base=/scratch/m/$USER     # levante
 
 # --------------------------------------
 # ICON grids used
-icon_grid_rootdir=/pool/data/ICON/grids/public   # for seamless also check /pool/data/edzw-shadow/
+icon_grid_rootdir=/pool/data/ICON/grids/public   # for seamless also check /pool/data/icon-xpp/
 
 export atmGridID=0049
 #export atmGridID=0012 # seamless
@@ -157,7 +157,7 @@ for ((yr=${start_year}; yr<=${end_year}; yr++)); do
 done
 #---
 # b) Define list of years
-#export year_list="1850 1979 1992 2005"
+#export year_list="1850 1979 1990 1992 2005 2015"
 
 # --------------------------------------
 # extpar4jsbach file ("extpar_file"; compare above "Notes on the extpar files")

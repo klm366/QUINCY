@@ -499,7 +499,7 @@ CONTAINS
         & t_cf('t_gmean', 'K', 'Global land mean surface temperature'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
-        & lrestart=.FALSE., initval_r=280.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=280.0_wp )
 
     END IF
 
