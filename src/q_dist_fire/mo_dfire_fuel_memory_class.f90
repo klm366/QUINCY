@@ -99,39 +99,9 @@ CONTAINS
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     ! ----------------------------------------------------------------------------------------------------- !
     ! dead pools
-    CALL mem%Add_var('dead_fuel_1hr', mem%dead_fuel_1hr, &
+    CALL mem%Add_var('dead_fuel', mem%dead_fuel, &
         & hgrid, vgrid_dead_fuel_pools, &
-        & t_cf('dead_fuel_1hr', 'gDM m-2', '1hr dead fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('dead_fuel_10hr', mem%dead_fuel_10hr, &
-        & hgrid, vgrid_dead_fuel_pools, &
-        & t_cf('dead_fuel_10hr', 'gDM m-2', '10hr dead fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('dead_fuel_100hr', mem%dead_fuel_100hr, &
-        & hgrid, vgrid_dead_fuel_pools, &
-        & t_cf('dead_fuel_100hr', 'gDM m-2', '100hr dead fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('dead_fuel_1000hr', mem%dead_fuel_1000hr, &
-        & hgrid, vgrid_dead_fuel_pools, &
-        & t_cf('dead_fuel_1000hr', 'gDM m-2', '1000hr dead fuel'), &
+        & t_cf('dead_fuel', 'gDM m-2', 'Dead fuel pools'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -140,39 +110,9 @@ CONTAINS
         & initval_r = 0.0_wp)
 
     ! live pools
-    CALL mem%Add_var('live_fuel_1hr', mem%live_fuel_1hr, &
+    CALL mem%Add_var('live_fuel', mem%live_fuel, &
         & hgrid, vgrid_live_fuel_pools, &
-        & t_cf('live_fuel_1hr', 'gDM m-2', '1hr live fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('live_fuel_10hr', mem%live_fuel_10hr, &
-        & hgrid, vgrid_live_fuel_pools, &
-        & t_cf('live_fuel_10hr', 'gDM m-2', '10hr live fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('live_fuel_100hr', mem%live_fuel_100hr, &
-        & hgrid, vgrid_live_fuel_pools, &
-        & t_cf('live_fuel_100hr', 'gDM m-2', '100hr live fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('live_fuel_1000hr', mem%live_fuel_1000hr, &
-        & hgrid, vgrid_live_fuel_pools, &
-        & t_cf('live_fuel_1000hr', 'gDM m-2', '1000hr live fuel'), &
+        & t_cf('live_fuel', 'gDM m-2', 'Live fuel pools'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
