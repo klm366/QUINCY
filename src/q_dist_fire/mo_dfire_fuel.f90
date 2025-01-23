@@ -98,8 +98,8 @@ CONTAINS
 
     REAL(wp)                              :: tile_fract(options%nc) !<  [%]
     REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:) !< Dead fuel (#nc,#fuel classes) [g DM m -2]
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_in_mols(:,:) !< Dead fuel (#nc, # dead fuel pools)
-    REAL(wp), ALLOCATABLE                 :: live_fuel_in_mols(:,:) !< Live fuel (#nc, # lvie fuel pools)
+    REAL(wp)                              :: dead_fuel_in_mols(options%nc, sf_fuel_dead_fuel_nr) !< Dead fuel (#nc, # dead fuel pools)
+    REAL(wp)                              :: live_fuel_in_mols(options%nc, sf_fuel_live_fuel_nr) !< Live fuel (#nc, # live fuel pools)
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -164,6 +164,8 @@ CONTAINS
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
+    dead_fuel_in_mols = 0._wp
+    live_fuel_in_mols = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
