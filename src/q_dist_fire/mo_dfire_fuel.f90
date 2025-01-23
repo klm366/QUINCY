@@ -54,6 +54,8 @@ MODULE mo_dfire_fuel
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
 
+  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
+
   IMPLICIT NONE
 
   PRIVATE
@@ -94,8 +96,11 @@ CONTAINS
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
-    REAL(wp)                              :: tile_fract(options%nc) !  [%]
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:) ! Dead fuel (#nc,#fuel classes) [g DM m -2]
+    REAL(wp)                              :: tile_fract(options%nc) !<  [%]
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:) !< Dead fuel (#nc,#fuel classes) [g DM m -2]
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_in_mols(:,:) !< Dead fuel (#nc, # dead fuel pools)
+    REAL(wp), ALLOCATABLE                 :: live_fuel_in_mols(:,:) !< Live fuel (#nc, # lvie fuel pools)
+    REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -108,14 +113,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
 
     dsl4jsb_Real3D_onChunk      :: dead_fuel          ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_fuel          ! out [g DM m-2]
 
-    dsl4jsb_Real2D_onChunk      :: forest_fract
-    dsl4jsb_Real2D_onChunk      :: grass_fract
+    dsl4jsb_Real2D_onChunk      :: forest_fract       ! out [%]
+    dsl4jsb_Real2D_onChunk      :: grass_fract        ! out [%]
 
-    dsl4jsb_Real2D_onChunk      :: fuel_bulk_density
+    dsl4jsb_Real2D_onChunk      :: fuel_bulk_density  ! out [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -135,11 +141,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
+
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)             ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)          ! out [%]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)           ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
@@ -155,6 +163,7 @@ CONTAINS
     forest_fract=0._wp
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
+    top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -169,23 +178,26 @@ CONTAINS
     END IF
 
     ! dead fuel (from sb_pool and live grass)
-    dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
-    dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl)
+    dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
+    dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl)
 
     IF (lctlib%GrassFlag) THEN ! dead fuel
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
-      dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
+      dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
+      dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
+      dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
+      dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
+      dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_sap_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
     ELSE IF (lctlib%ForestFlag) THEN ! live fuel
-      live_fuel(:,t_sf_fuel_live_fuel_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
-      live_fuel(:,t_sf_fuel_live_fuel_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
-      live_fuel(:,t_sf_fuel_live_fuel_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
-      live_fuel(:,t_sf_fuel_live_fuel_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
-      live_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
-      live_fuel(:,t_sf_fuel_live_fuel_heart_wood_ix) = veg_pool_mt(ix_heart_wood,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_sap_wood_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
+      live_fuel_in_mols(:,t_sf_fuel_live_fuel_heart_wood_ix) = veg_pool_mt(ix_heart_wood,ixC,:)
     END IF
+
+    dead_fuel = sf_convert_units("molC/m3", "gDM/m2", dead_fuel_in_mols, aux = top_soil_depth_sl)
+    live_fuel = sf_convert_units("molC/m2", "gDM/m2", live_fuel_in_mols)
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
