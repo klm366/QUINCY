@@ -125,15 +125,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! DFIRE_FUEL_ 3D
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_10hr             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_100hr            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1000hr           , weighted_by_fract)
-
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1hr              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_10hr             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_100hr            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1000hr           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel        , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, forest_fract     , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, grass_fract      , sum_agg)

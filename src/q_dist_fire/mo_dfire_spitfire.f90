@@ -165,10 +165,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
 
     ! DFIRE_FUEL_ 3D
-    dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr     ! [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr    ! 
-    dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr   ! 
-    dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr  ! 
+    dsl4jsb_Real3D_onChunk                :: dead_fuel         ! [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
     dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
@@ -202,10 +199,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr)     ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr)    ! in
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr)   ! in
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr)  ! in
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)     ! in [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
@@ -268,10 +262,7 @@ CONTAINS
       END IF
     ENDDO
 
-    write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel_1hr(1,t_sf_fuel_dead_fuel_woody_ix), &
-                                                            dead_fuel_10hr(1,t_sf_fuel_dead_fuel_woody_ix), &
-                                                            dead_fuel_100hr(1,t_sf_fuel_dead_fuel_woody_ix), &
-                                                            dead_fuel_1000hr(1,t_sf_fuel_dead_fuel_woody_ix)
+    write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
             t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
             fuel_bulk_density(1)
