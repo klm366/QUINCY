@@ -78,7 +78,7 @@ MODULE mo_dfire_constants
   REAL(wp), PARAMETER :: df_sf_units_sec_to_min = 60.0_wp
 
   ! Seconds to minutes conversions
-  !REAL(wp), PARAMETER :: df_sf_units_m_to_cm = 100.0_wp
+  REAL(wp), PARAMETER :: df_sf_units_m_to_cm = 100.0_wp
 
   ! km2 to ha conversion
   REAL(wp), PARAMETER :: df_sf_units_km2_to_ha = 100._wp
