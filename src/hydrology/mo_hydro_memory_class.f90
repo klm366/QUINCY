@@ -281,8 +281,7 @@ CONTAINS
       & hgrid, surface,                                                        &
       & t_cf('weq_snow', 'm (water equivalent)', 'Snow amount'),               &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
-      & prefix, suffix,                                                        &
-      & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & prefix, suffix, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                      &
@@ -1172,49 +1171,49 @@ CONTAINS
         & t_cf('trans_gmean', 'kg m-2 s-1', 'Global mean transpiration'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('evapotrans_gmean', mem%evapotrans_gmean,                         &
         & hgrid, surface,                                                                &
         & t_cf('evapotrans_gmean', 'kg m-2 s-1', 'Global land evapotranspiration'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('weq_land_gsum', mem%weq_land_gsum,                               &
         & hgrid, surface,                                                                &
         & t_cf('weq_land_gsum', 'km3', 'Global amount of land water and ice'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('discharge_ocean_gsum', mem%discharge_ocean_gsum,                 &
         & hgrid, surface,                                                                &
         & t_cf('discharge_ocean_gsum', 'Sv', 'Global water discharge to the oceans'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('wtr_rootzone_rel_gmean', mem%wtr_rootzone_rel_gmean,             &
         & hgrid, surface,                                                                &
         & t_cf('wtr_rootzone_rel_gmean', '-', 'Global mean relative rootzone moisture'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('fract_snow_gsum', mem%fract_snow_gsum,                           &
         & hgrid, surface,                                                                &
         & t_cf('fract_snow_gsum', 'Mio km2', 'Global snow area (including glaciers)'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('weq_snow_gsum', mem%weq_snow_gsum,                               &
         & hgrid, surface,                                                                &
         & t_cf('weq_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('weq_balance_err_gsum', mem%weq_balance_err_gsum,                 &
         & hgrid, surface,                                                                &
         & t_cf('weq_balance_err_gsum', 'm3/timestep', 'Global land water balance error'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     END IF
 
     END SUBROUTINE Init_hydro_memory
