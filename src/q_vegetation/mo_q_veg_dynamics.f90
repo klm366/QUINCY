@@ -52,7 +52,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_
-    USE mo_veg_constants,         ONLY: ITREE, rfr_ratio_toc, k_r2fr_chl
+    USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
@@ -67,6 +67,7 @@ CONTAINS
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)   :: fpc                    !< current foliage projective cover
     REAL(wp), DIMENSION(options%nc)   :: hlp1                   !< dummy variable
+    REAL(wp), DIMENSION(options%nc)   :: fract_herbivory        !< fraction of leaf and fruit (carbon) lost to herbivory
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< loop over chunk
@@ -95,6 +96,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cohort_age
     dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
@@ -114,6 +116,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_n15
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -152,6 +160,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, cohort_age)                 ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)             ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)    ! in
@@ -171,7 +180,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)    ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)   ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)        ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)    ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c14)    ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)   ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)   ! out
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !> 0.9 init local var
+    !>
+    fract_herbivory(:)          = 0.0_wp
 
     !>1.0 Calculate foliage projective cover if vegetation dynamics are simulated, i.e., not needed for constant mortality
     !>
@@ -182,6 +201,7 @@ CONTAINS
           &                                         lctlib%wood_density, &
           &                                         lctlib%k_latosa, &
           &                                         veg_pool_mt(ix_sap_wood, ixC, :), &
+          &                                         lai(:), &
           &                                         dens_ind(:), &
           &                                         height(:), &
           &                                         diameter(:))
@@ -204,7 +224,7 @@ CONTAINS
 
     !>2.0 Calculate mortality rate and veg litterfall
     !>
-    ! retruns constant mortality_rate if veg_dynamics_scheme == none \n
+    ! returns constant mortality_rate if veg_dynamics_scheme == none \n
     ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
     CALL calc_veg_mortality( &
       & nc                                              , & ! in
@@ -235,14 +255,34 @@ CONTAINS
       & veg_litterfall_mt(:,:,:), &                  ! inout
       & mortality_rate(:) )                          ! inout
 
-    !> 2.2 Adjust tissue turnover that generates new tissue by mortality
+    !> 2.2 Calculate herbivory and associated respiration and litter fall
+    !>
+    IF (dsl4jsb_Config(VEG_)%flag_herbivory) THEN
+      CALL calc_veg_herbivory( &
+        & nc, &                                 ! in
+        & dtime, &                              ! in
+        & model%config%elements_index_map(:), & ! in
+        & model%config%is_element_used(:), &    ! in
+        & lctlib%growthform, &                  ! in
+        & lctlib%cn_leaf_min, &                 ! in
+        & lai(:), &                             ! in
+        & net_growth_tvegdyn_mavg(:), &         ! in
+        & mortality_rate(:), &                  ! in
+        & veg_pool_mt(:,:,:), &                 ! in
+        & herbivory_leaf_resp(:), &             ! inout
+        & herbivory_leaf_resp_c13(:), &         ! inout
+        & herbivory_leaf_resp_c14(:), &         ! inout
+        & herbivory_fruit_resp(:), &            ! inout
+        & herbivory_fruit_resp_c13(:), &        ! inout
+        & herbivory_fruit_resp_c14(:), &        ! inout
+        & fract_herbivory(:), &                 ! inout
+        & veg_litterfall_mt(:,:,:))             ! inout
+    END IF
+
+    !> 2.3 Adjust tissue turnover that generates new tissue by mortality
     !>
     !> Tissues that turnover to become new tissues (sapwood -> heartwood; fruit -> seed bed)
     !> are recorded as growth (or negative growth) by the turnover routine
-    !>
-    !> Retranslocation of foliar nutrients is recorded separately, as it applies only to nutrients
-    !> These have to be reduced by the fraction of individuals that have died (i.e. no heartwood, seedpool
-    !> generation or retranslocation by dying individuals)
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (model%config%is_element_used(ielem)) THEN
         ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
@@ -252,13 +292,17 @@ CONTAINS
         veg_growth_mt(ix_seed_bed,ix_elem,:)   = veg_growth_mt(ix_seed_bed,ix_elem,:)   * (1._wp - mortality_rate(:))
       END IF
     END DO
-    recycling_leaf_n(:)         = recycling_leaf_n(:)         * (1._wp - mortality_rate(:))
+    !>
+    !> Retranslocation of foliar nutrients is recorded separately, as it applies only to nutrients
+    !> These have to be reduced by the fraction of individuals that have died (i.e. no heartwood, seedpool
+    !> generation or retranslocation by dying individuals)
+    recycling_leaf_n(:)         = recycling_leaf_n(:)         * (1._wp - mortality_rate(:) - fract_herbivory(:))
     recycling_fine_root_n(:)    = recycling_fine_root_n(:)    * (1._wp - mortality_rate(:))
     recycling_heart_wood_n(:)   = recycling_heart_wood_n(:)   * (1._wp - mortality_rate(:))
-    recycling_leaf_p(:)         = recycling_leaf_p(:)         * (1._wp - mortality_rate(:))
+    recycling_leaf_p(:)         = recycling_leaf_p(:)         * (1._wp - mortality_rate(:) - fract_herbivory(:))
     recycling_fine_root_p(:)    = recycling_fine_root_p(:)    * (1._wp - mortality_rate(:))
     recycling_heart_wood_p(:)   = recycling_heart_wood_p(:)   * (1._wp - mortality_rate(:))
-    recycling_leaf_n15(:)       = recycling_leaf_n15(:)       * (1._wp - mortality_rate(:))
+    recycling_leaf_n15(:)       = recycling_leaf_n15(:)       * (1._wp - mortality_rate(:) - fract_herbivory(:))
     recycling_fine_root_n15(:)  = recycling_fine_root_n15(:)  * (1._wp - mortality_rate(:))
     recycling_heart_wood_n15(:) = recycling_heart_wood_n15(:) * (1._wp - mortality_rate(:))
 
@@ -288,7 +332,7 @@ CONTAINS
 
     CASE ("population")
       ! no harvest
-      IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN
+      IF (.NOT. model%config%l_do_stand_replacing_harvest) THEN
         CALL calc_veg_establishment( &
           & nc                                  , & ! in
           & dtime                               , &
@@ -327,7 +371,7 @@ CONTAINS
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population", "cohort")
-      IF(lctlib%growthform == ITREE) THEN
+      IF (lctlib%growthform == itree) THEN
         delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size            , &
           &                                     dens_ind(:)                 , &
           &                                     mortality_rate(:)           , &
@@ -355,43 +399,52 @@ CONTAINS
     & lctlib_wood_density     , &
     & lctlib_k_latosa         , &
     & veg_pool_sap_wood_carbon, &
+    & lai                     , &
     & dens_ind                , &
     & height                  , &
     & diameter)                 &
     & RESULT(fpc)
 
-    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, k_sai2lai, ITREE
+    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, k_sai2lai, itree
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in) :: nc                          !< dimensions
     INTEGER,                  INTENT(in) :: lctlib_growthform           !< lctlib paramter
     REAL(wp),                 INTENT(in) :: lctlib_wood_density         !< lctlib paramter
     REAL(wp),                 INTENT(in) :: lctlib_k_latosa             !< lctlib paramter
     REAL(wp), DIMENSION(nc),  INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
+                                            lai                     , & !< lai (m2/m2)
                                             dens_ind                , & !< tree density (#/m2)
                                             height                  , & !< tree height (m)
                                             diameter                    !< tree diameter (m)
     REAL(wp), DIMENSION(nc)              :: fpc                         !< foliage projective cover (fraction)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)                     :: crown_area
-    REAL(wp), DIMENSION(nc)                     :: lai_ind
+    REAL(wp), DIMENSION(nc)                     :: crown_area_tile      ! crown area times individual density
+    REAL(wp), DIMENSION(nc)                     :: lai_ind              ! LAI of the individual
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !>1.0 ...
-    !>
-    WHERE((lctlib_growthform == ITREE) .AND. (dens_ind(:) > eps4) .AND. (height(:) > eps4))
-      ! crown area derived from diameter following Sitch et al. 2003; eq 4
-      crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
-      ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by
-      ! its crown area
-      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / &
-        &             crown_area(:)
-      ! foliage projective cover is then the product of density and individual crown area
-      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - EXP(-k_fpc * lai_ind(:) * (1._wp + k_sai2lai)))
-    ELSEWHERE
-      lai_ind(:) = 0.0_wp
-      fpc(:)     = 0.0_wp
-    ENDWHERE
+    SELECT CASE (lctlib_growthform)
+    CASE (itree)
+      WHERE((dens_ind(:) > eps4) .AND. (height(:) > eps4))
+        ! crown area derived from diameter following Sitch et al. 2003; eq 4
+        crown_area_tile(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter, diameter(:)) ** k_rp) * &
+          &                  dens_ind(:)
+        ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by
+        ! its crown area
+        lai_ind(:)    = veg_pool_sap_wood_carbon(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / &
+          &             crown_area_tile(:)
+      ELSEWHERE
+        crown_area_tile(:) = k_crown_area * min_diameter ** k_rp
+        lai_ind(:)         = 0.0_wp
+      ENDWHERE
+    CASE DEFAULT ! all other growthforms
+      crown_area_tile(:) = 1.0_wp ! to satisfy the fpc equation
+      lai_ind(:)         = lai(:) ! actually to be divided by dens_ind and crown_area,which are both 1
+    END SELECT
+
+    ! foliage projective cover is then the product of density and individual crown area
+    fpc(:) = crown_area_tile(:) * (1._wp - EXP(-k_fpc * lai_ind(:) * (1._wp + k_sai2lai)))
+
   END FUNCTION calc_foliage_projective_cover_tile
 
   ! ======================================================================================================= !
@@ -414,7 +467,7 @@ CONTAINS
     & mortality_rate )
 
     USE mo_veg_constants,         ONLY: min_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
-      &                                 ITREE, IGRASS, background_mort_rate_tree, background_mort_rate_grass
+      &                                 itree, igrass, background_mort_rate_tree, background_mort_rate_grass
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                         !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                      !< timestep length
@@ -498,9 +551,9 @@ CONTAINS
       !>  1.3 quasi-stochastic background mortality
       !>
       SELECT CASE (lctlib_growthform)
-      CASE (ITREE)
+      CASE (itree)
         bg_mortality_rate(:) = background_mort_rate_tree
-      CASE (IGRASS)
+      CASE (igrass)
         bg_mortality_rate(:) = background_mort_rate_grass
       ENDSELECT
       !>  1.4 total mortality is the sum of all mortality terms, and limited to one
@@ -509,9 +562,9 @@ CONTAINS
         &                 / one_year / one_day * dtime
     CASE ("none")
       SELECT CASE (lctlib_growthform)
-      CASE (ITREE)
+      CASE (itree)
         mortality_rate(:) = ((background_mort_rate_tree /  one_year) / one_day) * dtime
-      CASE (IGRASS)
+      CASE (igrass)
         mortality_rate(:) = ((background_mort_rate_grass / one_year) / one_day) * dtime
       ENDSELECT
     ENDSELECT ! veg_dynamics_scheme
@@ -642,6 +695,174 @@ CONTAINS
     END DO
 
   END SUBROUTINE calc_veg_harvest
+
+  ! ======================================================================================================= !
+  !>
+  !> Routine to calculate litter production from herbivory
+  !>
+  !> This routine calculate the respiration loss and litter production caused by naturally occurring
+  !>  herbivory. Following McNaughton et al. 1989, Nature, and Cry and Pace, 1993 Nature, the biomass
+  !>  removal can be predicted by a power-law on productivity, leading to an increase of the fraction removed
+  !>  from <1\% to >50\% with increase in productivity. This is implemented here by fitting to their data
+  !>  and imposing a miniumum productivity of 250gC/m2/yr. An additional N limitation factor is applied to
+  !>  account for different palatability of leaves.
+  !>
+  !> According to metabolic scaling, 90% of the energy consumption is assumed to be respired (instantly, as
+  !>  the model does not keep track of herbivory biomass). The remaining biomass, including all nutrients
+  !>  enter litter, and thereby increase net mineralisation of N and P via the tighter stoichiometry.
+  !>
+  !> input: long-term net growth, current lai and leaf stoichiometry
+  !> output: litter production and herbivory respiration
+  !>
+  SUBROUTINE calc_veg_herbivory( &
+      & nc, &
+      & dtime, &
+      & elements_index_map, &
+      & is_element_used, &
+      & lctlib_growthform, &
+      & lctlib_cn_leaf_min, &
+      & lai, &
+      & net_growth_tvegdyn_mavg, &
+      & mortality_rate, &
+      & veg_pool_mt, &
+      & herbivory_leaf_resp, &
+      & herbivory_leaf_resp_c13, &
+      & herbivory_leaf_resp_c14, &
+      & herbivory_fruit_resp, &
+      & herbivory_fruit_resp_c13, &
+      & herbivory_fruit_resp_c14, &
+      & fract_herbivory, &
+      & veg_litterfall_mt)
+
+    USE mo_veg_constants,               ONLY: igrass, itree, min_lai_herbivory, k_herbivory, &
+      &                                       ftroph_loss_herbivory, min_net_growth_herbivory
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER,  INTENT(in)    :: nc                           !< dimensions
+    REAL(wp), INTENT(in)    :: dtime                        !< timestep length
+    INTEGER,  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
+    LOGICAL,  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
+    INTEGER,  INTENT(in)    :: lctlib_growthform            !< lctlib paramter
+    REAL(wp), INTENT(in)    :: lctlib_cn_leaf_min           !< lctlib paramter
+    REAL(wp), INTENT(in)    :: lai(:)                       !< current LAI (m2/m2)
+    REAL(wp), INTENT(in)    :: net_growth_tvegdyn_mavg(:)   !< long-term average net growth (micro-mol / m2 / s)
+    REAL(wp), INTENT(in)    :: mortality_rate(:)            !< mortality rate
+    REAL(wp), INTENT(in)    :: veg_pool_mt(:,:,:)           !< vegetation pool
+    REAL(wp), INTENT(inout) :: herbivory_leaf_resp(:)       !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: herbivory_leaf_resp_c13(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: herbivory_leaf_resp_c14(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: herbivory_fruit_resp(:)      !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: herbivory_fruit_resp_c13(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: herbivory_fruit_resp_c14(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(wp), INTENT(inout) :: fract_herbivory(:)           !< fraction of leaf and fruit (carbon) lost to herbivory
+    REAL(wp), INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< vegetation litterfall
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                 :: n_veg_bgcm_comp              !< number of vegetation bgcm compartments
+    INTEGER                 :: ic                           !< loop over nc
+    INTEGER                 :: ielem                        !< loop over bgcm elements
+    INTEGER                 :: ix_comp, ix_elem             !< index of element and compartment in bgcm, used for looping
+    REAL(wp)                :: eff_fract_herbivory          !< updated herbivory fraction
+    REAL(wp), DIMENSION(nc) :: fact_lim_carbon              !< carbon limitation of herbivory (unitless)
+    REAL(wp), DIMENSION(nc) :: fact_lim_nitrogen            !< nitrogen limitation of herbivory (unitless)
+    REAL(wp), DIMENSION(nc) :: hlp1                         !< helper var
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_herbivory'
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    !> 0.8 get number of bgcm compartments
+    !>
+    n_veg_bgcm_comp = SIZE(veg_pool_mt, 1)
+
+    !> 1.0 herbivory rate for grass PFT
+    !>
+    SELECT CASE (lctlib_growthform)
+    CASE (igrass)
+      DO ic = 1,nc
+        ! long-term average productivity (mol/m2/year)
+        hlp1(ic) = net_growth_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_wp
+
+        ! limit herbivory to only occur beyond minimal LAI and vegetation net growth
+        IF (lai(ic) > min_lai_herbivory .AND. hlp1(ic) > min_net_growth_herbivory ) THEN
+          ! maximum herbivory fraction increases with long-term average productivity according to
+          ! power law (Cyr & Pace, 1993). Following McNaughton et al. 1989, a lower limit of herbivory is applied
+          ! note that this leads to a quadratic rise in the flux because that is fherbivory * pool
+          fact_lim_carbon(ic) = (hlp1(ic) - min_net_growth_herbivory) ** (4._wp / 3._wp - 1._wp)
+          ! herbivory fraction increases with N content, note this is
+          ! rearranged from (leafN/leafC)/(maximum leaf N:C)
+          fact_lim_nitrogen(ic) = veg_pool_mt(ix_leaf, ixN, ic) / veg_pool_mt(ix_leaf, ixC, ic) * &
+            &                     lctlib_cn_leaf_min
+          ! herbivory fraction is limited to the fraction that has not died yet
+          fract_herbivory(ic) = fract_herbivory(ic) &
+            &                   + (1.0_wp - mortality_rate(ic)) &
+            &                   * fact_lim_carbon(ic) * fact_lim_nitrogen(ic) &
+            &                   * k_herbivory / one_day * dtime
+        END IF
+      END DO
+    END SELECT
+
+    !> 2.0 calculate litter fall from herbivory
+    !>
+    DO ic = 1,nc
+      DO ix_comp = 1,n_veg_bgcm_comp
+        ! seed bed pool remains unaffected from mortality
+        ! TODO: needs proper implementation of looping over bgcm compartments
+        IF (ix_comp == ix_leaf .OR. ix_comp == ix_fruit) THEN
+          ! loop over bgcm elements and soil layers
+          DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (is_element_used(ielem)) THEN
+              ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+              ! Only the fraction of veg pool not yet lost to litterfall is available for herbivory
+              ! If remaining biomass is smaller than herbivory rate, reduce herbivory to available biomass
+              ! Otherwise put remaining biomass to litter
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) > eps8) THEN
+                eff_fract_herbivory = MIN(fract_herbivory(ic), &
+                  &   (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)) &
+                  &   / veg_pool_mt(ix_comp, ix_elem, ic))
+              ELSE
+                eff_fract_herbivory = 0.0_wp
+              END IF
+              ! for carbon and carbon isotopes
+              IF (ix_elem == ixC .OR. ix_elem == ixC13 .OR. ix_elem == ixC14) THEN
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
+                  &                                       * (1._wp - ftroph_loss_herbivory) * eff_fract_herbivory)
+                hlp1(ic) = ftroph_loss_herbivory * eff_fract_herbivory &
+                           * veg_pool_mt(ix_comp, ix_elem, ic) * 1.e6_wp / dtime
+                ! leaf herbivory
+                IF (ix_comp == ix_leaf) THEN
+                  IF (ix_elem == ixC) THEN
+                    herbivory_leaf_resp(ic)      = herbivory_leaf_resp(ic)     + hlp1(ic)
+                  END IF
+                  IF (ix_elem == ixC13) THEN
+                    herbivory_leaf_resp_c13(ic)  = herbivory_leaf_resp_c13(ic)  + hlp1(ic)
+                  END IF
+                  IF (ix_elem == ixC14) THEN
+                    herbivory_leaf_resp_c14(ic)  = herbivory_leaf_resp_c14(ic)  + hlp1(ic)
+                  END IF
+                END IF
+                ! fruit herbivory
+                IF (ix_comp == ix_fruit) THEN
+                  IF (ix_elem == ixC) THEN
+                    herbivory_fruit_resp(ic)     = herbivory_fruit_resp(ic)     + hlp1(ic)
+                  END IF
+                  IF (ix_elem == ixC13) THEN
+                    herbivory_fruit_resp_c13(ic) = herbivory_fruit_resp_c13(ic) + hlp1(ic)
+                  END IF
+                  IF (ix_elem == ixC14) THEN
+                    herbivory_fruit_resp_c14(ic) = herbivory_fruit_resp_c14(ic) + hlp1(ic)
+                  END IF
+                END IF
+              ! for all elements but carbon and carbon isotopes
+              ELSE
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
+                  &                                       * eff_fract_herbivory)
+              END IF
+            END IF
+          END DO
+        END IF
+      END DO
+    END DO
+  END SUBROUTINE calc_veg_herbivory
 
   ! ======================================================================================================= !
   !>calculate vegetation establishment

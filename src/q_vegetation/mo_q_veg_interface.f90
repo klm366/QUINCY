@@ -36,10 +36,9 @@ MODULE mo_q_veg_interface
   USE mo_q_veg_update_pools,          ONLY: update_veg_pools_real => update_veg_pools
   USE mo_q_veg_products_decay,        ONLY: update_products_decay_real => update_products_decay
 
-  dsl4jsb_Use_processes VEG_, RAD_, SB_
+  dsl4jsb_Use_processes VEG_, SB_
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_config(VEG_)
-  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SB_)
 
   IMPLICIT NONE

@@ -184,6 +184,13 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_n15      , & !< net flux of 15N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     net_growth                        !< npp minus turnover [micro-mol CO2 m-2 s-1]
+    TYPE(t_jsb_var_real2d)          :: &
+                                    herbivory_leaf_resp           , & !< respiration associated with herbivory on leaves [micro-mol CO2 m-2 s-1]
+                                    herbivory_leaf_resp_c13       , & !< respiration associated with herbivory on leaves [micro-mol 13CO2 m-2 s-1]
+                                    herbivory_leaf_resp_c14       , & !< respiration associated with herbivory on leaves [micro-mol 14CO2 m-2 s-1]
+                                    herbivory_fruit_resp          , & !< respiration associated with herbivory on fruits [micro-mol CO2 m-2 s-1]
+                                    herbivory_fruit_resp_c13      , & !< respiration associated with herbivory on fruits [micro-mol 13CO2 m-2 s-1]
+                                    herbivory_fruit_resp_c14          !< respiration associated with herbivory on fruits [micro-mol 14CO2 m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
     !>everything else
@@ -1795,6 +1802,72 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp', mem%herbivory_leaf_resp, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp', 'micro-mol CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp_c13', mem%herbivory_leaf_resp_c13, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp_c13', 'micro-mol 13CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp_c14', mem%herbivory_leaf_resp_c14, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp_c14', 'micro-mol 14CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp', mem%herbivory_fruit_resp, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp', 'micro-mol CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp_c13', mem%herbivory_fruit_resp_c13, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp_c13', 'micro-mol 13CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp_c14', mem%herbivory_fruit_resp_c14, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp_c14', 'micro-mol 14CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 

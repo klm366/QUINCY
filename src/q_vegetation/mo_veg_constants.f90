@@ -198,6 +198,13 @@ MODULE mo_veg_constants
       tau_pp_pv,         & !< exponential time constants for the decay of the plywood and veneer product pool
       tau_pp_sawnwood      !< exponential time constants for the decay of the sawnwood product pool
 
+  ! parameters used for herbivory
+  REAL(wp), SAVE :: &
+      k_herbivory,           &      !< asymptotic daily rate of herbivory (1/day)
+      ftroph_loss_herbivory, &      !< carbon respiration associated with herbivory (unitless)
+      min_net_growth_herbivory, &   !< minimum long-term average productivity for herbivory to occur (mol / m2 / yr)
+      min_lai_herbivory             !< minimum LAI beyond which herbivory can occur
+
   ! red to far red ratio calculations
   REAL(wp), SAVE :: &
     & rfr_ratio_toc, &     !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
@@ -378,6 +385,13 @@ CONTAINS
       tau_pp_oirw = 16.5
       tau_pp_pv = 24.9
       tau_pp_sawnwood = 49.9
+
+    ! parameters used for herbivory
+    ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150
+      k_herbivory              = 0.01_wp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      ftroph_loss_herbivory    = 0.9_wp  !< assumuming a typical 90% loss of energy per trophic level
+      min_net_growth_herbivory = 20.8_wp !< 250 gC/m2/yr converted to mol
+      min_lai_herbivory        = 0.1_wp  !< set to min_lai value, needs evaluation
 
     ! red to far red ratio calculations
       rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998

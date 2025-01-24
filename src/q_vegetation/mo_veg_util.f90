@@ -76,6 +76,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
     dsl4jsb_Real2D_onChunk      :: npp
     dsl4jsb_Real2D_onChunk      :: npp_c13
     dsl4jsb_Real2D_onChunk      :: npp_c14
@@ -97,6 +103,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk      :: biological_n_fixation
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
@@ -174,6 +182,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
@@ -195,6 +209,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
@@ -213,6 +229,12 @@ CONTAINS
       n_processing_respiration(ic) = zero
       n_processing_respiration_c13(ic) = zero
       n_processing_respiration_c14(ic) = zero
+      herbivory_leaf_resp(ic) = zero
+      herbivory_leaf_resp_c13(ic) = zero
+      herbivory_leaf_resp_c14(ic) = zero
+      herbivory_fruit_resp(ic) = zero
+      herbivory_fruit_resp_c13(ic) = zero
+      herbivory_fruit_resp_c14(ic) = zero
       npp(ic) = zero
       npp_c13(ic) = zero
       npp_c14(ic) = zero
@@ -234,6 +256,8 @@ CONTAINS
       recycling_heart_wood_n15(ic) = zero
       recycling_heart_wood_p(ic) = zero
       net_biosphere_production(ic) = zero
+      net_biosphere_production_c13(ic) = zero
+      net_biosphere_production_c14(ic) = zero
       biological_n_fixation(ic) = zero
       delta_dens_ind(ic) = zero
       unit_transpiration(ic) = zero

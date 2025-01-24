@@ -60,6 +60,7 @@ MODULE mo_veg_config_class
                                                    !! by default; this is hard-coded in SPQ_ init
     LOGICAL          :: l_use_product_pools        !< enable product pools (required for harvest process); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
+    LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -107,6 +108,7 @@ CONTAINS
     CHARACTER(15)               :: leaf_stoichom_scheme
     LOGICAL                     :: flag_dynamic_roots
     LOGICAL                     :: flag_dynroots_h2o_n_limit
+    LOGICAL                     :: flag_herbivory
     LOGICAL                     :: l_use_product_pools
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
@@ -127,6 +129,7 @@ CONTAINS
       leaf_stoichom_scheme,         &
       flag_dynamic_roots,           &
       flag_dynroots_h2o_n_limit,    &
+      flag_herbivory,               &
       l_use_product_pools
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
@@ -145,6 +148,7 @@ CONTAINS
     leaf_stoichom_scheme           = "dynamic"
     flag_dynamic_roots             = .TRUE.
     flag_dynroots_h2o_n_limit      = .FALSE.
+    flag_herbivory                 = .FALSE.
     l_use_product_pools            = .FALSE.
 
     ! read the namelist
@@ -172,6 +176,7 @@ CONTAINS
     config%leaf_stoichom_scheme          = TRIM(leaf_stoichom_scheme)
     config%flag_dynamic_roots            = flag_dynamic_roots
     config%flag_dynroots_h2o_n_limit     = flag_dynroots_h2o_n_limit
+    config%flag_herbivory                = flag_herbivory
     config%l_use_product_pools           = l_use_product_pools
 
   END SUBROUTINE Init_veg_config

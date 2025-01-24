@@ -201,6 +201,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
@@ -362,6 +368,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c14)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)         ! inout
@@ -514,7 +526,23 @@ CONTAINS
        veg_pool_mt(ix_reserve, :, :) = veg_pool_mt(ix_reserve, :, :) - veg_reserve_use_mt(:,:)
 
       DO ic = 1, nc
-        !>  1.5 update fluxes from continuous nutrient turnover and resorption
+        !>  1.5 remove respiration flux associated with herbivory from affected pools
+        !>      the remaining matter is already included in litter flux
+        !>
+        veg_pool_mt(ix_leaf, ixC, ic)    = veg_pool_mt(ix_leaf, ixC, ic)    &
+          &                                - herbivory_leaf_resp(ic)      * dtime / 1.e6_wp
+        veg_pool_mt(ix_leaf, ixC13, ic)  = veg_pool_mt(ix_leaf, ixC13, ic)  &
+          &                                - herbivory_leaf_resp_c13(ic)  * dtime / 1.e6_wp
+        veg_pool_mt(ix_leaf, ixC14, ic)  = veg_pool_mt(ix_leaf, ixC14, ic)  &
+          &                                - herbivory_leaf_resp_c14(ic)  * dtime / 1.e6_wp
+        veg_pool_mt(ix_fruit, ixC, ic)   = veg_pool_mt(ix_fruit, ixC, ic)   &
+          &                                - herbivory_fruit_resp(ic)     * dtime / 1.e6_wp
+        veg_pool_mt(ix_fruit, ixC13, ic) = veg_pool_mt(ix_fruit, ixC13, ic) &
+          &                                - herbivory_fruit_resp_c13(ic) * dtime / 1.e6_wp
+        veg_pool_mt(ix_fruit, ixC14, ic) = veg_pool_mt(ix_fruit, ixC14, ic) &
+          &                                - herbivory_fruit_resp_c14(ic) * dtime / 1.e6_wp
+
+       !>  1.6 update fluxes from continuous nutrient turnover and resorption
        !>
        ! N
        veg_pool_mt(ix_labile, ixN, ic)     = veg_pool_mt(ix_labile, ixN, ic) &
@@ -535,7 +563,7 @@ CONTAINS
        veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
        veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
 
-       !>  1.6 update labile pool with fluxes to mycorrhiza
+       !>  1.7 update labile pool with fluxes to mycorrhiza
        !>
        veg_pool_mt(ix_labile, ixC, ic)   = veg_pool_mt(ix_labile, ixC, ic)   - veg_exudation_mt(ixC, ic)
        veg_pool_mt(ix_labile, ixN, ic)   = veg_pool_mt(ix_labile, ixN, ic)   - veg_exudation_mt(ixN, ic)
@@ -546,7 +574,7 @@ CONTAINS
       END DO
 
 
-       !>  1.7 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
+       !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
        !>
       DO ic = 1, nc
         DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
@@ -912,18 +940,24 @@ CONTAINS
       ! could also be calculated based on NPP
       ! (n_processing_respiration = n_fixation_respiration + n_transform_respiration)
       net_biosphere_production(ic) = net_biosphere_production(ic) &
-        & + gross_assimilation(ic) - maint_respiration(ic) - growth_respiration(ic) - n_processing_respiration(ic)
+        & + gross_assimilation(ic) &
+        & - maint_respiration(ic)   - growth_respiration(ic) - n_processing_respiration(ic) &
+        & - herbivory_leaf_resp(ic) - herbivory_fruit_resp(ic)
       net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) &
-        & + gross_assimilation_C13(ic) - maint_respiration_c13(ic) - growth_respiration_c13(ic) - n_processing_respiration_c13(ic)
+        & + gross_assimilation_C13(ic) &
+        & - maint_respiration_c13(ic)   - growth_respiration_c13(ic) - n_processing_respiration_c13(ic) &
+        & - herbivory_leaf_resp_c13(ic) - herbivory_fruit_resp_c13(ic)
       net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) &
-        & + gross_assimilation_C14(ic) - maint_respiration_c14(ic) - growth_respiration_c14(ic) - n_processing_respiration_c14(ic)
+        & + gross_assimilation_C14(ic) &
+        & - maint_respiration_c14(ic)   - growth_respiration_c14(ic) - n_processing_respiration_c14(ic) &
+        & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic)
 
       ! biological N fixation (VEG_ and SB_ processes)
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
 
       IF (config_l_use_product_pools) THEN
         ! The product pool decay is a loss to the atmosphere (fprod_decay_mt unit is mol m-2 timestep-1)
-        net_biosphere_production(ic) = net_biosphere_production(ic) - (fprod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - (fprod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
         net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (fprod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
         net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (fprod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
       ENDIF
