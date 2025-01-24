@@ -110,7 +110,7 @@ CONTAINS
     hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
-    vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
+    vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     ! ----------------------------------------------------------------------------------------------------- !
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
