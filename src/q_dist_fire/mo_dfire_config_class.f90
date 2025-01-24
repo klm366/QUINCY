@@ -108,6 +108,7 @@ CONTAINS
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
