@@ -35,6 +35,8 @@ MODULE mo_dfire_fuel_interface
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process, DFIRE_FUEL_
   USE mo_dfire_fuel,                  ONLY: update_dfire_fuel
+  USE mo_dfire_sf_post,               ONLY: update_dfire_sf_post
+
   USE mo_dfire_constants,             ONLY: dfire_pft_mask ! pfts to compute average
 
   dsl4jsb_Use_memory(DFIRE_FUEL_)
