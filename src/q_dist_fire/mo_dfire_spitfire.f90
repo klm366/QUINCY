@@ -66,7 +66,7 @@ MODULE mo_dfire_spitfire
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
   USE mo_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
@@ -139,7 +139,8 @@ CONTAINS
     TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: sb_loss_stores(:) !< Reference to each sb_loss pft pools (#npfts)
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
-    dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    !dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -165,12 +166,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
 
     ! DFIRE_FUEL_ 3D
-    dsl4jsb_Real3D_onChunk                :: dead_fuel         ! [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel         ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel         ! in [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
     dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
 
     dsl4jsb_Real2D_onChunk                :: fuel_bulk_density ! [kg m-3]
+
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -199,15 +204,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)         ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)         ! in [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density) ! in [kg m-3]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 !    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
 
@@ -261,6 +271,12 @@ CONTAINS
         ab_moisture(ic) = sum(ab_moisture_sl(ic,:)) / size(ab_moisture_sl, dim=2) !< 2 = soil layers index
       END IF
     ENDDO
+
+    !< Test: assume 5% live fuel consumption
+    live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
+    !< Test: assume 3% dead fuel consumption
+    dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
+
 
     write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
