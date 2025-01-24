@@ -217,7 +217,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    !dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 !    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
 

@@ -27,6 +27,8 @@ MODULE mo_dfire_sf_post
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+
+  USE mo_jsb_grid,              ONLY: Get_grid
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -44,6 +46,7 @@ CONTAINS
   !>
   SUBROUTINE update_dfire_sf_post(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
@@ -61,6 +64,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
@@ -69,6 +73,7 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
 
     ! add here local variables
+    REAL(wp), POINTER                     :: area(:), tile_fract(:)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -78,6 +83,8 @@ CONTAINS
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SPQ_)
+
+    WRITE(*,*) "update_dfire_post:: running..."
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
@@ -90,13 +97,15 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
+    !IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    ! ----------------------------------------------------------------------------------------------------- !
+    grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
@@ -109,13 +118,16 @@ CONTAINS
 !    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
 !    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
+
     ! init here
+    area => grid %area (ics:ice, iblk)
+    tile_fract => tile%fract(ics:ice, iblk)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ! Aggregate fractions by type (Forest, Grass)
+    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(1), tile_fract(1)
 
   END SUBROUTINE update_dfire_sf_post
 
