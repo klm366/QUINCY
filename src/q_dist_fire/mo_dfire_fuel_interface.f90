@@ -96,7 +96,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_dfire_fuel(model_id))
-    CALL this%Register_task(tsk_dfire_post(model_id))
+    CALL this%Register_task(tsk_dfire_sf_post(model_id))
   END SUBROUTINE Register_dfire_fuel_tasks
 
   ! ======================================================================================================= !
