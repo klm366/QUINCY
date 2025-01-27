@@ -49,10 +49,14 @@ MODULE mo_dfire_fuel
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
   USE mo_dfire_constants,       ONLY: sf_fuel_classes_nr ! total number of fuel classes
   USE mo_dfire_constants,       ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
+  USE mo_dfire_constants,       ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
+  USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_100hr_idx, df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
+  USE mo_dfire_constants,       ONLY: df_sf_dead_frac
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
+
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
@@ -86,6 +90,8 @@ CONTAINS
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -101,11 +107,14 @@ CONTAINS
     REAL(wp)                              :: dead_fuel_in_mols(options%nc, sf_fuel_dead_fuel_nr) !< Dead fuel (#nc, # dead fuel pools)
     REAL(wp)                              :: live_fuel_in_mols(options%nc, sf_fuel_live_fuel_nr) !< Live fuel (#nc, # live fuel pools)
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
+    REAL(wp)                              :: polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
@@ -137,6 +146,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
@@ -179,9 +189,12 @@ CONTAINS
     !ELSE ! ignore
     END IF
 
+    polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
+
     ! dead fuel (from sb_pool and live grass)
     dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
-    dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl)
+    dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl) &
+                                                              * polymeric_litter_fract
 
     IF (lctlib%GrassFlag) THEN ! dead fuel
       dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
@@ -206,10 +219,12 @@ CONTAINS
     !> when accounting for the other pfts.
     !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
     !> fuel bulk densities (slightly more).
-    !dead_fuel_cls = SUM(dead_fuel(:,:,1:3), DIM=2) ! todo: 1:3= fuel classes from 1hr to 100hrs, 2 = fuel pools dimension index
-    !DO ic = 1, nc
-      fuel_bulk_density(:) = 2._wp !lctlib%fbd_pb * SUM(dead_fuel_cls(ic,:) * [1._wp, 1.2_wp, 1.4_wp]) ! todo: add hardcoded values into dfire_constants.f90
-    !END DO
+    !> Aggregation average's the PFT values
+    dead_fuel_cls = calc_dead_fuel_classes(dead_fuel)
+    dead_fuel_spread_cls = SUM(dead_fuel_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
+    DO ic = 1, nc
+      fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_cls(ic,:) * df_sf_fuel_class_factors)
+    END DO
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &
@@ -217,6 +232,31 @@ CONTAINS
 
   END SUBROUTINE update_dfire_fuel
 
+  ! ======================================================================================================= !
+  !>
+  !> Compute spitfire for current time step
+  !> It links Quincy and Spitfire
+  !>
+  FUNCTION calc_dead_fuel_class(dead_fuel) RESULT (dead_fuel_cls)
+    REAL(wp), INTENT(in) :: dead_fuel(:,:) !< (#nc,#dead fuel pools) [x]
+    REAL(wp), ALLOCATABLE :: dead_fuel_cls(:,:,:) !< (#nc, #dead fuel pools, #fuel classes) [x]
+
+    INTEGER :: ipools, ifclass, nc, npools, nfclass
+
+    nc=SIZE(dead_fuel, DIM=1) !< 1=nc dim
+    npools=SIZE(dead_fuel, DIM=1) !< 1=nc dim
+    nfclass=SIZE(df_sf_dead_frac)
+    ALLOCATE(dead_fuel_cls(nc,npools,nfclass))
+    dead_fuel_cls = 0._wp
+
+    DO ifclass=1, nfclass !< 1=nc dim
+      DO ipool=1, npools !< 2=dead pools
+        dead_fuel_cls(:,ipool,iclass) = dead_fuel(:,ipool) * df_sf_dead_frac(iclass)
+      END DO
+    END DO
+  END FUNCTION calc_dead_fuel_class
+
 
 #endif
 END MODULE mo_dfire_fuel
+
