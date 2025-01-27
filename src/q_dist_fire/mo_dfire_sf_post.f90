@@ -50,7 +50,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_, DFIRE_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -74,8 +74,16 @@ CONTAINS
 
     ! add here local variables
     REAL(wp), POINTER                     :: area(:), tile_fract(:)
+    REAL(wp), ALLOCATABLE                 :: dead_fc_1hr_tile(:,:) !< 1 hour dead fuel consumption for current tile (#nc, #dead fuel pools) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: live_fc_1hr_tile(:,:) !< 1 hour live fuel consumptino for current tile (#nc, #live fuel pools) [g DM m-2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+
+    dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
+
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
@@ -84,6 +92,11 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SPQ_)
 
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
     WRITE(*,*) "update_dfire_post:: running..."
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
@@ -122,6 +135,10 @@ CONTAINS
     ! init here
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
+!    tile_area = area * tile_fract
+    dead_fc_1hr_tile = dead_fuel_consumption_1hr * tile_fract
+    live_fc_1hr_tile = live_fuel_consumption_1hr * tile_fract
+
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
