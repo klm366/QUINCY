@@ -120,38 +120,18 @@ MODULE mo_dfire_constants
         df_sf_fc_1000hr_idx        !< 1000 hours fuel class array indices
   END ENUM
 
-  !< "Live" fuel array indices from t_sf_fuel_class
-  INTEGER, PARAMETER, PUBLIC :: t_sf_fuel_live_fuel_nr = 6 !< leaf, sap wood, heart wood, labile, reserve, fruit
-
-  ENUM, BIND(C)
-    ENUMERATOR :: t_sf_fuel_live_fuel_leaf_ix = 1, &
-        t_sf_fuel_live_fuel_sap_wood_ix, &
-        t_sf_fuel_live_fuel_heart_wood_ix, &
-        t_sf_fuel_live_fuel_labile_ix, &
-        t_sf_fuel_live_fuel_reserve_ix, &
-        t_sf_fuel_live_fuel_fruit_ix
-  END ENUM
-
-  !< "Dead" fuel array indices from t_sf_fuel_class
-  INTEGER, PUBLIC, PARAMETER :: t_sf_fuel_dead_fuel_nr = 7  !< woody, leaf, sap wood, labile, reserve, fruit, polymeric
-
-  ENUM, BIND(C)
-  !< Ensure how much to remove from each pool
-    ENUMERATOR :: t_sf_fuel_dead_fuel_woody_ix = 1, &     !< from sb_pool_mt
-        t_sf_fuel_dead_fuel_grass_leaf_ix, &    !< from veg_pool_mt
-        t_sf_fuel_dead_fuel_grass_sap_ix, &     !< from veg_pool_mt
-        t_sf_fuel_dead_fuel_grass_labile_ix, &  !< from veg_pool_mt
-        t_sf_fuel_dead_fuel_grass_reserve_ix, & !< from veg_pool_mt
-        t_sf_fuel_dead_fuel_grass_fruit_ix, &   !< from veg_pool_mt
-        t_sf_fuel_dead_fuel_polymeric_ix        !< from sb_pool_mt ( Optional)
-  END ENUM
-
   !< Set fraction of fuel to allocate from sb_pool (dead fuel)
-  REAL(wp) :: df_sf_dead_frac(df_sf_fc_full_nr, t_sf_fuel_dead_fuel_nr)
+  REAL(wp) :: df_sf_dead_frac(df_sf_fc_full_nr, sf_fuel_dead_fuel_nr)
   !< Set fraction of fuel to allocate from veg_pool (live tree fuel)
-  REAL(wp) :: df_sf_live_frac_tree(df_sf_fc_full_nr, t_sf_fuel_live_fuel_nr)
+  REAL(wp) :: df_sf_live_frac_tree(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
   !< Set fraction of fuel to allocate from veg_pool (live grass fuel)
-  REAL(wp) :: df_sf_live_frac_grass(df_sf_fc_full_nr, t_sf_fuel_live_fuel_nr)
+  REAL(wp) :: df_sf_live_frac_grass(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
+
+  !< Fuel class allocation for dead fuel (Pfeiffer et al. (2013) )
+  REAL(wp), PARAMETER :: df_sf_fuel_frac_slow(df_sf_fc_full_nr) = [0.045_wp, 0.075_wp, 0.21_wp, 0.67_wp]
+
+  !< Fuel class allocation for live fuel: 100% of live fuel is considered to be in the 1h class
+  REAL(wp), PARAMETER, PUBLIC :: df_sf_fuel_frac_fast(df_sf_fc_full_nr) = [1._wp, 0._wp, 0._wp, 0._wp]
 
   !< Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
   REAL(wp), PARAMETER, PUBLIC :: df_sf_fuel_class_factors(df_sf_fc_spread_nr) = [1._wp, 1.2_wp, 1.4_wp] !< For 1hr, 10hrs and 100 hrs

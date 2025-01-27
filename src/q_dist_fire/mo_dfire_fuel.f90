@@ -79,7 +79,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_, DFIRE_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -103,11 +103,13 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
 
     REAL(wp)                              :: tile_fract(options%nc) !<  [%]
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:) !< Dead fuel (#nc,#fuel classes) [g DM m -2]
     REAL(wp)                              :: dead_fuel_in_mols(options%nc, sf_fuel_dead_fuel_nr) !< Dead fuel (#nc, # dead fuel pools)
     REAL(wp)                              :: live_fuel_in_mols(options%nc, sf_fuel_live_fuel_nr) !< Live fuel (#nc, # live fuel pools)
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
     REAL(wp)                              :: polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
+
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_cls(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -237,24 +239,24 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  FUNCTION calc_dead_fuel_class(dead_fuel) RESULT (dead_fuel_cls)
+  FUNCTION calc_dead_fuel_classes(dead_fuel) RESULT (dead_fuel_cls)
     REAL(wp), INTENT(in) :: dead_fuel(:,:) !< (#nc,#dead fuel pools) [x]
     REAL(wp), ALLOCATABLE :: dead_fuel_cls(:,:,:) !< (#nc, #dead fuel pools, #fuel classes) [x]
 
-    INTEGER :: ipools, ifclass, nc, npools, nfclass
+    INTEGER :: ipool, ifclass, nc, npools, nfclass
 
     nc=SIZE(dead_fuel, DIM=1) !< 1=nc dim
-    npools=SIZE(dead_fuel, DIM=1) !< 1=nc dim
+    npools=SIZE(dead_fuel, DIM=2) !< 2=npools dim
     nfclass=SIZE(df_sf_dead_frac)
     ALLOCATE(dead_fuel_cls(nc,npools,nfclass))
     dead_fuel_cls = 0._wp
 
     DO ifclass=1, nfclass !< 1=nc dim
       DO ipool=1, npools !< 2=dead pools
-        dead_fuel_cls(:,ipool,iclass) = dead_fuel(:,ipool) * df_sf_dead_frac(iclass)
+        dead_fuel_cls(:,ipool,ifclass) = dead_fuel(:,ipool) * df_sf_dead_frac(ifclass,ipool)
       END DO
     END DO
-  END FUNCTION calc_dead_fuel_class
+  END FUNCTION calc_dead_fuel_classes
 
 
 #endif

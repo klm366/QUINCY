@@ -72,6 +72,9 @@ MODULE mo_dfire_config_class
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
+    !< flags
+    REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
+
   CONTAINS
     PROCEDURE :: Init => Init_dfire_config
   END type t_dfire_config
@@ -109,6 +112,8 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
+    
+    REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -122,7 +127,8 @@ CONTAINS
       & bc_filename,                &
       & flag_dfire,                 &
       & dfire_modelname,            &
-      & dfire_precip_method_name
+      & dfire_precip_method_name,   &
+      & ratio_polymeric_litter_to_dead_fuel
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -136,7 +142,8 @@ CONTAINS
     ic_filename              = 'ic_land_dfire.nc'
     flag_dfire               = .FALSE.
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
-    dfire_precip_method_name  = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
+    dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
+    ratio_polymeric_litter_to_dead_fuel = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -158,6 +165,7 @@ CONTAINS
     config%flag_dfire                = flag_dfire
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
+    config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
