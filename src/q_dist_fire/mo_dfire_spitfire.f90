@@ -278,6 +278,8 @@ CONTAINS
       END IF
     ENDDO
 
+    CALL calc_spitfire()
+
     !< Test: assume 5% live fuel consumption
     live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
     !< Test: assume 3% dead fuel consumption
@@ -291,6 +293,15 @@ CONTAINS
             t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
             fuel_bulk_density(1)
   END SUBROUTINE update_dfire_spitfire
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Run science
+  !>
+  SUBROUTINE calc_spitfire()
+
+  END SUBROUTINE calc_spitfire
 
 
   ! ======================================================================================================= !
