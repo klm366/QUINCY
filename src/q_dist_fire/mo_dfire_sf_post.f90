@@ -58,6 +58,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(DFIRE_FUEL_)
+    dsl4jsb_Use_memory(DFIRE_)
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -89,14 +90,9 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_FUEL_)
+    dsl4jsb_Def_memory(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SPQ_)
-
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
-
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
     WRITE(*,*) "update_dfire_post:: running..."
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
@@ -110,7 +106,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    !IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(DFIRE_FUEL_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
@@ -121,23 +117,34 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
+    dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
 !    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
 
     ! ----------------------------------------------------------------------------------------------------- !
 !    bgcm_store => tile%bgcm_store
 !    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
 !    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
+    ALLOCATE(dead_fc_1hr_tile, mold=dead_fuel_consumption_1hr)
+    ALLOCATE(live_fc_1hr_tile, mold=live_fuel_consumption_1hr)
 
     ! init here
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 !    tile_area = area * tile_fract
-    dead_fc_1hr_tile = dead_fuel_consumption_1hr * tile_fract
-    live_fc_1hr_tile = live_fuel_consumption_1hr * tile_fract
+    DO ic=1, nc
+      dead_fc_1hr_tile(ic,:) = dead_fuel_consumption_1hr(ic,:) * tile_fract(ic)
+      live_fc_1hr_tile(ic,:) = live_fuel_consumption_1hr(ic,:) * tile_fract(ic)
+    END DO
 
 
     ! ----------------------------------------------------------------------------------------------------- !
