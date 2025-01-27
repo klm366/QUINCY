@@ -74,6 +74,12 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: precip_qc_mavg
     dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
     dsl4jsb_Real2D_onDomain      :: precip_mavg
+
+    dsl4jsb_Real2D_onDomain      :: area_burned
+    dsl4jsb_Real2D_onDomain      :: area_burned_fract
+
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
+    dsl4jsb_Real3D_onDomain      :: live_fuel_consumption_1hr
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -89,6 +95,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_mavg)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned_fract)
+
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "dfire_init..."
     pm_fire = 0._wp
@@ -96,6 +107,10 @@ CONTAINS
     precip_qc_mavg = 0._wp
     precip_daily_mmd = 0._wp
     precip_mavg = 0._wp
+    area_burned = 0._wp
+    area_burned_fract = 0._wp
+    dead_fuel_consumption_1hr = 0._wp
+    live_fuel_consumption_1hr = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
