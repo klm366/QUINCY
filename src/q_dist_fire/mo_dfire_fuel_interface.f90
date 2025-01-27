@@ -165,7 +165,7 @@ CONTAINS
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_dfire_fuel::return_ptr)
+    ALLOCATE(tsk_dfire_sf_post::return_ptr)
     CALL return_ptr%Construct(name='dfire_sf_post', process_id=DFIRE_FUEL_, owner_model_id=model_id)
   END FUNCTION Create_task_dfire_sf_post
 
