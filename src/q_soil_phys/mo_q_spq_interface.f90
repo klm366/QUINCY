@@ -328,6 +328,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SPQ_, soil_depth_sl           , weighted_by_fract) ! Note: determined in SPQ_ init
     dsl4jsb_Aggregate_onChunk(SPQ_, heat_capa_sl            , weighted_by_fract)  ! NOTE it is set to a constant with SPQ_ init
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_sl               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_fc_sl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_pot_sl           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, gw_runoff_sl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, percolation_sl          , weighted_by_fract)
