@@ -176,6 +176,9 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
+
+    dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -214,6 +217,9 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! out [ha ts-1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! out [-]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -277,6 +283,8 @@ CONTAINS
     !< Test: assume 3% dead fuel consumption
     dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
 
+    area_burned = tile_area * 0.05        !< AB = 5%
+    area_burned_fract = tile_fract * 0.05
 
     write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
