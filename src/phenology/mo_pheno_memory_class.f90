@@ -269,7 +269,7 @@ CONTAINS
           & t_cf('growth_phase_CoverCrop', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & initval_r=0.0_wp )
+          & lrestart=.TRUE., initval_r=0.0_wp )
 
         CALL mem%Add_var('growth_days_eg', mem%days_since_growth_begin_EG,      &
           & hgrid, surface,                                                     &
