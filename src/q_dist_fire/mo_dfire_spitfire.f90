@@ -73,13 +73,28 @@ MODULE mo_dfire_spitfire
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
 
+  USE mo_dfire_sf_ignition,     ONLY: t_sf_ignitions
+
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: update_dfire_spitfire
 
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_spitfire'
+
+  !<
+  !< Calculated Spitfire values
+  !< Move spitfire data from calc_spitfire <-> update_dfire_spitfire subroutines
+  !<
+  TYPE t_sf_spitfire
+    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
+    REAL(wp), ALLOCATABLE :: e_n_humans(:)
+    REAL(wp), ALLOCATABLE :: e_n_lightning(:)
+  END TYPE t_sf_spitfire
+
+  INTERFACE t_sf_spitfire
+    MODULE PROCEDURE :: create_sf_spitfire
+  END INTERFACE t_sf_spitfire
 
 
   TYPE t_sf_bgcm_2L3D_p
@@ -88,6 +103,22 @@ MODULE mo_dfire_spitfire
 
 CONTAINS
 
+  !>
+  !> t_sf_spitfire constructor: Allocate and initialize
+  !>
+  FUNCTION create_sf_spitfire(nc) RESULT (sf_spitfire)
+    INTEGER, INTENT(in) :: nc          !< #Gridcells
+    TYPE(t_sf_spitfire) :: sf_spitfire !< Output
+
+    ALLOCATE(sf_spitfire % e_n_ignitions(nc))
+    ALLOCATE(sf_spitfire % e_n_humans(nc))
+    ALLOCATE(sf_spitfire % e_n_lightning(nc))
+
+    sf_spitfire % e_n_ignitions = 0._wp
+    sf_spitfire % e_n_humans = 0._wp
+    sf_spitfire % e_n_lightning = 0._wp
+
+  END FUNCTION create_sf_spitfire
 
   ! ======================================================================================================= !
   !>
@@ -134,6 +165,8 @@ CONTAINS
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
     REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
+
+    TYPE(t_sf_spitfire)                   :: sf_spitfire
 
     INTEGER                               :: nr_of_children
     TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: sb_loss_stores(:) !< Reference to each sb_loss pft pools (#npfts)
@@ -278,7 +311,7 @@ CONTAINS
       END IF
     ENDDO
 
-    CALL calc_spitfire()
+    CALL calc_spitfire(nc, dtime, one_day, spitfire)
 
     !< Test: assume 5% live fuel consumption
     live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
@@ -299,8 +332,22 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire()
+  SUBROUTINE calc_spitfire(nc, dtime, one_day, spitfire)
+    INTEGER, INTENT(in)   :: nc
+    REAL(wp), INTENT(in)  :: dtime, one_day
+    TYPE(t_sf_spitfire)   :: spitfire !< Spitfire outputs
 
+    TYPE(t_sf_ignitions)  :: sf_ignitions
+
+    sf_ignitions = t_sf_ignitions(nc)
+
+    !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
+    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
+                                    a_nd, lightning_frequency, &
+                                    df_sf_max_density_human_pop)
+    spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
+    spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
+    spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
   END SUBROUTINE calc_spitfire
 
 
