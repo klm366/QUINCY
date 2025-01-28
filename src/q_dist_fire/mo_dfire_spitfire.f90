@@ -72,8 +72,9 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
+  USE mo_dfire_constants,       ONLY: df_sf_max_density_human_pop
 
-  USE mo_dfire_sf_ignition,     ONLY: t_sf_ignitions
+  USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
 
   IMPLICIT NONE
 
@@ -311,7 +312,11 @@ CONTAINS
       END IF
     ENDDO
 
-    CALL calc_spitfire(nc, dtime, one_day, spitfire)
+    CALL calc_spitfire(nc, dtime, one_day, &
+                        dsl4jsb_Config(DFIRE_)%density_human_population, &
+                        dsl4jsb_Config(DFIRE_)%a_nd, &
+                        dsl4jsb_Config(DFIRE_)%lightning_frequency, &
+                        sf_spitfire)
 
     !< Test: assume 5% live fuel consumption
     live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
@@ -332,9 +337,16 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, dtime, one_day, spitfire)
+  SUBROUTINE calc_spitfire(nc, dtime, one_day, &
+                  density_human_population, a_nd, lightning_frequency, & ! ignition events
+                  spitfire)
     INTEGER, INTENT(in)   :: nc
     REAL(wp), INTENT(in)  :: dtime, one_day
+
+    REAL(wp), INTENT(in)  :: density_human_population       !< Average human population density in the grid cell [individuals km-2]
+    REAL(wp), INTENT(in)  :: a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
+    REAL(wp), INTENT(in)  :: lightning_frequency            !< Lightning frequency [ha-1 d-1]
+
     TYPE(t_sf_spitfire)   :: spitfire !< Spitfire outputs
 
     TYPE(t_sf_ignitions)  :: sf_ignitions
