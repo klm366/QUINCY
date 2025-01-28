@@ -247,7 +247,7 @@ CONTAINS
 
     nc=SIZE(dead_fuel, DIM=1) !< 1=nc dim
     npools=SIZE(dead_fuel, DIM=2) !< 2=npools dim
-    nfclass=SIZE(df_sf_dead_frac)
+    nfclass=SIZE(df_sf_dead_frac,DIM=1) ! 1=n fuel classes
     ALLOCATE(dead_fuel_cls(nc,npools,nfclass))
     dead_fuel_cls = 0._wp
 
