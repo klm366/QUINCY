@@ -107,8 +107,6 @@ CONTAINS
     INTEGER                               :: lctlib_growthform(options%nc)
 
     REAL(wp)                              :: tile_fract(options%nc) !<  [%]
-!    REAL(wp)                              :: dead_fuel_in_mols(options%nc, sf_fuel_dead_fuel_nr) !< Dead fuel (#nc, # dead fuel pools)
-!    REAL(wp)                              :: live_fuel_in_mols(options%nc, sf_fuel_live_fuel_nr) !< Live fuel (#nc, # live fuel pools)
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
     REAL(wp)                              :: config_polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
@@ -183,41 +181,19 @@ CONTAINS
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
     config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
-!    dead_fuel_in_mols = 0._wp
-!    live_fuel_in_mols = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! Aggregate fractions by type (Forest, Grass)
+    ! todo: move to init (static setup)
     IF (lctlib%ForestFlag) THEN
       forest_fract=tile_fract
     ELSE IF (lctlib%GrassFlag) THEN
       grass_fract=tile_fract
     !ELSE ! ignore
     END IF
-
-
-    ! dead fuel (from sb_pool and live grass)
-    !dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
-    !dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_polymeric_ix) = sb_pool_mt(ix_polymeric_litter,ixC,:,df_sf_spq_layer_top_sl) &
-    !                                                          * polymeric_litter_fract
-
-    !IF (lctlib%GrassFlag) THEN ! dead fuel
-    !  dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
-    !  dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
-    !  dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
-    !  dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
-    !  dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_grass_sap_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
-    !ELSE IF (lctlib%ForestFlag) THEN ! live fuel
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_leaf_ix) = veg_pool_mt(ix_leaf,ixC,:)
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_fruit_ix) = veg_pool_mt(ix_fruit,ixC,:)
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_labile_ix) = veg_pool_mt(ix_labile,ixC,:)
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_reserve_ix) = veg_pool_mt(ix_reserve,ixC,:)
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_sap_wood_ix) = veg_pool_mt(ix_sap_wood,ixC,:)
-    !  live_fuel_in_mols(:,t_sf_fuel_live_fuel_heart_wood_ix) = veg_pool_mt(ix_heart_wood,ixC,:)
-    !END IF
 
     dead_fuel = sf_convert_units("molC/m3", "gDM/m2", sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl), aux = top_soil_depth_sl)
     live_fuel = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
@@ -233,7 +209,6 @@ CONTAINS
     !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
     !> fuel bulk densities (slightly more).
     !> Aggregation average's the PFT values
-    !dead_fuel_cls = calc_dead_fuel_classes(dead_fuel)
     dead_fuel_cls = fuel % calc_dead_fuel()
     dead_fuel_spread_cls = SUM(dead_fuel_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
@@ -245,30 +220,6 @@ CONTAINS
                         tile_fract(1), forest_fract(1)
 
   END SUBROUTINE update_dfire_fuel
-
-  ! ======================================================================================================= !
-  !>
-  !> Compute spitfire for current time step
-  !> It links Quincy and Spitfire
-  !>
-!  FUNCTION calc_dead_fuel_classes(dead_fuel) RESULT (dead_fuel_cls)
-!    REAL(wp), INTENT(in) :: dead_fuel(:,:) !< (#nc,#dead fuel pools) [x]
-!    REAL(wp), ALLOCATABLE :: dead_fuel_cls(:,:,:) !< (#nc, #dead fuel pools, #fuel classes) [x]
-
-!    INTEGER :: ipool, ifclass, nc, npools, nfclass
-
-!    nc=SIZE(dead_fuel, DIM=1) !< 1=nc dim
-!    npools=SIZE(dead_fuel, DIM=2) !< 2=npools dim
-!    nfclass=SIZE(df_sf_dead_frac,DIM=1) ! 1=n fuel classes
-!    ALLOCATE(dead_fuel_cls(nc,npools,nfclass))
-!    dead_fuel_cls = 0._wp
-
-!    DO ifclass=1, nfclass !< 1=nc dim
-!      DO ipool=1, npools !< 2=dead pools
-!        dead_fuel_cls(:,ipool,ifclass) = dead_fuel(:,ipool) * df_sf_dead_frac(ifclass,ipool)
-!      END DO
-!    END DO
-!  END FUNCTION calc_dead_fuel_classes
 
 
 #endif
