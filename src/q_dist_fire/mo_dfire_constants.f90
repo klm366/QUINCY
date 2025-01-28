@@ -138,6 +138,10 @@ MODULE mo_dfire_constants
   !< Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
   REAL(wp), PARAMETER, PUBLIC :: df_sf_fuel_class_factors(df_sf_fc_spread_nr) = [1._wp, 1.2_wp, 1.4_wp] !< For 1hr, 10hrs and 100 hrs
 
+  !< Decide at runtime which df_sf_live_frac_XXX is required (PFT dependent)
+  !< Fraction allocation for live fuel (#nfuels, #live pools) [%]
+  REAL(wp), ALLOCATABLE, PUBLIC :: live_frac_allocation(:,:)
+
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                               .TRUE., .TRUE., &                                 ! grass pfts
