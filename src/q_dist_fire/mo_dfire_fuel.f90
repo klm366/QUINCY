@@ -51,15 +51,14 @@ MODULE mo_dfire_fuel
   USE mo_dfire_constants,       ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
   USE mo_dfire_constants,       ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
   USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_100hr_idx, df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
-  USE mo_dfire_constants,       ONLY: df_sf_dead_frac
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
   USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
 
-  USE mo_dfire_constants,       ONLY: live_frac_allocation  !< Live fraction ratio for live fuels
-  USE mo_dfire_constants,       ONLY: df_sf_dead_frac       !< Fuel fraction to allocate from sb_pool
+  USE mo_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
+  USE mo_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
@@ -105,11 +104,13 @@ CONTAINS
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
+    INTEGER                               :: lctlib_growthform(options%nc)
+
     REAL(wp)                              :: tile_fract(options%nc) !<  [%]
 !    REAL(wp)                              :: dead_fuel_in_mols(options%nc, sf_fuel_dead_fuel_nr) !< Dead fuel (#nc, # dead fuel pools)
 !    REAL(wp)                              :: live_fuel_in_mols(options%nc, sf_fuel_live_fuel_nr) !< Live fuel (#nc, # live fuel pools)
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
-    REAL(wp)                              :: polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
+    REAL(wp)                              :: config_polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
     REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_cls(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
@@ -180,6 +181,8 @@ CONTAINS
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
+    lctlib_growthform(:) = lctlib%growthform
+    config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
 !    dead_fuel_in_mols = 0._wp
 !    live_fuel_in_mols = 0._wp
 
@@ -195,7 +198,6 @@ CONTAINS
     !ELSE ! ignore
     END IF
 
-    polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
 
     ! dead fuel (from sb_pool and live grass)
     !dead_fuel_in_mols(:,t_sf_fuel_dead_fuel_woody_ix) = sb_pool_mt(ix_woody_litter,ixC,:,df_sf_spq_layer_top_sl)
@@ -220,10 +222,10 @@ CONTAINS
     dead_fuel = sf_convert_units("molC/m3", "gDM/m2", sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl), aux = top_soil_depth_sl)
     live_fuel = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
 
-    fuel = t_sf_fuel_class(nc, lctlib%growthform, &
+    fuel = t_sf_fuel_class(nc, lctlib_growthform, &
                             dead_fuel_frac, live_fuel_frac, &
                             dead_fuel, live_fuel, &
-                            polymeric_litter_fract)
+                            config_polymeric_litter_fract)
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented

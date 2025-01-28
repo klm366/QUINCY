@@ -37,10 +37,10 @@ MODULE mo_dfire_sf_fuel_class
   !< Top soil layers from sb_pool_mt used by spitfire, Total number of fuel classes
   USE mo_dfire_constants,       ONLY: df_sf_fc_full_nr
   !< Total number of spitfire dead fuel pools, polymeric fuel pool index within spitfire, same for woody litter
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_nr, t_sf_fuel_dead_fuel_polymeric_ix, &
-      t_sf_fuel_dead_fuel_woody_ix
+  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, t_sf_fuel_dead_fuel_polymeric_ix, &
+                                      t_sf_fuel_dead_fuel_woody_ix
   !< Total number of live fuel pools within spitfire, live fuel pool indices from spitfire
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_nr, t_sf_fuel_live_fuel_sap_wood_ix, &
+  USE mo_dfire_constants,       ONLY: sf_fuel_live_fuel_nr, t_sf_fuel_live_fuel_sap_wood_ix, &
       t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
       t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
       t_sf_fuel_live_fuel_leaf_ix
@@ -57,6 +57,7 @@ MODULE mo_dfire_sf_fuel_class
 
   PUBLIC :: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   PUBLIC :: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix
+  PUBLIC :: create_fuel_class ! DEBUG only
 
   PRIVATE
 
@@ -122,9 +123,9 @@ CONTAINS
     ALLOCATE(fuel%growth_form, source = growth_form)
     fuel%ratio_polymeric_litter = ratio_polymeric_litter
 
-    fuel%ndeadpools = t_sf_fuel_dead_fuel_nr !< woody litter + live grass pools (+ polymeric litter, won't be used if woody litter only)
+    fuel%ndeadpools = sf_fuel_dead_fuel_nr !< woody litter + live grass pools (+ polymeric litter, won't be used if woody litter only)
 
-    ALLOCATE(fuel%live(nc, t_sf_fuel_live_fuel_nr))
+    ALLOCATE(fuel%live(nc, sf_fuel_live_fuel_nr))
     ALLOCATE(fuel%dead(nc, fuel%ndeadpools))
     fuel%live = 0._wp
     fuel%dead = 0._wp
@@ -158,7 +159,7 @@ CONTAINS
     CLASS(t_sf_fuel_class), INTENT(in) :: this
     REAL(wp), ALLOCATABLE :: dead_fuel(:,:,:) !< (this%nc, this%ndeadpools, df_sf_fc_full_nr) !< output [g DM m-2]
 
-    REAL(wp) :: grass_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(wp) :: grass_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
     INTEGER :: ifuel
 
     IF (.NOT. ALLOCATED(dead_fuel)) ALLOCATE(dead_fuel(this%nc, this%ndeadpools, df_sf_fc_full_nr))
@@ -195,7 +196,7 @@ CONTAINS
   !>
   FUNCTION Calc_live_fuel(this) RESULT (live_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: live_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(wp) :: live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
 
     live_fuel = this % Calc_live_tree_fuel()
   END FUNCTION Calc_live_fuel
@@ -207,7 +208,7 @@ CONTAINS
   !>
   FUNCTION Calc_live_tree_fuel(this) RESULT (tree_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: tree_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(wp) :: tree_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
 
     INTEGER :: ifuel, ic
 
@@ -241,7 +242,7 @@ CONTAINS
   !>
   FUNCTION Calc_live_grass_fuel(this) RESULT (grass_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: grass_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(wp) :: grass_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
 
     INTEGER :: ifuel, ic
 
@@ -277,7 +278,7 @@ CONTAINS
     REAL(wp) :: total_live_fuel(this%nc)          !< output
     REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
-    ALLOCATE(live_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
+    ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
     live_fuel = this%Calc_live_fuel()
     total_live_fuel = sf_calc_aggr_fuels(live_fuel)
   END FUNCTION Calc_total_live_fuel
@@ -294,7 +295,7 @@ CONTAINS
     REAL(wp) :: total_live_fuel(this%nc)          !< output
     REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
-    ALLOCATE(live_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
+    ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
     live_fuel = this%Calc_live_fuel()
     total_live_fuel = sf_calc_aggr_fuels(live_fuel)
   END FUNCTION Calc_total_live_tree_fuel
@@ -311,7 +312,7 @@ CONTAINS
     REAL(wp) :: total_live_fuel(this%nc)      !< ouput [gDM m-2]
     REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)   !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
-    ALLOCATE(live_fuel(this%nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
+    ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
     live_fuel = this%Calc_live_grass_fuel()
     total_live_fuel = sf_calc_aggr_fuels(live_fuel)
   END FUNCTION Calc_total_live_grass_fuel
