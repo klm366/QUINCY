@@ -140,7 +140,7 @@ MODULE mo_dfire_constants
 
   !< Decide at runtime which df_sf_live_frac_XXX is required (PFT dependent)
   !< Fraction allocation for live fuel (#nfuels, #live pools) [%]
-  REAL(wp), ALLOCATABLE, PUBLIC :: live_frac_allocation(:,:)
+  !REAL(wp), ALLOCATABLE, PUBLIC :: live_frac_allocation(:,:)
 
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts

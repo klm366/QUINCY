@@ -57,8 +57,6 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
-    USE mo_dfire_constants,         ONLY: live_frac_allocation
-
     !dsl4jsb_Use_config(DFIRE_FUEL_)
     dsl4jsb_Use_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -107,13 +105,6 @@ CONTAINS
     grass_fract = 0._wp
 
     fuel_bulk_density = 0._wp
-
-    !< PFT related, no need to redefine at every time step
-    IF (lctlib%growthform == itree) THEN
-      ALLOCATE(live_frac_allocation, source = df_sf_live_frac_tree)
-    ELSE !< %growthform == igrass
-      ALLOCATE(live_frac_allocation, source = df_sf_live_frac_grass)
-    END IF
   END SUBROUTINE dfire_fuel_init
 
 #endif
