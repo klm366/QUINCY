@@ -72,6 +72,10 @@ MODULE mo_dfire_config_class
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
+    REAL(wp)          :: density_human_population    !< Ignition events
+    REAL(wp)          :: lightning_frequency
+    REAL(wp)          :: a_nd
+
     !< flags
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
 
@@ -109,6 +113,9 @@ CONTAINS
     INTEGER                       :: dfire_model_id           !< fire model ID, derived from 'dfire_modelname'
     CHARACTER(len=20)             :: dfire_precip_method_name !< precipitation method name, from namelist
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
+    REAL(wp)                      :: density_human_population !< Ignition events
+    REAL(wp)                      :: lightning_frequency      !<
+    REAL(wp)                      :: a_nd                     !<
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
@@ -128,6 +135,9 @@ CONTAINS
       & flag_dfire,                 &
       & dfire_modelname,            &
       & dfire_precip_method_name,   &
+      & density_human_population,   &         ! ignition events 
+      & lightning_frequency,        &         ! 
+      & a_nd,                       &         ! 
       & ratio_polymeric_litter_to_dead_fuel
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -143,6 +153,9 @@ CONTAINS
     flag_dfire               = .FALSE.
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
+    density_human_population = 55.0               ! Ignition events 
+    lightning_frequency      = 0.000012           ! 
+    a_nd                     = 0.000048           ! 
     ratio_polymeric_litter_to_dead_fuel = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -165,6 +178,9 @@ CONTAINS
     config%flag_dfire                = flag_dfire
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
+    config%density_human_population  = density_human_population       ! Ignition events 
+    config%lightning_frequency       = lightning_frequency            ! 
+    config%a_nd                      = a_nd                           ! 
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
