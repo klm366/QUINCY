@@ -79,8 +79,15 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
+  USE mo_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
+                                      df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
+
   USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
+  USE mo_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
+  USE mo_dfire_sf_nesterov,     ONLY: calc_sf_nesterov_index
+
+  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
   IMPLICIT NONE
 
@@ -148,7 +155,7 @@ CONTAINS
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     !dsl4jsb_Use_memory(SB_)
-    !dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -174,13 +181,19 @@ CONTAINS
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
+    REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
     !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    REAL(wp)                              :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+
+    ! todo: move to memory
+    REAL(wp)                              :: fuel_moisture(options%nc,df_sf_omegas_nr) ! fuel moisture (#nc, #omegas) [-]
+    REAL(wp), ALLOCATABLE, SAVE           :: nesterov_index(:) !< (#nc) [C2]
 
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
+    REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
+    REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
@@ -198,7 +211,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     !dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SPQ_)
-    !dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
@@ -380,14 +393,21 @@ CONTAINS
       END IF
     ENDDO
 
+    IF (.NOT. ALLOCATED(nesterov_index)) THEN
+      ALLOCATE(nesterov_index(nc))
+      nesterov_index = 0._wp
+    ENDIF
+
     CALL calc_spitfire(nc, df_sf_alpha_nr, dtime, one_day, &
                         dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
                         df_sf_alphas, &
                         ab_moisture, & ! soil properties
-                        dead_fuel_fcl, live_grass_fuel_lfp, live_tree_fuel_lfp, & ! fuel
+                        dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
+                        nesterov_index, &
+                        fuel_moisture, & ! fuel properties
                         sf_spitfire)
 
     !< Test: assume 5% live fuel consumption
@@ -416,6 +436,7 @@ CONTAINS
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   nesterov_index, & ! inout
+                  fuel_moisture, & ! out
                   spitfire) ! out
     INTEGER, INTENT(in)   :: nc, nalphas
     REAL(wp), INTENT(in)  :: dtime, one_day
@@ -437,7 +458,9 @@ CONTAINS
 
     REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
-    TYPE(t_sf_spitfire)   :: spitfire                              !< Spitfire outputs
+    REAL(wp), INTENT(out) :: fuel_moisture(nc,df_sf_omegas_nr)     !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
+
+    TYPE(t_sf_spitfire), INTENT(out) :: spitfire                   !< Spitfire outputs
 
     ! locals
     TYPE(t_sf_ignitions)  :: sf_ignitions
@@ -446,7 +469,10 @@ CONTAINS
     INTEGER :: ndeadpools
     TYPE(t_sf_fuel_class) :: fuel_cls
 
+    INTEGER                               :: i, j
+
     sf_ignitions = t_sf_ignitions(nc)
+    ! init :spitfire = t_sf_spitfire(...)
 
     !> Initialize object by computing dead and live fuels
     !fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
