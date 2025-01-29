@@ -146,9 +146,22 @@ MODULE mo_dfire_constants
   !< Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
   REAL(wp), PARAMETER, PUBLIC :: df_sf_fuel_class_factors(df_sf_fc_spread_nr) = [1._wp, 1.2_wp, 1.4_wp] !< For 1hr, 10hrs and 100 hrs
 
-  !< Decide at runtime which df_sf_live_frac_XXX is required (PFT dependent)
-  !< Fraction allocation for live fuel (#nfuels, #live pools) [%]
-  !REAL(wp), ALLOCATABLE, PUBLIC :: live_frac_allocation(:,:)
+  !> Alpha fuel classes indices
+  INTEGER, PARAMETER :: df_sf_alpha_nr = 3        !< 1hr, 10hr and 100hr
+  ENUM, BIND(C)
+    ENUMERATOR ::  &
+            df_sf_alpha_1hr = 1, &  !< 1 hr alpha index
+            df_sf_alpha_10hr, &     !< 10 hr alpha index
+            df_sf_alpha_100hr       !< 100 hr alplha index
+  END ENUM
+
+  !< Inverse proportion to their surface-area-to-volume ratio [Celsius-2]
+  !< Given in comments to Thonicke's et al. (2010) Eq.6
+  REAL(wp), PARAMETER :: df_sf_alphas(df_sf_alpha_nr) = [0.001_wp, 0.0000542_wp, 0.0000149_wp]
+
+  !< Nesterov threshold constants
+  REAL(wp), PARAMETER :: df_sf_precip_trhd = 3.0_wp !< Precipitation threshold (Thonicke et al. (2010), below eq. 5)
+  REAL(wp), PARAMETER :: df_sf_frost_trhd = 4.0_wp !< Frost threshold, from source code (Thonicke et al. (2010), https://github.com/PIK-LPJmL/LPJmL/blob/811b1691c26645968803fab65f9e463d64d5f40b/src/spitfire/update_nesterov.c#L25)
 
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
