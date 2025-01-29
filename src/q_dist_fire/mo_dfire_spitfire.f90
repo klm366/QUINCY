@@ -76,6 +76,9 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr
   USE mo_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
+  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                      df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
+
   USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
 
@@ -170,6 +173,13 @@ CONTAINS
     REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
+    !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
+    !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
@@ -208,8 +218,22 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
 
     ! DFIRE_FUEL_ 3D
-    dsl4jsb_Real3D_onChunk                :: dead_fuel         ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_fuel         ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel                  ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp         ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr_dfp        ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr_dfp       ! in [g DM m-2]
+
+    dsl4jsb_Real3D_onChunk                :: live_fuel                  ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1hr_lfp    ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_10hr_lfp   ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_100hr_lfp  ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1000hr_lfp ! in [g DM m-2]
+
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp     ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_10hr_lfp    ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_100hr_lfp   ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1000hr_lfp  ! in [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
     dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
@@ -252,8 +276,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)         ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)         ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)                  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)  ! in [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
@@ -283,6 +320,19 @@ CONTAINS
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     pm_fire = 0._wp
+    ! rebuild fuel arrays
+    dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
+    dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_1hr_dfp
+    dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_1hr_dfp
+    dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1hr_dfp
+    live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr_lfp ! live grass fuel
+    live_grass_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_grass_fuel_10hr_lfp
+    live_grass_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_grass_fuel_100hr_lfp
+    live_grass_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_grass_fuel_1000hr_lfp
+    live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp ! live tree fuel
+    live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
+    live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
+    live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
     ! todo: veg_pool -> change units from molsC/m2 to gDM/m2
     ! todo: sb_pool -> change units from molsC/m3 to gDM/m2
@@ -336,6 +386,7 @@ CONTAINS
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
                         df_sf_alphas, &
                         ab_moisture, & ! soil properties
+                        dead_fuel_fcl, live_grass_fuel_lfp, live_tree_fuel_lfp, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         sf_spitfire)
 
@@ -362,6 +413,7 @@ CONTAINS
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
                   alphas, &
                   ab_moisture, & ! soil properties
+                  dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   nesterov_index, & ! inout
                   spitfire) ! out
@@ -375,6 +427,10 @@ CONTAINS
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
 
+    REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+
     REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: add to t_weather derive type
     REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
     REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
@@ -385,8 +441,6 @@ CONTAINS
 
     ! locals
     TYPE(t_sf_ignitions)  :: sf_ignitions
-    REAL(wp), ALLOCATABLE :: dead_fuel(:,:,:) !< (nc, ndeadpools, df_sf_fc_full_nr) !< dead fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
-    !REAL(wp) :: live_fuel(nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
     REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
@@ -399,7 +453,7 @@ CONTAINS
     !    dead_fuel_frac, live_fuel_frac, &
     !    dead_fuel_mt, live_fuel_mt, &
     !    ratio_polymeric_litter)
-    ndeadpools = fuel_cls % Count_dead_fuel_pools()
+    ndeadpools = SIZE(dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
@@ -409,11 +463,12 @@ CONTAINS
         o_tsfactor = (dtime / one_day) )
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    dead_fuel = fuel_cls % Calc_dead_fuel() !< fuel pool and fuel class
-    w_oi = sum(dead_fuel, dim=2) !< 2= dead fuel pools index, fuel class only
+    w_oi = SUM(dead_fuel, DIM=2) !< 2= dead fuel pools index, fuel class only
 
-    tot_lvg_fuel = fuel_cls % Calc_total_live_grass_fuel()
-    !< Compute fuel moisture (omega_o, omega_n,l)
+    DO CONCURRENT (i=1:SIZE(live_grass_fuel,2), j=1:SIZE(live_grass_fuel,3)) !2=fuel pools dim, 3=fuel classes dim
+      tot_lvg_fuel = SUM(live_grass_fuel(:,i,j)) ! sum multiple dimensions
+    END DO
+    !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
                                           nesterov_index, ab_moisture, &
                                           w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
