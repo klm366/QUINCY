@@ -137,8 +137,22 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
 
-    dsl4jsb_Real3D_onChunk      :: dead_fuel          ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_fuel          ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr_dfp    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr_dfp   ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr_dfp  ! out [g DM m-2]
+
+    dsl4jsb_Real3D_onChunk      :: live_fuel                  ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1hr_lfp    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_10hr_lfp   ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_100hr_lfp  ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1000hr_lfp ! out [g DM m-2]
+
+    dsl4jsb_Real3D_onChunk      :: live_tree_fuel_1hr_lfp     ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_tree_fuel_10hr_lfp    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_tree_fuel_100hr_lfp   ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_tree_fuel_1000hr_lfp  ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk      :: forest_fract       ! out [%]
     dsl4jsb_Real2D_onChunk      :: grass_fract        ! out [%]
@@ -167,7 +181,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
+
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)             ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)  ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)          ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)           ! out [%]
@@ -237,6 +264,21 @@ CONTAINS
     DO ic = 1, nc
       fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
     END DO
+
+    dead_fuel_1hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+    dead_fuel_10hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_10hr_idx)
+    dead_fuel_100hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_100hr_idx)
+    dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+    
+    live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+    live_grass_fuel_10hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_10hr_idx)
+    live_grass_fuel_100hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_100hr_idx)
+    live_grass_fuel_1000hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+
+    live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+    live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
+    live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
+    live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &

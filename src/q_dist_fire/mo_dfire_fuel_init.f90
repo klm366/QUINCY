@@ -72,6 +72,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_fuel_10hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_100hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1000hr_dfp
+
     dsl4jsb_Real3D_onDomain      :: live_fuel
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_1hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_10hr_lfp
@@ -121,6 +122,9 @@ CONTAINS
     WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel = 0._wp
     dead_fuel_1hr_dfp = 0._wp
+    dead_fuel_10hr_dfp = 0._wp
+    dead_fuel_100hr_dfp = 0._wp
+    dead_fuel_1000hr_dfp = 0._wp
     live_fuel = 0._wp
     live_grass_fuel_1hr_lfp = 0._wp
     live_grass_fuel_10hr_lfp = 0._wp
