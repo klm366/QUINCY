@@ -125,9 +125,9 @@ MODULE mo_dfire_constants
   !< Set fraction of fuel to allocate from sb_pool (dead fuel)
   REAL(wp) :: df_sf_dead_frac(df_sf_fc_full_nr, sf_fuel_dead_fuel_nr)
   !< Set fraction of fuel to allocate from veg_pool (live tree fuel)
-  REAL(wp) :: df_sf_live_frac_tree(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
+  REAL(wp), TARGET :: df_sf_live_frac_tree(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
   !< Set fraction of fuel to allocate from veg_pool (live grass fuel)
-  REAL(wp) :: df_sf_live_frac_grass(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
+  REAL(wp), TARGET :: df_sf_live_frac_grass(df_sf_fc_full_nr, sf_fuel_live_fuel_nr)
 
   !< Fuel class allocation for dead fuel (Pfeiffer et al. (2013) )
   REAL(wp), PARAMETER :: df_sf_fuel_frac_slow(df_sf_fc_full_nr) = [0.045_wp, 0.075_wp, 0.21_wp, 0.67_wp]
