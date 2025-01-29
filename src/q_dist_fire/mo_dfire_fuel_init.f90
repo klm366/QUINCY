@@ -34,10 +34,6 @@ MODULE mo_dfire_fuel_init
 
   USE mo_veg_constants,           ONLY: itree, igrass   !< lctlib%growthform
 
-  !< Live fraction allocation for dead and live fuels
-  USE mo_dfire_constants,         ONLY: df_sf_live_frac_tree, &
-                                        df_sf_live_frac_grass
-
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: dfire_fuel_init

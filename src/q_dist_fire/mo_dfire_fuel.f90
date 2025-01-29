@@ -58,6 +58,10 @@ MODULE mo_dfire_fuel
   USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
 
   !USE mo_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
+
+  !< Live fraction allocation for dead and live fuels
+  USE mo_dfire_constants,       ONLY: df_sf_live_frac_tree, &
+                                        df_sf_live_frac_grass
   USE mo_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
@@ -110,7 +114,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
     REAL(wp)                              :: config_polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
-    REAL(wp), ALLOCATABLE                 :: live_frac_allocation(:,:) !< (#fuel classes,#live pools)
+    REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
+    REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_cls(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
     TYPE(t_sf_fuel_class)                 :: fuel
@@ -196,14 +201,18 @@ CONTAINS
     !ELSE ! ignore
     END IF
 
-    !< PFT related, no need to redefine at every time step
+    !< PFT related, todo: no need to redefine at every time step
     IF (lctlib%growthform == itree) THEN
-      ALLOCATE(live_frac_allocation, source = df_sf_live_frac_tree)
+      live_fuel_frac => df_sf_live_frac_tree
     ELSE !< %growthform == igrass
-      ALLOCATE(live_frac_allocation, source = df_sf_live_frac_grass)
+      live_fuel_frac => df_sf_live_frac_grass
     END IF
 
-    dead_fuel = sf_convert_units("molC/m3", "gDM/m2", sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl), aux = top_soil_depth_sl)
+    sb_pool_slim = sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl)
+    ALLOCATE(dead_fuel, mold=sb_pool_slim) ! unsure why is needed, otherwise NAG compiler raises an error. function should be allocated dead_fuel
+    dead_fuel = sf_convert_units("molC/m3", "gDM/m2", sb_pool_slim, aux = top_soil_depth_sl, nc_dim_opt=2)
+
+    ALLOCATE(live_fuel, mold=veg_pool_mt(:,ixC,:)) ! unsure why is needed, NAG compiler raises an error. sf_convert_units should already allocate live_fuel
     live_fuel = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
 
     fuel = t_sf_fuel_class(nc, lctlib_growthform, &
