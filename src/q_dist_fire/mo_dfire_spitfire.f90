@@ -73,7 +73,10 @@ MODULE mo_dfire_spitfire
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
   USE mo_dfire_constants,       ONLY: df_sf_max_density_human_pop
+  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr
+  USE mo_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
+  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
 
   IMPLICIT NONE
@@ -327,10 +330,12 @@ CONTAINS
       END IF
     ENDDO
 
-    CALL calc_spitfire(nc, dtime, one_day, &
+    CALL calc_spitfire(nc, df_sf_alpha_nr, dtime, one_day, &
                         dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
+                        df_sf_alphas, &
+                        ab_moisture, & ! soil properties
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         sf_spitfire)
 
@@ -353,29 +358,48 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, dtime, one_day, & ! in
+  SUBROUTINE calc_spitfire(nc, nalphas, dtime, one_day, & ! in
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
+                  alphas, &
+                  ab_moisture, & ! soil properties
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   nesterov_index, & ! inout
                   spitfire) ! out
-    INTEGER, INTENT(in)   :: nc
+    INTEGER, INTENT(in)   :: nc, nalphas
     REAL(wp), INTENT(in)  :: dtime, one_day
 
     REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
     REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
     REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
+
+    REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
+    REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
+
     REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: add to t_weather derive type
     REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
     REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
 
     REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
-    TYPE(t_sf_spitfire)   :: spitfire !< Spitfire outputs
+    TYPE(t_sf_spitfire)   :: spitfire                              !< Spitfire outputs
 
+    ! locals
     TYPE(t_sf_ignitions)  :: sf_ignitions
-
+    REAL(wp), ALLOCATABLE :: dead_fuel(:,:,:) !< (nc, ndeadpools, df_sf_fc_full_nr) !< dead fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    !REAL(wp) :: live_fuel(nc, t_sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
+    REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
+    INTEGER :: ndeadpools
+    TYPE(t_sf_fuel_class) :: fuel_cls
 
     sf_ignitions = t_sf_ignitions(nc)
+
+    !> Initialize object by computing dead and live fuels
+    !fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
+    !    dead_fuel_frac, live_fuel_frac, &
+    !    dead_fuel_mt, live_fuel_mt, &
+    !    ratio_polymeric_litter)
+    ndeadpools = fuel_cls % Count_dead_fuel_pools()
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
@@ -383,6 +407,17 @@ CONTAINS
     nesterov_index = calc_sf_nesterov_index(nc, t_air_max_c, t_air_min_c, &
         precip_daily_mmd, nesterov_index, &
         o_tsfactor = (dtime / one_day) )
+
+    !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
+    dead_fuel = fuel_cls % Calc_dead_fuel() !< fuel pool and fuel class
+    w_oi = sum(dead_fuel, dim=2) !< 2= dead fuel pools index, fuel class only
+
+    tot_lvg_fuel = fuel_cls % Calc_total_live_grass_fuel()
+    !< Compute fuel moisture (omega_o, omega_n,l)
+    fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
+                                          nesterov_index, ab_moisture, &
+                                          w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                          tot_lvg_fuel)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &
