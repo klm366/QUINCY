@@ -116,9 +116,9 @@ CONTAINS
 
     REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
     REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_cls(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_cls(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
-    TYPE(t_sf_fuel_class)                 :: fuel
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
+    TYPE(t_sf_fuel_class)                 :: fuel_cls
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -226,10 +226,10 @@ CONTAINS
     !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
     !> fuel bulk densities (slightly more).
     !> Aggregation average's the PFT values
-    dead_fuel_cls = fuel % calc_dead_fuel()
-    dead_fuel_spread_cls = SUM(dead_fuel_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
+    dead_fuel_fcl = fuel_cls % calc_dead_fuel()
+    dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
-      fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_cls(ic,:) * df_sf_fuel_class_factors)
+      fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
     END DO
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
