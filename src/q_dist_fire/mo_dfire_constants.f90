@@ -46,6 +46,14 @@ MODULE mo_dfire_constants
   INTEGER, PARAMETER :: df_sf_sl_dims_nr=2   !< soil moisture layer dimension from w_soil_sl(dim1, dim2)
   INTEGER, PARAMETeR :: df_sf_sl_indices(df_sf_sl_dims_nr) = [1,2]!< Select soil moisture layer to use
 
+  !< Fuel moisture
+  INTEGER, PARAMETER :: df_sf_omegas_nr = 2      !< Total number of omegas = 2 (omega_o and omega_n_l)
+  ENUM, BIND(C)
+    ENUMERATOR ::  &
+        df_sf_omega_o_idx = 1, &    !< Array index for omega_o (fuel moisture for 1, 10, 100 hours + grass)
+        df_sf_omega_nl_idx  !< Array index for omega_n_l (fuel moisture for 1 hours + grass)
+  END ENUM
+
   CHARACTER(*), PARAMETER :: df_sf_vgrid_dead_fuel_pools_name="vg_dd_fl_pls" ! vgrid_dead_fuel_pools
   CHARACTER(*), PARAMETER :: df_sf_vgrid_live_fuel_pools_name="vg_lv_fl_pls" ! vgrid_live_fuel_pools
 
