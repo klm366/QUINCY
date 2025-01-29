@@ -117,6 +117,8 @@ CONTAINS
     REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
     REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
@@ -220,13 +222,17 @@ CONTAINS
                             dead_fuel, live_fuel, &
                             config_polymeric_litter_fract)
 
+    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel()
+    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel()
+    dead_fuel_fcl = fuel_cls % calc_dead_fuel()
+
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
     !> when accounting for the other pfts.
     !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
     !> fuel bulk densities (slightly more).
     !> Aggregation average's the PFT values
-    dead_fuel_fcl = fuel_cls % calc_dead_fuel()
+
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
       fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
@@ -236,6 +242,7 @@ CONTAINS
                         ", fraction, forest_fract=", &
                         tile_fract(1), forest_fract(1)
 
+    NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel
 
 
