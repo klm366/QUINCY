@@ -123,6 +123,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
     REAL(wp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
     REAL(wp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
+    REAL(wp) :: bclimit_min_snow          !< PFT-specific minimum snow depth [m]
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
     REAL(wp) :: moist_extinction          !< PFT specific moisture of extinction
@@ -356,6 +357,7 @@ CONTAINS
     LOGICAL            :: exists_bclimit_max_warm_mmtemp  = .FALSE.
     LOGICAL            :: exists_bclimit_min_temprange    = .FALSE.
     LOGICAL            :: exists_bclimit_min_gdd          = .FALSE.
+    LOGICAL            :: exists_bclimit_min_snow         = .FALSE.
     LOGICAL            :: exists_gdd_base                 = .FALSE.
     LOGICAL            :: exists_upper_tlim               = .FALSE.
     LOGICAL            :: exists_fract_wood_2_onSite       = .FALSE.
@@ -708,6 +710,9 @@ CONTAINS
           CASE ('bclimit_min_gdd')                              ! PFT-specific minimum growing degree days (at or above 5 deg C)
              READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_gdd
              exists_bclimit_min_gdd = .TRUE.
+          CASE ('bclimit_min_snow')                              ! PFT-specific minimum snow depth
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_snow
+             exists_bclimit_min_snow = .TRUE.
           CASE ('gdd_base')                                     ! PFT-specific GDD base
              READ(line(pos:length),*) lctlib(1:nlct)%gdd_base
              exists_gdd_base = .TRUE.
@@ -1132,6 +1137,8 @@ CONTAINS
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
          IF(.NOT.exists_bclimit_min_gdd ) &
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
+         IF(.NOT.exists_bclimit_min_snow ) &
+              CALL finish('init_lctlib','No data for BCLIMIT_MIN_SNOW found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_gdd_base) &
               CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_upper_tlim) &
@@ -1554,6 +1561,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%bclimit_max_warm_mmtemp, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bclimit_min_temprange, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_min_snow, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%gdd_base, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%upper_tlim, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%fract_wood_2_onSite, p_io, mpi_comm)

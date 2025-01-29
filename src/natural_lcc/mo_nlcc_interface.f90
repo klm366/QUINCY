@@ -32,19 +32,19 @@ MODULE mo_nlcc_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, NLCC_, DISTURB_
+  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, NLCC_, DISTURB_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(NLCC_)
 
   ! Use of process memories
-!! TR$  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(NLCC_)
   dsl4jsb_Use_memory(DISTURB_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -119,6 +119,7 @@ CONTAINS
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -148,6 +149,7 @@ CONTAINS
     REAL(wp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
     REAL(wp), POINTER  ::  bclimit_min_temprange(:,:)
     REAL(wp), POINTER  ::  bclimit_min_gdd(:,:)
+    REAL(wp), POINTER  ::  bclimit_min_snow(:,:)
     REAL(wp), POINTER  ::  tau_c_woods(:,:)
     REAL(wp), POINTER  ::  NPP_mean_5year(:,:)
     REAL(wp), POINTER  ::  burned_fract(:,:)
@@ -166,6 +168,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     ! Declare pointers to variables in nlcc memory
     dsl4jsb_Real2D_onChunk :: temp_sum_day
@@ -182,14 +185,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bio_exist
     dsl4jsb_Real2D_onChunk :: gdd_sum_year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
+    dsl4jsb_Real2D_onChunk :: max_snow_year
+    dsl4jsb_Real2D_onChunk :: max_snow_prev_year
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
     ! Declare pointers to variables in foreign memory
-!!$ TR    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_soil_dens
 
     ! Local variables
     LOGICAL :: new_year, new_month, new_day
+    REAL(wp), DIMENSION(options%nc) :: snow_depth
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -215,6 +222,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(DISTURB_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! import lct information from PFT tiles
     !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
@@ -248,6 +256,7 @@ CONTAINS
     bclimit_max_warm_mmtemp => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_max_warm_mmtemp)
     bclimit_min_temprange => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_temprange)
     bclimit_min_gdd => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_gdd)
+    bclimit_min_snow => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_snow)
     tau_c_woods => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%tau_c_woods)
 
     ! import specific leave area from lct library
@@ -272,6 +281,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_snow_year)    ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_snow_prev_year)    ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
@@ -280,8 +291,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
-!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
 
     IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       lstart = .TRUE.
@@ -330,9 +342,14 @@ CONTAINS
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
+
+    DO i = 1,nc
+      snow_depth(i) = weq_snow_soil(i) * rhoh2o / snow_soil_dens(i)
+    END DO
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+                      snow_depth, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
                       min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
+                      max_snow_year, max_snow_prev_year,                              &
                       gdd_sum_year, gdd_prev_year)
 
     IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
@@ -340,15 +357,13 @@ CONTAINS
           CALL message(TRIM(routine), 'initialisation of mmtemp20')
     ENDIF
 
-!!$ TR    WRITE (*,*) 't_air: ', lstart, new_day, t_air(:)
-!!$ TR    WRITE (*,*) 'temp_sum_day: ', lstart, new_day, temp_sum_day(:)
-
     ! annual calculations
     IF (new_year) THEN
        DO itile = 1,no_children
           CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
-                               bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                               min_mmtemp20(:), max_mmtemp20(:), gdd_prev_year(:), bio_exist(:,itile))
+                               bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile),                           &
+                               bclimit_min_gdd(:,itile), bclimit_min_snow(:,itile),                                         &
+                               min_mmtemp20(:), max_mmtemp20(:), max_snow_prev_year(:), gdd_prev_year(:), bio_exist(:,itile))
        ENDDO
        IF (.NOT. lstart) THEN
           CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &
@@ -377,7 +392,7 @@ CONTAINS
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
                                sum_green_bio_memory(:), desert_fpc(:))
-!!$ TR          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
+
           !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
           ALLOCATE(fract_fpc_max(nc,no_children))
           fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
@@ -394,7 +409,7 @@ CONTAINS
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
-               bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, tau_c_woods)
+               bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, bclimit_min_snow, tau_c_woods)
     IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
     DEALLOCATE(burned_fract, damaged_fract)
@@ -444,6 +459,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(NLCC_, min_mmtemp20,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, max_mmtemp20,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, gdd_prev_year,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(NLCC_, max_snow_prev_year,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, bare_fpc,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, desert_fpc,            weighted_by_fract)
 

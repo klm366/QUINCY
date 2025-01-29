@@ -51,6 +51,8 @@ MODULE mo_nlcc_memory_class
       & max_mmtemp20, &
       & gdd_sum_year, &
       & gdd_prev_year, &
+      & max_snow_year, &
+      & max_snow_prev_year, &
       & bare_fpc, &
       & sum_green_bio_memory, &
       & desert_fpc
@@ -166,7 +168,23 @@ CONTAINS
       & t_cf('gdd_prev_year', 'gdd previous year', 'gdd prev year'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
+      & output_level=FULL,                                                    &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_snow_year', mem%max_snow_year,                      &
+      & hgrid, surface,                                                       &
+      & t_cf('max_snow_year', 'max snow current year', 'max snow year'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=NONE,                                                    &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,            &
+      & hgrid, surface,                                                       &
+      & t_cf('max_snow_prev_year', 'max snow previous year', 'max snow prev year'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL,                                                    &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &

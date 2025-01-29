@@ -977,6 +977,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: bclimit_max_warm_mmtemp
     dsl4jsb_Real2D_onChunk :: bclimit_min_temprange
     dsl4jsb_Real2D_onChunk :: bclimit_min_gdd
+    dsl4jsb_Real2D_onChunk :: bclimit_min_snow
     dsl4jsb_Real2D_onChunk :: tau_c_woods
 
     ! Set local variables from options argument
@@ -1010,6 +1011,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_max_warm_mmtemp) ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_temprange)   ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_gdd)         ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_snow)         ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   tau_c_woods)             ! out
 
     ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
@@ -1034,6 +1036,7 @@ CONTAINS
     bclimit_max_warm_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp)
     bclimit_min_temprange(:) = dsl4jsb_Lctlib_param(bclimit_min_temprange)
     bclimit_min_gdd(:) = dsl4jsb_Lctlib_param(bclimit_min_gdd)
+    bclimit_min_snow(:) = dsl4jsb_Lctlib_param(bclimit_min_snow)
     tau_c_woods(:) = dsl4jsb_Lctlib_param(tau_c_woods)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
