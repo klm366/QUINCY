@@ -215,7 +215,7 @@ CONTAINS
     ALLOCATE(live_fuel, mold=veg_pool_mt(:,ixC,:)) ! unsure why is needed, NAG compiler raises an error. sf_convert_units should already allocate live_fuel
     live_fuel = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
 
-    fuel = t_sf_fuel_class(nc, lctlib_growthform, &
+    fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
                             dead_fuel_frac, live_fuel_frac, &
                             dead_fuel, live_fuel, &
                             config_polymeric_litter_fract)
