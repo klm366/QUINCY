@@ -338,14 +338,14 @@ CONTAINS
   !> Run science
   !>
   SUBROUTINE calc_spitfire(nc, dtime, one_day, &
-                  density_human_population, a_nd, lightning_frequency, & ! ignition events
+                  config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
                   spitfire)
     INTEGER, INTENT(in)   :: nc
     REAL(wp), INTENT(in)  :: dtime, one_day
 
-    REAL(wp), INTENT(in)  :: density_human_population       !< Average human population density in the grid cell [individuals km-2]
-    REAL(wp), INTENT(in)  :: a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
-    REAL(wp), INTENT(in)  :: lightning_frequency            !< Lightning frequency [ha-1 d-1]
+    REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
+    REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
+    REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
 
     TYPE(t_sf_spitfire)   :: spitfire !< Spitfire outputs
 
@@ -354,8 +354,8 @@ CONTAINS
     sf_ignitions = t_sf_ignitions(nc)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
-                                    a_nd, lightning_frequency, &
+    sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &
+                                    config_a_nd, config_lightning_frequency, &
                                     df_sf_max_density_human_pop)
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
