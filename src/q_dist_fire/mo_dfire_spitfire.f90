@@ -167,6 +167,8 @@ CONTAINS
     REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
+    REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
+
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
     INTEGER                               :: nr_of_children
@@ -195,6 +197,9 @@ CONTAINS
     ! Note: t_air_max/t_air_min belongs to the previous days due to implementation constraints
     dsl4jsb_Real2D_onChunk                :: t_air_min         ! Min temperature of the day (previous day) [k]
     dsl4jsb_Real2D_onChunk                :: t_air_max         ! Max temperature of the day (previous day) [k]
+    dsl4jsb_Real2D_onChunk                :: precip_daily_mmd  ! out [mm day-1]
+    dsl4jsb_Real2D_onChunk                :: precip_daily      ! in [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk                :: wind_10m          ! in A2L_ [m s-1]
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
@@ -237,6 +242,9 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)              ! in [k]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)              ! in
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily_mmd)       ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
@@ -298,6 +306,13 @@ CONTAINS
       CALL finish(TRIM(routine), "potential_burn_area > tile_fract")
     END IF
 
+    !> Units conversion
+    t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
+    t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
+    precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
+    wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+    !DBH(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
+
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
     ab_w_soil_fc_sl(:,:) = w_soil_fc_sl(:, [df_sf_sl_indices])
@@ -313,9 +328,10 @@ CONTAINS
     ENDDO
 
     CALL calc_spitfire(nc, dtime, one_day, &
-                        dsl4jsb_Config(DFIRE_)%density_human_population, &
+                        dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
+                        t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         sf_spitfire)
 
     !< Test: assume 5% live fuel consumption
@@ -337,21 +353,36 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, dtime, one_day, &
+  SUBROUTINE calc_spitfire(nc, dtime, one_day, & ! in
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
-                  spitfire)
+                  t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
+                  nesterov_index, & ! inout
+                  spitfire) ! out
     INTEGER, INTENT(in)   :: nc
     REAL(wp), INTENT(in)  :: dtime, one_day
 
     REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
     REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
     REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
+    REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: add to t_weather derive type
+    REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
+    REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
+
+    REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
     TYPE(t_sf_spitfire)   :: spitfire !< Spitfire outputs
 
     TYPE(t_sf_ignitions)  :: sf_ignitions
 
+
     sf_ignitions = t_sf_ignitions(nc)
+
+    !> Calculate whether there are conditions for fire based on the Nesterov Index,
+    !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
+    !> and own changes for QUINCY.
+    nesterov_index = calc_sf_nesterov_index(nc, t_air_max_c, t_air_min_c, &
+        precip_daily_mmd, nesterov_index, &
+        o_tsfactor = (dtime / one_day) )
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &
