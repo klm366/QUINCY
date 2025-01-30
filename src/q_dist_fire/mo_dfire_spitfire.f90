@@ -347,9 +347,6 @@ CONTAINS
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
-    ! todo: veg_pool -> change units from molsC/m2 to gDM/m2
-    ! todo: sb_pool -> change units from molsC/m3 to gDM/m2
-
     write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
