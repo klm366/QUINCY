@@ -52,6 +52,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active, lrestart_cont
     LOGICAL                     :: l_forestRegrowth
+    LOGICAL                     :: l_cropdynamics
+    LOGICAL                     :: l_covercrops
     CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     NAMELIST /jsb_pheno_nml/  &
