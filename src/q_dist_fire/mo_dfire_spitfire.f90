@@ -104,6 +104,8 @@ MODULE mo_dfire_spitfire
     REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
     REAL(wp), ALLOCATABLE :: e_n_humans(:)
     REAL(wp), ALLOCATABLE :: e_n_lightning(:)
+
+    REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -127,10 +129,12 @@ CONTAINS
     ALLOCATE(sf_spitfire % e_n_ignitions(nc))
     ALLOCATE(sf_spitfire % e_n_humans(nc))
     ALLOCATE(sf_spitfire % e_n_lightning(nc))
+    ALLOCATE(sf_spitfire % fdi(nc))
 
     sf_spitfire % e_n_ignitions = 0._wp
     sf_spitfire % e_n_humans = 0._wp
     sf_spitfire % e_n_lightning = 0._wp
+    sf_spitfire % fdi = 0._wp
 
   END FUNCTION create_sf_spitfire
 
@@ -252,6 +256,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
 
     dsl4jsb_Real2D_onChunk                :: fuel_bulk_density ! [kg m-3]
+    dsl4jsb_Real2D_onChunk                :: moisture_extinction ! [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
@@ -308,7 +313,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, forest_fract)      ! in [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)       ! in [%]
 
-    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density) ! in [kg m-3]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)   ! in [kg m-3]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction) ! in [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
@@ -333,7 +339,7 @@ CONTAINS
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     pm_fire = 0._wp
-    ! rebuild fuel arrays
+    ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
     dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_1hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_1hr_dfp
@@ -357,6 +363,7 @@ CONTAINS
 
     tile_area = grid_cell_area * tile_fract
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
+
     ! assertion
     IF (ANY(pot_burn_area > tile_area)) THEN
       DO ic=1, nc
@@ -400,10 +407,11 @@ CONTAINS
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
                         df_sf_alphas, &
+                        moisture_extinction, &
                         ab_moisture, & ! soil properties
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
-                        nesterov_index, &
+                        nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
                         sf_spitfire)
 
@@ -429,6 +437,7 @@ CONTAINS
   SUBROUTINE calc_spitfire(nc, nalphas, dtime, one_day, & ! in
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
                   alphas, &
+                  moisture_extinction, &
                   ab_moisture, & ! soil properties
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
@@ -443,6 +452,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
+    REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
     REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
 
     REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
@@ -496,6 +506,10 @@ CONTAINS
                                           nesterov_index, ab_moisture, &
                                           w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                           tot_lvg_fuel)
+
+    !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+    !> Eq. 8 from Thonicke et al. (2010)
+    spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &

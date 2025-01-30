@@ -304,3 +304,6 @@ k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5
 
 # Fuel bulk density [kg m-3], from Thonicke et al. (2010), Table 1
 fbd_pb 25.0 10.0 25.0 22.0 25.0 22.0 2.0 2.0 2.0 2.0 2.0 2.0 0.0 0.0
+
+# Moisture of extinction from Pfeiffer et al. (2013), Table 1
+moisture_extinction 0.404 0.404 0.404 0.404 0.404 0.404 0.2 0.2 0.2 0.2 0.2 0.2 0.0 0.0

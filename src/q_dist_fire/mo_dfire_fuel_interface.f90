@@ -146,6 +146,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! DFIRE_FUEL_ 3D
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, moisture_extinction  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel            , sum_agg)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp    , sum_agg)
