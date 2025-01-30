@@ -1643,8 +1643,6 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    CALL finish(TRIM(routine), "Not yet implemented")
-
     ! Needed for GPUs
     tile_ptrs3d_cache => tile%ptrs3d_cache ! the 3d var pointer cache on this tile
     l_aggregate_all = var%l_aggregate_all
@@ -1682,29 +1680,6 @@ CONTAINS
       END DO
 
     ELSE IF (no_children > 1) THEN
-      ! With more then one child tile we need to do the weighted averaging.
-!      !$ACC LOOP GANG(STATIC: 1) VECTOR
-!      DO j = ics, ice
-!        this%fract_sum(j,iblk) = 0._wp
-!      END DO
-      !$ACC LOOP SEQ
-!      DO i=1,no_children
-!        ! Check if the var exists on this tile (could be a tile on which the according process is not running)
-!        IF (var%child_idx(i) > 0) THEN
-!          !$ACC LOOP GANG(STATIC: 1) VECTOR
-!          DO j = ics, ice
-!            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-!          END DO
-!        ELSE IF (l_aggregate_all) THEN
-!          ! The variable is not defined on the this child tile, but we still want to consider its fraction
-!          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
-!          !$ACC LOOP GANG(STATIC: 1) VECTOR
-!          DO j = ics, ice
-!            ! Add weight for this child i to the weight sum
-!            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-!          END DO
-!        END IF
-!      END DO
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
@@ -1729,9 +1704,9 @@ CONTAINS
           END IF
         END DO
 
-        ! Calculate the weighted average
+        ! Calculate the sum
         !
-!        IF (icount == 1) THEN ! Only one child tile needs to be considered
+        IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
 !            IF (this%fract_sum(j,iblk) > 0._wp) THEN
@@ -1739,17 +1714,17 @@ CONTAINS
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
 !            END IF
           END DO
-!        ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
-!          !$ACC LOOP GANG(STATIC: 1) VECTOR
-!          DO j = ics, ice
-!            IF (this%fract_sum(j,iblk) > 0._wp) THEN
-!              ! Divide the data sum by the sum of the fractions
-!              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-!            END IF
-!          END DO
-!        ELSE
-!          STOP 'Aggregate_sum_3d: This should not happen (icount=0)!'
-!        END IF
+        ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO j = ics, ice
+            !IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              ! Assign data
+              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
+            !END IF
+          END DO
+        ELSE
+          STOP 'Aggregate_sum_3d: This should not happen (icount=0)!'
+        END IF
       END DO
 
     END IF
@@ -1762,7 +1737,7 @@ CONTAINS
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
     END IF
 
-  END SUBROUTINE Aggregate_sum_3d
+  END SUBROUTINE
 
   ! ======================================================================================================= !
   !>
