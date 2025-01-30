@@ -284,8 +284,6 @@ CONTAINS
     live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
-    mois
-
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &
                         tile_fract(1), forest_fract(1)
