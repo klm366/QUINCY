@@ -69,6 +69,8 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_10hr_lfp    !< 10hr dead fuel [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_100hr_lfp   !< 100hr dead fuel [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_1000hr_lfp  !< 1000hr dead fuel [g DM m-2], _lfp = live fuel pools
+
+    TYPE(t_jsb_var_real2d)  :: moisture_extinction        !< Moisture of extinction threshold [0 to 1]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -274,6 +276,16 @@ CONTAINS
     CALL mem%Add_var('fuel_bulk_density', mem%fuel_bulk_density, &
         & hgrid, vgrid_surface, &
         & t_cf('fuel_bulk_density', 'kg m-3', 'Fuel bulk density'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('moisture_extinction', mem%moisture_extinction, &
+        & hgrid, vgrid_surface, &
+        & t_cf('moisture_extinction', '0 to 1', 'Moisture of extinction threshold'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

@@ -159,6 +159,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: grass_fract        ! out [%]
 
     dsl4jsb_Real2D_onChunk      :: fuel_bulk_density  ! out [kg m-3]
+    dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -201,6 +202,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)           ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction)     ! out [0 to 1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -217,6 +219,7 @@ CONTAINS
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
     config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
+    moisture_extinction = lctlib%moisture_extinction ! aggregation: weighted over tile fraction
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -280,6 +283,8 @@ CONTAINS
     live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
     live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+
+    mois
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &
