@@ -147,18 +147,18 @@ CONTAINS
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel            , sum_agg)
-    ! todo: is it weighted by fract?
+
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp    , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp   , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp  , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel            , sum_agg)
-    ! todo: is it weighted by fract?
+
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp   , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp  , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp , sum_agg)
-    ! todo: is it weighted by fract?
+
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp     , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , sum_agg)
