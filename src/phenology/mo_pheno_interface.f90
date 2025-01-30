@@ -608,6 +608,8 @@ CONTAINS
           & l_newday,                         & ! in
           & pheno__conf%l_cropdynamics,       & ! in
           & pheno__conf%l_covercrops,         & ! in
+          & dsl4jsb_Config(PHENO_)%l_cropdynamics, &
+          & dsl4jsb_Config(PHENO_)%l_covercrops,   &
           & timestep,                         & ! in
           & NPP_pot_rate_ca(ic),              & ! in
           & lat(ic),                          & ! in

@@ -375,6 +375,8 @@ MODULE mo_pheno_process
 
    SUBROUTINE calc_crop_phenology(day_of_year,                  & ! <- in
                                   is_newday,                    & ! <- in
+                                  l_cropdynamics,               & ! <- in
+                                  l_covercrops,                 & ! <- in
                                   timeStep_in_days,             & ! <- in
                                   NPP_pot_rate_ca,              & ! <- in
                                   lat,                          & ! <- in
@@ -388,6 +390,7 @@ MODULE mo_pheno_process
                                   heat_sum_CRP,                 & ! <- inout
                                   heat_sum_winter,              & ! <- inout
                                   growth_phase_CRP,             & ! <- inout
+                                  growth_phase_CC,              & ! <- inout
                                   lai )                           ! <- inout
 
     !$ACC ROUTINE SEQ
@@ -401,6 +404,8 @@ MODULE mo_pheno_process
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
+     LOGICAL,  intent(in)    :: l_cropdynamics
+     LOGICAL,  intent(in)    :: l_covercrops
      REAL(wp), intent(in)    :: timeStep_in_days ! express the time step as a fraction of a day. = dtime / 86400
 
      REAL(wp), intent(in)    :: lctlib_specificLeafArea_C
@@ -421,6 +426,7 @@ MODULE mo_pheno_process
                                 heat_sum_CRP,     &
                                 heat_sum_winter,  &
                                 growth_phase_CRP, &
+                                growth_phase_CC,  &
                                 lai                 ! Total LAI.
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
