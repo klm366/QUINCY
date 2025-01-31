@@ -108,6 +108,9 @@ MODULE mo_dfire_spitfire
 
     REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
     TYPE(t_sf_ros)        :: ros    !< fire dynamics
+
+    REAL(wp), ALLOCATABLE :: area_burned(:) !<
+    REAL(wp), ALLOCATABLE :: area_burned_fract(:)
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -132,12 +135,16 @@ CONTAINS
     ALLOCATE(sf_spitfire % e_n_humans(nc))
     ALLOCATE(sf_spitfire % e_n_lightning(nc))
     ALLOCATE(sf_spitfire % fdi(nc))
+    ALLOCATE(sf_spitfire % area_burned(nc))
+    ALLOCATE(sf_spitfire % area_burned_fract(nc))
 
     sf_spitfire % e_n_ignitions = 0._wp
     sf_spitfire % e_n_humans = 0._wp
     sf_spitfire % e_n_lightning = 0._wp
     sf_spitfire % fdi = 0._wp
     sf_spitfire % ros = t_sf_ros(nc)
+    sf_spitfire % area_burned = 0._wp
+    sf_spitfire % area_burned_fract = 0._wp
 
   END FUNCTION create_sf_spitfire
 
@@ -568,6 +575,16 @@ CONTAINS
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
     spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
+
+  !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
+  CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
+      spitfire % fdi, &
+      spitfire % ros % mean_fire_area, &
+      grid_cell_area_ha, &
+      spitfire % area_burned, &  !< out
+      spitfire % area_burned_fract, & !< out
+      mask=has_fire_conditions) !< in, optional
+
   END SUBROUTINE calc_spitfire
 
 
@@ -596,6 +613,35 @@ CONTAINS
       current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
   END FUNCTION Get_childrens_bgcm_stores_2l_3d
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate area burned and fraction of the area burned of a gridcell
+  !> Eq. 2 from Thonicke et al. (2010)
+  !>
+  SUBROUTINE calc_area_burned(nc, e_n_ignitions, fdi, mean_fire_area, area, ab, ab_fract, mask)
+    INTEGER, INTENT(in)   :: nc
+    REAL(wp), INTENT(in)  :: e_n_ignitions(nc)  !< Expected number of ignitions events [ha-1 ts-1]
+    REAL(wp), INTENT(in)  :: fdi(nc)            !< Fire danger index [0 to 1]
+    REAL(wp), INTENT(in)  :: mean_fire_area(nc) !< [ha]
+    REAL(wp), INTENT(in)  :: area(nc)           !< Area of the gridcell [ha]
+    REAL(wp), INTENT(out) :: ab(nc)             !< area_burned [ha ts-1]
+    REAL(wp), INTENT(out) :: ab_fract(nc)       !< area_burned fraction [-]
+    LOGICAL, INTENT(in), OPTIONAL :: mask(nc)   !< True=compute gridcell(s)
+    LOGICAL :: mask_sel(nc)
+
+    mask_sel = .TRUE. !< default
+    IF (PRESENT(mask)) THEN
+      mask_sel = mask
+    END IF
+
+    WHERE (mask)
+      !< Calculate Fraction of the Area burned (eq. 2 from Thonicke et al. (2010))
+      ab = e_n_ignitions * fdi * mean_fire_area * area !< [ha TS-1]
+      ab_fract = ab / area
+    END WHERE
+  END SUBROUTINE calc_area_burned
 
 #endif
 END MODULE mo_dfire_spitfire
