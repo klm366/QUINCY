@@ -50,6 +50,8 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -58,10 +60,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store             !< the bgcm store of this tile
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb          !< Vertical grid
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: nsoil_sb               !< number of soil layers
     INTEGER                           :: nr_of_veg_compartments !< number of compartments in veg bgcms
     INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
-    INTEGER                           :: ic, id_elem
+    INTEGER                           :: ic, id_elem, i_soil
     INTEGER                           :: ix_comp, ix_elem       !< loop index
 
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
@@ -108,6 +112,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: biological_n_fixation
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
+    dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -127,6 +132,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -214,6 +221,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
+    dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -263,6 +271,15 @@ CONTAINS
       unit_transpiration(ic) = zero
     END DO
     !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO i_soil = 1, nsoil_sb
+      DO ic = 1, nc
+        delta_root_fraction_sl(ic, i_soil) = zero
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
 
   END SUBROUTINE reset_veg_fluxes
 

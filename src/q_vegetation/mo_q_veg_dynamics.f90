@@ -51,10 +51,12 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_, Q_SH_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
+
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_SH_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
@@ -80,6 +82,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_SH_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
@@ -89,11 +92,9 @@ CONTAINS
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk      :: do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: height
-    dsl4jsb_Real2D_onChunk      :: cohort_age
     dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: lai
@@ -138,6 +139,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_SH_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
@@ -153,11 +155,9 @@ CONTAINS
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
     ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)          ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, cohort_age)                 ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)             ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)             ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                        ! in
@@ -195,7 +195,7 @@ CONTAINS
     !>1.0 Calculate foliage projective cover if vegetation dynamics are simulated, i.e., not needed for constant mortality
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-      CASE ("population","cohort")
+      CASE ("population")
         fpc(:) = calc_foliage_projective_cover_tile(nc, &
           &                                         lctlib%growthform, &
           &                                         lctlib%wood_density, &
@@ -207,25 +207,10 @@ CONTAINS
           &                                         diameter(:))
     ENDSELECT
 
-    !>  1.1 Increase age of the cohort [years] & check if cohort harvest is reached
-    !>
-    ! apply this only after spinup of transient mode has finished
-    IF (.NOT. model%config%l_transient_spinup) THEN
-      SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-        CASE ("cohort")
-          cohort_age(:)        = cohort_age(:) + dtime / (one_year * one_day)
-          do_cohort_harvest(:) = false                                               ! per default it is set to FALSE
-          WHERE (cohort_age(:) > dsl4jsb_Config(VEG_)%cohort_harvest_interval)
-            do_cohort_harvest(:) = true
-            cohort_age(:)        = 0.0_wp
-          ENDWHERE
-      ENDSELECT
-    ENDIF
-
     !>2.0 Calculate mortality rate and veg litterfall
     !>
     ! returns constant mortality_rate if veg_dynamics_scheme == none \n
-    ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
+    ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population
     CALL calc_veg_mortality( &
       & nc                                              , & ! in
       & dtime                                           , &
@@ -242,20 +227,7 @@ CONTAINS
       & veg_litterfall_mt(:,:,:)                        , & ! inout
       & mortality_rate(:)                               )   ! out
 
-    !>  2.1 Calculate harvest_rate and veg litterfall for stand replacing harvest
-    !>
-    ! only if: l_do_stand_replacing_harvest .OR. do_cohort_harvest(ic) > test_false_true
-    CALL calc_veg_harvest( &
-      & nc, &                                        ! in
-      & model%config%elements_index_map(:), &        ! in
-      & model%config%is_element_used(:), &           ! in
-      & model%config%l_do_stand_replacing_harvest, & ! in
-      & do_cohort_harvest(:), &                      ! in
-      & veg_pool_mt(:,:,:), &                        ! in
-      & veg_litterfall_mt(:,:,:), &                  ! inout
-      & mortality_rate(:) )                          ! inout
-
-    !> 2.2 Calculate herbivory and associated respiration and litter fall
+    !> 2.1 Calculate herbivory and associated respiration and litter fall
     !>
     IF (dsl4jsb_Config(VEG_)%flag_herbivory) THEN
       CALL calc_veg_herbivory( &
@@ -279,7 +251,7 @@ CONTAINS
         & veg_litterfall_mt(:,:,:))             ! inout
     END IF
 
-    !> 2.3 Adjust tissue turnover that generates new tissue by mortality
+    !> 2.2 Adjust tissue turnover that generates new tissue by mortality
     !>
     !> Tissues that turnover to become new tissues (sapwood -> heartwood; fruit -> seed bed)
     !> are recorded as growth (or negative growth) by the turnover routine
@@ -309,30 +281,12 @@ CONTAINS
     !>3.0 Calculate establishment_rate and veg establishment
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-    CASE ("cohort")
-      ! set carbon in establishment such that the inital stand density is 10000 / ha (i.e. 1/m2)
-      ! which is a typical value in temperate forests
-      ! but limit to actual available seed pool to avoid generating mass
-      ! NB: This might need to be revised for particular case studies
-      ! establishment_rate
-      hlp1(:) = 0.0_wp
-      DO ic = 1, nc
-        IF (do_cohort_harvest(ic) > test_false_true) THEN
-          IF (veg_pool_mt(ix_seed_bed, ixC, ic) > eps8) THEN
-            hlp1(ic) = MIN(1.0_wp * lctlib%seed_size, veg_pool_mt(ix_seed_bed, ixC, ic)) / veg_pool_mt(ix_seed_bed, ixC, ic)
-          END IF
-        END IF
-      END DO
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          veg_establishment_mt(ix_elem, :) = hlp1(:) * veg_pool_mt(ix_seed_bed, ix_elem, :)
-        END IF
-      END DO
-
     CASE ("population")
-      ! no harvest
-      IF (.NOT. model%config%l_do_stand_replacing_harvest) THEN
+      ! Determine establishment flux:
+
+      ! Standard case: calculate establishment from seed pool
+      ! (Exception: if we just had a stand replacing harvest running QS)
+      IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
         CALL calc_veg_establishment( &
           & nc                                  , & ! in
           & dtime                               , &
@@ -346,8 +300,8 @@ CONTAINS
           & rfr_ratio_boc_tvegdyn_mavg(:)       , &
           & veg_pool_mt(ix_seed_bed,:,:)        , & ! in
           & veg_establishment_mt(:,:)           )   ! inout
-      ! harvest
       ELSE
+        ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
         hlp1(:) = 0.0_wp
         ! set carbon in establishment such that the inital stand density is 1000 / ha (i.e. 0.1/m2)
         ! which seeds the forest floor for natural regeneration
@@ -370,7 +324,8 @@ CONTAINS
     !>4.0 Calculate change in individual density from mortality and establishment
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-    CASE ("population", "cohort")
+
+    CASE ("population")
       IF (lctlib%growthform == itree) THEN
         delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size            , &
           &                                     dens_ind(:)                 , &
@@ -475,7 +430,7 @@ CONTAINS
     LOGICAL,                  INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_growthform          !< lctlib paramter
     REAL(wp),                 INTENT(in)    :: lctlib_k1_mort_greff       !< lctlib paramter
-    CHARACTER(len=*),         INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
+    CHARACTER(len=*),         INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: an_boc_tvegdyn_mavg        !< long-term net C balance at the bottom of the canopy (micro-mol / m2 / s)
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: net_growth_tvegdyn_mavg    !< long-term net growth of the plant (micro-mol / m2 / s)
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
@@ -510,9 +465,9 @@ CONTAINS
     self_thinning_mortality_rate(:) = 0.0_wp
     bg_mortality_rate(:)            = 0.0_wp
 
-    ! differ between veg_dynamics_schemes: population/cohort & none
+    ! differ between veg_dynamics_schemes: population & none
     SELECT CASE (veg_dynamics_scheme)
-    CASE ("population","cohort")
+    CASE ("population")
       !>1.0 mortality related to growth efficiency mortality
       !>
       DO ic = 1,nc
@@ -599,102 +554,6 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE calc_veg_mortality
-
-  !----------------------------------------------------------------------------------------------------------
-  ! 2.1 Sub Task of update_veg_dynamics
-  !
-  !----------------------------------------------------------------------------------------------------------
-  !> Routine to calculate litter production from stand replacing harvest
-  !> in cohort mode when set cohort age is reached
-  !> in population mode on a given year
-  !!
-  !! output: litter production and mortality rate
-  !! @TODO: add link to products pool
-  !----------------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_harvest( &
-    & nc                          , &
-    & elements_index_map          , &
-    & is_element_used             , &
-    & l_do_stand_replacing_harvest, &
-    & do_cohort_harvest           , &
-    & veg_pool_mt                 , &
-    & veg_litterfall_mt           , &
-    & mortality_rate)
-
-    USE mo_veg_constants,         ONLY: wood_extraction_rate
-    ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER,                  INTENT(in)    :: nc                             !< dimensions
-    INTEGER,                  INTENT(in)    :: elements_index_map(:)          !< map bgcm element ID -> IDX
-    LOGICAL,                  INTENT(in)    :: is_element_used(:)             !< is element in 'elements_index_map' used
-    LOGICAL,                  INTENT(in)    :: l_do_stand_replacing_harvest   !< stand replacing harvest this time step
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: do_cohort_harvest              !< cohort replacing harvest this time step
-    REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)             !< vegetation pool
-    REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)       !< vegetation litterfall
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: mortality_rate                 !< mortality rate [fraction removed / timestep]
-    ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                     :: n_veg_bgcm_comp       !< number of vegetation bgcm compartments
-    INTEGER                     :: ic                    !< loop over nc
-    INTEGER                     :: ielem                 !< loop over bgcm elements
-    INTEGER                     :: ix_comp, ix_elem      !< index of element and compartment in bgcm, used for looping
-    REAL                        :: eff_mortality_rate    !< effective mortality rate of biomass
-                                                         !<  (corrected by antecedent litterfall)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_harvest'
-    ! ----------------------------------------------------------------------------------------------------- !
-
-    ! get number of bgcm compartments
-    n_veg_bgcm_comp = SIZE(veg_pool_mt,1)
-
-    ! loop over points of chunk
-    DO ic = 1,nc
-      ! harvest
-      IF (l_do_stand_replacing_harvest .OR. do_cohort_harvest(ic) > test_false_true) THEN
-        ! loop over bgcm compartments
-        DO ix_comp = 1,n_veg_bgcm_comp
-          ! seed bed pool remains unaffected from harvest
-          ! TODO: needs proper implementation of looping over bgcm compartments
-          IF (ix_comp /= ix_seed_bed) THEN
-            ! loop over bgcm elements and soil layers
-            DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-              IF (is_element_used(ielem)) THEN
-                ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-
-                ! calculate effective mortality rate
-                ! 1) adjusted by antecedent natural mortality (term 1 - mortality_rate)
-                ! 2) adjusted by antecedent litter fall to converse mass:
-                ! Only the fraction of veg pool not yet lost to litterfall is available for mortality.
-                ! If remaining biomass is smaller than mortality rate, reduce biomass by mortality rate
-                ! Otherwise put remaining biomass to litter
-                IF (veg_pool_mt(ix_comp, ix_elem, ic) > eps8) THEN
-                  eff_mortality_rate = MIN(1._wp - mortality_rate(ic), &
-                    &   (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)) &
-                    &   / veg_pool_mt(ix_comp, ix_elem, ic))
-                ELSE
-                  eff_mortality_rate = 0.0_wp
-                END IF
-
-                ! wood extraction for woody pools. These should go into the products pool at a later stage
-                ! TODO: needs proper implementation of looping over bgcm compartments
-                IF (ix_comp == ix_sap_wood .OR. ix_comp == ix_heart_wood) THEN
-                  veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
-                    &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
-                    &                                       * (1._wp - wood_extraction_rate) &
-                    &                                       * eff_mortality_rate)
-                ! standard case, all goes into litter
-                ELSE
-                  veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
-                    &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
-                    &                                       * eff_mortality_rate)
-                END IF
-              END IF
-            END DO
-          END IF
-        END DO
-        ! mortality is 100 % for a harvest event
-        mortality_rate(ic) = 1.0_wp
-      END IF
-    END DO
-
-  END SUBROUTINE calc_veg_harvest
 
   ! ======================================================================================================= !
   !>
@@ -943,7 +802,8 @@ CONTAINS
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
         ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-        veg_establishment_mt(ix_elem, :) = veg_pool_mt_seed_bed(ix_elem, :) * establishment_rate(:)
+        veg_establishment_mt(ix_elem, :) = veg_establishment_mt(ix_elem, :) &
+          &                                + veg_pool_mt_seed_bed(ix_elem, :) * establishment_rate(:)
       END IF
     END DO
   END SUBROUTINE calc_veg_establishment

@@ -151,7 +151,6 @@ MODULE mo_veg_constants
       k_est_temp                  , & !< parameter in the Weibull function controlling temperature-limited establishment
       lambda_est_moist            , & !< parameter in the Weibull function controlling moisture-limited establishment
       k_est_moist                 , & !< parameter in the Weibull function controlling moisture-limited establishment
-      wood_extraction_rate        , & !< fraction of wood removed from site after harvesting
       min_greff                   , & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
       k2_mort_greff               , & !< scaling coefficient
       k3_mort_greff               , & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
@@ -348,7 +347,6 @@ CONTAINS
       k_est_temp                  = 4.0_wp
       lambda_est_moist            = 10._wp
       k_est_moist                 = 2.0_wp
-      wood_extraction_rate        = 0.8_wp
       k2_mort_greff               = 0.3_wp
       k3_mort_greff               = 25.0_wp
       min_greff                   = 1.0_wp
