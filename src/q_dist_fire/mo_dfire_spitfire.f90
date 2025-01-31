@@ -187,6 +187,8 @@ CONTAINS
     REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
+    TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
+
     !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
     !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
@@ -398,6 +400,9 @@ CONTAINS
       ab_moisture_sl(:,:) = ab_w_soil_sl(:,:) / ab_w_soil_fc_sl(:,:)
     END WHERE
 
+    !< Pack vegetation cover fraction
+    veg_cover_frac = t_sf_veget_cover_frac(nc, tree_frac, grass_frac)
+
     !< moisture average of above ground soil layers
     DO ic=1, nc
       IF (SUM(ab_moisture_sl(ic,:)) > 0._wp) THEN
@@ -451,6 +456,7 @@ CONTAINS
                   ab_moisture, & ! soil properties
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
+                  veg_cover_fract, & in
                   nesterov_index, & ! inout
                   fuel_moisture, & ! out
                   spitfire) ! out
@@ -472,9 +478,11 @@ CONTAINS
     REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
 
-    REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: add to t_weather derive type
+    REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: refactor to t_weather derive type
     REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
     REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
+
+    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
 
     REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
@@ -548,7 +556,7 @@ CONTAINS
     !> calculate the rate of spread following Thonicke et al. (2010)
     spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
         lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-        wind_sf, lctlib_moisture_extinction, spitfire % fdi, veg_cover_frac, &
+        wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
         w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
         mask=has_fire_conditions)
 
