@@ -158,7 +158,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: forest_fract       ! out [%]
     dsl4jsb_Real2D_onChunk      :: grass_fract        ! out [%]
 
-    dsl4jsb_Real2D_onChunk      :: fuel_bulk_density  ! out [kg m-3]
+    dsl4jsb_Real2D_onChunk      :: fuel_bulk_density    ! out [kg m-3]
     dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
     dsl4jsb_Real2D_onChunk      :: fwd_wind_factor      ! out [0 to 1]
     ! ----------------------------------------------------------------------------------------------------- !

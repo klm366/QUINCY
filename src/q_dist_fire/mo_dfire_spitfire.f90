@@ -255,11 +255,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_100hr_lfp   ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1000hr_lfp  ! in [g DM m-2]
 
-    dsl4jsb_Real2D_onChunk                :: forest_fract      ! [%]
-    dsl4jsb_Real2D_onChunk                :: grass_fract       ! [%]
+    dsl4jsb_Real2D_onChunk                :: forest_fract      ! in [%]
+    dsl4jsb_Real2D_onChunk                :: grass_fract       ! in [%]
 
-    dsl4jsb_Real2D_onChunk                :: fuel_bulk_density ! [kg m-3]
-    dsl4jsb_Real2D_onChunk                :: moisture_extinction ! [-]
+    dsl4jsb_Real2D_onChunk                :: fuel_bulk_density          ! in [kg m-3]
+    dsl4jsb_Real2D_onChunk                :: moisture_extinction        ! in [-]
+    dsl4jsb_Real2D_onChunk                :: fwd_wind_factor            ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
@@ -319,6 +320,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)   ! in [kg m-3]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction) ! in [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fwd_wind_factor)     ! in [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
