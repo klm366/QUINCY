@@ -401,7 +401,7 @@ CONTAINS
     END WHERE
 
     !< Pack vegetation cover fraction
-    veg_cover_frac = t_sf_veget_cover_frac(nc, tree_frac, grass_frac)
+    veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
     !< moisture average of above ground soil layers
     DO ic=1, nc
@@ -425,6 +425,7 @@ CONTAINS
                         ab_moisture, & ! soil properties
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
+                        veg_cover_frac, &
                         nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
                         sf_spitfire)
@@ -456,7 +457,7 @@ CONTAINS
                   ab_moisture, & ! soil properties
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
-                  veg_cover_fract, & in
+                  veg_cover_frac, & ! in
                   nesterov_index, & ! inout
                   fuel_moisture, & ! out
                   spitfire) ! out

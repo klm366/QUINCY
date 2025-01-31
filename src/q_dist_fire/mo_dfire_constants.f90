@@ -162,6 +162,12 @@ MODULE mo_dfire_constants
   !< Nesterov threshold constants
   REAL(wp), PARAMETER :: df_sf_precip_trhd = 3.0_wp !< Precipitation threshold (Thonicke et al. (2010), below eq. 5)
   REAL(wp), PARAMETER :: df_sf_frost_trhd = 4.0_wp !< Frost threshold, from source code (Thonicke et al. (2010), https://github.com/PIK-LPJmL/LPJmL/blob/811b1691c26645968803fab65f9e463d64d5f40b/src/spitfire/update_nesterov.c#L25)
+  REAL(wp), PARAMETER :: df_sf_oven_dry_part_dens = 513._wp !< Table A1, Thonicke et al. (2010) [kg m-3]
+  INTEGER, PARAMETER :: df_sf_sigma_nr = 3 !< Total number of sigmas (1,10,100) hours
+  REAL(wp), PARAMETER :: df_sigmas(df_sf_sigma_nr) = (/ 66._wp, 3.58_wp, 0.98_wp/) !< Values form LPJ, surface area to volume. Pyne et al. (1996)
+  REAL(wp), PARAMETER :: df_sf_mineral_fract = 0.055_wp !< Total mineral content of fuel (fraction, S_T in Thonicke et al. (2010), Table A1) [0 to 1]
+  REAL(wp), PARAMETER :: df_sf_mineral_damp_coeff = 0.41739_wp !< Table A1, Thonicke et al. (2010) [0 to 1]
+  REAL(wp), PARAMETER :: df_sf_fuel_heat_content = 18000._wp !<  Appendix A, Thonicke et al. (2010) [kJ kg-1]
 
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
