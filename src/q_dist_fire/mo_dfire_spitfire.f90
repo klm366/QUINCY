@@ -147,7 +147,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_, A2L_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
@@ -281,6 +281,7 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)             ! in
@@ -363,6 +364,8 @@ CONTAINS
 
     tile_area = grid_cell_area * tile_fract
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
+    WRITE(*,*) "(spitfire.f90) calc_spitfire:: tile_fract, tile_area, gc area", tile_fract(9), &
+            tile_area(9), grid_cell_area(9)
 
     ! assertion
     IF (ANY(pot_burn_area > tile_area)) THEN
@@ -424,9 +427,9 @@ CONTAINS
     area_burned_fract = tile_fract * 0.05
 
     write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
-    WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
-            t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
-            fuel_bulk_density(1)
+    !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
+    !        t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
+    !        fuel_bulk_density(1)
   END SUBROUTINE update_dfire_spitfire
 
 
@@ -478,8 +481,10 @@ CONTAINS
 
     INTEGER                               :: i, j
 
+    ! todo: deal with tile_frac = 0?
+
     sf_ignitions = t_sf_ignitions(nc)
-    ! init :spitfire = t_sf_spitfire(...)
+    spitfire = t_sf_spitfire(nc)
 
     !> Initialize object by computing dead and live fuels
     !fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
@@ -509,7 +514,11 @@ CONTAINS
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
-    spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
+    !WRITE(*,*) "(spitfire.f90) calc_spitfire:: nc, me == 0?", nc, COUNT(moisture_extinction == 0._wp)
+    !WRITE(*,*) "(spitfire.f90) calc_spitfire:: idx==0?", pack([(ix,ix=1,size(moisture_extinction))],moisture_extinction==0._wp)
+    WHERE(moisture_extinction > 0._wp)
+      spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
+    ENDWHERE
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &

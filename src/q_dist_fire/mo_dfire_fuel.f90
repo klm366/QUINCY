@@ -209,6 +209,9 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     CALL tile%Get_fraction(ics, ice, iblk, tile_fract)
+
+    ! todo: deal with tile_frac = 0?
+
     !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
     !             fract(1)
     dead_fuel = 0._wp
@@ -286,7 +289,7 @@ CONTAINS
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", fraction, forest_fract=", &
-                        tile_fract(1), forest_fract(1)
+                        tile_fract(9), forest_fract(9)
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel
