@@ -160,6 +160,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk      :: fuel_bulk_density  ! out [kg m-3]
     dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
+    dsl4jsb_Real2D_onChunk      :: fwd_wind_factor      ! out [0 to 1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -202,7 +203,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, grass_fract)           ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction)     ! out [0 to 1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction)   ! out [0 to 1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fwd_wind_factor)       ! out [0 to 1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -223,6 +225,7 @@ CONTAINS
     lctlib_growthform(:) = lctlib%growthform
     config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
     moisture_extinction = lctlib%moisture_extinction ! aggregation: weighted over tile fraction
+    fwd_wind_factor = lctlib%fwd_wind_factor ! aggregation: weighted over tile fraction
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science

@@ -86,6 +86,7 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
   USE mo_dfire_sf_nesterov,     ONLY: calc_sf_nesterov_index
+  USE mo_dfire_sf_ros_class,    ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
@@ -106,6 +107,7 @@ MODULE mo_dfire_spitfire
     REAL(wp), ALLOCATABLE :: e_n_lightning(:)
 
     REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
+    TYPE(t_sf_ros)        :: ros    !< fire dynamics
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -135,6 +137,7 @@ CONTAINS
     sf_spitfire % e_n_humans = 0._wp
     sf_spitfire % e_n_lightning = 0._wp
     sf_spitfire % fdi = 0._wp
+    sf_spitfire % ros = t_sf_ros(nc)
 
   END FUNCTION create_sf_spitfire
 
@@ -406,6 +409,7 @@ CONTAINS
     ENDIF
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, dtime, one_day, &
+                        fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
@@ -438,6 +442,7 @@ CONTAINS
   !> Run science
   !>
   SUBROUTINE calc_spitfire(nc, nalphas, dtime, one_day, & ! in
+                  lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
                   alphas, &
                   moisture_extinction, &
@@ -449,6 +454,9 @@ CONTAINS
                   spitfire) ! out
     INTEGER, INTENT(in)   :: nc, nalphas
     REAL(wp), INTENT(in)  :: dtime, one_day
+
+    REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
+    REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
 
     REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
     REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
@@ -536,11 +544,11 @@ CONTAINS
 
     !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
     !> calculate the rate of spread following Thonicke et al. (2010)
-!    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
-!        lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-!        wind_sf, lctlib_moisture_extinction, spitfire % fdi, veg_cover_frac, &
-!        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
-!        mask=has_fire_conditions)
+    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
+        lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
+        wind_sf, lctlib_moisture_extinction, spitfire % fdi, veg_cover_frac, &
+        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
+        mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &

@@ -145,8 +145,11 @@ CONTAINS
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ! DFIRE_FUEL_ 3D
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, moisture_extinction  , weighted_by_fract)
+    ! Lctlib related
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, moisture_extinction      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, fwd_wind_factor          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk_masked(DFIRE_FUEL_, fuel_bulk_density , average_agg, dfire_pft_mask)
+
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel            , sum_agg)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp    , sum_agg)
@@ -167,8 +170,6 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, forest_fract     , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, grass_fract      , sum_agg)
-
-    dsl4jsb_Aggregate_onChunk_masked(DFIRE_FUEL_, fuel_bulk_density , average_agg, dfire_pft_mask)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_fuel

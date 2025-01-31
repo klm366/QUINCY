@@ -324,6 +324,9 @@ AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 
 # Fire Disturbance (spitfire)
 #
 
+# fwd_wind_factor: forward wind factor, from Thonicke et al. (2010), paragraph above eq. 10 [-]
+fwd_wind_factor 0.4 0.4 0.4 0.4 0.4 0.4 0.6 0.6 0.6 0.6 0.6 0.6 0.0 0.0
+
 # Fuel bulk density [kg m-3], from Thonicke et al. (2010), Table 1
 fbd_pb 25.0 10.0 25.0 22.0 25.0 22.0 2.0 2.0 2.0 2.0 2.0 2.0 0.0 0.0
 
