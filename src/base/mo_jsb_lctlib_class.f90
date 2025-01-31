@@ -228,7 +228,8 @@ MODULE mo_jsb_lctlib_class
 
     ! Disturbance fire
     REAL(wp) :: fbd_pb                , &
-                moisture_extinction
+                moisture_extinction   , &
+                fwd_wind_factor
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
@@ -443,6 +444,7 @@ CONTAINS
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_fbd_pb = .FALSE.
     LOGICAL            :: exists_moisture_extinction = .FALSE.
+    LOGICAL            :: exists_fwd_wind_factor = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -997,6 +999,9 @@ CONTAINS
             CASE ('moisture_extinction')
               READ(line(pos:length),*) lctlib(1:nlct)%moisture_extinction
               exists_moisture_extinction = .TRUE.
+            CASE ('fwd_wind_factor')
+              READ(line(pos:length),*) lctlib(1:nlct)%fwd_wind_factor
+              exists_fwd_wind_factor = .TRUE.
             CASE default
               ! nothing to do
             END SELECT

@@ -53,12 +53,15 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
     TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%]
 
-    TYPE(t_jsb_var_real2d)  :: fuel_bulk_density   !< Fuel bulk density [kg m-3]
+    ! lctlib, weighted by tile fraction
+    TYPE(t_jsb_var_real2d)  :: fuel_bulk_density          !< Fuel bulk density [kg m-3]
+    TYPE(t_jsb_var_real2d)  :: moisture_extinction        !< Moisture of extinction threshold [0 to 1]
+    TYPE(t_jsb_var_real2d)  :: fwd_wind_factor            !< Forward wind factor [0 to 1]
 
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_1hr_dfp           !< 1hr dead fuel (#nc, #ndeadpools) [g DM m-2]
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_10hr_dfp          !< 10hr dead fuel [g DM m-2], _dfp = dead fuel pools
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_100hr_dfp         !< 100hr dead fuel [g DM m-2], _dfp = dead fuel pools
-    TYPE(t_jsb_var_real3d)  :: dead_fuel_1000hr_dfp        !< 1000hr dead fuel [g DM m-2], _dfp = dead fuel pools
+    TYPE(t_jsb_var_real3d)  :: dead_fuel_1hr_dfp          !< 1hr dead fuel (#nc, #ndeadpools) [g DM m-2]
+    TYPE(t_jsb_var_real3d)  :: dead_fuel_10hr_dfp         !< 10hr dead fuel [g DM m-2], _dfp = dead fuel pools
+    TYPE(t_jsb_var_real3d)  :: dead_fuel_100hr_dfp        !< 100hr dead fuel [g DM m-2], _dfp = dead fuel pools
+    TYPE(t_jsb_var_real3d)  :: dead_fuel_1000hr_dfp       !< 1000hr dead fuel [g DM m-2], _dfp = dead fuel pools
 
     TYPE(t_jsb_var_real3d)  :: live_grass_fuel_1hr_lfp    !< 1hr dead fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_grass_fuel_10hr_lfp   !< 10hr dead fuel [g DM m-2], _lfp = live fuel pools
@@ -70,7 +73,6 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_100hr_lfp   !< 100hr dead fuel [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_1000hr_lfp  !< 1000hr dead fuel [g DM m-2], _lfp = live fuel pools
 
-    TYPE(t_jsb_var_real2d)  :: moisture_extinction        !< Moisture of extinction threshold [0 to 1]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -286,6 +288,16 @@ CONTAINS
     CALL mem%Add_var('moisture_extinction', mem%moisture_extinction, &
         & hgrid, vgrid_surface, &
         & t_cf('moisture_extinction', '0 to 1', 'Moisture of extinction threshold'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fwd_wind_factor', mem%fwd_wind_factor, &
+        & hgrid, vgrid_surface, &
+        & t_cf('fwd_wind_factor', '0 to 1', 'Forward wind factor'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
