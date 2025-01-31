@@ -324,6 +324,7 @@ CONTAINS
   !> Implementation for dead_fuel with 3 dimensions(:,:,:)
   !>
   !> Note: In fortran a generic function must implemente each type and rank, See INTERFACE sf_calc_has_any_fuel
+  !> todo: rename dead_fuel to fuel (a more generic naming).
   !>
   FUNCTION sf_calc_has_any_fuel_r3(dead_fuel) RESULT (has_dead_fuel)
     REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)      !< [g DM m-2]

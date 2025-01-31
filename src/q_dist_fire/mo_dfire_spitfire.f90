@@ -82,7 +82,7 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
                                       df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
 
-  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
+  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel
   USE mo_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
   USE mo_dfire_sf_nesterov,     ONLY: calc_sf_nesterov_index
@@ -478,6 +478,8 @@ CONTAINS
     REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
     TYPE(t_sf_fuel_class) :: fuel_cls
+    LOGICAL  :: has_dead_fuel(nc)          !< True = dead fuel
+    LOGICAL  :: has_fire_conditions(nc)    !< 1, 10, 100 and 1000 hours
 
     INTEGER                               :: i, j
 
@@ -519,6 +521,26 @@ CONTAINS
     WHERE(moisture_extinction > 0._wp)
       spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
     ENDWHERE
+
+    !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
+    !< fire spread depends on dead fuel availability. If there is no dead fuel,
+    !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
+    has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
+    !< It accounts for 1, 10 and 100 hours fuel classes
+    has_fire_conditions(:) = ANY(has_dead_fuel) .AND. ANY(spitfire % fdi > 1.e-6_wp)
+
+    !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
+    !< Previously initialized to zero.
+    !< Such conditions accounts for multiple grid cells running at the same time (IQ)
+!    IF (ALL(has_fire_conditions .EQV. .FALSE.)) RETURN
+
+    !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
+    !> calculate the rate of spread following Thonicke et al. (2010)
+!    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
+!        lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
+!        wind_sf, lctlib_moisture_extinction, spitfire % fdi, veg_cover_frac, &
+!        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
+!        mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &
