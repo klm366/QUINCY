@@ -228,7 +228,7 @@ CONTAINS
     grid  => get_grid(model%grid_id)
     lon   => grid%lon(ics:ice, iblk)
     mtime_current => time_config%tc_current_date
-    global_seconds_day = get_secs_of_day(mtime_current)
+    global_seconds_day = NINT(get_secs_of_day(mtime_current))  ! TODO time steps w/ fractional seconds not supported by quincy, yet!
     current_year = get_year(mtime_current)
 
     model_scheme = model%config%model_scheme
