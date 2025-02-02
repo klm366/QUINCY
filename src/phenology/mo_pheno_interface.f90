@@ -606,8 +606,6 @@ CONTAINS
         CALL calc_crop_phenology(             &
           & day_of_year,                      & ! in
           & l_newday,                         & ! in
-          & pheno__conf%l_cropdynamics,       & ! in
-          & pheno__conf%l_covercrops,         & ! in
           & dsl4jsb_Config(PHENO_)%l_cropdynamics, &
           & dsl4jsb_Config(PHENO_)%l_covercrops,   &
           & timestep,                         & ! in
@@ -623,7 +621,7 @@ CONTAINS
           & heat_sum_CRP(ic),                 & ! inout
           & heat_sum_winter(ic),              & ! inout
           & growth_phase_CRP(ic),             & ! inout
-          & growth_phase_CC(:),               & ! inout
+          & growth_phase_CC(ic),              & ! inout
           & lai(ic)                           & ! inout
           & )
 
