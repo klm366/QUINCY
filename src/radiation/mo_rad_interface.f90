@@ -594,6 +594,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -611,6 +612,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -639,6 +641,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: fract_snow_can
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -663,6 +667,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
@@ -692,6 +697,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)              ! in
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)           ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 1.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
@@ -699,6 +706,7 @@ CONTAINS
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
     !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
     !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
     !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
@@ -708,7 +716,7 @@ CONTAINS
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:),&
-                     alb_vis_soil(:), &
+                     alb_vis_soil(:), fract_snow_can(:), &
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:),arad_vis_soil(:), &
                      alb_vis_can(:),alb_vis_lnd(:))
@@ -1053,8 +1061,6 @@ CONTAINS
       & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
     USE mo_rad_process,       ONLY: calc_surface_radiation_quincy
-    USE mo_rad_parameters,    ONLY: def_alb_vis_soil, def_alb_nir_soil, &
-      &                             def_alb_vis_snow, def_alb_nir_snow
 #endif
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
     USE mo_jsb_control,       ONLY: jsbach_runs_standalone
@@ -1646,6 +1652,13 @@ CONTAINS
       ENDIF
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
+#endif
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_var2D_onChunk(SPQ_,    fract_snow_can)        ! in
+      dsl4jsb_Get_var2D_onChunk(SPQ_,    fract_snow_soil)       ! in
+#endif
+    END SELECT
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! in
@@ -1653,11 +1666,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
-
       !> 5.1  simple calculation of alb_vis_lnd / alb_nir_lnd
       !!
       !! TRUE for jsbach_lite, FALSE for jsbach_pfts
       IF (use_alb_veg_simple) THEN
+#ifndef __QUINCY_STANDALONE__
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
           alb_vis_lnd(ic) = get_surface_albedo_simple( &
@@ -1672,7 +1685,7 @@ CONTAINS
           alb_nir_lnd(ic) = alb_vis_lnd(ic)
         END DO
         !$ACC END PARALLEL LOOP
-
+#endif
       !> 5.2  detailed calculation of alb_vis_lnd & alb_nir_lnd
       !!
       !! merging albedo of snow, soil and canopy
@@ -1686,7 +1699,16 @@ CONTAINS
           ! The albedo for bare soil under the canopy of a vegetation tile is the same as for the bare soil tile:
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
-          specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+          SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+          CASE (MODEL_JSBACH)
+            specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+#endif
+#ifndef __NO_QUINCY__
+          CASE (MODEL_QUINCY)
+            specificLeafArea_C_param = dsl4jsb_Lctlib_param(sla)
+#endif
+          END SELECT
           AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
           AlbedoLitterNIR_param    = dsl4jsb_Lctlib_param(AlbedoLitterNIR)
 
@@ -1723,6 +1745,10 @@ CONTAINS
 
         !$ACC WAIT(1)
 
+        ! improve indentation !
+        SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+        CASE (MODEL_JSBACH)
         ! Get the fractions of the vegetation tile that is bare soil from the sky point of view
         ! Needed later for merging the contributing snow-, bare soil- and canopy-albedos for this vegetation tile
         dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract)       ! inout
@@ -1775,25 +1801,13 @@ CONTAINS
             & )
         END DO
         !$ACC END PARALLEL LOOP
-
-      END IF ! NOT use_alb_veg_simple
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)          ! out
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)          ! out
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_snow)          ! out
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_snow)          ! out
-
       ! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
       ! soil's albedo
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
-        alb_vis_soil(ic) = def_alb_vis_soil
-        alb_nir_soil(ic) = def_alb_nir_soil
-        alb_vis_snow(ic) = def_alb_vis_snow
-        alb_nir_snow(ic) = def_alb_nir_snow
-
         alb_vis_soil(ic) = fract_snow_soil(ic) * alb_vis_snow(ic) &
           &                + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic)
         alb_nir_soil(ic) = fract_snow_soil(ic) * alb_nir_snow(ic) &
@@ -1804,6 +1818,7 @@ CONTAINS
       CALL calc_surface_radiation_quincy(tile, options)
 #endif
     END SELECT  ! quincy / jsbach
+    END IF      ! NOT use_alb_veg_simple
       ! <<< TODO: correct indentation
     END IF      ! IF (tile%is_vegetation)
     !$ACC WAIT(1)
