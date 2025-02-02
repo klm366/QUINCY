@@ -399,14 +399,14 @@ CONTAINS
           & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
         CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
           & hgrid, surface,                                                           &
           & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
       END IF
     END IF !  VEG / LAND
