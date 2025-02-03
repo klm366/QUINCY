@@ -28,7 +28,10 @@ MODULE mo_dfire_sf_post
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
+  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
+  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr, df_sf_fc_1hr_idx, df_sf_fc_100hr_idx
+  USE mo_dfire_sf_damage,       ONLY: calc_prob_mortality
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -78,13 +81,23 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: dead_fc_1hr_tile(:,:) !< 1 hour dead fuel consumption for current tile (#nc, #dead fuel pools) [g DM m-2]
     REAL(wp), ALLOCATABLE                 :: live_fc_1hr_tile(:,:) !< 1 hour live fuel consumptino for current tile (#nc, #live fuel pools) [g DM m-2]
 
-    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+    REAL(wp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
+    REAL(wp)                              :: lctlib_growthform(options%nc)
 
+    REAL(wp)                              :: prob_mort(options%nc) !< Tree probability of mortality due to fire [-]
+    REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
+    LOGICAL                               :: is_fire_intense_enough(options%nc) !< True: gridcell can burn [-]
+
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
+
+    dsl4jsb_Real2D_onChunk                :: diameter
+    dsl4jsb_Real2D_onChunk                :: height
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
@@ -120,10 +133,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
+!    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)              ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
+
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
@@ -139,16 +155,42 @@ CONTAINS
     ! init here
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
-!    tile_area = area * tile_fract
-    DO ic=1, nc
-      dead_fc_1hr_tile(ic,:) = dead_fuel_consumption_1hr(ic,:) * tile_fract(ic)
-      live_fc_1hr_tile(ic,:) = live_fuel_consumption_1hr(ic,:) * tile_fract(ic)
-    END DO
 
+    lctlib_growthform(:) = lctlib%growthform
+    is_fire_intense_enough = .TRUE. !< todo: import somehow from mo_dfire_spitfire.f90
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
+
+    dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
+
+    ! calc tree mortality
+    IF (lctlib%growthform == itree) THEN
+      prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
+                                      lctlib%crown_length, lctlib%r_ck, lctlib%ck_p, lctlib%F_scorch_height, &
+                                      lctlib%par1, lctlib%par2, &
+                                      height, dbh, & ! Tree characteristics
+                                      i_surface, & ! Fire intensity
+                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                      dead_frac_consump(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                      mask_opt=is_fire_intense_enough)
+
+!      live_fuel = fuel_cls % Calc_live_fuel()
+!      fc_live = sf_calc_live_fuel_consumption(nc, t_sf_fuel_live_fuel_nr, nfuels, &
+!                                              pm_prop_ck, &
+!                                              config_fract_crown_scorch, &
+!                                              sf_area_burned_fract, &
+!                                              live_fuel, &
+!                                              mask=spitfire % is_fire_intense_enough)
+    END IF
+
+    ! derive dead FC (DM * AB)
+    ! calc live FC (DM)
+    ! calc EM (CN)
+    ! backcalculate EM and FC (DM -> CNP, CN -> CNP131415)
+    ! calc Residue
+    ! Feedbacks
 
     WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
