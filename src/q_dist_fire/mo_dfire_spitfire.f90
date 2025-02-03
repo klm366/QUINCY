@@ -76,17 +76,21 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr
   USE mo_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
+  USE mo_dfire_constants,       ONLY: df_sf_calorific_heat_content
+
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
   USE mo_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
                                       df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
 
-  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel
+  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
   USE mo_dfire_sf_nesterov,     ONLY: calc_sf_nesterov_index
   USE mo_dfire_sf_ros_class,    ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
+  USE mo_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
+  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
@@ -424,11 +428,12 @@ CONTAINS
       nesterov_index = 0._wp
     ENDIF
 
-    CALL calc_spitfire(nc, df_sf_alpha_nr, dtime, one_day, &
+    CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
+                        df_sf_calorific_heat_content, &
                         df_sf_alphas, &
                         moisture_extinction, &
                         ab_moisture, & ! soil properties
@@ -459,9 +464,10 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, nalphas, dtime, one_day, & ! in
+  SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
+                  const_calorific_heat_content, &
                   alphas, &
                   moisture_extinction, &
                   ab_moisture, & ! soil properties
@@ -472,7 +478,7 @@ CONTAINS
                   nesterov_index, & ! inout
                   fuel_moisture, & ! out
                   spitfire) ! out
-    INTEGER, INTENT(in)   :: nc, nalphas
+    INTEGER, INTENT(in)   :: nc, nalphas, nfuelclasses
     REAL(wp), INTENT(in)  :: dtime, one_day
 
     REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
@@ -481,6 +487,8 @@ CONTAINS
     REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
     REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
     REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
+
+    REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
@@ -591,6 +599,28 @@ CONTAINS
       spitfire % area_burned_fract, & !< out
       mask=has_fire_conditions) !< in, optional
 
+  !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
+  !< extracted from equations B1, B4, B5 and B6)
+  spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, moisture_extinction, &
+                                                      fuel_moisture, mask=has_fire_conditions)
+
+  !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
+  !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.
+  !< See mo_dfire_sf_fuel_consumption_class.f90 for furter details.
+  spitfire % fc_dead_cls = sf_calc_dead_fuel_consumption(spitfire % area_burned_fract, &
+                                                      spitfire % dead_frac_consump, &
+                                                      dead_fuel, mask=has_fire_conditions)
+
+  !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
+  !< rate of spread and burned area fraction (Sec. 2.2.5).
+  !< Here, it is calculated only for grid cells where fuel is dry enough.
+  spitfire % i_surface = sf_calc_fire_intensity(nc, ndeadpools, df_sf_fc_spread_nr, &
+                                                calorific_heat_content, &
+                                                spitfire % ros %  ros_forward, &
+                                                spitfire % area_burned_fract, &
+                                                spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                                mask=has_fire_conditions)
+
   END SUBROUTINE calc_spitfire
 
 
@@ -619,6 +649,38 @@ CONTAINS
       current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
   END FUNCTION Get_childrens_bgcm_stores_2l_3d
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate fire intensity (1, 10 and 100 hours dead fuel classes)
+  !> Eq. 15 from Thonicke et al. (2010)
+  !>
+  FUNCTION sf_calc_fire_intensity(nc, ndeadpools, nfuels, calorific_heat_content, ros_forward, area_burned_fract, &
+      fc_dead_cls, mask) RESULT (i_surface)
+    INTEGER, INTENT(in)  :: nc, ndeadpools, nfuels
+    REAL(wp), INTENT(in) :: calorific_heat_content          !< Calorific heat content of fuel [KJ Kg-1]
+    REAL(wp), INTENT(in) :: ros_forward(nc)                 !< Forward rate of spread of the fire [m min-1]
+    REAL(wp), INTENT(in) :: area_burned_fract(nc)           !< Fraction of the area burned [0 to 1]
+    REAL(wp), INTENT(in) :: fc_dead_cls(nc, ndeadpools, nfuels) !< Dead fuel consumption. It includes 1, 10 and 100 hours fuel classes [g DM m-2]
+    LOGICAL, INTENT(in)  :: mask(nc)                        !< True = compute gridcell(s)
+    REAL(wp)             :: i_surface(nc)                   !< Fire intensity [kW m-1]
+
+    REAL(wp) :: tot_fc_dead(nc)                             !< Total dead fuel consumption aggregated over 1h, 10h, and 100h fuel classes [g DM m-2]
+    INTEGER :: inc
+
+    !< Account for fuel classes involved in the spread part
+    tot_fc_dead = sf_calc_aggr_fuels(fc_dead_cls)
+    i_surface = 0._wp
+
+    DO inc = 1, nc
+      IF (mask(inc)) THEN
+        !< Calculate the intensity of a surface fire at the flaming front (eq. 15 from Thonicke et al. (2010))
+        i_surface(inc) = calorific_heat_content * (tot_fc_dead(inc) * ros_forward(inc)) / &
+            (1000._wp * area_burned_fract(inc) * 60._wp)
+      END IF
+    END DO
+  END FUNCTION sf_calc_fire_intensity
 
 
   ! ======================================================================================================= !
