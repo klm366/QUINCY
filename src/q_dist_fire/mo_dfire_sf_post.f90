@@ -93,7 +93,6 @@ CONTAINS
     dsl4jsb_Def_memory(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SPQ_)
-    WRITE(*,*) "update_dfire_post:: running..."
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
@@ -151,7 +150,7 @@ CONTAINS
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
-    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(1), tile_fract(1)
+    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
   END SUBROUTINE update_dfire_sf_post
 
