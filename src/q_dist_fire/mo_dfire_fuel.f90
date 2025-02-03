@@ -88,8 +88,9 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: VEG_, SPQ_, DFIRE_FUEL_, DFIRE_
     ! ----------------------------------------------------------------------------------------------------- !
-    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_math_constants,      ONLY: one_day
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -102,6 +103,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
@@ -112,6 +114,8 @@ CONTAINS
     INTEGER                               :: lctlib_growthform(options%nc)
 
     REAL(wp)                              :: tile_fract(options%nc) !<  [%]
+    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
+    REAL(wp), POINTER                     :: tile_fract_ref(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
     REAL(wp)                              :: config_polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
@@ -172,6 +176,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
@@ -211,6 +216,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     CALL tile%Get_fraction(ics, ice, iblk, tile_fract)
+    grid_cell_area => grid % area(ics:ice, iblk)
+    tile_fract_ref => tile%fract(ics:ice, iblk)
 
     ! todo: deal with tile_frac = 0?
 
@@ -291,8 +298,8 @@ CONTAINS
     live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
-                        ", fraction, forest_fract=", &
-                        tile_fract(9), forest_fract(9)
+                        ", area, fraction ref, tile func, forest_fract=", grid_cell_area(9),  &
+                        tile_fract_ref(9), tile_fract(9), forest_fract(9)
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel
