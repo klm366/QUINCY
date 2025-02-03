@@ -94,6 +94,8 @@ MODULE mo_dfire_constants
   REAL(wp), PARAMETER :: df_sf_units_km2_to_ha = 100._wp
   REAL(wp), PARAMETER :: df_sf_units_m2_to_ha = 0.0001_wp
 
+  REAL(wp), PARAMETER :: df_sf_calorific_heat_content = 18000._wp !< From Thonicke et al. (2010), Appendix A [kJ kg-1]
+
   !REAL(wp), PARAMETER :: df_sf_units_m2_to_cm2 = 10000._wp  !< units conversion from m-2 to cm-2
 
   !< "Live" fuel array indices from t_sf_fuel_class
