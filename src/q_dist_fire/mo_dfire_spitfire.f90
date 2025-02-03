@@ -210,6 +210,7 @@ CONTAINS
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
+    REAL(wp)                              :: grid_cell_area_ha(options%nc)                !< Grid cell area [ha] 
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
@@ -398,6 +399,7 @@ CONTAINS
     t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+    grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
     !DBH(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
@@ -430,6 +432,7 @@ CONTAINS
                         df_sf_alphas, &
                         moisture_extinction, &
                         ab_moisture, & ! soil properties
+                        grid_cell_area_ha, &
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
@@ -462,6 +465,7 @@ CONTAINS
                   alphas, &
                   moisture_extinction, &
                   ab_moisture, & ! soil properties
+                  grid_cell_area, & 
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   veg_cover_frac, & ! in
@@ -481,6 +485,8 @@ CONTAINS
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
     REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
+
+    REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
     REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
@@ -580,7 +586,7 @@ CONTAINS
   CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
       spitfire % fdi, &
       spitfire % ros % mean_fire_area, &
-      grid_cell_area_ha, &
+      grid_cell_area, &
       spitfire % area_burned, &  !< out
       spitfire % area_burned_fract, & !< out
       mask=has_fire_conditions) !< in, optional
