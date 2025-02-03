@@ -25,7 +25,8 @@ MODULE mo_dfire_sf_adaptor
   USE mo_dfire_constants,     ONLY: df_sf_carbon_to_biomass_factor, df_sf_units_g_to_kg
 
   USE mo_dfire_constants,     ONLY: df_sk_units_kgm2s_to_mmday, df_sf_units_k_to_c, &
-                                    df_sf_units_sec_to_min, df_sf_units_m_to_cm
+                                    df_sf_units_sec_to_min, df_sf_units_m_to_cm, &
+                                    df_sf_units_m2_to_ha
   USE mo_jsb_physical_constants, ONLY: molar_mass_C
 
   IMPLICIT NONE
@@ -83,6 +84,8 @@ CONTAINS
 
     IF (TRIM(src) == "Kelvin" .AND. TRIM(dst) == "Celsius") THEN
       varOut = varIn + df_sf_units_k_to_c
+    ELSE IF (TRIM(src) == "m2" .AND. TRIM(dst) == "ha") THEN
+      varOut = varIn * df_sf_units_m2_to_ha
     ELSE IF (TRIM(src) == "g" .AND. TRIM(dst) == "kg") THEN
       varOut = varIn * df_sf_units_g_to_kg
     ELSE IF (TRIM(src) == "kg m-2 s-1" .AND. TRIM(dst) == "mm/day") THEN
