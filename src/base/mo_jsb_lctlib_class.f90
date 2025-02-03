@@ -226,10 +226,15 @@ MODULE mo_jsb_lctlib_class
       & k_som_fast_init               , &
       & k_som_slow_init
 
-    ! Disturbance fire
+    ! Quincy disturbance: spitfire (Thonicke)
     REAL(wp) :: fbd_pb                , &
                 moisture_extinction   , &
-                fwd_wind_factor
+                fwd_wind_factor       , &
+                crown_damage_r_ck, &
+                crown_damage_p, &
+                crown_length, &
+                par1, par2, &
+                F_scorch_height
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
@@ -445,6 +450,12 @@ CONTAINS
     LOGICAL            :: exists_fbd_pb = .FALSE.
     LOGICAL            :: exists_moisture_extinction = .FALSE.
     LOGICAL            :: exists_fwd_wind_factor = .FALSE.
+    LOGICAL            :: exists_crown_damage_r_ck = .FALSE.
+    LOGICAL            :: exists_crown_damage_p = .FALSE.
+    LOGICAL            :: exists_crown_length = .FALSE.
+    LOGICAL            :: exists_par1 = .FALSE.
+    LOGICAL            :: exists_par2 = .FALSE.
+    LOGICAL            :: exists_F_scorch_height = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -993,6 +1004,8 @@ CONTAINS
             CASE ('k_som_slow_init')
               READ(line(pos:length),*) lctlib(1:nlct)%k_som_slow_init
               exists_k_som_slow_init = .TRUE.
+            ! Quincy disturbance: spitfire
+            ! todo: rename to avoid any clashing vs current implementation
             CASE ('fbd_pb')
               READ(line(pos:length),*) lctlib(1:nlct)%fbd_pb
               exists_fbd_pb = .TRUE.
@@ -1002,6 +1015,24 @@ CONTAINS
             CASE ('fwd_wind_factor')
               READ(line(pos:length),*) lctlib(1:nlct)%fwd_wind_factor
               exists_fwd_wind_factor = .TRUE.
+            CASE ('crown_damage_r_ck')
+              READ(line(pos:length),*) lctlib(1:nlct)%crown_damage_r_ck
+              exists_ = .TRUE.
+            CASE ('crown_damage_p')
+              READ(line(pos:length),*) lctlib(1:nlct)%crown_damage_p
+              exists_ = .TRUE.
+            CASE ('crown_length')
+              READ(line(pos:length),*) lctlib(1:nlct)%crown_length
+              exists_ = .TRUE.
+            CASE ('par1')
+              READ(line(pos:length),*) lctlib(1:nlct)%par1
+              exists_ = .TRUE.
+            CASE ('par2')
+              READ(line(pos:length),*) lctlib(1:nlct)%par2
+              exists_ = .TRUE.
+            CASE ('scorch_heigth_f')
+              READ(line(pos:length),*) lctlib(1:nlct)%F_scorch_height
+              exists_ = .TRUE.
             CASE default
               ! nothing to do
             END SELECT
