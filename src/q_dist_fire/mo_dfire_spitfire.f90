@@ -113,8 +113,12 @@ MODULE mo_dfire_spitfire
     REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
     TYPE(t_sf_ros)        :: ros    !< fire dynamics
 
-    REAL(wp), ALLOCATABLE :: area_burned(:) !<
+    REAL(wp), ALLOCATABLE :: area_burned(:)             !<
     REAL(wp), ALLOCATABLE :: area_burned_fract(:)
+
+    REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
+    REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: i_surface(:)               !<
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -131,8 +135,10 @@ CONTAINS
   !>
   !> t_sf_spitfire constructor: Allocate and initialize
   !>
-  FUNCTION create_sf_spitfire(nc) RESULT (sf_spitfire)
+  FUNCTION create_sf_spitfire(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
     INTEGER, INTENT(in) :: nc          !< #Gridcells
+    INTEGER, INTENT(in) :: nfuels      !< # fuel classes
+    INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools 
     TYPE(t_sf_spitfire) :: sf_spitfire !< Output
 
     ALLOCATE(sf_spitfire % e_n_ignitions(nc))
@@ -141,6 +147,9 @@ CONTAINS
     ALLOCATE(sf_spitfire % fdi(nc))
     ALLOCATE(sf_spitfire % area_burned(nc))
     ALLOCATE(sf_spitfire % area_burned_fract(nc))
+    ALLOCATE(sf_spitfire % dead_frac_consump(nc, nfuels))
+    ALLOCATE(sf_spitfire % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
+    ALLOCATE(sf_spitfire % i_surface(nc))
 
     sf_spitfire % e_n_ignitions = 0._wp
     sf_spitfire % e_n_humans = 0._wp
@@ -149,6 +158,9 @@ CONTAINS
     sf_spitfire % ros = t_sf_ros(nc)
     sf_spitfire % area_burned = 0._wp
     sf_spitfire % area_burned_fract = 0._wp
+    sf_spitfire % dead_frac_consump = 0._wp
+    sf_spitfire % fc_dead_cls = 0._wp
+    sf_spitfire % i_surface = 0._wp
 
   END FUNCTION create_sf_spitfire
 
@@ -525,15 +537,10 @@ CONTAINS
 
     ! todo: deal with tile_frac = 0?
 
-    sf_ignitions = t_sf_ignitions(nc)
-    spitfire = t_sf_spitfire(nc)
-
-    !> Initialize object by computing dead and live fuels
-    !fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
-    !    dead_fuel_frac, live_fuel_frac, &
-    !    dead_fuel_mt, live_fuel_mt, &
-    !    ratio_polymeric_litter)
     ndeadpools = SIZE(dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
+
+    sf_ignitions = t_sf_ignitions(nc)
+    spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
@@ -615,7 +622,7 @@ CONTAINS
   !< rate of spread and burned area fraction (Sec. 2.2.5).
   !< Here, it is calculated only for grid cells where fuel is dry enough.
   spitfire % i_surface = sf_calc_fire_intensity(nc, ndeadpools, df_sf_fc_spread_nr, &
-                                                calorific_heat_content, &
+                                                const_calorific_heat_content, &
                                                 spitfire % ros %  ros_forward, &
                                                 spitfire % area_burned_fract, &
                                                 spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
