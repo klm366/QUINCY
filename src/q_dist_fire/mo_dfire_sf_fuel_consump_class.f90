@@ -40,7 +40,7 @@ MODULE mo_dfire_sf_fuel_consump_class
   USE mo_dfire_sf_adaptor,    ONLY: sf_convert_units
 
   !< Total number of spitfire live fuel pools
-  USE mo_dfire_constants,     ONLY: t_sf_fuel_live_fuel_nr
+  USE mo_dfire_constants,     ONLY: sf_fuel_live_fuel_nr
 
   IMPLICIT NONE
 
@@ -98,7 +98,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: area_burned_frac(nc)                !< Fraction of the area burned by a fire [0 to 1]
     REAL(wp), INTENT(in) :: live_fuel(nc,nlivepools,nfuelclass) !< Live fuel [g DM m-2]
     LOGICAL, INTENT(in)  :: mask(nc)                            !< True = compute gridcell(s)
-    REAL(wp) :: live_fc(nc,t_sf_fuel_live_fuel_nr)              !< output [g DM m-2]
+    REAL(wp) :: live_fc(nc,sf_fuel_live_fuel_nr)                !< output [g DM m-2]
 
     INTEGER :: iclass, ilvpool
 
