@@ -597,31 +597,31 @@ CONTAINS
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
     spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
 
-  !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
-  CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
-      spitfire % fdi, &
-      spitfire % ros % mean_fire_area, &
-      grid_cell_area, &
-      spitfire % area_burned, &  !< out
-      spitfire % area_burned_fract, & !< out
-      mask=has_fire_conditions) !< in, optional
+    !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
+    CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
+                          spitfire % fdi, &
+                          spitfire % ros % mean_fire_area, &
+                          grid_cell_area, &
+                          spitfire % area_burned, &  !< out
+                          spitfire % area_burned_fract, & !< out
+                          mask=has_fire_conditions) !< in, optional
 
-  !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
-  !< extracted from equations B1, B4, B5 and B6)
-  spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, moisture_extinction, &
+    !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
+    !< extracted from equations B1, B4, B5 and B6)
+    spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, moisture_extinction, &
                                                       fuel_moisture, mask=has_fire_conditions)
 
-  !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
-  !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.
-  !< See mo_dfire_sf_fuel_consumption_class.f90 for furter details.
-  spitfire % fc_dead_cls = sf_calc_dead_fuel_consumption(spitfire % area_burned_fract, &
+    !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
+    !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.
+    !< See mo_dfire_sf_fuel_consumption_class.f90 for furter details.
+    spitfire % fc_dead_cls = sf_calc_dead_fuel_consumption(spitfire % area_burned_fract, &
                                                       spitfire % dead_frac_consump, &
                                                       dead_fuel, mask=has_fire_conditions)
 
-  !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
-  !< rate of spread and burned area fraction (Sec. 2.2.5).
-  !< Here, it is calculated only for grid cells where fuel is dry enough.
-  spitfire % i_surface = sf_calc_fire_intensity(nc, ndeadpools, df_sf_fc_spread_nr, &
+    !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
+    !< rate of spread and burned area fraction (Sec. 2.2.5).
+    !< Here, it is calculated only for grid cells where fuel is dry enough.
+    spitfire % i_surface = sf_calc_fire_intensity(nc, ndeadpools, df_sf_fc_spread_nr, &
                                                 const_calorific_heat_content, &
                                                 spitfire % ros %  ros_forward, &
                                                 spitfire % area_burned_fract, &
