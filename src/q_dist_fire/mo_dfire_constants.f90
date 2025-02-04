@@ -173,6 +173,9 @@ MODULE mo_dfire_constants
   REAL(wp), PARAMETER :: df_sf_mineral_damp_coeff = 0.41739_wp !< Table A1, Thonicke et al. (2010) [0 to 1]
   REAL(wp), PARAMETER :: df_sf_fuel_heat_content = 18000._wp !<  Appendix A, Thonicke et al. (2010) [kJ kg-1]
 
+  REAL(wp), PARAMETER :: df_sf_isurface_extinc_th = 50._wp !< Fires extinguishes below this threshold [kW m-1]
+                                                           !< below eq. 15, Thonicke et al. (2010)
+
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                               .TRUE., .TRUE., &                                 ! grass pfts
