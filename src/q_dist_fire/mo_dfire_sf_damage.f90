@@ -41,10 +41,10 @@ MODULE mo_dfire_sf_damage
     REAL(wp), ALLOCATABLE :: tau_c(:)!< Critical time for cambial damage [min]
     REAL(wp), ALLOCATABLE :: bark_thickness(:) !< [cm]
     REAL(wp), ALLOCATABLE :: prop_ck(:) !< Fraction of the crown scorch [-]
-    REAL(wp), ALLOCATABLE :: r_ck(:) !< Resistance factor against crown damage [-]
-    REAL(wp), ALLOCATABLE :: ck_p(:) !< Parameter for woody PFTs used in Pm (CK) equation [-]
+    REAL(wp), ALLOCATABLE :: r_ck !< Resistance factor against crown damage [-]
+    REAL(wp), ALLOCATABLE :: ck_p !< Parameter for woody PFTs used in Pm (CK) equation [-]
     REAL(wp), ALLOCATABLE :: scorch_height(:)   !< Scorch height [m]
-    REAL(wp), ALLOCATABLE :: F_scorch_height(:) !< PFT-parameter in crown scorch equation [-]
+    REAL(wp), ALLOCATABLE :: F_scorch_height    !< PFT-parameter in crown scorch equation [-]
     REAL(wp), ALLOCATABLE :: crown_length(:)    !< Crown length of woody PFT [m]
   CONTAINS
     PROCEDURE :: copy_from_prob_mort
@@ -75,10 +75,10 @@ CONTAINS
     ALLOCATE(sf_pm%tau_c(nc))
     ALLOCATE(sf_pm%bark_thickness(nc))
     ALLOCATE(sf_pm%prop_ck(nc))
-    ALLOCATE(sf_pm%r_ck(nc))
-    ALLOCATE(sf_pm%ck_p(nc))
+    ALLOCATE(sf_pm%r_ck)
+    ALLOCATE(sf_pm%ck_p)
     ALLOCATE(sf_pm%scorch_height(nc))
-    ALLOCATE(sf_pm%F_scorch_height(nc))
+    ALLOCATE(sf_pm%F_scorch_height)
     ALLOCATE(sf_pm%crown_length(nc))
 
     sf_pm%pm_fire = 0._wp
@@ -130,17 +130,17 @@ CONTAINS
       mask_opt) RESULT (prob_mort)
     INTEGER, INTENT(in)  :: nc
     INTEGER, INTENT(in)  :: nfuels                          !< Dead fuel classes
-    REAL(wp), INTENT(in) :: lctlib_crown_length(nc)         !< Crown length of woody PFT [m]
+    REAL(wp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
     REAL(wp), INTENT(in) :: height(nc)                      !< Tree height [m]
     REAL(wp), INTENT(in) :: dbh(nc)                         !< Diameter at breast height [cm]
     REAL(wp), INTENT(in) :: i_surface(nc)                   !< Fire intensity [kW m-1]
     REAL(wp), INTENT(in) :: dead_fuel(nc,nfuels)            !< Dead fuel involved in the spread of the fire (1,10,100) [gDM m-2]
     REAL(wp), INTENT(in) :: frac_consump(nc,nfuels)         !< fraction of fuel consumption for spread fuel class(1,10,100) [0 to 1]
-    REAL(wp), INTENT(in) :: lctlib_r_ck(nc)                 !< Resistant factor of the crown (damage) [0 to 1]
-    REAL(wp), INTENT(in) :: lctlib_ck_p(nc)                 !< Defoliation factor of the crown scorch [3 to 4]
-    REAL(wp), INTENT(in) :: lctlib_F_scorch_height(nc)      !< Scorch height parameter [-]
-    REAL(wp), INTENT(in) :: lctlib_par1(nc)                 !< Bark thickness par1 parameter [-]
-    REAL(wp), INTENT(in) :: lctlib_par2(nc)                 !< Bark thickness par2 parameter [-]
+    REAL(wp), INTENT(in) :: lctlib_r_ck                     !< Resistant factor of the crown (damage) [0 to 1]
+    REAL(wp), INTENT(in) :: lctlib_ck_p                     !< Defoliation factor of the crown scorch [3 to 4]
+    REAL(wp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
+    REAL(wp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
+    REAL(wp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
     LOGICAL, INTENT(in), OPTIONAL :: mask_opt(nc)           !< True = Compute gridcell(s) (default = true)
     TYPE(t_sf_prob_mort) :: prob_mort                       !< output
 
@@ -156,19 +156,19 @@ CONTAINS
     DO inc = 1, nc
       IF (mask(inc)) THEN
         !< probability of mortality
-        prob_mort % scorch_height(inc) = lctlib_F_scorch_height(inc) * (i_surface(inc) ** 0.667) ! (Eq. 16 from Thonicke et al. (2010))
-        prob_mort % crown_length(inc) = lctlib_crown_length(inc) * height(inc)
+        prob_mort % scorch_height(inc) = lctlib_F_scorch_height * (i_surface(inc) ** 0.667) ! (Eq. 16 from Thonicke et al. (2010))
+        prob_mort % crown_length(inc) = lctlib_crown_length * height(inc)
         prob_mort % prop_ck(inc) = calc_prop_ck(prob_mort % scorch_height(inc), &
             height(inc), &
             prob_mort % crown_length(inc))
 
         !< Probability of mortality as a result of the crown scorching (eq. 22 from Thonicke et al. (2010))
-        prob_mort % pm_ck(inc) = lctlib_r_ck(inc) * (prob_mort % prop_ck(inc) ** lctlib_ck_p(inc))
+        prob_mort % pm_ck(inc) = lctlib_r_ck * (prob_mort % prop_ck(inc) ** lctlib_ck_p)
 
         !< Calculate Pm(tau) from Eq. 19 in Thonicke et al. (2010).
         prob_mort % tau_l(inc) = calc_tau_l(nfuels, dead_fuel(inc,:), frac_consump(inc,:))
         !< Calculate bark thickness (Eq. 21 from Thonicke et al. (2010))
-        prob_mort % bark_thickness(inc) = lctlib_par1(inc) * dbh(inc) + lctlib_par2(inc)
+        prob_mort % bark_thickness(inc) = lctlib_par1 * dbh(inc) + lctlib_par2
         !< Calculate critical time for cambial damage (tau_c - eq. 20 from Thonicke et al. (2010))
         prob_mort % tau_c(inc) = 2.9_wp * (prob_mort % bark_thickness(inc) ** 2)
         prob_mort % pm_tau(inc) = calc_prob_mortality_tau(prob_mort % tau_l(inc), prob_mort % tau_c(inc))
@@ -176,9 +176,9 @@ CONTAINS
         !< Eq. 18 from Thonicke et al. (2010)
         prob_mort%pm_fire(:) = prob_mort % pm_tau(inc) + prob_mort % pm_ck(inc) - &
             prob_mort % pm_tau(inc) * prob_mort % pm_ck(inc)
-        prob_mort%r_ck(inc) = lctlib_r_ck(inc)
-        prob_mort%ck_p(inc) = lctlib_ck_p(inc)
-        prob_mort%F_scorch_height(inc) = lctlib_F_scorch_height(inc)
+        prob_mort%r_ck = lctlib_r_ck
+        prob_mort%ck_p = lctlib_ck_p
+        prob_mort%F_scorch_height = lctlib_F_scorch_height
       END IF
     END DO
   END FUNCTION calc_prob_mortality
