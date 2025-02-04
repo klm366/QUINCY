@@ -643,9 +643,9 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime,                                    &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock,                           &
     & ltpe_closed, ltpe_open, enforce_water_budget, l_latflow_to_streamflow,             &
-    & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,                       &
+    & soilhydmodel, interpol_mean, hydro_scale,  bot_drain_mode, w_soil_wilt_fract,      &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,  slope,       &
@@ -654,8 +654,9 @@ CONTAINS
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
     & tpe_overflow, evapo_deficit, wtr_latflow_res_srf, wtr_latflow_res_sl,              &
     ! out
+    & wtr_soil_sl_rel, ice_soil_sl_rel, immo_soil_sl_rel,                                &
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
-    & drainage_sl, wtr_transp_down, wtr_soilhyd_res, wtr_latflow_sl                      &
+    & drain_bot, drainage_sl, wtr_transp_down, wtr_soilhyd_res, wtr_latflow_sl           &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -666,8 +667,8 @@ CONTAINS
     INTEGER,  INTENT(in) :: &
       & nc, nsoil
     INTEGER, INTENT(in)  :: &
-      & enforce_water_budget, soilhydmodel, interpol_mean, hydro_scale
-    REAL(wp), INTENT(in) :: dtime, w_soil_wilt_fract
+      & enforce_water_budget, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode
+    REAL(wp), INTENT(in) :: dtime, w_soil_wilt_fract, k_brock
     LOGICAL, INTENT(in)  :: ltpe_closed
     LOGICAL, INTENT(in)  :: ltpe_open
     LOGICAL, INTENT(in)  :: l_latflow_to_streamflow
@@ -685,8 +686,9 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl, wtr_latflow_res_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & runoff_dunne, drainage, wtr_soilhyd_res
+      & runoff_dunne, drainage, drain_bot, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+      & wtr_soil_sl_rel, ice_soil_sl_rel, immo_soil_sl_rel,        &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down, drainage_sl, wtr_latflow_sl
 
@@ -694,7 +696,6 @@ CONTAINS
     REAL(wp) ::                       &
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
-      & drain_bot(nc),                & !< drainage towards bedrock [m]
       & wtr_pond_corr(nc),            & !< correction term for ponds fluxes due to saturated soils [m]
       & hyd_cond_bot(nc)                !< hydraulic conductivity of the bottom soil layer [m/s]
     INTEGER :: ic, is
@@ -742,8 +743,9 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculation of vertical soil water movement for multiple soil layers
-    CALL soilhyd(nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget, &
-      &    slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,         &
+    CALL soilhyd(nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock,  &
+      &    enforce_water_budget, slope, soilhydmodel, interpol_mean, hydro_scale,      &
+      &    bot_drain_mode, w_soil_wilt_fract,                                          &
       &    soil_depth_sl, wtr_wres_sl, wtr_field_cap_sl, wtr_wsat_sl,                  &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl,                         &
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
@@ -756,8 +758,8 @@ CONTAINS
     wtr_latflow_sl(:,:) = 0._wp
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
-      CALL soilhyd_lat(l_pf_soil, nc, nsoil, dtime,          &
-        &    flowlag, hyd_cond_bot,                          &
+      CALL soilhyd_lat(l_pf_soil, nc, nsoil, dtime, k_brock, &
+        &    bot_drain_mode, flowlag, hyd_cond_bot,          &
         &    soil_depth_sl, vol_field_cap_sl,                &
         &    ice_soil_sl, wtr_soil_sl,                       &
         &    wtr_latflow_res_sl, drainage_sl, drain_bot,     &
@@ -814,6 +816,7 @@ CONTAINS
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
       runoff_dunne(ic)  = runoff_dunne (ic) * rhoh2o / dtime
       drainage(ic)      = drainage     (ic) * rhoh2o / dtime
+      drain_bot(ic)     = drain_bot    (ic) * rhoh2o / dtime
       evapo_deficit(ic) = evapo_deficit(ic) * rhoh2o / dtime
     END DO
     !$ACC END PARALLEL LOOP
@@ -826,6 +829,28 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
+
+
+    ! Get saturation of the soil
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        IF (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is) > 0._wp) THEN        
+          wtr_soil_sl_rel(ic,is) = wtr_soil_sl(ic,is) / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
+          ice_soil_sl_rel(ic,is) = ice_soil_sl(ic,is) / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
+          immo_soil_sl_rel(ic,is) = ice_soil_sl(ic,is) + MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is)) &
+            &                     / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
+        ELSE
+          wtr_soil_sl_rel(ic,is) = -1._wp
+          ice_soil_sl_rel(ic,is) = -1._wp
+          immo_soil_sl_rel(ic,is) = -1._wp
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+
 
     !$ACC WAIT(1)
     !$ACC END DATA
@@ -960,9 +985,10 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(                                                       &
-    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget, &
-    & slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
-    & dsoil, wtr_wres_sl,                                                   &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock,  &
+    & enforce_water_budget,                                                 &
+    & slope, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode,      &
+    & w_soil_wilt_fract, dsoil, wtr_wres_sl,                                &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                       &
     & vol_porosity_sl, vol_field_cap_sl,                                    &
     & vol_wres_sl,                                                          &
@@ -977,7 +1003,7 @@ CONTAINS
     USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
 
     USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_, &
-      & drain_min, drain_max, drain_exp, k_brock
+      & drain_min, drain_max, drain_exp
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
@@ -989,8 +1015,10 @@ CONTAINS
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              ! vertical interpolation scheme
     INTEGER,  INTENT(in)            :: hydro_scale                !< hydrology scale scheme
+    INTEGER,  INTENT(in)            :: bot_drain_mode             !< scheme for bottom layer drainage
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
+    REAL(wp), INTENT(IN)            :: k_brock                    ! Hydraulic conductivity of bedrock
     REAL(wp), INTENT(IN)            :: slope(:)                   ! slope of gridcell / tile [/]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wres_sl(:,:)           !< residual water content of soil layer (reduced by ice) [m]
@@ -1206,7 +1234,16 @@ CONTAINS
             IF (l_pf_soil(ic)) THEN
               drain_bot(ic) = 0._wp
             ELSE
-              drain_bot(ic) = MIN(k_brock, hyd_cond_sl(ic,last_soil_layer(ic))) * dtime
+              IF ((bot_drain_mode == 1) .OR. (bot_drain_mode == 3) .OR. &
+                & (bot_drain_mode == 5) .OR. (bot_drain_mode == 6)) THEN
+                drain_bot(ic) = MIN(k_brock, hyd_cond_sl(ic,last_soil_layer(ic))) * dtime
+                drain_bot(ic) = MIN(drain_bot(ic), MAX(0._wp, &
+                  & wtr_soil_sl(ic,last_soil_layer(ic))-wtr_residual_sl(ic,last_soil_layer(ic))))
+              ELSE IF ((bot_drain_mode == 2) .OR. (bot_drain_mode == 4)) THEN
+                drain_bot(ic) = k_brock * dtime
+                drain_bot(ic) = MIN(drain_bot(ic), MAX(0._wp, &
+                  & wtr_soil_sl(ic,last_soil_layer(ic))-wtr_residual_sl(ic,last_soil_layer(ic))))
+              END IF
             END IF
           END IF
         END DO
@@ -1636,17 +1673,17 @@ CONTAINS
   !----------------------------------------------------------------------------------------------
 
   SUBROUTINE soilhyd_lat( &
-                          &    l_pf_soil, nc, nsoil, delta_time, &
-                          &    flowlag, hyd_cond_bot, soil_depth_sl, vol_field_cap_sl,               &
+                          &    l_pf_soil, nc, nsoil, delta_time, k_brock, &
+                          &    bot_drain_mode, flowlag, hyd_cond_bot, soil_depth_sl, vol_field_cap_sl, &
                           &    ice_soil_sl, wtr_soil_sl, wtr_latflow_res_sl, drainage_sl, drain_bot, &
                           &    wtr_latflow_sl)
-
-    USE mo_hydro_constants,    ONLY: k_brock
 
     LOGICAL, INTENT(IN)             :: l_pf_soil(:)               ! Permafrost within the soil above bedrock
     INTEGER,  INTENT(IN)            :: nc                         ! number of cells
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
+    INTEGER,  INTENT(IN)            :: bot_drain_mode
     REAL(wp), INTENT(IN)            :: delta_time                 ! time step length
+    REAL(wp), INTENT(IN)            :: k_brock                    ! Hydraulic conductivity of bedrock
     REAL(wp), INTENT(IN)            :: flowlag(:)                 ! lag factor determining the outflow [/]
     REAL(wp), INTENT(IN)            :: hyd_cond_bot(:)            ! hydraulic conductivity of the bottom soil layer [m/s]
     REAL(wp), INTENT(IN)            :: soil_depth_sl(:,:)         ! thicknesses of soil layers until edrock [m]
@@ -1682,7 +1719,12 @@ CONTAINS
       IF (l_pf_soil(ic)) THEN
         drain_bot_pot(ic) = 0._wp
       ELSE
-        drain_bot_pot(ic) = MIN(k_brock, hyd_cond_bot(ic)) * delta_time
+        IF ((bot_drain_mode == 1) .OR. (bot_drain_mode == 3)) THEN
+          drain_bot_pot(ic) = MIN(k_brock, hyd_cond_bot(ic)) * delta_time
+        ELSE IF ((bot_drain_mode == 2) .OR. (bot_drain_mode == 4) .OR. &
+          & (bot_drain_mode == 5) .OR. (bot_drain_mode == 6)) THEN
+          drain_bot_pot(ic) = k_brock * delta_time
+        END IF
       END IF
     END DO
 
@@ -1701,19 +1743,36 @@ CONTAINS
           wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) &
                                  &    - MIN(field_cap_sl(ic,is) - weq_sl(ic,is), wtr_latflow_res_sl(ic,is))
         END IF
-        ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
-        IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
-          drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
-          drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
-          wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
-          drain_bot(ic)               = drain_bot(ic) + drain_bot_act
-        END IF
-        ! Calculating the lateral flux to downstream unit / river
+        
+        IF ((bot_drain_mode == 1) .OR. (bot_drain_mode == 2) .OR. (bot_drain_mode == 5)) THEN
+          ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
+          IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+            drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
+            drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
+            wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
+            drain_bot(ic)               = drain_bot(ic) + drain_bot_act
+          END IF
+          ! Calculating the lateral flux to downstream unit / river
           IF (wtr_latflow_res_sl(ic,is) > 0._wp) THEN
             wtr_latflow_sl(ic,is)     = wtr_latflow_res_sl(ic,is) * flowlag(ic)
             ! Removing outflow from reservoir
             wtr_latflow_res_sl(ic,is) = wtr_latflow_res_sl(ic,is) - wtr_latflow_sl(ic,is)
           END IF
+        ELSE IF ((bot_drain_mode == 3) .OR. (bot_drain_mode == 4).OR. (bot_drain_mode == 6)) THEN
+          ! Calculating the lateral flux to downstream unit / river
+          IF (wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+            wtr_latflow_sl(ic,is)     = wtr_latflow_res_sl(ic,is) * flowlag(ic)
+            ! Removing outflow from reservoir
+            wtr_latflow_res_sl(ic,is) = wtr_latflow_res_sl(ic,is) - wtr_latflow_sl(ic,is)
+          END IF
+          ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
+          IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+            drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
+            drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
+            wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
+            drain_bot(ic)               = drain_bot(ic) + drain_bot_act
+          END IF
+        END IF
       END DO
     END DO
     !$ACC END PARALLEL LOOP

@@ -234,9 +234,9 @@ CONTAINS
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>
-  !! Calculates the relative soil humidity wrt field capacity
+  !! Calculates the relative soil humidity wrt maximum soil water capacity and residual water content
   !!
-  REAL(wp) FUNCTION relative_humidity_soil(ws, fc)
+  REAL(wp) FUNCTION relative_humidity_soil(ws, ws_min, ws_max)
 
     !$ACC ROUTINE SEQ
 
@@ -244,14 +244,17 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
-      fc                      !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
+      & ws_min,             & !< minimum moisture content [m], e.g. of uppermost soil layer
+      & ws_max                !< maximum moisture content [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
 
-    moisture = MIN(ws, fc)
+    moisture = MIN(ws, ws_max)
     IF (moisture > 0._wp) THEN
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
-                                                                          !  lower fc. Note, fc has to be  >= than moisture!
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(MAX(moisture - ws_min, 0._wp) / (ws_max - ws_min) * pi))
+      ! relative_humidity increases with higher moisture
+      ! and lower maximum water capacity.
+      ! Note, ws_max has to be >= than moisture and values below ws_min result in zero relative humidity!
     ELSE
       relative_humidity_soil = 0._wp
     END IF
@@ -520,7 +523,7 @@ CONTAINS
                 &               heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / (alf * rhoh2o) &
                 &              )
             ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoi))
+              melt(ic,is) = MIN(ice(ic,is), heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / (alf * rhoh2o))
             END IF
           END DO
         END DO
@@ -533,10 +536,10 @@ CONTAINS
             ws(ic,is) = ws(ic,is) - frozen(ic,is) + melt(ic,is)
             ice(ic,is) = ice(ic,is) + frozen(ic,is) - melt(ic,is)
             t_soil_sl(ic,is) = t_soil_sl(ic,is) + frozen(ic,is) * alf * rhoh2o / heat_cap(ic,is) - &
-              & melt(ic,is) * alf * rhoi / heat_cap(ic,is)
+              & melt(ic,is) * alf * rhoh2o / heat_cap(ic,is)
 
             frozen(ic,is) = frozen(ic,is) * rhoh2o / delta_time
-            melt  (ic,is) = melt  (ic,is) * rhoi   / delta_time
+            melt  (ic,is) = melt  (ic,is) * rhoh2o   / delta_time
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -586,7 +589,7 @@ CONTAINS
               ELSE IF (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is  ) < tmelt) THEN
                   ! in case water is present this would increase the energy required to bring temperatures above the melting point
                   thaw_depth(ic) = zbot(is-1) + dsoil(ic,is) * (t_soil_sl(ic,is-1) - tmelt) &
-                    & / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is) + ice(ic,is) * alf * rhoi / heat_cap(ic,is))
+                    & / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is) + ice(ic,is) * alf * rhoh2o / heat_cap(ic,is))
               END IF
             END IF
           END DO

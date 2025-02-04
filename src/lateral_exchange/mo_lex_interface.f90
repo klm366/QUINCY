@@ -433,6 +433,7 @@ CONTAINS
       &  wtr_lex_net_sl,         &
       &  wtr_infil_in_sl,        &
       &  wtr_diffusion_in_sl,    &
+      &  drainage_sl,            &
       &  wtr_drainage_out_sl,    &
       &  wtr_diffusion_out_sl,   &
       &  wtr_soil_sl,            &
@@ -596,6 +597,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)         ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_lex_net_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, drainage_sl)            ! inout
 
     dsl4jsb_Get_var3D_onChunk(SSE_,   heat_cond_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,   vol_heat_cap_sl)        ! in
@@ -1135,6 +1137,9 @@ CONTAINS
       DO ic = 1,nc
         drainage(ic) = drainage(ic) &
           & + SUM(wtr_latflow_sl(ic,:)) / dtime * rhoh2o - SUM(wtr_drainage_out_sl(ic,:))
+
+        drainage_sl(ic,:) = drainage_sl(ic,:) &
+          & + wtr_latflow_sl(ic,:) / dtime * rhoh2o - wtr_drainage_out_sl(ic,:)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -1191,6 +1196,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil_lex,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, new_snow_soil,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,            weighted_by_fract)
