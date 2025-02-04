@@ -77,6 +77,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
+    dsl4jsb_Real2D_onDomain      :: i_surface 
 
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
     dsl4jsb_Real3D_onDomain      :: live_fuel_consumption_1hr
@@ -97,11 +98,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daytime)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned_fract)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, i_surface) 
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
     ! ----------------------------------------------------------------------------------------------------- !
-    WRITE(*,*) "dfire_init..."
     pm_fire = 0._wp
     precip_daytime = 0._wp
     precip_qc_mavg = 0._wp
@@ -109,6 +110,7 @@ CONTAINS
     precip_mavg = 0._wp
     area_burned = 0._wp
     area_burned_fract = 0._wp
+    i_surface = 0._wp
     dead_fuel_consumption_1hr = 0._wp
     live_fuel_consumption_1hr = 0._wp
 
@@ -125,8 +127,6 @@ CONTAINS
       dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_qc_mavg)
     ENDIF
 
-    npft = tile%Get_no_of_children()
-    WRITE(*,*) "dfire_init:: npft=", npft
   END SUBROUTINE dfire_init
 #endif
 END MODULE mo_dfire_init

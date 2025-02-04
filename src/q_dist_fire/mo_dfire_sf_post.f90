@@ -28,10 +28,11 @@ MODULE mo_dfire_sf_post
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
+  USE mo_veg_constants,         ONLY: itree, igrass
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr, df_sf_fc_1hr_idx, df_sf_fc_100hr_idx
-  USE mo_dfire_sf_damage,       ONLY: calc_prob_mortality
+  USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -84,14 +85,19 @@ CONTAINS
     REAL(wp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
     REAL(wp)                              :: lctlib_growthform(options%nc)
 
-    REAL(wp)                              :: prob_mort(options%nc) !< Tree probability of mortality due to fire [-]
     REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< True: gridcell can burn [-]
+
+    ! todo: import from spitfire.f90 as it is calculated there
+    REAL(wp)                              :: dead_frac_consump(options%nc, df_sf_fc_full_nr) !< Dead fuel fraction of consumption by fuel classes [g DM m-2]
+
+    TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
+    dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [?]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
@@ -137,6 +143,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [?]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -158,6 +165,7 @@ CONTAINS
 
     lctlib_growthform(:) = lctlib%growthform
     is_fire_intense_enough = .TRUE. !< todo: import somehow from mo_dfire_spitfire.f90
+    prob_mort = t_sf_prob_mort(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -168,13 +176,13 @@ CONTAINS
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
       prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
-                                      lctlib%q_crown_length, lctlib%q_crown_damage_r_ck, lctlib%q_crown_damage_ck_p, &
-                                      lctlib%q_F_scorch_height, &
-                                      lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
+                                      [lctlib%q_crown_length], [lctlib%q_crown_damage_p], [lctlib%q_crown_damage_r_ck], &
+                                      [lctlib%q_F_scorch_height], & ! todo: pass a scalar, no arrays required. Same in QS
+                                      [lctlib%q_bark_thickness_par1], [lctlib%q_bark_thickness_par2], &
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
                                       w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      dead_frac_consump(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                      dead_frac_consump(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: import from spitfire.f90
                                       mask_opt=is_fire_intense_enough)
 
 !      live_fuel = fuel_cls % Calc_live_fuel()
