@@ -1025,14 +1025,14 @@ CONTAINS
               READ(line(pos:length),*) lctlib(1:nlct)%q_crown_length
               exists_q_crown_length = .TRUE.
             CASE ('q_bark_thickness_par1')
-              READ(line(pos:length),*) lctlib(1:nlct)%q_bark_bark_thickness_par1
+              READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par1
               exists_q_bark_thickness_par1 = .TRUE.
             CASE ('q_bark_thickness_par2')
               READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par2
               exists_q_bark_thickness_par2 = .TRUE.
             CASE ('q_F_scorch_height')
               READ(line(pos:length),*) lctlib(1:nlct)%q_F_scorch_height
-              exists_ = .TRUE.
+              exists_q_F_scorch_height = .TRUE.
             CASE default
               ! nothing to do
             END SELECT
