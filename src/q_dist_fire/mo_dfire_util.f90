@@ -38,6 +38,8 @@ MODULE mo_dfire_util
   PRIVATE
   PUBLIC :: calculate_time_average_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
 
+  PUBLIC :: logical2real, real2logical
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_util'
 
 CONTAINS
@@ -379,6 +381,39 @@ CONTAINS
     END DO
 
   END SUBROUTINE calculate_pure_moving_averages
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Convert logical into real(wp)
+  !> TRUE=1._wp, FALSE=0._wp
+  !>
+  ELEMENTAL PURE REAL(wp) FUNCTION logical2real(val)
+    LOGICAL, INTENT(in) :: val
+
+    IF (val) THEN
+      logical2real = 1._wp
+    ELSE
+      logical2real = 0._wp
+    ENDIF
+
+  END FUNCTION logical2real
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Convert real to logical:
+  !> TRUE=1._wp, FALSE=0._wp
+  !>
+  PURE ELEMENTAL LOGICAL FUNCTION real2logical(val)
+    REAL(wp), INTENT(in) :: val
+
+    IF (val == 1._wp) THEN
+      real2logical = .TRUE.
+    ELSE ! (val == 0._wp)
+      real2logical = .FALSE.
+    ENDIF
+  END FUNCTION real2logical
 
 #endif
 END MODULE mo_dfire_util
