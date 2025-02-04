@@ -1063,7 +1063,6 @@ CONTAINS
         ! ------------------------------------------------------------------
       END DO
       DEALLOCATE(itmp)
-
        !> Test if the lctLib parameter could be read, if not finish()
        !>
 
