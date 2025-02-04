@@ -55,6 +55,10 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
     TYPE(t_jsb_var_real2d)               :: pm_fire             !< Tree probability of mortality of tree [-]
 
+    TYPE(t_jsb_var_real2d)               :: mask_is_fire_intense_enough !< Mask (LOGICAL): TRUE=current fire is intense enough to exist [-]
+                                                                !< Conversion required from REAL(wp) <-> LOGICAL
+                                                                !< True = 1._wp, False = 0._wp
+
     ! dead fuel
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1hr !< [g DM m-2]
     !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_10hr !< [g DM m-2]
@@ -145,6 +149,16 @@ CONTAINS
     CALL mem%Add_var('pm_fire', mem%pm_fire, &
         & hgrid, vgrid_surface, &
         & t_cf('pm_fire', '-', 'Tree probability of mortality by fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
+        & hgrid, vgrid_surface, &
+        & t_cf('mask_is_fire_instense_enough', '-', 'True when fire is intense enough to exist'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

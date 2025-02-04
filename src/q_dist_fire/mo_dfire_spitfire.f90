@@ -76,7 +76,7 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr
   USE mo_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
-  USE mo_dfire_constants,       ONLY: df_sf_calorific_heat_content
+  USE mo_dfire_constants,       ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
 
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
@@ -118,7 +118,9 @@ MODULE mo_dfire_spitfire
 
     REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
     REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE :: i_surface(:)               !<
+    REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
+
+    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist 
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -150,6 +152,7 @@ CONTAINS
     ALLOCATE(sf_spitfire % dead_frac_consump(nc, nfuels))
     ALLOCATE(sf_spitfire % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
     ALLOCATE(sf_spitfire % i_surface(nc))
+    ALLOCATE(sf_spitfire % is_fire_intense_enough(nc))
 
     sf_spitfire % e_n_ignitions = 0._wp
     sf_spitfire % e_n_humans = 0._wp
@@ -161,6 +164,7 @@ CONTAINS
     sf_spitfire % dead_frac_consump = 0._wp
     sf_spitfire % fc_dead_cls = 0._wp
     sf_spitfire % i_surface = 0._wp
+    sf_spitfire % is_fire_intense_enough = .FALSE.
 
   END FUNCTION create_sf_spitfire
 
@@ -262,6 +266,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
+    dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
+                                                               ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel                  ! in [g DM m-2]
@@ -326,6 +332,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
@@ -450,6 +457,7 @@ CONTAINS
                         dsl4jsb_Config(DFIRE_)%a_nd, &
                         dsl4jsb_Config(DFIRE_)%lightning_frequency, &
                         df_sf_calorific_heat_content, &
+                        df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
                         moisture_extinction, &
                         ab_moisture, & ! soil properties
@@ -470,6 +478,7 @@ CONTAINS
     area_burned_fract = tile_fract * 0.05
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
+    mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
 
 
     write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
@@ -486,7 +495,7 @@ CONTAINS
   SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
-                  const_calorific_heat_content, &
+                  const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
                   moisture_extinction, &
                   ab_moisture, & ! soil properties
@@ -508,6 +517,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
 
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
+    REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1] 
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
@@ -635,7 +645,28 @@ CONTAINS
                                                 spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                                 mask=has_fire_conditions)
 
+    spitfire % is_fire_intense_enough = has_fire_conditions .EQV. &
+                                          (spitfire % i_surface >= const_i_surface_thd)
+
   END SUBROUTINE calc_spitfire
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Convert logical into real(wp)
+  !> TRUE=1._wp, FALSE=0._wp
+  !> todo: move to mo_dfire_util.f90
+  !>
+  ELEMENTAL PURE REAL(wp) FUNCTION logical2real(val) 
+    LOGICAL, INTENT(in) :: val
+
+    IF (val) THEN
+      logical2real = 1._wp
+    ELSE
+      logical2real = 0._wp
+    ENDIF 
+
+  END FUNCTION logical2real
 
 
   ! ======================================================================================================= !

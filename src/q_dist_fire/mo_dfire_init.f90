@@ -70,6 +70,7 @@ CONTAINS
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onDomain      :: pm_fire
+    dsl4jsb_Real2D_onDomain      :: mask_is_fire_intense_enough 
     dsl4jsb_Real2D_onDomain      :: precip_daytime
     dsl4jsb_Real2D_onDomain      :: precip_qc_mavg
     dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
@@ -93,6 +94,7 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_mavg)
@@ -106,6 +108,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
     ! ----------------------------------------------------------------------------------------------------- !
     pm_fire = 0._wp
+    mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp
     precip_qc_mavg = 0._wp
     precip_daily_mmd = 0._wp

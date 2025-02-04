@@ -86,7 +86,7 @@ CONTAINS
     REAL(wp)                              :: lctlib_growthform(options%nc)
 
     REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
-    LOGICAL                               :: is_fire_intense_enough(options%nc) !< True: gridcell can burn [-]
+    LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
 
@@ -95,7 +95,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
-    dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [?]
+    dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
+    dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
@@ -142,7 +143,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [?]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -161,9 +163,9 @@ CONTAINS
     ! init here
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
+    is_fire_intense_enough = .FALSE.
 
     lctlib_growthform(:) = lctlib%growthform
-    is_fire_intense_enough = .TRUE. !< todo: import somehow from mo_dfire_spitfire.f90
     prob_mort = t_sf_prob_mort(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -174,6 +176,8 @@ CONTAINS
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
+      is_fire_intense_enough = real2logical(mask_is_fire_intense_enough)
+
       prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                       lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                       lctlib%q_F_scorch_height, & 
@@ -204,6 +208,21 @@ CONTAINS
 
   END SUBROUTINE update_dfire_sf_post
 
+
+  ! ======================================================================================================= !
+  !>
+  !> real2logical
+  !> todo: move to mo_dfire_util.f90
+  !>
+  PURE ELEMENTAL LOGICAL FUNCTION real2logical(val)
+    REAL(wp), INTENT(in) :: val
+
+    IF (val == 1._wp) THEN
+      real2logical = .TRUE.
+    ELSE ! (val == 0._wp)
+      real2logical = .FALSE.
+    ENDIF
+  END FUNCTION real2logical
 
 #endif
 END MODULE mo_dfire_sf_post
