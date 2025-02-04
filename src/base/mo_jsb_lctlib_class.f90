@@ -1027,6 +1027,7 @@ CONTAINS
           CASE ('albedolitternir')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
             exists_AlbedoLitterNIR = .TRUE.
+          ! Quincy disturbance: spitfire
           CASE ('q_fuel_bulk_density')
             READ(line(pos:length),*) lctlib(1:nlct)%q_fuel_bulk_density
             exists_q_fuel_bulk_density = .TRUE.
