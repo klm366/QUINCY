@@ -96,7 +96,7 @@ MODULE mo_dfire_constants
 
   REAL(wp), PARAMETER :: df_sf_calorific_heat_content = 18000._wp !< From Thonicke et al. (2010), Appendix A [kJ kg-1]
 
-  !REAL(wp), PARAMETER :: df_sf_units_m2_to_cm2 = 10000._wp  !< units conversion from m-2 to cm-2
+  REAL(wp), PARAMETER :: df_sf_units_m2_to_cm2 = 10000._wp  !< units conversion from m-2 to cm-2
 
   !< "Live" fuel array indices from t_sf_fuel_class
   INTEGER, PARAMETER, PUBLIC :: sf_fuel_live_fuel_nr = 6 !< (veg_pool tree) leaf, sap wood, heart wood, labile, reserve, fruit
