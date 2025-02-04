@@ -1006,7 +1006,6 @@ CONTAINS
               READ(line(pos:length),*) lctlib(1:nlct)%k_som_slow_init
               exists_k_som_slow_init = .TRUE.
             ! Quincy disturbance: spitfire
-            ! todo: rename to avoid any clashing vs current implementation
             CASE ('q_fuel_bulk_density')
               READ(line(pos:length),*) lctlib(1:nlct)%q_fuel_bulk_density
               exists_q_fuel_bulk_density = .TRUE.
