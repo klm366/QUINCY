@@ -34,7 +34,8 @@ MODULE mo_dfire_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
-                                      df_sf_vgrid_live_fuel_pools_name
+                                      df_sf_vgrid_live_fuel_pools_name, &
+                                      df_sf_vgrid_fuel_classes_name
 
   IMPLICIT NONE
 
@@ -64,6 +65,8 @@ MODULE mo_dfire_memory_class
     !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_10hr !< [g DM m-2]
     !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_100hr !< [g DM m-2]
     !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1000hr !< [g DM m-2]
+
+    TYPE(t_jsb_var_real3d)               :: dead_frac_consumption !< [-]
 
     TYPE(t_jsb_var_real2d)               :: area_burned_fract   !< Fraction of the area burned [%]
     TYPE(t_jsb_var_real2d)               :: area_burned         !< Area burned in a gridcell [ha ts-1]m-2]
@@ -106,6 +109,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                    !> Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools            !> Dead fuel pools grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools            !> Live fuel pools grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_classes               !> Fuel classes grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -115,6 +119,7 @@ CONTAINS
     vgrid_surface => Get_vgrid('surface')
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
+    vgrid_fuel_classes => Get_vgrid(df_sf_vgrid_fuel_classes_name)
     ! ----------------------------------------------------------------------------------------------------- !
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
@@ -221,6 +226,16 @@ CONTAINS
     CALL mem%Add_var('live_fuel_consumption_1hr', mem%live_fuel_consumption_1hr, &
         & hgrid, vgrid_live_fuel_pools, &
         & t_cf('live_fuel_consumption_1hr', 'g DM m-2', '1 hour live fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dead_frac_consumption', mem%dead_frac_consumption, &
+        & hgrid, vgrid_fuel_classes, &
+        & t_cf('dead_frac_consumption', '-', 'Dead fuel fraction of consumption'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

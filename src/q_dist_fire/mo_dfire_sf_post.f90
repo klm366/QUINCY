@@ -97,6 +97,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
+    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [?]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
@@ -143,6 +144,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [?]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
@@ -182,7 +184,7 @@ CONTAINS
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
                                       w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      dead_frac_consump(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: import from spitfire.f90
+                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & 
                                       mask_opt=is_fire_intense_enough)
 
 !      live_fuel = fuel_cls % Calc_live_fuel()

@@ -293,6 +293,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
+    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! out [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -354,6 +355,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! out [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! out [-]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! out [kW m-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -466,7 +468,9 @@ CONTAINS
 
     area_burned = tile_area * 0.05        !< AB = 5%
     area_burned_fract = tile_fract * 0.05
+    dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
+
 
     write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &

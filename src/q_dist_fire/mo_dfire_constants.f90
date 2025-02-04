@@ -56,6 +56,7 @@ MODULE mo_dfire_constants
 
   CHARACTER(*), PARAMETER :: df_sf_vgrid_dead_fuel_pools_name="vg_dd_fl_pls" ! vgrid_dead_fuel_pools
   CHARACTER(*), PARAMETER :: df_sf_vgrid_live_fuel_pools_name="vg_lv_fl_pls" ! vgrid_live_fuel_pools
+  CHARACTER(*), PARAMETER :: df_sf_vgrid_fuel_classes_name="vg_fl_cls" ! vgrid_fuel_classes
 
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 
