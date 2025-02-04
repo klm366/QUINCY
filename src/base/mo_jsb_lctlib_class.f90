@@ -226,15 +226,16 @@ MODULE mo_jsb_lctlib_class
       & k_som_fast_init               , &
       & k_som_slow_init
 
-    ! Quincy disturbance: spitfire (Thonicke)
-    REAL(wp) :: fbd_pb                , &
-                moisture_extinction   , &
-                fwd_wind_factor       , &
-                crown_damage_r_ck, &
-                crown_damage_p, &
-                crown_length, &
-                par1, par2, &
-                F_scorch_height
+    ! --- Parameters used in Quincy SPITFIRE (mo_dfire_spitfire.f90) -------------------------------------------------------------
+    REAL(wp) :: q_fuel_bulk_density          , &
+                q_moisture_extinction        , &
+                q_fwd_wind_factor            , &
+                q_crown_damage_r_ck          , &
+                q_crown_damage_p             , &
+                q_crown_length               , &
+                q_bark_thickness_par1        , &
+                q_bark_thickness_par2   , &
+                q_F_scorch_height
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
@@ -447,15 +448,15 @@ CONTAINS
     LOGICAL            :: exists_k_root_dist = .FALSE.
     LOGICAL            :: exists_k_som_fast_init = .FALSE.
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
-    LOGICAL            :: exists_fbd_pb = .FALSE.
-    LOGICAL            :: exists_moisture_extinction = .FALSE.
-    LOGICAL            :: exists_fwd_wind_factor = .FALSE.
-    LOGICAL            :: exists_crown_damage_r_ck = .FALSE.
-    LOGICAL            :: exists_crown_damage_p = .FALSE.
-    LOGICAL            :: exists_crown_length = .FALSE.
-    LOGICAL            :: exists_par1 = .FALSE.
-    LOGICAL            :: exists_par2 = .FALSE.
-    LOGICAL            :: exists_F_scorch_height = .FALSE.
+    LOGICAL            :: exists_q_fuel_bulk_density = .FALSE.
+    LOGICAL            :: exists_q_moisture_extinction = .FALSE.
+    LOGICAL            :: exists_q_fwd_wind_factor = .FALSE.
+    LOGICAL            :: exists_q_crown_damage_r_ck = .FALSE.
+    LOGICAL            :: exists_q_crown_damage_p = .FALSE.
+    LOGICAL            :: exists_q_crown_length = .FALSE.
+    LOGICAL            :: exists_q_bark_thickness_par1 = .FALSE.
+    LOGICAL            :: exists_q_bark_thickness_par2 = .FALSE.
+    LOGICAL            :: exists_q_F_scorch_height = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1006,32 +1007,32 @@ CONTAINS
               exists_k_som_slow_init = .TRUE.
             ! Quincy disturbance: spitfire
             ! todo: rename to avoid any clashing vs current implementation
-            CASE ('fbd_pb')
-              READ(line(pos:length),*) lctlib(1:nlct)%fbd_pb
-              exists_fbd_pb = .TRUE.
-            CASE ('moisture_extinction')
-              READ(line(pos:length),*) lctlib(1:nlct)%moisture_extinction
-              exists_moisture_extinction = .TRUE.
-            CASE ('fwd_wind_factor')
-              READ(line(pos:length),*) lctlib(1:nlct)%fwd_wind_factor
-              exists_fwd_wind_factor = .TRUE.
-            CASE ('crown_damage_r_ck')
-              READ(line(pos:length),*) lctlib(1:nlct)%crown_damage_r_ck
-              exists_ = .TRUE.
-            CASE ('crown_damage_p')
-              READ(line(pos:length),*) lctlib(1:nlct)%crown_damage_p
-              exists_ = .TRUE.
-            CASE ('crown_length')
-              READ(line(pos:length),*) lctlib(1:nlct)%crown_length
-              exists_ = .TRUE.
-            CASE ('par1')
-              READ(line(pos:length),*) lctlib(1:nlct)%par1
-              exists_ = .TRUE.
-            CASE ('par2')
-              READ(line(pos:length),*) lctlib(1:nlct)%par2
-              exists_ = .TRUE.
-            CASE ('scorch_heigth_f')
-              READ(line(pos:length),*) lctlib(1:nlct)%F_scorch_height
+            CASE ('q_fuel_bulk_density')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_fuel_bulk_density
+              exists_q_fuel_bulk_density = .TRUE.
+            CASE ('q_moisture_extinction')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction
+              exists_q_moisture_extinction = .TRUE.
+            CASE ('q_fwd_wind_factor')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_fwd_wind_factor
+              exists_q_fwd_wind_factor = .TRUE.
+            CASE ('q_crown_damage_r_ck')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_crown_damage_r_ck
+              exists_q_crown_damage_r_ck = .TRUE.
+            CASE ('q_crown_damage_p')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_crown_damage_p
+              exists_q_crown_damage_p = .TRUE.
+            CASE ('q_crown_length')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_crown_length
+              exists_q_crown_length = .TRUE.
+            CASE ('q_bark_thickness_par1')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_bark_bark_thickness_par1
+              exists_q_bark_thickness_par1 = .TRUE.
+            CASE ('q_bark_thickness_par2')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par2
+              exists_q_bark_thickness_par2 = .TRUE.
+            CASE ('q_F_scorch_height')
+              READ(line(pos:length),*) lctlib(1:nlct)%q_F_scorch_height
               exists_ = .TRUE.
             CASE default
               ! nothing to do
@@ -1336,8 +1337,24 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_fbd_pb) &
-            CALL finish('init_lctlib','No data for fbd_pb found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_fuel_bulk_density) &
+            CALL finish('init_lctlib','No data for q_fuel_bulk_density found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_moisture_extinction) &
+            CALL finish('init_lctlib','No data for q_moisture_extinction found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_fwd_wind_factor) &
+            CALL finish('init_lctlib','No data for q_fwd_wind_factor found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_damage_r_ck) &
+            CALL finish('init_lctlib','No data for q_crown_damage_r_ck found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_damage_p) &
+            CALL finish('init_lctlib','No data for q_crown_damage_p found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_length) &
+            CALL finish('init_lctlib','No data for q_crown_lenght found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_bark_thickness_par1) &
+            CALL finish('init_lctlib','No data for q_bark_thickness_par1 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_bark_thickness_par2) &
+            CALL finish('init_lctlib','No data for q_bark_thickness_par2 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_F_scorch_height) &
+            CALL finish('init_lctlib','No data for q_F_scorch_height found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1671,7 +1688,15 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%fbd_pb, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_fuel_bulk_density, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_moisture_extinction, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_fwd_wind_factor, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_damage_r_ck, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_damage_p, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_length, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_bark_thickness_par1, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_bark_thickness_par2, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_F_scorch_height, p_io, mpi_comm)
       END IF
 #endif
     END IF
