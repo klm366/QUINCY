@@ -231,8 +231,8 @@ CONTAINS
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
     config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
-    moisture_extinction = lctlib%moisture_extinction ! aggregation: weighted over tile fraction
-    fwd_wind_factor = lctlib%fwd_wind_factor ! aggregation: weighted over tile fraction
+    moisture_extinction = lctlib%q_moisture_extinction ! aggregation: weighted over tile fraction
+    fwd_wind_factor = lctlib%q_fwd_wind_factor ! aggregation: weighted over tile fraction
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -279,7 +279,7 @@ CONTAINS
 
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
-      fuel_bulk_density(:) = lctlib%fbd_pb * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
+      fuel_bulk_density(:) = lctlib%q_fuel_bulk_density * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
     END DO
 
     dead_fuel_1hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1hr_idx)

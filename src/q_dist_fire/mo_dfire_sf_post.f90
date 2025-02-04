@@ -168,8 +168,9 @@ CONTAINS
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
       prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
-                                      lctlib%crown_length, lctlib%r_ck, lctlib%ck_p, lctlib%F_scorch_height, &
-                                      lctlib%par1, lctlib%par2, &
+                                      lctlib%q_crown_length, lctlib%q_crown_damage_r_ck, lctlib%q_crown_damage_ck_p, &
+                                      lctlib%q_F_scorch_height, &
+                                      lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
                                       w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
