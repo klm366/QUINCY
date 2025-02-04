@@ -93,6 +93,7 @@ MODULE mo_dfire_spitfire
   USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_dfire_util,            ONLY: logical2real
 
   IMPLICIT NONE
 
@@ -649,24 +650,6 @@ CONTAINS
                                           (spitfire % i_surface >= const_i_surface_thd)
 
   END SUBROUTINE calc_spitfire
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Convert logical into real(wp)
-  !> TRUE=1._wp, FALSE=0._wp
-  !> todo: move to mo_dfire_util.f90
-  !>
-  ELEMENTAL PURE REAL(wp) FUNCTION logical2real(val) 
-    LOGICAL, INTENT(in) :: val
-
-    IF (val) THEN
-      logical2real = 1._wp
-    ELSE
-      logical2real = 0._wp
-    ENDIF 
-
-  END FUNCTION logical2real
 
 
   ! ======================================================================================================= !

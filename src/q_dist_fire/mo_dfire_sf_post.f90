@@ -33,6 +33,7 @@ MODULE mo_dfire_sf_post
   USE mo_jsb_grid,              ONLY: Get_grid
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr, df_sf_fc_1hr_idx, df_sf_fc_100hr_idx
   USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
+  USE mo_dfire_util,            ONLY: real2logical
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -207,22 +208,6 @@ CONTAINS
     WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
   END SUBROUTINE update_dfire_sf_post
-
-
-  ! ======================================================================================================= !
-  !>
-  !> real2logical
-  !> todo: move to mo_dfire_util.f90
-  !>
-  PURE ELEMENTAL LOGICAL FUNCTION real2logical(val)
-    REAL(wp), INTENT(in) :: val
-
-    IF (val == 1._wp) THEN
-      real2logical = .TRUE.
-    ELSE ! (val == 0._wp)
-      real2logical = .FALSE.
-    ENDIF
-  END FUNCTION real2logical
 
 #endif
 END MODULE mo_dfire_sf_post
