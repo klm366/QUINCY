@@ -315,7 +315,7 @@ q_bark_thickness_par1 0.0301 0.0451 0.1085 0.0347 0.03295 0.0347 0.0 0.0 0.0 0.0
 q_bark_thickness_par2 0.0281 0.1412 0.212 0.1086 0.1612 0.1086 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 
 # Scorch height, from Thonicke et al. (2010), Table 1
-q_F_scorch_height 0.1487 0.371 0.061 0.094 0.105 0.049 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+q_f_scorch_height 0.1487 0.371 0.061 0.094 0.105 0.049 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 
 # Fuel bulk density [kg m-3], from Thonicke et al. (2010), Table 1
 q_fuel_bulk_density 25.0 10.0 25.0 22.0 25.0 22.0 2.0 2.0 2.0 2.0 2.0 2.0 0.0 0.0
