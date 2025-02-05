@@ -141,6 +141,7 @@ CONTAINS
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
+    dsl4jsb_Real2D_onChunk      :: height      ! in [m]
 
     dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
@@ -187,6 +188,7 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                ! in
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
@@ -298,8 +300,8 @@ CONTAINS
     live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
-                        ", area, fraction ref, tile func, forest_fract=", grid_cell_area(9),  &
-                        tile_fract_ref(9), tile_fract(9), forest_fract(9)
+                        ", area, fraction ref, tile func, forest_fract, height=", grid_cell_area(1),  &
+                        tile_fract_ref(1), tile_fract(1), forest_fract(1), height(1)
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel
