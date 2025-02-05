@@ -21,7 +21,7 @@
 MODULE mo_jsb_lcc
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,           ONLY: finish, message
+  USE mo_exception,           ONLY: finish, message, message_text
   USE mo_util,                ONLY: int2string, one_of
   USE mo_util_string,         ONLY: tolower
   USE mo_kind,                ONLY: wp
@@ -472,8 +472,11 @@ CONTAINS
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: Lost area exceeds available area ' &
-        & //'for lcc process '// TRIM(lcc_relocations%name) //'! Please check!')
+      CALL message(routine, 'Violation of assertion: Lost area exceeds available area ' &
+        & //'for lcc process '// TRIM(lcc_relocations%name))
+      WRITE (message_text,*) 'MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
+        & ' (nc,tile)'
+      CALL finish(routine, message_text)
     ENDIF
 
     !>
