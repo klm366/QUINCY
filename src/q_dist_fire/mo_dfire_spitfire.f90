@@ -407,8 +407,8 @@ CONTAINS
 
     tile_area = grid_cell_area * tile_fract
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
-    WRITE(*,*) "(spitfire.f90) calc_spitfire:: tile_fract, tile_area, gc area", tile_fract(9), &
-            tile_area(9), grid_cell_area(9)
+!    WRITE(*,*) "(spitfire.f90) calc_spitfire:: tile_fract, tile_area, gc area", tile_fract(9), &
+!            tile_area(9), grid_cell_area(9)
 
     ! assertion
     IF (ANY(pot_burn_area > tile_area)) THEN
@@ -471,9 +471,9 @@ CONTAINS
                         sf_spitfire)
 
     !< Test: assume 5% live fuel consumption
-    live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
+!    live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
     !< Test: assume 3% dead fuel consumption
-    dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
+!    dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
 
     area_burned = tile_area * 0.05        !< AB = 5%
     area_burned_fract = tile_fract * 0.05
@@ -481,8 +481,7 @@ CONTAINS
     i_surface = sf_spitfire % i_surface
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
 
-
-    write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
+    !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
     !        t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
     !        fuel_bulk_density(1)
