@@ -365,6 +365,9 @@ CONTAINS
     ! quincy model with 11 PFT tiles incl. bare soil
     CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
+    ! quincy model with 12 PFT tiles (incl. cold shrubs) 
+    CASE ('quincy_12_pfts')
+      lctlib_filename = 'lctlib_quincy_nlct15.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
