@@ -84,7 +84,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: live_fc_1hr_tile(:,:) !< 1 hour live fuel consumptino for current tile (#nc, #live fuel pools) [g DM m-2]
 
     REAL(wp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
-    REAL(wp)                              :: lctlib_growthform(options%nc)
 
     REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
@@ -166,18 +165,22 @@ CONTAINS
     tile_fract => tile%fract(ics:ice, iblk)
     is_fire_intense_enough = .FALSE.
 
-    lctlib_growthform(:) = lctlib%growthform
     prob_mort = t_sf_prob_mort(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
-      is_fire_intense_enough = real2logical(mask_is_fire_intense_enough)
+      dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
+      WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
+            area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
+
+      is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &
+                                (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
+                                (height > 0._wp) ! height is not yet initialized, skip
 
       prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                       lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
@@ -205,7 +208,7 @@ CONTAINS
     ! calc Residue
     ! Feedbacks
 
-    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
+!    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
   END SUBROUTINE update_dfire_sf_post
 
