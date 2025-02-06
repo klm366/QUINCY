@@ -119,6 +119,12 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
     REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
+    REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
+    REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
+                                          
+    REAL(wp)                              :: mass_imbalance_emitted_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elems) [mol m-2]
+    REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
+
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -292,22 +298,54 @@ CONTAINS
                                     emissions_live_el, & ! out [molX/m2]
                                     mask=is_fire_intense_enough)
 
-!    !< Is there any C, N and/or P left after Emissions?
-!    CALL sf_calc_residue(spitfire % fc_dead_el, & ! in [molX/m2]
-!        spitfire % emissions_dead_el, & ! [molX/m2]
-!        spitfire % residue_dead_el, & ! out [molX/m2]
-!        spitfire % mass_imbalance_emitted_dead_el) ! [molX/m2]
-!
-!    CALL sf_calc_residue(spitfire % fc_live_el, & ! in [molX/m2]
-!        spitfire % emissions_live_el, & ! [molX/m2]
-!        spitfire % residue_live_el, & ! out [molX/m2]
-!        spitfire % mass_imbalance_emitted_live_el) ! [molX/m2]
+    !< Is there any C, N and/or P left after Emissions?
+    CALL sf_calc_residue(fc_dead_el, & ! in [molX/m2]
+                          emissions_dead_el, & ! [molX/m2]
+                          residue_dead_el, & ! out [molX/m2]
+                          mass_imbalance_emitted_dead_el) ! [molX/m2]
+
+    CALL sf_calc_residue(fc_live_el, & ! in [molX/m2]
+                          emissions_live_el, & ! [molX/m2]
+                          residue_live_el, & ! out [molX/m2]
+                          mass_imbalance_emitted_live_el) ! [molX/m2]
 
     ! Feedbacks
 
 !    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
   END SUBROUTINE update_dfire_sf_post
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate residue and any mass imbalance
+  !>
+  SUBROUTINE sf_calc_residue(fuel_consumption, emitted_elements, residue, mass_overflow)
+    REAL(wp), INTENT(in) :: fuel_consumption(:,:,:) !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(in) :: emitted_elements(:,:,:) !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(out) :: residue(:,:,:)         !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(out) :: mass_overflow(:,:,:)   !< (#nc,#pools,#elements) [molX/m2]
+
+    !< Compute residue, where Emitted elements < FC
+    residue = fuel_consumption - emitted_elements
+    mass_overflow = 0._wp
+
+    WHERE (residue < 0._wp)
+      mass_overflow = ABS(residue)
+      residue = fuel_consumption ! set to max value
+    END WHERE
+    ! Use for debugging
+    !DO ic=1, SIZE(residue, DIM=1) ! 1= nc dimension index
+    !  DO ipool=1, SIZE(residue, DIM=2) ! 2=pool dimension index
+    !    DO iel=1, SIZE(residue, DIM=3) ! 3=elements dimension index
+    !      IF (residue(ic,ipool,iel) < 0._wp .AND. mask(ic) THEN
+    !        mass_overflow(ic,ipool,iel) = ABS(residue(ic,ipool,iel))
+    !        residue(ic,ipool,iel) = 0._wp
+    !      END IF
+    !    END DO
+    !  END DO
+    !END DO
+  END SUBROUTINE sf_calc_residue
 
 #endif
 END MODULE mo_dfire_sf_post
