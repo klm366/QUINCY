@@ -125,6 +125,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:) !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: live_fuel(:,:) !< Live fuel (#nc,#live fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -140,8 +142,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
-    dsl4jsb_Real2D_onChunk      :: height      ! in [m]
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! in [m]
+    dsl4jsb_Real2D_onChunk      :: height                ! in [m]
+
+    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr_lfp     ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr_lfp    ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr_lfp   ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr_lfp  ! out [g DM m-2]
 
     dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
@@ -196,7 +203,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)             ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr_lfp)          ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr_lfp)         ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp)        ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp)       ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! out [g DM m-2]
@@ -271,6 +281,7 @@ CONTAINS
     live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel()
     live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel()
     dead_fuel_fcl = fuel_cls % calc_dead_fuel()
+    live_fuel_fcl = fuel_cls % calc_live_fuel()
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
@@ -298,6 +309,11 @@ CONTAINS
     live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
     live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+
+    live_fuel_1hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+    live_fuel_10hr_lfp = live_fuel_fcl(:,:,df_sf_fc_10hr_idx)
+    live_fuel_100hr_lfp = live_fuel_fcl(:,:,df_sf_fc_100hr_idx)
+    live_fuel_1000hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
                         ", area, fraction ref, tile func, forest_fract, height=", grid_cell_area(1),  &
