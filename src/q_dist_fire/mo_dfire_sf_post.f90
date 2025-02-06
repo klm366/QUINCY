@@ -48,7 +48,7 @@ MODULE mo_dfire_sf_post
                                             sf_calc_live_fuel_consumption_populate_elements
 
   USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
-!  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
 
@@ -156,7 +156,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
 
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -180,7 +180,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)              ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
@@ -294,7 +294,7 @@ CONTAINS
                                     emissions_dead_el, & ! out [molX/m2]
                                     mask=is_fire_intense_enough)
 
-    CALL sf_calc_emissions_elements(nc,t_sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
+    CALL sf_calc_emissions_elements(nc,sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
                                     fc_live_el, & ! [molX/m2]
                                     emissions_live_spc, & ! [molX/m2]
                                     emissions_live_el, & ! out [molX/m2]
