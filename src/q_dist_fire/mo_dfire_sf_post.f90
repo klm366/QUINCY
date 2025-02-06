@@ -100,9 +100,12 @@ CONTAINS
     REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
     REAL(wp)                              :: fc_dead_cls(options%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr) !< Dead fuel consumption for current PFT [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: fc_live(options%nc,sf_fuel_live_fuel_nr)   !< Live fuel consumption (#nc, #live pools) for current PFT [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: emissions_live_spc(options%nc,sf_fuel_live_fuel_nr,df_sf_species_nr) !< emissions (#nc, #live pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
-    REAL(wp), ALLOCATABLE                 :: emissions_dead_spc(options%nc,sf_fuel_dead_fuel_nr,df_sf_species_nr) !< emissions (#nc, #dead pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+    REAL(wp)                              :: fc_live(options%nc,sf_fuel_live_fuel_nr)   !< Live fuel consumption (#nc, #live pools) for current PFT [g DM m-2]
+    REAL(wp)                              :: emissions_live_spc(options%nc,sf_fuel_live_fuel_nr,df_sf_species_nr) !< emissions (#nc, #live pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+    REAL(wp)                              :: emissions_dead_spc(options%nc,sf_fuel_dead_fuel_nr,df_sf_species_nr) !< emissions (#nc, #dead pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+
+    REAL(wp)                              :: emissions_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #live pools, #elements) [mol X m-2]
+    REAL(wp)                              :: emissions_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #dead pools, #elements) [mol X m-2]
 
     REAL(wp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
@@ -277,19 +280,17 @@ CONTAINS
                                                               veg_pool_mt, fc_live_mol_m2, & ! [molX/m2], [molX/m2]
                                                               mask=is_fire_intense_enough)
 
-!    CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
-!                                    fc_dead_el, & ! [molX/m2]
-!                                    emissions_dead_spc, & ! [molX/m2]
-!                                    emissions_dead_el, & ! out [molX/m2]
-!                                    mask=is_fire_intense_enough)
-!
-!    CALL sf_calc_emissions_elements(nc,t_sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
-!                                    fc_live_el, & ! [molX/m2]
-!                                    emissions_live_spc, & ! [molX/m2]
-!                                    emissions_live_el, & ! out [molX/m2]
-!                                    mask=is_fire_intense_enough)
-                                    ! calc live FC (DM)
+    CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
+                                    fc_dead_el, & ! [molX/m2]
+                                    emissions_dead_spc, & ! [molX/m2]
+                                    emissions_dead_el, & ! out [molX/m2]
+                                    mask=is_fire_intense_enough)
 
+    CALL sf_calc_emissions_elements(nc,t_sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
+                                    fc_live_el, & ! [molX/m2]
+                                    emissions_live_spc, & ! [molX/m2]
+                                    emissions_live_el, & ! out [molX/m2]
+                                    mask=is_fire_intense_enough)
 
 !    !< Is there any C, N and/or P left after Emissions?
 !    CALL sf_calc_residue(spitfire % fc_dead_el, & ! in [molX/m2]
