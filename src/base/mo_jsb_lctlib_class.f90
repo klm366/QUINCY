@@ -463,7 +463,7 @@ CONTAINS
     LOGICAL            :: exists_q_crown_length = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par1 = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par2 = .FALSE.
-    LOGICAL            :: exists_q_F_scorch_height_par2 = .FALSE.
+    LOGICAL            :: exists_q_F_scorch_height = .FALSE.
     LOGICAL            :: exists_q_emissions_co2_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_co_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_ch4_mol = .FALSE.
