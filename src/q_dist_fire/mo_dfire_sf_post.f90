@@ -106,6 +106,9 @@ CONTAINS
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
     REAL(wp)                              :: live_fuel(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
+    REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
+    REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
+
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
@@ -243,8 +246,24 @@ CONTAINS
                                                         fc_live, &
                                                         mask=is_fire_intense_enough)
 
+    !< Units conversion of Dead fuel consumption into molX/m2
+    fc_dead_mol_m2 = sf_convert_units("gDM/m2", "molC/m2", SUM(fc_dead_cls, dim=3)) !< 3=fuel classes
 
-    ! calc live FC (DM)
+    !< Units conversion of Live fuel consumption into Quincy units
+    fc_live_mol_m2 = sf_convert_units("gDM/m2", "molC/m2", fc_live) !< (#nc,#live_pools)
+
+!    CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
+!                                    spitfire % fc_dead_el, & ! [molX/m2]
+!                                    spitfire % emissions_dead_spc, & ! [molX/m2]
+!                                    spitfire % emissions_dead_el, & ! out [molX/m2]
+!                                    mask=spitfire % is_fire_intense_enough)
+!
+!    CALL sf_calc_emissions_elements(nc,t_sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
+!                                    spitfire % fc_live_el, & ! [molX/m2]
+!                                    spitfire % emissions_live_spc, & ! [molX/m2]
+!                                    spitfire % emissions_live_el, & ! out [molX/m2]
+!                                    mask=spitfire % is_fire_intense_enough)
+!                                    ! calc live FC (DM)
 
     ! backcalculate EM and FC (DM -> CNP, CN -> CNP131415)
     ! calc Residue
