@@ -323,3 +323,14 @@ q_fuel_bulk_density 25.0 10.0 25.0 22.0 25.0 22.0 2.0 2.0 2.0 2.0 2.0 2.0 0.0 0.
 # Moisture of extinction from Pfeiffer et al. (2013), Table 1
 q_moisture_extinction 0.404 0.404 0.404 0.404 0.404 0.404 0.2 0.2 0.2 0.2 0.2 0.2 0.0 0.0
 
+### Emission factors in mol/kgDM
+# Carbon emissions: X [mol C / kg of DM burned] emission factors converted to mol units from Thonicke et al. (2010), Table 1
+emissions_co2_mol 35.902 35.629 37.810 35.629 35.629 35.629 37.810 35.629 37.810 35.629 37.810 35.629 0.000 0.000
+emissions_co_mol 3.677 3.784 2.249 3.784 3.784 3.784 3.784 2.249 3.784 2.249 3.784 2.249 0.000 0.000
+emissions_ch4_mol 0.425 0.300 0.137 0.300 0.300 0.300 0.300 0.137 0.300 0.137 0.300 0.137 0.000 0.000
+
+# Nitrogen emissions: X [mol N / kg of DM burned] emission factors converted to mol units from Andrae et al. (2001)
+emissions_nh3_mol 0.076 0.062 0.082 0.082 0.082 0.082 0.082 0.062 0.082 0.062 0.082 0.062 0.000 0.000
+emissions_n2o_mol 0.009 0.010 0.012 0.012 0.012 0.012 0.012 0.010 0.012 0.010 0.012 0.010 0.000 0.000
+emissions_n2_mol 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.000 0.000
+
