@@ -36,6 +36,7 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_util,            ONLY: real2logical
 
   USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption
+  USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -206,9 +207,19 @@ CONTAINS
                                               mask=spitfire % is_fire_intense_enough)
     END IF
 
+    ! Calc EM (CN)
+    !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
+    !< live fuel, as in Peiffer et al. (2013)
+    emissions_dead_spc = sf_calc_emissions(nc, sf_fuel_dead_fuel_nr, df_sf_species_nr, lctlib_emission_factors, &
+                                                        SUM(spitfire % fc_dead_cls, dim=3), & !< 3 = fuel classes index
+                                                        mask=spitfire % is_fire_intense_enough)
+    emissions_live_spc = sf_calc_emissions(nc, sf_fuel_live_fuel_nr, nspecs, lctlib_emission_factors, &
+                                                        spitfire % fc_live, &
+                                                        mask=spitfire % is_fire_intense_enough)
+
     ! derive dead FC (DM * AB)
     ! calc live FC (DM)
-    ! calc EM (CN)
+
     ! backcalculate EM and FC (DM -> CNP, CN -> CNP131415)
     ! calc Residue
     ! Feedbacks

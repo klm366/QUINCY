@@ -72,6 +72,21 @@ MODULE mo_dfire_constants
                   t_sf_fuel_dead_fuel_polymeric_ix                !< from sb_pool_mt ( Optional)
   END ENUM
 
+  !> Emissions
+  INTEGER, PARAMETER :: df_sf_species_nr = 6 !< Thonicke, Table 1 for now we use only (CO2, CO, CH4, NH3, N2O, N2)
+  ENUM, BIND(C)
+    ENUMERATOR ::                   &
+        df_sf_species_co2_idx = 1, & !< 44.01 g/mol, where C = 12.011, C_ratio=0.2729
+        df_sf_species_co_idx, &      !< 28.01 g/mol, where C = 12.011, C_ratio=0.4288
+        df_sf_species_ch4_idx, &     !< 16 g/mol, where C = 12.011, C_ratio=0.7507
+        !df_sf_species_voc_idx, &    !< Note: discuss later
+        !df_sf_species_tpm_idx, &
+        !df_sf_species_nrox_idx, &
+        df_sf_species_nh3_idx, &     !< 17.021 g/mol, where N = 14.0067, N_ratio=0.8229
+        df_sf_species_n2o_idx, &     !< 44.013 g/mol, where N = 14.0067, N_ratio=0.3182
+        df_sf_species_n2_idx         !< 28.0134 g/mol, where N = 14.0067, N_ratio=0.5
+  END ENUM
+
   !< Conversion factor from carbon to biomass
   REAL(wp), SAVE :: df_sf_carbon_to_biomass_factor
 
@@ -162,6 +177,8 @@ MODULE mo_dfire_constants
   !< Inverse proportion to their surface-area-to-volume ratio [Celsius-2]
   !< Given in comments to Thonicke's et al. (2010) Eq.6
   REAL(wp), PARAMETER :: df_sf_alphas(df_sf_alpha_nr) = [0.001_wp, 0.0000542_wp, 0.0000149_wp]
+
+  REAL(wp), ALLOCATABLE, PUBLIC :: lctlib_emission_factors(:) !<(df_sf_species_nr)    !< Emission factors for each species
 
   !< Nesterov threshold constants
   REAL(wp), PARAMETER :: df_sf_precip_trhd = 3.0_wp !< Precipitation threshold (Thonicke et al. (2010), below eq. 5)
