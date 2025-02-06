@@ -62,9 +62,9 @@ MODULE mo_dfire_memory_class
 
     ! dead fuel
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_10hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_100hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1000hr !< [g DM m-2]
+    TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_10hr !< [g DM m-2]
+    TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_100hr !< [g DM m-2]
+    TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1000hr !< [g DM m-2]
     ! live fuel
     TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1hr !< [g DM m-2]
     !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_10hr !< [g DM m-2]
@@ -241,6 +241,36 @@ CONTAINS
     CALL mem%Add_var('dead_fuel_consumption_1hr', mem%dead_fuel_consumption_1hr, &
         & hgrid, vgrid_dead_fuel_pools, &
         & t_cf('dead_fuel_consumption_1hr', 'g DM m-2', '1 hour dead fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dead_fuel_consumption_10hr', mem%dead_fuel_consumption_10hr, &
+        & hgrid, vgrid_dead_fuel_pools, &
+        & t_cf('dead_fuel_consumption_10hr', 'g DM m-2', '10 hour dead fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dead_fuel_consumption_100hr', mem%dead_fuel_consumption_100hr, &
+        & hgrid, vgrid_dead_fuel_pools, &
+        & t_cf('dead_fuel_consumption_100hr', 'g DM m-2', '100 hour dead fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dead_fuel_consumption_1000hr', mem%dead_fuel_consumption_1000hr, &
+        & hgrid, vgrid_dead_fuel_pools, &
+        & t_cf('dead_fuel_consumption_1000hr', 'g DM m-2', '1000 hour dead fuel consumption'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

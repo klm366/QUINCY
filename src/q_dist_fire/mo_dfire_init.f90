@@ -83,6 +83,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: i_surface 
 
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_100hr
+    dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1000hr
     dsl4jsb_Real3D_onDomain      :: live_fuel_consumption_1hr
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
@@ -107,6 +110,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, i_surface) 
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_10hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_100hr)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1000hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
     ! ----------------------------------------------------------------------------------------------------- !
     pm_fire = 0._wp
@@ -121,6 +127,9 @@ CONTAINS
     dead_frac_consumption = 0._wp
     i_surface = 0._wp
     dead_fuel_consumption_1hr = 0._wp
+    dead_fuel_consumption_10hr = 0._wp
+    dead_fuel_consumption_100hr = 0._wp
+    dead_fuel_consumption_1000hr = 0._wp
     live_fuel_consumption_1hr = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
