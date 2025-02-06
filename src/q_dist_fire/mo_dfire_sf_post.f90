@@ -31,7 +31,14 @@ MODULE mo_dfire_sf_post
   USE mo_veg_constants,         ONLY: itree, igrass
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
-  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr, df_sf_fc_1hr_idx, df_sf_fc_100hr_idx
+
+  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
+  USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+  USE mo_dfire_constants,       ONLY: df_sf_species_nr
+
+  USE mo_dfire_constants,       ONLY: lctlib_emission_factors !< todo: check values depends on PFT
+
   USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
   USE mo_dfire_util,            ONLY: real2logical
 
@@ -83,13 +90,18 @@ CONTAINS
 
     ! add here local variables
     REAL(wp), POINTER                     :: area(:), tile_fract(:)
-    REAL(wp), ALLOCATABLE                 :: dead_fc_1hr_tile(:,:) !< 1 hour dead fuel consumption for current tile (#nc, #dead fuel pools) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: live_fc_1hr_tile(:,:) !< 1 hour live fuel consumptino for current tile (#nc, #live fuel pools) [g DM m-2]
 
     REAL(wp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
 
     REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
+    REAL(wp)                              :: fc_dead_cls(options%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr) !< Dead fuel consumption for current PFT [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: fc_live(options%nc,sf_fuel_live_fuel_nr)   !< Live fuel consumption (#nc, #live pools) for current PFT [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: emissions_live_spc(options%nc,sf_fuel_live_fuel_nr,df_sf_species_nr) !< emissions (#nc, #live pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+    REAL(wp), ALLOCATABLE                 :: emissions_dead_spc(options%nc,sf_fuel_dead_fuel_nr,df_sf_species_nr) !< emissions (#nc, #dead pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+
+    REAL(wp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
+    REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
     REAL(wp)                              :: live_fuel(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
@@ -104,6 +116,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! in [g DM m-2]
+
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: diameter
@@ -156,6 +172,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -163,8 +182,6 @@ CONTAINS
 !    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
 !    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(dead_fc_1hr_tile, mold=dead_fuel_consumption_1hr)
-    ALLOCATE(live_fc_1hr_tile, mold=live_fuel_consumption_1hr)
 
     ! init here
     area => grid %area (ics:ice, iblk)
@@ -172,6 +189,15 @@ CONTAINS
     is_fire_intense_enough = .FALSE.
 
     prob_mort = t_sf_prob_mort(nc)
+    !< Rebuild dead fuel consumption
+    !< * Derive dead FC (DM * AB) *
+    !< Calculate from Tile to PFT (* tile_fract)
+    fc_dead_cls(:,:,df_sf_fc_1hr_idx) = dead_fuel_consumption_1hr * tile_fract
+    fc_dead_cls(:,:,df_sf_fc_10hr_idx) = dead_fuel_consumption_10hr * tile_fract
+    fc_dead_cls(:,:,df_sf_fc_100hr_idx) = dead_fuel_consumption_100hr * tile_fract
+    fc_dead_cls(:,:,df_sf_fc_1000hr_idx) = dead_fuel_consumption_1000hr * tile_fract
+    area_burned_pft = area_burned * tile_fract
+    area_burned_fract_pft = area_burned_fract * tile_fract
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -181,8 +207,8 @@ CONTAINS
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
-      WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
-            area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
+      !WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
+      !      area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
 
       is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
@@ -207,17 +233,17 @@ CONTAINS
                                               mask=spitfire % is_fire_intense_enough)
     END IF
 
-    ! Calc EM (CN)
+    ! * Calc Emissions (by Species) *
     !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
     !< live fuel, as in Peiffer et al. (2013)
     emissions_dead_spc = sf_calc_emissions(nc, sf_fuel_dead_fuel_nr, df_sf_species_nr, lctlib_emission_factors, &
-                                                        SUM(spitfire % fc_dead_cls, dim=3), & !< 3 = fuel classes index
-                                                        mask=spitfire % is_fire_intense_enough)
-    emissions_live_spc = sf_calc_emissions(nc, sf_fuel_live_fuel_nr, nspecs, lctlib_emission_factors, &
-                                                        spitfire % fc_live, &
-                                                        mask=spitfire % is_fire_intense_enough)
+                                                        SUM(fc_dead_cls, dim=3), & !< 3 = fuel classes dim index
+                                                        mask=is_fire_intense_enough)
+    emissions_live_spc = sf_calc_emissions(nc, sf_fuel_live_fuel_nr, df_sf_species_nr, lctlib_emission_factors, &
+                                                        fc_live, &
+                                                        mask=is_fire_intense_enough)
 
-    ! derive dead FC (DM * AB)
+
     ! calc live FC (DM)
 
     ! backcalculate EM and FC (DM -> CNP, CN -> CNP131415)
