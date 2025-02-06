@@ -80,7 +80,10 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_fuel_100hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1000hr_dfp
 
-    dsl4jsb_Real3D_onDomain      :: live_fuel
+    dsl4jsb_Real3D_onDomain      :: live_fuel_1hr_lfp
+    dsl4jsb_Real3D_onDomain      :: live_fuel_10hr_lfp
+    dsl4jsb_Real3D_onDomain      :: live_fuel_100hr_lfp
+    dsl4jsb_Real3D_onDomain      :: live_fuel_1000hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_1hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_10hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_100hr_lfp
@@ -113,7 +116,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_10hr_dfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_100hr_dfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1000hr_dfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_10hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_100hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1000hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)
@@ -136,7 +142,10 @@ CONTAINS
     dead_fuel_10hr_dfp = 0._wp
     dead_fuel_100hr_dfp = 0._wp
     dead_fuel_1000hr_dfp = 0._wp
-    live_fuel = 0._wp
+    live_fuel_1hr_lfp = 0._wp
+    live_fuel_10hr_lfp = 0._wp
+    live_fuel_100hr_lfp = 0._wp
+    live_fuel_1000hr_lfp = 0._wp
     live_grass_fuel_1hr_lfp = 0._wp
     live_grass_fuel_10hr_lfp = 0._wp
     live_grass_fuel_100hr_lfp = 0._wp
