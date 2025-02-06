@@ -36,14 +36,18 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
   USE mo_dfire_constants,       ONLY: df_sf_species_nr
+  USE mo_dfire_constants,       ONLY: df_sf_elements_nr
 
   USE mo_dfire_constants,       ONLY: lctlib_emission_factors !< todo: check values depends on PFT
 
   USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
   USE mo_dfire_util,            ONLY: real2logical
 
-  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption
-  USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions
+  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
+                                            sf_calc_dead_fuel_consumption_populate_elements, &
+                                            sf_calc_live_fuel_consumption_populate_elements
+
+  USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -108,6 +112,11 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
+
+    REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
+    REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
+
+    REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -181,9 +190,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
 
     ! ----------------------------------------------------------------------------------------------------- !
-!    bgcm_store => tile%bgcm_store
-!    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-!    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init here
@@ -252,21 +261,47 @@ CONTAINS
     !< Units conversion of Live fuel consumption into Quincy units
     fc_live_mol_m2 = sf_convert_units("gDM/m2", "molC/m2", fc_live) !< (#nc,#live_pools)
 
+    !< To use in fuel consumption, emissions, residue, ...
+    sb_pool_in_m2 =  sf_convert_units("-/m3", "-/m2", sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl), nc_dim_opt=3, &
+                                      aux=soil_depth_sl(:,df_sf_spq_layer_top_sl)) !< 3=nc dimension
+
+    !< Derive dead fuel consumption elements and isotopes from dead fuel consumption, sb_pool and veg_pool
+    fc_dead_el = sf_calc_dead_fuel_consumption_populate_elements(nc, sf_fuel_dead_fuel_nr, df_sf_elements_nr, & ! [molX/m2]
+                                                              veg_pool_mt, sb_pool_in_m2, & ! [molX/m2], [molX/m2]
+                                                              fc_dead_mol_m2, & ! [molX/m2]
+                                                              mask=is_fire_intense_enough)
+
+    !< Derive live fuel consumption elements and isotopes from live fuel consumption and veg_pool
+    fc_live_el = sf_calc_live_fuel_consumption_populate_elements(nc, sf_fuel_live_fuel_nr, & ! [molX/m2]
+                                                              df_sf_elements_nr, &
+                                                              veg_pool_mt, fc_live_mol_m2, & ! [molX/m2], [molX/m2]
+                                                              mask=is_fire_intense_enough)
+
 !    CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
-!                                    spitfire % fc_dead_el, & ! [molX/m2]
-!                                    spitfire % emissions_dead_spc, & ! [molX/m2]
-!                                    spitfire % emissions_dead_el, & ! out [molX/m2]
-!                                    mask=spitfire % is_fire_intense_enough)
+!                                    fc_dead_el, & ! [molX/m2]
+!                                    emissions_dead_spc, & ! [molX/m2]
+!                                    emissions_dead_el, & ! out [molX/m2]
+!                                    mask=is_fire_intense_enough)
 !
 !    CALL sf_calc_emissions_elements(nc,t_sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
-!                                    spitfire % fc_live_el, & ! [molX/m2]
-!                                    spitfire % emissions_live_spc, & ! [molX/m2]
-!                                    spitfire % emissions_live_el, & ! out [molX/m2]
-!                                    mask=spitfire % is_fire_intense_enough)
-!                                    ! calc live FC (DM)
+!                                    fc_live_el, & ! [molX/m2]
+!                                    emissions_live_spc, & ! [molX/m2]
+!                                    emissions_live_el, & ! out [molX/m2]
+!                                    mask=is_fire_intense_enough)
+                                    ! calc live FC (DM)
 
-    ! backcalculate EM and FC (DM -> CNP, CN -> CNP131415)
-    ! calc Residue
+
+!    !< Is there any C, N and/or P left after Emissions?
+!    CALL sf_calc_residue(spitfire % fc_dead_el, & ! in [molX/m2]
+!        spitfire % emissions_dead_el, & ! [molX/m2]
+!        spitfire % residue_dead_el, & ! out [molX/m2]
+!        spitfire % mass_imbalance_emitted_dead_el) ! [molX/m2]
+!
+!    CALL sf_calc_residue(spitfire % fc_live_el, & ! in [molX/m2]
+!        spitfire % emissions_live_el, & ! [molX/m2]
+!        spitfire % residue_live_el, & ! out [molX/m2]
+!        spitfire % mass_imbalance_emitted_live_el) ! [molX/m2]
+
     ! Feedbacks
 
 !    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
