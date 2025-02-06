@@ -476,10 +476,10 @@ CONTAINS
                         fuel_moisture, & ! fuel properties
                         sf_spitfire)
 
-    dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(df_sf_fc_1hr_idx)
-    dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(df_sf_fc_10hr_idx)
-    dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(df_sf_fc_100hr_idx)
-    dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(df_sf_fc_1000hr_idx)
+    dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx)
+    dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
+    dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_100hr_idx)
+    dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
 
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
