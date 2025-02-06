@@ -155,16 +155,16 @@ CONTAINS
 
     !> Pack emission factors in an array
     ALLOCATE(lctlib_emission_factors(df_sf_species_nr))
-    lctlib_emission_factors(df_sf_species_co2_idx) = lctlib%emissions_co2_mol
-    lctlib_emission_factors(df_sf_species_co_idx) = lctlib%emissions_co_mol
-    lctlib_emission_factors(df_sf_species_ch4_idx) = lctlib%emissions_ch4_mol
-    lctlib_emission_factors(df_sf_species_nh3_idx) = lctlib%emissions_nh3_mol
-    lctlib_emission_factors(df_sf_species_n2o_idx) = lctlib%emissions_n2o_mol
-    lctlib_emission_factors(df_sf_species_n2_idx) = lctlib%emissions_n2_mol
+    lctlib_emission_factors(df_sf_species_co2_idx) = lctlib%q_emissions_co2_mol
+    lctlib_emission_factors(df_sf_species_co_idx) = lctlib%q_emissions_co_mol
+    lctlib_emission_factors(df_sf_species_ch4_idx) = lctlib%q_emissions_ch4_mol
+    lctlib_emission_factors(df_sf_species_nh3_idx) = lctlib%q_emissions_nh3_mol
+    lctlib_emission_factors(df_sf_species_n2o_idx) = lctlib%q_emissions_n2o_mol
+    lctlib_emission_factors(df_sf_species_n2_idx) = lctlib%q_emissions_n2_mol
     !< Decide what to do later
-    !lctlib_emission_factors(df_sf_species_voc_idx) = lctlib%emissions_voc
-    !lctlib_emission_factors(df_sf_species_tpm_idx) = lctlib%emissions_tpm
-    !lctlib_emission_factors(df_sf_species_nrox_idx) = lctlib%emissions_nox
+    !lctlib_emission_factors(df_sf_species_voc_idx) = lctlib%q_emissions_voc
+    !lctlib_emission_factors(df_sf_species_tpm_idx) = lctlib%q_emissions_tpm
+    !lctlib_emission_factors(df_sf_species_nrox_idx) = lctlib%q_emissions_nox
   END SUBROUTINE dfire_fuel_init
 
 #endif
