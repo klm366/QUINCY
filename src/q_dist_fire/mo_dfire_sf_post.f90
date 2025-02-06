@@ -134,7 +134,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
-    dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! in [-]
+    dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! out [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! in [g DM m-2]
@@ -187,7 +187,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! in [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! out [-]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -247,11 +247,13 @@ CONTAINS
 
       live_fuel = fuel_cls % Calc_live_fuel()
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                              pm_prop_ck, &
+                                              prob_mort % pm_prop_ck, &
                                               dsl4jsb_Config(DFIRE_)%fract_crown_scorch, &
                                               area_burned_fract, &
                                               live_fuel, &
                                               mask=spitfire % is_fire_intense_enough)
+
+      pm_prop_ck = prob_mort % pm_prop_ck
     END IF
 
     ! * Calc Emissions (by Species) *
