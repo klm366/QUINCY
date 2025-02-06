@@ -234,8 +234,15 @@ MODULE mo_jsb_lctlib_class
                 q_crown_damage_p             , &
                 q_crown_length               , &
                 q_bark_thickness_par1        , &
-                q_bark_thickness_par2   , &
-                q_F_scorch_height
+                q_bark_thickness_par2        , &
+                q_F_scorch_height            , &
+                q_emissions_co2_mol          , &
+                q_emissions_co_mol           , &
+                q_emissions_ch4_mol          , &
+                q_emissions_nh3_mol          , &
+                q_emissions_n2o_mol          , &
+                q_emissions_n2_mol
+
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
@@ -458,7 +465,13 @@ CONTAINS
     LOGICAL            :: exists_q_crown_length = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par1 = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par2 = .FALSE.
-    LOGICAL            :: exists_q_F_scorch_height = .FALSE.
+    LOGICAL            :: exists_q_F_scorch_height_par2 = .FALSE.
+    LOGICAL            :: exists_q_emissions_co2_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_co_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_ch4_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_nh3_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_n2o_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_n2_mol = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1055,6 +1068,24 @@ CONTAINS
           CASE ('q_f_scorch_height')
             READ(line(pos:length),*) lctlib(1:nlct)%q_F_scorch_height
             exists_q_F_scorch_height = .TRUE.
+          CASE ('q_emissions_co2_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_co2_mol
+            exists_q_emissions_co2_mol = .TRUE.
+          CASE ('q_emissions_co_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_co_mol
+            exists_q_emissions_co_mol = .TRUE.
+          CASE ('q_emissions_ch4_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_ch4_mol
+            exists_q_emissions_ch4_mol = .TRUE.
+          CASE ('q_emissions_nh3_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_nh3_mol
+            exists_q_emissions_nh3_mol = .TRUE.
+          CASE ('q_emissions_n2o_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_n2o_mol
+            exists_q_emissions_n2o_mol = .TRUE.
+          CASE ('q_emissions_n2_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_n2_mol
+            exists_q_emissions_n2_mol = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1380,6 +1411,18 @@ CONTAINS
             CALL finish('init_lctlib','No data for q_bark_thickness_par2 found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_F_scorch_height) &
             CALL finish('init_lctlib','No data for q_F_scorch_height found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_co2_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_co2_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_co_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_co_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_ch4_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_ch4_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_nh3_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_nh3_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_n2o_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_n2o_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_n2_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_n2_mol found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1724,6 +1767,12 @@ CONTAINS
         CALL p_bcast(lctlib(:)%q_bark_thickness_par1, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_bark_thickness_par2, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_F_scorch_height, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_co2_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_co_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_ch4_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_nh3_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_n2o_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_n2_mol, p_io, mpi_comm)
       END IF
 #endif
     END IF
