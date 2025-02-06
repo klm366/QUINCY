@@ -1,4 +1,4 @@
-!> Initialization of the the hydrology process.
+!> Initialization of the the hydrology process
 !>
 !> ICON-Land
 !>
@@ -155,7 +155,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Intialize hydrology process
+  !>#### Intialize the hydrology process
   !>
   SUBROUTINE hydro_init(tile)
 
@@ -167,21 +167,22 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    !> Read hydrology initial and boundary condition data
-    ! The initial data is read only once - by the top tile - and is made avilable to the other tiles.
-    ! Note: this requires that the init routines in [[mo_jsb_model_init:jsbach_init]] are called starting
+    !> - Read hydrology initial and boundary condition data <br>
+    !>   The initial data is read only once - by the top tile - and is made avilable to the other tiles.
+    !>
+    ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
     !       from the top tile!
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN  ! This is the top tile.
       CALL hydro_read_init_vars(tile)
     END IF
 
-    !> Set soil properties (on all tiles)
+    !> - Set soil properties (on all tiles)
     CALL hydro_init_bc(tile)
 
-    !> Set soil initial condition (on all tiles)
+    !> - Set soil initial conditions (on all tiles)
     CALL hydro_init_ic(tile)
 
-    !> Finalize hydrology initialization after the last tile has been initialized
+    !> - Finalize hydrology initialization after the last tile has been initialized
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
@@ -190,11 +191,11 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Finalize hydrology initialization
+  !>#### Finalize hydrology initialization
   !>
   SUBROUTINE hydro_finalize_init_vars
 
-    !> Deallocation of the variables that had only been needed for initialization
+    !> Deallocation of the variables that had only been needed during the initialization phase
 
     DEALLOCATE( &
       & hydro_init_vars%oro_stddev      ,       &
@@ -230,31 +231,30 @@ CONTAINS
   !
   !>#### Read variables from initial files
   !>
-  !> Soil parameters and initial conditions for the hydrology process need to be set for all tiles where
-  !> the `HYDRO_` process is active and which contain soil. However, in order to avoid opening and reading
-  !> from the initial NetCDF files on each tile just to read the same data, this subroutine is called only
-  !> once for the first tile (should be the top tile), reads the required input variables and puts them
-  !> into the module variable [[mo_hydro_init:hydro_init_vars]] of type [[t_hydro_init_vars]]. All the
-  !> remaining tiles then use the variables from this structure to initialize their memory.
+  !> Soil parameters and initial conditions for the hydrology need to be set on all tiles on which
+  !> the HYDRO_ process is active. Currently, the data is identical for all tiles. We thus only read it
+  !> once by the top tile and store it in variable [[mo_hydro_init:hydro_init_vars]] of type
+  !> [[t_hydro_init_vars]]. The remaining tiles are then using this variable to initialize their memories.
+  !>
   SUBROUTINE hydro_read_init_vars(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
-    dsl4jsb_Def_config(HYDRO_) !< configuration of `HYDRO_` process
+    dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO_ process
 
     REAL(wp), POINTER :: &
-      & ptr_2D(:,  :),   & !< pointer to 2d variable
-      & ptr_3D(:,:,:)      !< pointer to 3d variable
-    LOGICAL,  POINTER   :: is_in_domain(:,:) !< true: cell in domain (not halo)
+      & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
+      & ptr_3D(:,:,:)                           !< Pointer to 3d variable
+    LOGICAL,  POINTER   :: is_in_domain(:,:)    !< True: the cell belongs to domain; False: halo cell
 
-    TYPE(t_jsb_model), POINTER :: model         !< pointer to model
-    TYPE(t_jsb_grid),  POINTER :: grid          !< pointer to horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_w        !< pointer to vertical hydrology grid
-    TYPE(t_input_file)         :: input_file    !< variable for input file(s)
-    INTEGER                    :: nproma, nblks !< dimensions of horizontal grid
-    INTEGER                    :: nsoil         !< number of soil layers
+    TYPE(t_jsb_model), POINTER :: model         !< Current instance of the model
+    TYPE(t_jsb_grid),  POINTER :: grid          !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w        !< Vertical grid used for hydrology
+    TYPE(t_input_file)         :: input_file    !< File containing input data to be read
+    INTEGER                    :: nproma, nblks !< Dimensions of the horizontal grid
+    INTEGER                    :: nsoil         !< Number of vertical soil layers
 
-    INTEGER :: isoil
+    INTEGER :: isoil                            !< Looping index for soil layers
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
@@ -276,7 +276,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
-    !> - Allocate memory for input variables
+    !> - Allocate memory for the input variables
     !>
     ALLOCATE( &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
@@ -352,7 +352,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !
-    !> - Read variables for soil properties from input files `bc_sso_filename` and `bc_filename`
+    !> - Read soil properties from input files `bc_sso_filename` and `bc_filename`
     !
 
     ! Open input file - bc_sso
