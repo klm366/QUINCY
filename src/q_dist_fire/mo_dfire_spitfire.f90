@@ -297,6 +297,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: fwd_wind_factor            ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
@@ -361,6 +364,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fwd_wind_factor)     ! in [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_100hr) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1000hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! out [ha ts-1]
@@ -473,13 +479,11 @@ CONTAINS
                         fuel_moisture, & ! fuel properties
                         sf_spitfire)
 
-    !< Test: assume 5% live fuel consumption
-!    live_fuel_consumption_1hr = live_fuel * 0.045 * 0.05 ! 4.5% 1 hour live fuel, 5%
-    !< Test: assume 3% dead fuel consumption
-!    dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
+    dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(df_sf_fc_1hr_idx)
+    dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(df_sf_fc_10hr_idx)
+    dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(df_sf_fc_100hr_idx)
+    dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(df_sf_fc_1000hr_idx)
 
-    !area_burned = tile_area * 0.05        !< AB = 5%
-    !area_burned_fract = tile_fract * 0.05
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
