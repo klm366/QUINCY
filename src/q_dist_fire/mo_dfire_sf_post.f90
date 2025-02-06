@@ -34,6 +34,8 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr, df_sf_fc_1hr_idx, df_sf_fc_100hr_idx
   USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
   USE mo_dfire_util,            ONLY: real2logical
+
+  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption
 !  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -89,6 +91,7 @@ CONTAINS
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
+    REAL(wp)                              :: live_fuel(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -97,6 +100,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
+    dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! in [-]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
@@ -145,6 +149,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! in [-]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -192,13 +197,13 @@ CONTAINS
                                       dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & 
                                       mask_opt=is_fire_intense_enough)
 
-!      live_fuel = fuel_cls % Calc_live_fuel()
-!      fc_live = sf_calc_live_fuel_consumption(nc, t_sf_fuel_live_fuel_nr, nfuels, &
-!                                              pm_prop_ck, &
-!                                              config_fract_crown_scorch, &
-!                                              sf_area_burned_fract, &
-!                                              live_fuel, &
-!                                              mask=spitfire % is_fire_intense_enough)
+      live_fuel = fuel_cls % Calc_live_fuel()
+      fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                              pm_prop_ck, &
+                                              dsl4jsb_Config(DFIRE_)%fract_crown_scorch, &
+                                              area_burned_fract, &
+                                              live_fuel, &
+                                              mask=spitfire % is_fire_intense_enough)
     END IF
 
     ! derive dead FC (DM * AB)

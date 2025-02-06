@@ -267,6 +267,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
+    dsl4jsb_Real2D_onChunk                :: pm_prop_ck        ! Tree probability of mortality: proportion of the crown scorch [0 to 1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
 
@@ -333,6 +334,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)             ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! in [g DM m-2]
@@ -383,6 +385,7 @@ CONTAINS
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     pm_fire = 0._wp
+    pm_prop_ck = 0._wp
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
     dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_1hr_dfp
@@ -475,11 +478,14 @@ CONTAINS
     !< Test: assume 3% dead fuel consumption
 !    dead_fuel_consumption_1hr = dead_fuel * 0.045 * 0.03 ! 4.5% 1 hour live fuel, 3%
 
-    area_burned = tile_area * 0.05        !< AB = 5%
-    area_burned_fract = tile_fract * 0.05
+    !area_burned = tile_area * 0.05        !< AB = 5%
+    !area_burned_fract = tile_fract * 0.05
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
+    pm_prop_ck = sf_spitfire % prob_mort % prop_ck
+    area_burned_fract = sf_spitfire % area_burned_fract
+    area_burned = sf_spitfire % area_burned
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
