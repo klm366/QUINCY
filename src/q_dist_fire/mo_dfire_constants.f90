@@ -60,6 +60,7 @@ MODULE mo_dfire_constants
 
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 
+  ! todo: sf_dead_fuel_pools_nr
   INTEGER, PARAMETER :: sf_fuel_dead_fuel_nr = 7  !< (sb_pool) woody/leaf, (veg_pool grass) sap wood/labile/reserve/fruit/polymeric
   ENUM, BIND(C)
   !< Ensure how much to remove from each pool
@@ -114,7 +115,7 @@ MODULE mo_dfire_constants
 
   REAL(wp), PARAMETER :: df_sf_units_m2_to_cm2 = 10000._wp  !< units conversion from m-2 to cm-2
 
-  !< "Live" fuel array indices from t_sf_fuel_class
+  !< "Live" fuel array indices from t_sf_fuel_class, todo: rename to sf_live_fuel_pools_nr
   INTEGER, PARAMETER, PUBLIC :: sf_fuel_live_fuel_nr = 6 !< (veg_pool tree) leaf, sap wood, heart wood, labile, reserve, fruit
 
   ENUM, BIND(C)
