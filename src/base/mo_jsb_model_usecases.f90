@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
-    &                               Q_PHENO_, Q_ASSIMI_
+    &                               Q_PHENO_, Q_SH_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -639,6 +639,12 @@ CONTAINS
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
 
+    ! IF PPLCC is active, then PPLCC should run for Quincy
+    ! ... for now it will only be used to provide tree area to the Q_SH_ process ...
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
+
     !------------------------------------------------------------------------------------------------------ !
     ! land tile w/o process
     !
@@ -669,6 +675,12 @@ CONTAINS
         &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
         &                    parent = veg_tile)
       !$ACC ENTER DATA COPYIN(pft_tile)
+
+        IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
+          IF (model%processes(Q_SH_)%p%config%active) THEN
+            CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+          END IF
+        END IF
     END DO
 
     ! catch compiler warnings and cleanup pointers

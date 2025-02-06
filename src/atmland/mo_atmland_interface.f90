@@ -87,9 +87,7 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
-    USE mtime,                     ONLY: datetime
-    USE mo_time_config,            ONLY: time_config
-    USE mo_jsb_time,               ONLY: get_secs_of_day
+
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
@@ -106,9 +104,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER  :: iblk, ics, ice, nc, i
-    INTEGER  :: global_seconds_day
     REAL(wp) :: dtime
-    TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), POINTER :: lon(:)
@@ -165,8 +161,6 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
     lon   => grid%lon(ics:ice, iblk)
-    mtime_current => time_config%tc_current_date
-    global_seconds_day = get_secs_of_day(mtime_current)
 
     model_scheme = model%config%model_scheme
 

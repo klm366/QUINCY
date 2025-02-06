@@ -200,9 +200,10 @@ CONTAINS
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>
-  !! Calculates the relative soil humidity wrt field capacity
-  !!
-  REAL(wp) FUNCTION relative_humidity_soil(ws, fc)
+  !> Calculates the relative soil humidity in the range between maximum soil water capacity
+  !> and residual water content
+  !>
+  REAL(wp) FUNCTION relative_humidity_soil(ws, ws_min, ws_max)
 
     !$ACC ROUTINE SEQ
 
@@ -210,14 +211,17 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
-      fc                      !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
+      & ws_min,             & !< minimum moisture content [m], e.g. of uppermost soil layer
+      & ws_max                !< maximum moisture content [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
 
-    moisture = MIN(ws, fc)
+    moisture = MIN(ws, ws_max)
     IF (moisture > 0._wp) THEN
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
-                                                                          !  lower fc. Note, fc has to be  >= than moisture!
+      ! Soil moisture values below ws_min result in a rel. humidity of 0, for values above ws_max the
+      ! rel. humidity is 1. Between ws_min and ws_max rel. humidity increases using the Cosine function
+      ! resulting leads in a smooth transitions at ws_min and was_max.
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(MAX(moisture - ws_min, 0._wp) / (ws_max - ws_min) * pi))
     ELSE
       relative_humidity_soil = 0._wp
     END IF

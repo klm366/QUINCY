@@ -1127,7 +1127,7 @@ CONTAINS
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
-        global_seconds_day = get_secs_of_day(datetime_new)
+        global_seconds_day = NINT(get_secs_of_day(datetime_new)) ! TODO time steps w/ fractional seconds not supported by quincy, yet!
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
