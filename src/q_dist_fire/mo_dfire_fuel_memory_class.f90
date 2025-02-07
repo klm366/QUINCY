@@ -40,7 +40,7 @@ MODULE mo_dfire_fuel_memory_class
   PRIVATE
   PUBLIC :: t_dfire_fuel_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   ! ======================================================================================================= !
   !>
@@ -120,6 +120,7 @@ CONTAINS
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     ! ----------------------------------------------------------------------------------------------------- !
+
     ! dead pools
     CALL mem%Add_var('dead_fuel_1hr_dfp', mem%dead_fuel_1hr_dfp, &
         & hgrid, vgrid_dead_fuel_pools, &
