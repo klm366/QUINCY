@@ -465,128 +465,146 @@ MODULE mo_pheno_process
      ELSE
        NPP_positive = .FALSE.
      END IF
+   
+     ! Set cover crops to rest phase, if cover crops are not activated 
+     IF (.NOT. l_covercrops) growth_phase_CC = 0._wp
 
-     ! To do only at first time step of a day:
-     ! Update output variables: days_since_growth_begin_EG, chill_days_EG, heat_sum_EG, growth_phase_EG
-     IF (is_newday) THEN
+         ! To do only at first time step of a day:
+         ! Update output variables: days_since_growth_begin_EG, chill_days_EG, heat_sum_EG, growth_phase_EG
+         IF (is_newday) THEN
 
-        ! Crops growth_phase_CRP includes 2 Dimensions: the kind of cropping (fS, sS, W) and the phase (growth, rest).
-        ! For extra-tropical crops growth_phase_CRP values are:
-        !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
-        !      1.0  .. during growth phase of second summer crops (i.e. from summer to autumn)
-        !      0.0  .. during growth phase of first  summer crops (i.e. from spring to autumn)
-        !     -1.0  .. during rest   phase of all    summer crops (i.e. from autumn to spring)
-        !     -2.0  .. during rest   phase of winter crops (i.e. from spring to autumn)
-        ! Note, these phases exclude each other because there are either winter or summer crops for a grid cell (but never both).
-        !
-        !             |SPRING      |SUMMER          |AUTUMN          WINTER       |SPRING     |SUMMER    ...
-        !------------------------------------------------------------------------------------------
-        ! Summer      |-1  0       |0 or 1          |                             |           |
-        ! Crops       |     x-can switch to -1 if heatsum is reached-x            |           |
-        !------------------------------------------------------------------------------------------
-        ! Winter      |2/-2        |-2              |-1 (goto SC) or -2           |           |
-        ! Crops       |            |                |x-can switch to 2 if heatsum is reached-x|
+            ! Crops growth_phase_CRP includes 2 Dimensions: the kind of cropping (fS, sS, W) and the phase (growth, rest).
+            ! For extra-tropical crops growth_phase_CRP values are:
+            !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
+            !      1.0  .. during growth phase of second summer crops (i.e. from summer to autumn)
+            !      0.0  .. during growth phase of first  summer crops (i.e. from spring to autumn)
+            !     -1.0  .. during rest   phase of all    summer crops (i.e. from autumn to spring)
+            !     -2.0  .. during rest   phase of winter crops (i.e. from spring to autumn)
+            ! Note, these phases exclude each other because there are either winter or summer crops for a grid cell (but never both).
+            !
+            !             |SPRING      |SUMMER          |AUTUMN          WINTER       |SPRING     |SUMMER    ...
+            !------------------------------------------------------------------------------------------
+            ! Summer      |-1  0       |0 or 1          |                             |           |
+            ! Crops       |     x-can switch to -1 if heatsum is reached-x            |           |
+            !------------------------------------------------------------------------------------------
+            ! Winter      |2/-2        |-2              |-1 (goto SC) or -2           |           |
+            ! Crops       |            |                |x-can switch to 2 if heatsum is reached-x|
 
 
-        ! At the beginning of spring:
-        IF (lat >= 0._wp .AND. day_of_year == 70      & ! we are at northern hemisphere at March 11 (March 10 in leap years)
-           .OR.                                       & ! or ..
-           lat <  0._wp .AND. day_of_year == 252      & ! we are at southern hemisphere at September 9 (September 8 in leap years) ..
-           ) THEN
-             heat_sum_CRP = 0._wp                         ! => heat summation has to start, so initialize it by zero
-             IF (ABS(growth_phase_CRP) < 1.5_wp) THEN     ! if there are no winter crops at all (neither in rest nor in growth) ..
-                growth_phase_CRP = -1._wp                 !     => crop phase is set to rest phase of summer crops
-             END IF
-        END IF
+            ! At the beginning of spring:
+            IF (lat >= 0._wp .AND. day_of_year == 70      & ! we are at northern hemisphere at March 11 (March 10 in leap years)
+               .OR.                                       & ! or ..
+               lat <  0._wp .AND. day_of_year == 252      & ! we are at southern hemisphere at September 9 (September 8 in leap years) ..
+               ) THEN
+                  heat_sum_CRP = 0._wp                         ! => heat summation has to start, so initialize it by zero
+                  IF (ABS(growth_phase_CRP) < 1.5_wp) THEN     ! if there are no winter crops at all (neither in rest nor in growth) ..
+                     growth_phase_CRP = -1._wp                 !     => crop phase is set to rest phase of summer crops
+                  END IF
+               END IF ! beginning of spring
 
-        ! At the beginning of summer:
-        IF (lat >= 0._wp .AND. day_of_year == 172     & ! we are at northern hemisphere at June 21 (June 20 in leap years)
-           .OR.                                       & ! or ..
-           lat <  0._wp .AND. day_of_year == 354      & ! we are at southern hemisphere at December 21 (December 20 in leap years)
-           ) THEN
+            ! At the beginning of summer:
+            IF (lat >= 0._wp .AND. day_of_year == 172     & ! we are at northern hemisphere at June 21 (June 20 in leap years)
+               .OR.                                       & ! or ..
+               lat <  0._wp .AND. day_of_year == 354      & ! we are at southern hemisphere at December 21 (December 20 in leap years)
+               ) THEN
 
-             IF (ABS(growth_phase_CRP) < 1.5_wp .AND.           &         ! if there are no winter crops at all (neither in rest nor in
-                 heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest & ! growth) and the heat sum is enough for harvesting
-                 ) THEN
-                 heat_sum_CRP = 0._wp                               ! then heat summation has to start again, so initialize it by
-                 growth_phase_CRP = 1._wp                           ! zero and crop phase is set to growth phase of double cropping
-                                                                    ! (crops already have been harvested try double cropping.)
-             ELSE IF (growth_phase_CRP > 1.5_wp) THEN             ! if there are winter crops still in the growing phase ..
-                growth_phase_CRP = -2._wp                         ! => then switch to the rest phase of winter crops
-             END IF
-             IF (heat_sum_winter > 0._wp)  THEN              ! Heat sum for winter is multiplied by -1 to indicate ..
-                heat_sum_winter = -1._wp * heat_sum_winter   ! => that there is no heat summation during summer
-             END IF
-        END IF
+                  IF (ABS(growth_phase_CRP) < 1.5_wp .AND.           &         ! if there are no winter crops at all (neither in rest nor in
+                     heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest & ! growth) and the heat sum is enough for harvesting
+                     ) THEN
+                     ! LJ 
+                     !heat_sum_CRP = 0._wp                               ! then heat summation has to start again, so initialize it by
+                     !growth_phase_CRP = 1._wp                           ! zero and crop phase is set to growth phase of double cropping 
+                     ! LJ we don't want to simulate with double cropping                         
+                                                                        ! (crops already have been harvested try double cropping.)
+                  ELSE IF (growth_phase_CRP > 1.5_wp) THEN             ! if there are winter crops still in the growing phase ..
+                     growth_phase_CRP = -2._wp                         ! => then switch to the rest phase of winter crops
+                  END IF
+                  IF (heat_sum_winter > 0._wp)  THEN              ! Heat sum for winter is multiplied by -1 to indicate ..
+                     heat_sum_winter = -1._wp * heat_sum_winter   ! => that there is no heat summation during summer
+                  END IF
+            END IF !end of summer
 
-        ! In autumn:
-        IF (lat >= 0._wp .AND. day_of_year == 289    & ! we are at northern hemisphere at October 16 (October 15 in leap
-           .OR.                                      & ! years) or ..
-           lat <  0._wp .AND. day_of_year == 105     & ! we are at southern hemisphere at April 15 (April 14 in leap years)
-           ) THEN
+            ! In autumn:
+            IF (lat >= 0._wp .AND. day_of_year == 289    & ! we are at northern hemisphere at October 16 (October 15 in leap
+               .OR.                                      & ! years) or ..
+               lat <  0._wp .AND. day_of_year == 105     & ! we are at southern hemisphere at April 15 (April 14 in leap years)
+               ) THEN
+   
+                  IF(l_cropdynamics) THEN ! TRUE LJ: summer and winter cropping changes dynamically          
 
-            ! If there are winter crops and they were not harvested last winter or spring and summer crops would have been
-            ! harvested already  --> crop phase is SET TO REST PHASE OF SUMMER CROPS
-            IF (ABS(growth_phase_CRP) > 1.5_wp .AND.      &                             ! winter crops in growth phase..
-                ABS(heat_sum_winter) < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &  ! and they are not ready for harvest..
-                heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN            ! and summer crops are ready for harvest..
-                   growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
+                     ! If there are winter crops and they were not harvested last winter or spring and summer crops would have been
+                     ! harvested already  --> crop phase is SET TO REST PHASE OF SUMMER CROPS
+                     IF (ABS(growth_phase_CRP) > 1.5_wp .AND.      &                             ! winter crops in growth phase..
+                        ABS(heat_sum_winter) < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &  ! and they are not ready for harvest..
+                        heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN            ! and summer crops are ready for harvest..
+                           growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
+                     END IF
+
+                     ! If there are winter crops and summer crops would have been harvested already twice
+                     ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
+                     IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                                 ! winter crops in growth phase..
+                        heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
+                                                                                                ! already twice..
+                           growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
+                     END IF
+                     ! If there is no double cropping and summer crops are still not harvested and winter crops would have been harvested
+                     ! last spring and it is still warm then try winter crops --> crop phase is SET TO REST PHASE OF WINTER CROPS
+                     ! R: Note, here was an error in the "IF-Tree" in the JSBACH3 version! As I corrected this error there is a difference
+                     !    between JSBACH3 and 4 here! However, the error only inhibited winter crops, so it wasn't so bad...
+                     IF (ABS(growth_phase_CRP - 1._wp) > 0.5_wp .AND. &                         ! growth_phase_CRP is not 1 (growth phase sec. crop)
+                        heat_sum_CRP < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &         ! and summer crops are not ready for harvest..
+                        ABS(heat_sum_winter) > pheno_param_jsbach%CRP%heat_sum_harvest .AND. & ! and winter crops are ready for harvest..
+                        pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN              ! it is warm enough..
+                           growth_phase_CRP = -2._wp                                          ! => growth phase of winter crops
+                     END IF
+
+                  END IF ! LJ l_cropdynamics
+                  heat_sum_winter = EPSILON(1._wp) ! heat summation for winter crops has to start anyway
+            END IF ! end autumn
+
+            ! Each time step:
+            ! increase heat sum
+            temp_min_max = (previous_day_temp_min + previous_day_temp_max) / 2.0_wp
+            IF(temp_min_max > pheno_param_jsbach%CRP%gdd_temp .AND.      & ! it is warm enough to count gdd ..
+               NPP_positive) THEN                                          ! and yesterdays productivity of a crop or grass type is
+                                                                           ! positive
+                  heat_sum_CRP = heat_sum_CRP + temp_min_max - pheno_param_jsbach%CRP%gdd_temp ! => add mean day temp. excess above critical
+                                                                                                !    temperature to the heat sum for summer crops
+                  IF (heat_sum_winter > 0._wp) THEN                           ! additionally, if we are in the growing period of
+                                                                              ! winter crops
+                     heat_sum_winter = heat_sum_winter + temp_min_max - pheno_param_jsbach%CRP%gdd_temp  ! => add mean day temperature excess
+                                                                                                         !    above critical temperature to
+                                                                                                         !    the heat sum for winter crops
+                  END IF
             END IF
 
-            ! If there are winter crops and summer crops would have been harvested already twice
-            ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
-            IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                                 ! winter crops in growth phase..
-               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
-                                                                                       ! already twice..
-                  growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
-            END IF
-            ! If there is no double cropping and summer crops are still not harvested and winter crops would have been harvested
-            ! last spring and it is still warm then try winter crops --> crop phase is SET TO REST PHASE OF WINTER CROPS
-            ! R: Note, here was an error in the "IF-Tree" in the JSBACH3 version! As I corrected this error there is a difference
-            !    between JSBACH3 and 4 here! However, the error only inhibited winter crops, so it wasn't so bad...
-            IF (ABS(growth_phase_CRP - 1._wp) > 0.5_wp .AND. &                         ! growth_phase_CRP is not 1 (growth phase sec. crop)
-                heat_sum_CRP < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &         ! and summer crops are not ready for harvest..
-                ABS(heat_sum_winter) > pheno_param_jsbach%CRP%heat_sum_harvest .AND. & ! and winter crops are ready for harvest..
-                pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN              ! it is warm enough..
-                    growth_phase_CRP = -2._wp                                          ! => growth phase of winter crops
-            END IF
-            heat_sum_winter = EPSILON(1._wp) ! heat summation for winter crops has to start anyway
-        END IF ! is_newday
-
-       ! Each time step:
-       ! increase heat sum
-       temp_min_max = (previous_day_temp_min + previous_day_temp_max) / 2.0_wp
-       IF(temp_min_max > pheno_param_jsbach%CRP%gdd_temp .AND.      & ! it is warm enough to count gdd ..
-          NPP_positive) THEN                                          ! and yesterdays productivity of a crop or grass type is
-                                                                      ! positive
-             heat_sum_CRP = heat_sum_CRP + temp_min_max - pheno_param_jsbach%CRP%gdd_temp ! => add mean day temp. excess above critical
-                                                                                          !    temperature to the heat sum for summer crops
-             IF (heat_sum_winter > 0._wp) THEN                           ! additionally, if we are in the growing period of
-                                                                         ! winter crops
-                heat_sum_winter = heat_sum_winter + temp_min_max - pheno_param_jsbach%CRP%gdd_temp  ! => add mean day temperature excess
-                                                                                                    !    above critical temperature to
-                                                                                                    !    the heat sum for winter crops
-             END IF
-       END IF
-
-       ! set growth phase for crops
-       IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN             ! it is warm enough for crop growth ..
-          IF (ABS(growth_phase_CRP) < 1.5_wp) THEN                              ! .. and if there are no winter crops ..
-             IF (heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! .. and the heat sum for summer crops is high enough
-                growth_phase_CRP = -1._wp                                       ! => crops are harvested,  i.e. rest phase starts,
-             ELSE
-                IF (growth_phase_CRP < 0.5_wp) growth_phase_CRP = 0._wp   ! => crops are still in the growth phase ..
-             END IF
-          ELSE                                                          ! .. but if there are winter crops and
-             IF (heat_sum_winter > pheno_param_jsbach%CRP%heat_sum_harvest .OR. &   ! .. the heat sum for winter crops is high enough
-                 heat_sum_winter < 0._wp) THEN                                      ! .. or their rest period (summer) started
-                    growth_phase_CRP = -2._wp                                       ! => crops are harvested, i.e. rest phase starts,
-             ELSE
-                growth_phase_CRP = 2._wp                                    ! => crops are still in the growth phase
-             END IF
-          END IF
-       END IF
-     END IF
+            ! set growth phase for crops
+            IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN             ! it is warm enough for crop growth ..
+               IF (ABS(growth_phase_CRP) < 1.5_wp) THEN                              ! .. and if there are no winter crops ..
+                  IF (heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! .. and the heat sum for summer crops is high enough
+                     growth_phase_CRP = -1._wp                                       ! => crops are harvested,  i.e. rest phase starts,
+                  ELSE
+                     IF (growth_phase_CRP < 0.5_wp) growth_phase_CRP = 0._wp   ! => crops are still in the growth phase ..
+                  END IF
+               ELSE                                                          ! .. but if there are winter crops and
+                  IF (heat_sum_winter > pheno_param_jsbach%CRP%heat_sum_harvest .OR. &   ! .. the heat sum for winter crops is high enough
+                     heat_sum_winter < 0._wp) THEN                                      ! .. or their rest period (summer) started
+                        growth_phase_CRP = -2._wp                                       ! => crops are harvested, i.e. rest phase starts,
+                  ELSE
+                     growth_phase_CRP = 2._wp                                    ! => crops are still in the growth phase
+                  END IF
+               END IF
+               ! LJ: CCstart additionally set growth phase of Cover Crops depending on growth phase of main crop
+               IF(growth_phase_CRP < -0.5 .AND. &      ! if any main crop is in rest phase (-1 or -2) ..
+                  lai < 1._wp .AND. & ! if LAI of main crop is smaller than 1
+                  !lai < pheno_param_jsbach%all%laiSeed .AND. & ! LJ CCstart.. and the lai is smaller than lai of seed .. 
+                  l_covercrops == .TRUE.) THEN                   ! .. cover crops are activated ..
+                     growth_phase_CC = 1._wp              ! .. set cover crops to growth phase ..
+               ELSE                                    ! .. else ..
+                  growth_phase_CC = 0._wp              ! .. set crover crops in rest phase
+               END IF
+            END IF ! end soil temp
+         END IF !end is_newday
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
@@ -594,39 +612,57 @@ MODULE mo_pheno_process
 
         ! If crops are in the growth phase and there is sufficient water in upper soil layer, then there are good growth
         ! conditions. (Note: addition of 0.001 for numerical reasons)
-        IF(growth_phase_CRP > -0.5_wp                           & ! there is ANY growth phase of any crop..
+         IF(growth_phase_CRP > -0.5_wp                           & ! there is ANY growth phase of any main crop..
+            .OR. growth_phase_CC > 0._wp                          &  ! ... or cover crop
                   .AND.                                         &
            w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp & ! soil water is above wilt point
            ) THEN
 
-                ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer
-                ! has at least a little bit water
-                IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN ! it is warm enough
-                   IF(lai < pheno_param_jsbach%all%laiSeed .AND.           & ! the lai is smaller than lai of seed..
-                      w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN   ! and a critical fract. of soil water bucket level is reached
-                      lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed) ! => at least with seed value ( < laiMax)
-                   ENDIF
+            ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer
+            ! has at least a little bit water
+            IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN ! it is warm enough
+               IF(lai < pheno_param_jsbach%all%laiSeed .AND.           & ! the lai is smaller than lai of seed..
+                  w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN   ! and a critical fract. of soil water bucket level is reached
+                  lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed) ! => at least with seed value ( < laiMax)
+               END IF
 
-                   ! If also yesterdays net production is positive let it grow
-                   IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN
-                      grRate = pheno_param_jsbach%CRP%leafAlloc_fract * lctlib_specificLeafArea_C * & ! => grRate is high depending on NPP
-                                 MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / MAX(lai,1.E-6_wp)         !    and is in units of 1/days
-                      lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, LaiMax_corrected)
-                   ELSE                                                                ! else ..
-                      xtmp = pheno_param_jsbach%CRP%shedRate_growth
-                      lai = get_letItDie(timeStep_in_days,lai,xtmp)                           ! do a tiny bit of leaf shedding
-                   END IF
-                ELSE                                                 ! it is not warm enough
+               ! If also yesterdays net production is positive let it grow
+               IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN
+                  grRate = pheno_param_jsbach%CRP%leafAlloc_fract * lctlib_specificLeafArea_C * & ! => grRate is high depending on NPP
+                           MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / MAX(lai,1.E-6_wp)         !    and is in units of 1/days
+                  ! if cover crops are in growth phase
+                  IF (growth_phase_CC > 0.5_wp) THEN
+                     xtmp = LaiMax_corrected* 0.75_wp ! LaiMax_corrected = 4.0_wp !  ! => LJ maximum LAI of cover crops is reduced ..
+                     lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, xtmp) ! fast growth
+                  ELSE                                 ! .. otherwise ..
+                     xtmp = LaiMax_corrected           ! .. maximum LAI of main crops has default value
+                     lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, xtmp) ! fast growth
+                  END IF
+               ELSE ! else yesterdays net production is negative
+                  xtmp = pheno_param_jsbach%CRP%shedRate_growth
+                  lai = get_letItDie(timeStep_in_days,lai,xtmp) ! do a tiny bit of leaf shedding
+               END IF
+      
+            ELSE ! It is not warm enough
+               ! LJ  noshed changes
+               IF (growth_phase_CC > 0.5_wp) THEN ! LJ need this if-else here if I want to change the sheding characteristics of CC
+                  lai = lai !LJ - noshed experiment: CC do not shed their leaves when it gets colder
+                  !xtmp = pheno_param_jsbach%CRP%shedRate_growth
+                  !lai = get_letItDie(timeStep_in_days,lai,xtmp) ! do a tiny bit of leaf shedding
+               ELSE
                    xtmp = pheno_param_jsbach%CRP%shedRate_growth
-                   lai = get_letItDie(timeStep_in_days,lai,xtmp)                       ! do a tiny bit of leaf shedding
-                END IF
-        ELSE                                                      ! there is NOT ANY growth phase of any crop
-                                                                  ! OR soil water is below wilt point
-           xtmp = pheno_param_jsbach%CRP%shedRate_rest
-           lai = get_letItDie(timeStep_in_days,lai,xtmp)             ! shed leaves fast
-        END IF
+                   lai = get_letItDie(timeStep_in_days,lai,xtmp) ! do a tiny bit of leaf shedding
+               END IF
+   
+            END IF !end is warm enough
+   
+         ELSE ! there is NOT ANY growth phase of any crop OR soil water is below wilt point
+            xtmp = pheno_param_jsbach%CRP%shedRate_rest
+            lai = get_letItDie(timeStep_in_days,lai,xtmp) ! shed leaves fast %_leo test higher shedrate for crops
+         END IF ! no growth phase of any crop: fast sheding of leaves
+   
 
-     ELSE                              ! We are in the TROPICS
+     ELSE ! We are in the TROPICS
         ! If temperature is fine and there is sufficient water in upper soil layer then there are good growth conditions
         !  (addition of 0.001 for numerical reasons)
         IF (pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp         & ! it is warm enough..
