@@ -74,7 +74,6 @@ CONTAINS
     !dsl4jsb_Def_config(DFIRE_FUEL_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onDomain      :: dead_fuel
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_10hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_100hr_dfp
@@ -111,7 +110,6 @@ CONTAINS
     !dsl4jsb_Get_config(DFIRE_FUEL_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1hr_dfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_10hr_dfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_100hr_dfp)
@@ -137,7 +135,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fwd_wind_factor)
     ! ----------------------------------------------------------------------------------------------------- !
     WRITE(*,*) "Computing dfire_fuel_init..."
-    dead_fuel = 0._wp
     dead_fuel_1hr_dfp = 0._wp
     dead_fuel_10hr_dfp = 0._wp
     dead_fuel_100hr_dfp = 0._wp
