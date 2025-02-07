@@ -111,7 +111,7 @@ CONTAINS
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
-    REAL(wp)                              :: live_fuel(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    REAL(wp)                              :: live_fuel_cls(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
@@ -129,6 +129,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real3D_onChunk                :: live_fuel_1hr_lfp         ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel_10hr_lfp        ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel_100hr_lfp       ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_fuel_1000hr_lfp      ! in [g DM m-2]
+
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
@@ -141,10 +146,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! in [g DM m-2]
 
-    dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! in [g DM m-2]
-
-    dsl4jsb_Real2D_onChunk                :: diameter
-    dsl4jsb_Real2D_onChunk                :: height
+    dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
+    dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
+    dsl4jsb_Real3D_onChunk                :: soil_depth_sl              ! in [m]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
@@ -156,7 +160,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onChunk      :: soil_depth_sl      ! in [m]
 
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -180,7 +183,12 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)               ! in [?]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [?]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [?]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [?]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [?]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
@@ -196,7 +204,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, live_fuel_consumption_1hr) ! in [g DM m-2]
 
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -217,6 +224,10 @@ CONTAINS
     fc_dead_cls(:,:,df_sf_fc_10hr_idx) = dead_fuel_consumption_10hr * tile_fract
     fc_dead_cls(:,:,df_sf_fc_100hr_idx) = dead_fuel_consumption_100hr * tile_fract
     fc_dead_cls(:,:,df_sf_fc_1000hr_idx) = dead_fuel_consumption_1000hr * tile_fract
+    live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
+    live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
+    live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
+    live_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_fuel_1000hr_lfp
     area_burned_pft = area_burned * tile_fract
     area_burned_fract_pft = area_burned_fract * tile_fract
 
@@ -245,12 +256,11 @@ CONTAINS
                                       dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & 
                                       mask_opt=is_fire_intense_enough)
 
-      live_fuel = fuel_cls % Calc_live_fuel()
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                               prob_mort % pm_prop_ck, &
                                               dsl4jsb_Config(DFIRE_)%fract_crown_scorch, &
                                               area_burned_fract, &
-                                              live_fuel, &
+                                              live_fuel_cls, &
                                               mask=spitfire % is_fire_intense_enough)
 
       pm_prop_ck = prob_mort % pm_prop_ck
@@ -288,6 +298,7 @@ CONTAINS
                                                               veg_pool_mt, fc_live_mol_m2, & ! [molX/m2], [molX/m2]
                                                               mask=is_fire_intense_enough)
 
+    !< Derive missing nutrients/isotopes from emissions
     CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
                                     fc_dead_el, & ! [molX/m2]
                                     emissions_dead_spc, & ! [molX/m2]
@@ -300,7 +311,7 @@ CONTAINS
                                     emissions_live_el, & ! out [molX/m2]
                                     mask=is_fire_intense_enough)
 
-    !< Is there any C, N and/or P left after Emissions?
+    !< Is there any C, N and/or P left after Emissions? Calculate residue
     CALL sf_calc_residue(fc_dead_el, & ! in [molX/m2]
                           emissions_dead_el, & ! [molX/m2]
                           residue_dead_el, & ! out [molX/m2]
