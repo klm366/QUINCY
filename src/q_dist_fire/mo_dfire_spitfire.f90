@@ -271,13 +271,11 @@ CONTAINS
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
 
     ! DFIRE_FUEL_ 3D
-    dsl4jsb_Real3D_onChunk                :: dead_fuel                  ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp         ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr_dfp        ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr_dfp       ! in [g DM m-2]
 
-    dsl4jsb_Real3D_onChunk                :: live_fuel                  ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1hr_lfp    ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_grass_fuel_10hr_lfp   ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_grass_fuel_100hr_lfp  ! in [g DM m-2]
@@ -338,13 +336,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel)                  ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! in [g DM m-2]
