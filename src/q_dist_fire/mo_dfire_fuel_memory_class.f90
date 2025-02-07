@@ -47,7 +47,6 @@ MODULE mo_dfire_fuel_memory_class
   !> Type definition for dfire memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_fuel_memory
-    TYPE(t_jsb_var_real3d)  :: dead_fuel           !< Dead fuel (#nc, #ndeadpools) [gDM m-2]
 
     TYPE(t_jsb_var_real3d)  :: live_fuel_1hr_lfp           !< 1 hour live fuel (#nc, #nlivepools) [gDM m-2]
     TYPE(t_jsb_var_real3d)  :: live_fuel_10hr_lfp          !< 10 hours live fuel (#nc, #nlivepools) [gDM m-2]
@@ -122,16 +121,6 @@ CONTAINS
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     ! ----------------------------------------------------------------------------------------------------- !
     ! dead pools
-    CALL mem%Add_var('dead_fuel', mem%dead_fuel, &
-        & hgrid, vgrid_dead_fuel_pools, &
-        & t_cf('dead_fuel', 'gDM m-2', 'Dead fuel pools'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
     CALL mem%Add_var('dead_fuel_1hr_dfp', mem%dead_fuel_1hr_dfp, &
         & hgrid, vgrid_dead_fuel_pools, &
         & t_cf('dead_fuel_1hr_dfp', 'gDM m-2', '1 hour dead fuel pools'), &
