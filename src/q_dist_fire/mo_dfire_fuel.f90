@@ -235,8 +235,6 @@ CONTAINS
 
     !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
     !             fract(1)
-    sb_pool_in_gdm = 0._wp
-    veg_pool_in_gdm = 0._wp
     forest_fract=0._wp
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
