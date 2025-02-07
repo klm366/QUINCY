@@ -728,6 +728,9 @@ CONTAINS
     LOGICAL, INTENT(in), OPTIONAL :: mask(nc)   !< True=compute gridcell(s)
     LOGICAL :: mask_sel(nc)
 
+    ab = 0._wp
+    ab_fract = 0._wp
+
     mask_sel = .TRUE. !< default
     IF (PRESENT(mask)) THEN
       mask_sel = mask
