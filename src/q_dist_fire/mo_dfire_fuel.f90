@@ -126,7 +126,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:) !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: live_fuel(:,:) !< Live fuel (#nc,#live fuel pools) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: veg_pool_in_gdm(:,:) !< Live fuel (#nc,#live fuel pools) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:) !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -150,13 +151,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: live_fuel_100hr_lfp   ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr_lfp  ! out [g DM m-2]
 
-    dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
+!    dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr_dfp    ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr_dfp   ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr_dfp  ! out [g DM m-2]
 
-    dsl4jsb_Real3D_onChunk      :: live_fuel                  ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1hr_lfp    ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_grass_fuel_10hr_lfp   ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_grass_fuel_100hr_lfp  ! out [g DM m-2]
@@ -197,7 +197,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                ! in
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
@@ -235,8 +235,8 @@ CONTAINS
 
     !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
     !             fract(1)
-    dead_fuel = 0._wp
-    live_fuel = 0._wp
+    sb_pool_in_gdm = 0._wp
+    veg_pool_in_gdm = 0._wp
     forest_fract=0._wp
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
@@ -267,15 +267,15 @@ CONTAINS
     END IF
 
     sb_pool_slim = sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl)
-    ALLOCATE(dead_fuel, mold=sb_pool_slim) ! unsure why is needed, otherwise NAG compiler raises an error. function should be allocated dead_fuel
-    dead_fuel = sf_convert_units("molC/m3", "gDM/m2", sb_pool_slim, aux = top_soil_depth_sl, nc_dim_opt=2)
+    ALLOCATE(sb_pool_in_gdm, mold=sb_pool_slim) ! unsure why is needed, otherwise NAG compiler raises an error. function should be allocated dead_fuel
+    sb_pool_in_gdm = sf_convert_units("molC/m3", "gDM/m2", sb_pool_slim, aux = top_soil_depth_sl, nc_dim_opt=2)
 
-    ALLOCATE(live_fuel, mold=veg_pool_mt(:,ixC,:)) ! unsure why is needed, NAG compiler raises an error. sf_convert_units should already allocate live_fuel
-    live_fuel = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
+    ALLOCATE(veg_pool_in_gdm, mold=veg_pool_mt(:,ixC,:)) ! unsure why is needed, NAG compiler raises an error. sf_convert_units should already allocate live_fuel
+    veg_pool_in_gdm = sf_convert_units("molC/m2", "gDM/m2", veg_pool_mt(:,ixC,:))
 
     fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
                             dead_fuel_frac, live_fuel_frac, &
-                            dead_fuel, live_fuel, &
+                            sb_pool_in_gdm, veg_pool_in_gdm, &
                             config_polymeric_litter_fract)
 
     live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel()
