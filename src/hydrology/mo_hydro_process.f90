@@ -270,7 +270,7 @@ CONTAINS
         wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + pond_melt(ic)
       ! 1.) Potential freezing:
       ELSE IF (le_phase_blg(ic) < 0._wp .AND. wtr_pond(ic) > 0._wp) THEN
-        pond_freeze(ic)      = MAX(ABS(le_phase_blg(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
+        pond_freeze(ic)      = MIN(ABS(le_phase_blg(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
         le_phase_blg(ic)     = le_phase_blg(ic) + pond_freeze(ic) * rhoh2o * alf / dtime
         wtr_pond(ic)         = wtr_pond(ic) - pond_freeze(ic)
         ice_pond(ic)         = ice_pond(ic) + pond_freeze(ic)
