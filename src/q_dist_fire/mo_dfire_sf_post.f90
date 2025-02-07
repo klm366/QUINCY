@@ -228,6 +228,7 @@ CONTAINS
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
     is_fire_intense_enough = .FALSE.
+    fc_live = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -264,7 +265,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
-
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
