@@ -34,13 +34,6 @@ MODULE mo_dfire_fuel_init
 
   USE mo_veg_constants,           ONLY: itree, igrass   !< lctlib%growthform
 
-  USE mo_dfire_constants,         ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
-                                          df_sf_species_ch4_idx, &
-                                          !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
-                                          df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
-                                          df_sf_species_n2_idx
-  USE mo_dfire_constants,         ONLY: lctlib_emission_factors
-
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: dfire_fuel_init
@@ -159,18 +152,6 @@ CONTAINS
     moisture_extinction = 0._wp
     fwd_wind_factor = 0._wp
 
-    !> Pack emission factors in an array
-    ALLOCATE(lctlib_emission_factors(df_sf_species_nr))
-    lctlib_emission_factors(df_sf_species_co2_idx) = lctlib%q_emissions_co2_mol
-    lctlib_emission_factors(df_sf_species_co_idx) = lctlib%q_emissions_co_mol
-    lctlib_emission_factors(df_sf_species_ch4_idx) = lctlib%q_emissions_ch4_mol
-    lctlib_emission_factors(df_sf_species_nh3_idx) = lctlib%q_emissions_nh3_mol
-    lctlib_emission_factors(df_sf_species_n2o_idx) = lctlib%q_emissions_n2o_mol
-    lctlib_emission_factors(df_sf_species_n2_idx) = lctlib%q_emissions_n2_mol
-    !< Decide what to do later
-    !lctlib_emission_factors(df_sf_species_voc_idx) = lctlib%q_emissions_voc
-    !lctlib_emission_factors(df_sf_species_tpm_idx) = lctlib%q_emissions_tpm
-    !lctlib_emission_factors(df_sf_species_nrox_idx) = lctlib%q_emissions_nox
   END SUBROUTINE dfire_fuel_init
 
 #endif

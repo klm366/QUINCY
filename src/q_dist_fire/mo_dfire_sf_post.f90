@@ -39,7 +39,11 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_constants,       ONLY: df_sf_species_nr
   USE mo_dfire_constants,       ONLY: df_sf_elements_nr
 
-  USE mo_dfire_constants,       ONLY: lctlib_emission_factors !< todo: check values depends on PFT
+  USE mo_dfire_constants,         ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
+                                        df_sf_species_ch4_idx, &
+                                        !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
+                                        df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
+                                        df_sf_species_n2_idx
 
   USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
   USE mo_dfire_util,            ONLY: real2logical
@@ -131,6 +135,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
 
     INTEGER                               :: ip ! iterate
+
+    REAL(wp), ALLOCATABLE, SAVE           :: lctlib_emission_factors(:) !< Array packed with emission factors from lctlib (#species)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -239,6 +245,21 @@ CONTAINS
     live_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_fuel_1000hr_lfp
     area_burned_pft = area_burned * tile_fract
     area_burned_fract_pft = area_burned_fract * tile_fract
+
+    IF (.NOT. ALLOCATED(lctlib_emission_factors)) THEN ! only 1st timestep
+      ALLOCATE(lctlib_emission_factors(df_sf_species_nr))
+      !> Pack emission factors in an array
+      lctlib_emission_factors(df_sf_species_co2_idx) = lctlib%q_emissions_co2_mol
+      lctlib_emission_factors(df_sf_species_co_idx) = lctlib%q_emissions_co_mol
+      lctlib_emission_factors(df_sf_species_ch4_idx) = lctlib%q_emissions_ch4_mol
+      lctlib_emission_factors(df_sf_species_nh3_idx) = lctlib%q_emissions_nh3_mol
+      lctlib_emission_factors(df_sf_species_n2o_idx) = lctlib%q_emissions_n2o_mol
+      lctlib_emission_factors(df_sf_species_n2_idx) = lctlib%q_emissions_n2_mol
+      !< Decide what to do later
+      !lctlib_emission_factors(df_sf_species_voc_idx) = lctlib%q_emissions_voc
+      !lctlib_emission_factors(df_sf_species_tpm_idx) = lctlib%q_emissions_tpm
+      !lctlib_emission_factors(df_sf_species_nrox_idx) = lctlib%q_emissions_nox
+    ENDIF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science

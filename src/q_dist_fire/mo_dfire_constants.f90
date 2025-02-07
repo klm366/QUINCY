@@ -181,8 +181,6 @@ MODULE mo_dfire_constants
   !< Given in comments to Thonicke's et al. (2010) Eq.6
   REAL(wp), PARAMETER :: df_sf_alphas(df_sf_alpha_nr) = [0.001_wp, 0.0000542_wp, 0.0000149_wp]
 
-  REAL(wp), ALLOCATABLE, PUBLIC :: lctlib_emission_factors(:) !<(df_sf_species_nr)    !< Emission factors for each species
-
   !< Nesterov threshold constants
   REAL(wp), PARAMETER :: df_sf_precip_trhd = 3.0_wp !< Precipitation threshold (Thonicke et al. (2010), below eq. 5)
   REAL(wp), PARAMETER :: df_sf_frost_trhd = 4.0_wp !< Frost threshold, from source code (Thonicke et al. (2010), https://github.com/PIK-LPJmL/LPJmL/blob/811b1691c26645968803fab65f9e463d64d5f40b/src/spitfire/update_nesterov.c#L25)
