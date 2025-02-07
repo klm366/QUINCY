@@ -32,6 +32,7 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
 
+  USE mo_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
   USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
   USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
@@ -81,6 +82,8 @@ CONTAINS
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -111,7 +114,7 @@ CONTAINS
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
-    REAL(wp)                              :: live_fuel_cls(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    REAL(wp)                              :: live_fuel_cls(options%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
@@ -126,6 +129,8 @@ CONTAINS
     REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
 
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
+
+    INTEGER                               :: ip ! iterate
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -153,6 +158,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
@@ -178,6 +184,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_memory(VEG_)
@@ -220,10 +227,12 @@ CONTAINS
     !< Rebuild dead fuel consumption
     !< * Derive dead FC (DM * AB) *
     !< Calculate from Tile to PFT (* tile_fract)
-    fc_dead_cls(:,:,df_sf_fc_1hr_idx) = dead_fuel_consumption_1hr * tile_fract
-    fc_dead_cls(:,:,df_sf_fc_10hr_idx) = dead_fuel_consumption_10hr * tile_fract
-    fc_dead_cls(:,:,df_sf_fc_100hr_idx) = dead_fuel_consumption_100hr * tile_fract
-    fc_dead_cls(:,:,df_sf_fc_1000hr_idx) = dead_fuel_consumption_1000hr * tile_fract
+    DO ip=1, sf_fuel_dead_fuel_nr ! iterate over dead fuel pools
+      fc_dead_cls(:,ip,df_sf_fc_1hr_idx) = dead_fuel_consumption_1hr(:,ip) * tile_fract
+      fc_dead_cls(:,ip,df_sf_fc_10hr_idx) = dead_fuel_consumption_10hr(:,ip) * tile_fract
+      fc_dead_cls(:,ip,df_sf_fc_100hr_idx) = dead_fuel_consumption_100hr(:,ip) * tile_fract
+      fc_dead_cls(:,ip,df_sf_fc_1000hr_idx) = dead_fuel_consumption_1000hr(:,ip) * tile_fract
+    ENDDO
     live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
     live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
     live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
@@ -257,13 +266,13 @@ CONTAINS
                                       mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                              prob_mort % pm_prop_ck, &
+                                              prob_mort % prop_ck, &
                                               dsl4jsb_Config(DFIRE_)%fract_crown_scorch, &
                                               area_burned_fract, &
                                               live_fuel_cls, &
-                                              mask=spitfire % is_fire_intense_enough)
+                                              mask=is_fire_intense_enough)
 
-      pm_prop_ck = prob_mort % pm_prop_ck
+      pm_prop_ck = prob_mort % prop_ck
     END IF
 
     ! * Calc Emissions (by Species) *
