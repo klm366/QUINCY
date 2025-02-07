@@ -150,13 +150,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, fwd_wind_factor          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk_masked(DFIRE_FUEL_, fuel_bulk_density , average_agg, dfire_pft_mask)
 
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel            , sum_agg)
-
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp    , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp   , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp  , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp , sum_agg)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel            , sum_agg)
+
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1hr_lfp    , sum_agg)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_10hr_lfp   , sum_agg)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp  , sum_agg)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp , sum_agg)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , sum_agg)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp   , sum_agg)
