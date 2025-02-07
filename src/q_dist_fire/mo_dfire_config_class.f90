@@ -74,8 +74,10 @@ MODULE mo_dfire_config_class
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
     REAL(wp)          :: density_human_population    !< Ignition events
-    REAL(wp)          :: lightning_frequency
-    REAL(wp)          :: a_nd
+    REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
+    REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
+                                                     !< [ignitions indivual-1 d-1]      
+    REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch
 
     !< flags
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
@@ -116,7 +118,8 @@ CONTAINS
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
-    REAL(wp)                      :: a_nd                     !<
+    REAL(wp)                      :: a_nd                     !< 
+    REAL(wp)                      :: fract_crown_scorch(4)    !< Fraction of live fuel consumption from crown scorch
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
@@ -140,6 +143,7 @@ CONTAINS
       & density_human_population,   &         ! ignition events 
       & lightning_frequency,        &         ! 
       & a_nd,                       &         ! 
+      &  fract_crown_scorch,        &         ! 
       & ratio_polymeric_litter_to_dead_fuel
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -158,6 +162,7 @@ CONTAINS
     density_human_population = 55.0               ! Ignition events 
     lightning_frequency      = 0.000012           ! 
     a_nd                     = 0.000048           ! 
+    fract_crown_scorch       = [1.0, 0.05, 0., 0.]
     ratio_polymeric_litter_to_dead_fuel = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -183,6 +188,7 @@ CONTAINS
     config%density_human_population  = density_human_population       ! Ignition events 
     config%lightning_frequency       = lightning_frequency            ! 
     config%a_nd                      = a_nd                           ! 
+    config%fract_crown_scorch        = fract_crown_scorch             ! 
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
