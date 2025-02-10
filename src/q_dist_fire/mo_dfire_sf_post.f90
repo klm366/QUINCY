@@ -145,6 +145,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: live_fuel_100hr_lfp       ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_fuel_1000hr_lfp      ! in [g DM m-2]
 
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp         ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp        ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_100hr_dfp       ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr_dfp      ! in [g DM m-2]
+
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
@@ -198,10 +203,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)               ! in [?]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [?]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [?]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [?]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [?]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [g DM m-2]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! in [-]
@@ -268,6 +278,11 @@ CONTAINS
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
+      w_oi(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
+      w_oi(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
+      w_oi(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
+      w_oi(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
+
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
       !WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
       !      area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
@@ -282,7 +297,7 @@ CONTAINS
                                       lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
-                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: compute at PFT level
+                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                       dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: compute at PFT level
                                       mask_opt=is_fire_intense_enough)
 
