@@ -126,6 +126,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
     REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2], todo: set as ALLOCATABLE
+
     REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
     REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
                                           
@@ -162,7 +164,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! in [g DM m-2]
 
-    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
 
     dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
     dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
@@ -225,8 +226,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
-
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
@@ -282,10 +281,14 @@ CONTAINS
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
-      w_oi(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
-      w_oi(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
-      w_oi(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
-      w_oi(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
+      ALLOCATE( dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr) )
+      dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
+      dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
+      dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
+      dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
+
+      !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
+      w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
 
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
       !WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
