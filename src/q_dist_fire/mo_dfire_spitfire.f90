@@ -727,6 +727,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: ab_fract(nc)       !< area_burned fraction [-]
     LOGICAL, INTENT(in), OPTIONAL :: mask(nc)   !< True=compute gridcell(s)
     LOGICAL :: mask_sel(nc)
+    INTEGER :: ic
 
     ab = 0._wp
     ab_fract = 0._wp
@@ -736,11 +737,13 @@ CONTAINS
       mask_sel = mask
     END IF
 
-    WHERE (mask)
-      !< Calculate Fraction of the Area burned (eq. 2 from Thonicke et al. (2010))
-      ab = e_n_ignitions * fdi * mean_fire_area * area !< [ha TS-1]
-      ab_fract = ab / area
-    END WHERE
+    DO ic=1, nc
+      IF (mask(ic)) THEN
+        !< Calculate Fraction of the Area burned (eq. 2 from Thonicke et al. (2010))
+        ab(ic) = e_n_ignitions(ic) * fdi(ic) * mean_fire_area(ic) * area(ic) !< [ha TS-1]
+        ab_fract(ic) = ab(ic) / area(ic)
+      END IF
+    END DO
   END SUBROUTINE calc_area_burned
 
 #endif
