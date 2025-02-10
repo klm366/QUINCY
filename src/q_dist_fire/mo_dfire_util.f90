@@ -151,6 +151,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
     !TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
     INTEGER                                 :: iblk, ics, ice, nc
+    INTEGER                                 :: ic
     REAL(wp)                                :: dtime              !< timestep
     LOGICAL, ALLOCATABLE                    :: is_midnight(:)     !< is peak of the day
     LOGICAL, ALLOCATABLE                    :: is_sun_upwards_in_curr_ts(:)

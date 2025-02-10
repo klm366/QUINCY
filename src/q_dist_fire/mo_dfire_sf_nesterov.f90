@@ -78,6 +78,7 @@ CONTAINS
     REAL(wp) :: precip_thd              !< precipitation threshold
     REAL(wp) :: frost_thd               !< rain as frost threshold
     REAL(wp) :: tsfactor
+    INTEGER  :: ic
     ! ----------------------------------------------------------------------------------------------------- !
     precip_thd = df_sf_precip_trhd
     IF (PRESENT(o_precip_thd)) precip_thd = o_precip_thd
@@ -98,7 +99,7 @@ CONTAINS
       ELSE
         tdew_daily(ic) = tmin_daily(ic) - frost_thd
         ni_inc(ic) = (tmax_daily(ic) * (tmax_daily(ic) - tdew_daily(ic))) * tsfactor
-        nesterov_index(ic) = nesterov_index_prev(ic) + ni_inc
+        nesterov_index(ic) = nesterov_index_prev(ic) + ni_inc(ic)
       END IF
     END DO
   END FUNCTION calc_sf_nesterov_index
