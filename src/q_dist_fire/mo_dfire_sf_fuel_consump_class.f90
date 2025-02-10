@@ -67,17 +67,19 @@ CONTAINS
     LOGICAL, INTENT(in)                  :: mask(:)                   !< True = gridcells to compute
     REAL(wp), ALLOCATABLE                :: dead_fc(:,:,:)            !< output (nc, ndeadpools, nfuelclass) [g DM m-2]
 
-    INTEGER  :: iclass, idpool
+    INTEGER  :: iclass, idpool, ic
 
     IF (.NOT. ALLOCATED(dead_fc)) ALLOCATE(dead_fc, mold=dead_fuel)
     dead_fc = 0._wp
 
     DO iclass=1, SIZE(dead_fuel, DIM=3) !< 3 = dead fuel idx
       DO idpool = 1, SIZE(dead_fuel, DIM=2) !< 2 = dead fuel pool indices
-        WHERE (mask)
-          !< Equations B1, B4 and B5 from Thonicke et al. (2010)
-          dead_fc(:,idpool,iclass) = fract_consumption(:,iclass) * dead_fuel(:,idpool,iclass) * area_burned_frac(:)
-        END WHERE
+        DO ic=1, SIZE(dead_fuel, DIM=1) !< 1 = gridcells
+          IF (mask(ic)) THEN
+            !< Equations B1, B4 and B5 from Thonicke et al. (2010)
+            dead_fc(ic,idpool,iclass) = fract_consumption(ic,iclass) * dead_fuel(ic,idpool,iclass) * area_burned_frac(ic)
+          END IF
+        END DO
       ENDDO
     END DO
   END FUNCTION sf_calc_dead_fuel_consumption
@@ -100,16 +102,18 @@ CONTAINS
     LOGICAL, INTENT(in)  :: mask(nc)                            !< True = compute gridcell(s)
     REAL(wp) :: live_fc(nc,sf_fuel_live_fuel_nr)                !< output [g DM m-2]
 
-    INTEGER :: iclass, ilvpool
+    INTEGER :: iclass, ilvpool, ic
 
     live_fc = 0._wp
 
     DO ilvpool = 1, nlivepools
       DO iclass=1, nfuelclass
-        WHERE (mask)
-          live_fc(:,ilvpool) = live_fc(:,ilvpool) + (live_fuel(:,ilvpool,iclass) * prop_crown_scorch(:) * &
-              area_burned_frac * fract_crown_scorch(iclass))
-        ENDWHERE
+        DO ic=1, nc
+          IF (mask(ic)) THEN
+            live_fc(ic,ilvpool) = live_fc(ic,ilvpool) + (live_fuel(ic,ilvpool,iclass) * prop_crown_scorch(ic) * &
+              area_burned_frac(ic) * fract_crown_scorch(iclass))
+          END IF
+        END DO
       END DO
     END DO
   END FUNCTION sf_calc_live_fuel_consumption
