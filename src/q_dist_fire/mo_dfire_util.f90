@@ -261,17 +261,19 @@ CONTAINS
     is_sun_downwards_in_prev_ts(:) = ( (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8 )
     is_midnight(:) = (is_sun_upwards_in_curr_ts(:) .AND. is_sun_downwards_in_prev_ts(:))
 
-    WHERE (is_midnight(:))
-      ! check if at least one value had been assigned at the current day, avoiding division by zero
-      ! calculate the average over the previous day and pass it to the according *_daytime variable;
-      t_air_max(:)            = t_air_max_old(:)
-      t_air_min(:)            = t_air_min_old(:)
-      precip_daytime(:)       = precip_daytime_old(:)
-      ! init variables after min/max daily value
-      t_air_max_old(:)        = 0.0_wp     !< zero kelvin
-      t_air_min_old(:)        = 9999.0_wp  !< above max
-      precip_daytime_old(:)   = 0._wp      !< no precipitation
-    END WHERE
+    DO ic=1, nc
+      IF (is_midnight(ic)) THEN
+        ! check if at least one value had been assigned at the current day, avoiding division by zero
+        ! calculate the average over the previous day and pass it to the according *_daytime variable;
+        t_air_max(ic)            = t_air_max_old(ic)
+        t_air_min(ic)            = t_air_min_old(ic)
+        precip_daytime(ic)       = precip_daytime_old(ic)
+        ! init variables after min/max daily value
+        t_air_max_old(ic)        = 0.0_wp     !< zero kelvin
+        t_air_min_old(ic)        = 9999.0_wp  !< above max
+        precip_daytime_old(ic)   = 0._wp      !< no precipitation
+      END IF
+    END DO
 
     !    IF (debug_on() .AND. iblk == 1) THEN
     IF (is_midnight(1)) THEN

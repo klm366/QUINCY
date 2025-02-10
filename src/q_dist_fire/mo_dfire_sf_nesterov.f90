@@ -91,14 +91,16 @@ CONTAINS
     is_frost = (tmin_daily <= frost_thd)
     is_wet_enough = (precipitation_daily > precip_thd)
 
-    WHERE (is_wet_enough(:) .OR. is_frost(:))
-      ! reset to 0
-      nesterov_index(:) = 0._wp
-    ELSEWHERE
-      tdew_daily(:) = tmin_daily(:) - frost_thd
-      ni_inc(:) = (tmax_daily(:) * (tmax_daily(:) - tdew_daily(:))) * tsfactor
-      nesterov_index(:) = nesterov_index_prev(:) + ni_inc
-    ENDWHERE
+    DO ic=1, nc
+      IF (is_wet_enough(ic) .OR. is_frost(ic)) THEN
+        ! reset to 0
+        nesterov_index(ic) = 0._wp
+      ELSE
+        tdew_daily(ic) = tmin_daily(ic) - frost_thd
+        ni_inc(ic) = (tmax_daily(ic) * (tmax_daily(ic) - tdew_daily(ic))) * tsfactor
+        nesterov_index(ic) = nesterov_index_prev(ic) + ni_inc
+      END IF
+    END DO
   END FUNCTION calc_sf_nesterov_index
 
 #endif

@@ -73,16 +73,18 @@ CONTAINS
     LOGICAL, INTENT(in)            :: mask(:)   !< True = compute gridcell(s) (#nc)
     REAL(wp), ALLOCATABLE          :: emissions(:,:,:) !< output (#nc,#npools,#nspecs) [mol m-2]
 
-    INTEGER :: ispecs, ipool
+    INTEGER :: ispecs, ipool, ic
 
     IF (.NOT. ALLOCATED(emissions)) ALLOCATE(emissions(nc,npools,nspecs))
 
     ! Eq. A86 from Pfeiffer et al. (2013)
     DO ispecs=1, nspecs
       DO ipool=1, npools
-        WHERE (mask)
-          emissions(:,ipool,ispecs) = emission_factors(ispecs) *  sf_convert_units("g", "kg", bb(:,ipool))
-        END WHERE
+        DO ic=1, nc
+          IF (mask(ic)) THEN
+            emissions(ic,ipool,ispecs) = emission_factors(ispecs) *  sf_convert_units("g", "kg", bb(ic,ipool))
+          END IF
+        END DO
       END DO
     END DO
   END FUNCTION sf_calc_emissions
