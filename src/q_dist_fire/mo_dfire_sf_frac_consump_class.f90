@@ -54,17 +54,20 @@ CONTAINS
 
     REAL(wp) :: omega_n_l(nc) !< Fuel moisture for 1 hour and grass [0 to 1]
     REAL(wp) :: omega_o(nc)   !< Fuel moisture for 1, 10, 100 hours fuel classes and grass [0 to 1]
+    INTEGER :: ic
 
     frac_consump = 0._wp
     omega_n_l(:) = fuel_moisture(:,df_sf_omega_o_idx)
     omega_o(:) = fuel_moisture(:,df_sf_omega_nl_idx)
 
-    WHERE (mask)
-      frac_consump(:,df_sf_fc_1hr_idx) = calc_1hr(omega_n_l, moist_extinction)
-      frac_consump(:,df_sf_fc_10hr_idx) = calc_10hr(omega_o, moist_extinction)
-      frac_consump(:,df_sf_fc_100hr_idx) = calc_100hr(omega_o, moist_extinction)
-      frac_consump(:,df_sf_fc_1000hr_idx) = calc_1000hr(omega_o, moist_extinction)
-    END WHERE
+    DO ic=1, nc
+      IF (mask(ic)) THEN
+        frac_consump(ic,df_sf_fc_1hr_idx) = calc_1hr(omega_n_l(ic), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_10hr_idx) = calc_10hr(omega_o(ic), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_100hr_idx) = calc_100hr(omega_o(ic), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_1000hr_idx) = calc_1000hr(omega_o(ic), moist_extinction(ic))
+      END IF
+    END DO
   END FUNCTION sf_calc_frac_consump
 
 
