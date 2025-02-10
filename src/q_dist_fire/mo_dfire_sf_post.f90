@@ -282,8 +282,8 @@ CONTAINS
                                       lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
-                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & 
+                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: compute at PFT level
+                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: compute at PFT level
                                       mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
