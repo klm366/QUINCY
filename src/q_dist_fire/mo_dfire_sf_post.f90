@@ -162,6 +162,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! in [g DM m-2]
 
+    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
+
     dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
     dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl              ! in [m]
@@ -222,6 +224,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
@@ -298,7 +302,7 @@ CONTAINS
                                       height, dbh, & ! Tree characteristics
                                       i_surface, & ! Fire intensity
                                       w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! todo: compute at PFT level
+                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                       mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
