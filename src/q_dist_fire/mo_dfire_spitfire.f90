@@ -200,7 +200,7 @@ CONTAINS
     TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
-    INTEGER                               :: iblk, ics, ice, nc, ic
+    INTEGER                               :: iblk, ics, ice, nc, ic, is
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -435,9 +435,9 @@ CONTAINS
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
     ab_w_soil_fc_sl(:,:) = w_soil_fc_sl(:, [df_sf_sl_indices])
-    WHERE (ab_w_soil_fc_sl > 0._wp) ! should it happen?
-      ab_moisture_sl(:,:) = ab_w_soil_sl(:,:) / ab_w_soil_fc_sl(:,:)
-    END WHERE
+    DO CONCURRENT(ic=1:nc, is=1:df_sf_sl_dims_nr, ab_w_soil_fc_sl(ic,is) > 0._wp) ! should it happen? (ab_w_soil_fc_sl = 0)
+      ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
+    END DO
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
