@@ -37,6 +37,7 @@ MODULE mo_dfire_util
 
   PRIVATE
   PUBLIC :: calculate_time_average_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
+  PUBLIC :: dfire_update_pools
 
   PUBLIC :: logical2real, real2logical
 
@@ -417,6 +418,48 @@ CONTAINS
       real2logical = .FALSE.
     ENDIF
   END FUNCTION real2logical
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Apply dfire_update_pools
+  !> 1. Remove fire emissions from sb_pool
+  !> 2. Transfer woody litter residue into polymeric litter
+  !>
+  SUBROUTINE dfire_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
+    USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter
+
+    REAL(wp), INTENT(in) :: sb_fire_emissions(:,:,:)
+    REAL(wp), INTENT(in) :: sb_fire_litter_ash(:,:,:)
+    REAL(wp), INTENT(inout) :: sb_pool(:,:,:)
+
+    !> 1. Remove fire emissions from sb_pool_mt
+    sb_pool = sb_pool - sb_fire_emissions
+
+    !> Does it make sense? not really, to keep as purely informative.
+    !CALL pool_transfer(sb_fire_litter_ash_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+    !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+    !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+
+    !> 2. Woody litter residue is transformed into polymeric
+    CALL pool_transfer(sb_fire_litter_ash(ix_woody_litter,:,:), & ! amount (IN)
+        sb_pool(ix_woody_litter,:,:), & ! pool from (INOUT)
+        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+  END SUBROUTINE dfire_update_pools
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Small helper routine to transfer matter between pools
+  !>
+  SUBROUTINE pool_transfer(amount, from, to)
+    REAL(wp), INTENT(in) :: amount(:,:)
+    REAL(wp), INTENT(inout) :: from(:,:)
+    REAL(wp), INTENT(inout) :: to(:,:)
+
+    from = from - amount
+    to = to + amount
+  END SUBROUTINE pool_transfer
 
 #endif
 END MODULE mo_dfire_util
