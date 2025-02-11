@@ -25,9 +25,11 @@ MODULE mo_q_veg_update_pools
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
+    &                                   VEG_BGCM_FIRE_LITTERFALL_ID, &
     &                                   VEG_BGCM_RESERVE_USE_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
-    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_FPROD_DECAY_ID
+    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_FPROD_DECAY_ID, &
+    &                                   VEG_BGCM_FIRE_EMISSIONS_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_MYCO_EXPORT_ID
 
   IMPLICIT NONE
@@ -99,7 +101,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
@@ -264,7 +268,9 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_LITTERFALL_ID, veg_fire_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_EMISSIONS_ID, veg_fire_emissions_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -495,6 +501,18 @@ CONTAINS
        veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
       END DO
 
+      !> 1.X Update veg_litterfall + litterfall from disturbances
+      DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, n_veg_bgcm_comp
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+                                                        veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+            END DO ! ix_comp = 1, n_veg_bgcm_comp
+          END IF ! model%config%is_element_used(ielem)) THEN
+        END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+      END DO ! ic = 1, nc
 
        !>  1.7 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
        !>
@@ -525,6 +543,21 @@ CONTAINS
           END IF
         END DO
       END DO
+
+      !< 1.7.1 Update dist_fire pools with veg_fire_emissions
+      IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+        DO ic = 1, nc
+          DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(ielem)) THEN
+              ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+              DO ix_comp = 1, nc
+                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+              END DO ! ix_comp
+            END IF ! is_element_used(ielem)
+          END DO ! ielem
+        END DO ! ic
+      END IF ! flag_dfire
 
       ! @TODO
       !>    1.7.1 quick-fix ensure veg_pool does not become negative

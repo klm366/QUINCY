@@ -32,6 +32,8 @@ MODULE mo_q_sb_update_pools
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
 
+  USE mo_dfire_util,              ONLY: dfire_update_pools
+
   IMPLICIT NONE
 
   PRIVATE
@@ -118,6 +120,8 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_transport_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     dsl4jsb_Def_mt1L3D :: sb_delta_pools_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_litter_ash_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_emissions_mt
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -370,6 +374,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_DELTA_POOLS_ID, sb_delta_pools_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_LITTER_ASH_ID, sb_fire_litter_ash_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_EMISSIONS_ID, sb_fire_emissions_mt)
 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)
     ALLOCATE(p_deposition_sl(nc, nsoil_sb))
@@ -694,6 +700,12 @@ CONTAINS
     !!
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
       sb_pool_mt = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
+
+      IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+      END IF
     END IF
 
     !> 6.0 JSM:
@@ -710,7 +722,27 @@ CONTAINS
       !>
       sb_pool_prev_timestep_hlp_mt = sb_pool_mt
       sb_pool_mt                   = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
-      !>  6.2 particle transport
+
+      !> 6.2 update fire disturbance flux pools
+      IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+        !sb_pool_mt = sb_pool_mt - sb_fire_emissions_mt
+
+        !> 6.2.1 burned polymeric litter into polymeric
+        !> Does it make sense? not really, to keep as purely informative.
+        !CALL pool_transfer(sb_fire_litter_ash_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+        !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+        !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+
+        !> 6.2.2 burned woody litter is transformed into polymeric
+        !CALL pool_transfer(sb_fire_litter_ash_mt(ix_woody_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+        !sb_pool_mt(ix_woody_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+        !sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+      END IF ! flag_dfire
+
+      !>  6.3 particle transport
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._wp
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_sb, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
