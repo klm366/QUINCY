@@ -1,0 +1,193 @@
+!> QUINCY apply feedback
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!> @brief module to feedback fire effects into quincy
+!>
+!> @author
+!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
+!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
+!>
+MODULE mo_dfire_sf_feedback
+#ifndef __NO_JSBACH__
+
+  USE mo_kind,                  ONLY: wp
+  USE mo_jsb_control,           ONLY: debug_on
+  USE mo_exception,             ONLY: message, finish
+
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix !< dead fuel pools indices (from sb_pool_mt)
+
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
+                                      t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
+                                      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
+                                      t_sf_fuel_live_fuel_nr
+
+  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
+                                      t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
+                                      t_sf_fuel_dead_fuel_grass_sap_ix
+
+  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter, &
+                                      ix_sap_wood, ix_heart_wood, ix_fruit, ix_labile, &
+                                      ix_reserve, ix_leaf, ix_seed_bed
+
+  IMPLICIT NONE
+
+  PRIVATE
+  PUBLIC :: calc_sf_feedback_dead, calc_sf_feedback_live
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_feedback'
+
+CONTAINS
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Apply spitfire effects into the model for dead fuel consumption on the top soil layer
+  !>
+  !> Woody (polymeric) litter pool (from sb_pool)
+  !> -Emitted: add to sb_fire_emissions_mt (Removed)
+  !> -Residue: add  to  sb_fire_litter_ash_mt -polymeric- (added)
+  !>
+  !> Live grass pools (from veg_pool):
+  !> -Emitted: add to veg_fire_emissions_mt (substracted)
+  !> -Residue: Add to veg_litterfall_mt (transfered from veg_pool into sb_pool)
+  !>
+  SUBROUTINE calc_sf_feedback_dead(emissions, residue, &
+      sb_fire_emissions_mt, sb_fire_litter_ash_mt, &
+      veg_fire_emissions_mt, veg_litterfall_mt, &
+      mask)
+    USE mo_jsb_control, ONLY: debug_on
+
+    REAL(wp), INTENT(in)                  :: emissions(:,:,:)             !< Dead emissions (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
+    REAL(wp), INTENT(in)                  :: residue(:,:,:)               !< Residue from dead fuel consumption (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
+    REAL(wp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bccm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(wp), INTENT(inout)               :: sb_fire_emissions_mt(:,:,:)  !< bgcm sb_pool (#pool, #element, #nc) [mol/m3]
+    REAL(wp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(wp), INTENT(inout)               :: sb_fire_litter_ash_mt(:,:,:) !< bgcm sb_pool (#pools, #element, #nc) [mol/m3]
+    LOGICAL, INTENT(in)                   :: mask(:)                      !< True = Gridcells to compute
+
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':calc_sf_feedback_dead'
+    INTEGER :: inc
+    ! ----------------------------------------------------------------------------------------------------- !
+    !< Emitted FC is removed through sb_fire_emissions_mt
+    DO inc=1, SIZE(sb_fire_emissions_mt, DIM=3) ! nc dim=3
+      IF (mask(inc)) THEN
+        sb_fire_emissions_mt(ix_woody_litter,:,inc) = sb_fire_emissions_mt(ix_woody_litter,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_woody_ix,:)
+        sb_fire_emissions_mt(ix_polymeric_litter,:,inc) = sb_fire_emissions_mt(ix_polymeric_litter,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_polymeric_ix,:)
+      END IF
+    END DO
+
+    !> Emitted FC - livegrass (counts as dead fuel)
+    DO inc=1, SIZE(veg_fire_emissions_mt, DIM=3) ! nc dim=3
+      IF (mask(inc)) THEN
+        veg_fire_emissions_mt(ix_fruit,:,inc) = veg_fire_emissions_mt(ix_fruit,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_grass_fruit_ix,:)
+        veg_fire_emissions_mt(ix_reserve,:,inc) = veg_fire_emissions_mt(ix_reserve,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_grass_reserve_ix,:)
+        veg_fire_emissions_mt(ix_labile,:,inc) = veg_fire_emissions_mt(ix_labile,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_grass_labile_ix,:)
+        veg_fire_emissions_mt(ix_sap_wood,:,inc) = veg_fire_emissions_mt(ix_sap_wood,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_grass_sap_ix,:)
+        veg_fire_emissions_mt(ix_leaf,:,inc) = veg_fire_emissions_mt(ix_leaf,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_grass_leaf_ix,:)
+      END IF
+    END DO
+
+    !< Residue is transfered using sb_fire_litter_ash_mt (woody litter to polymeric)
+    DO inc=1, SIZE(sb_fire_litter_ash_mt, DIM=3) !< nc dim = 3
+      IF (mask(inc)) THEN
+        sb_fire_litter_ash_mt(ix_woody_litter,:,inc) = &
+            sb_fire_litter_ash_mt(ix_woody_litter,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_woody_ix,:)
+        sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) = &
+            sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_polymeric_ix,:)
+        !< livegrass into veg_litterfall (no units conversion required)
+        veg_litterfall_mt(ix_fruit,:,inc) = veg_litterfall_mt(ix_fruit,:,inc) + &
+            residue(inc,t_sf_fuel_dead_fuel_grass_fruit_ix,:)
+        veg_litterfall_mt(ix_leaf,:,inc) = veg_litterfall_mt(ix_leaf,:,inc) + &
+            residue(inc,t_sf_fuel_dead_fuel_grass_leaf_ix,:)
+        veg_litterfall_mt(ix_labile,:,inc) = veg_litterfall_mt(ix_labile,:,inc) + &
+            residue(inc,t_sf_fuel_dead_fuel_grass_labile_ix,:)
+        veg_litterfall_mt(ix_sap_wood,:,inc) = veg_litterfall_mt(ix_sap_wood,:,inc) + &
+            residue(inc,t_sf_fuel_dead_fuel_grass_sap_ix,:)
+        veg_litterfall_mt(ix_reserve,:,inc) = veg_litterfall_mt(ix_reserve,:,inc) + &
+            residue(inc,t_sf_fuel_dead_fuel_grass_reserve_ix,:)
+      ENDIF
+    END DO
+
+  END SUBROUTINE calc_sf_feedback_dead
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Apply spitfire effects into the model for live fuel consumption
+  !>
+  !> Emitted: add to veg_fire_emissions (remove)
+  !> Residue: add to veg_litterfall (transfer to polymeric litter-sb_pool-)
+  !>
+  SUBROUTINE calc_sf_feedback_live(emissions, residue, veg_fire_emissions_mt, veg_litterfall_mt, mask)
+
+    REAL(wp), INTENT(in)                  :: emissions(:,:,:)             !< Live emissions (#nc,#n live pools,#elems) [mol/m2]
+    REAL(wp), INTENT(in)                  :: residue(:,:,:)               !< Residue from live emissions (#nc,#n live pools,#elems) [mol/m2]
+    REAL(wp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(wp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    LOGICAL, INTENT(in)                   :: mask(:)                      !< True = compute gridcell(s)
+
+    INTEGER                               :: inc
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':calc_sf_feedback_live'
+    ! ----------------------------------------------------------------------------------------------------- !
+    !< Emitted
+    DO inc=1, SIZE(emissions, DIM=1) !< nc dim=1
+      IF (mask(inc)) THEN
+        veg_fire_emissions_mt(ix_fruit,:,inc) = veg_fire_emissions_mt(ix_fruit,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_fruit_ix,:)
+        veg_fire_emissions_mt(ix_leaf,:,inc) = veg_fire_emissions_mt(ix_leaf,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_leaf_ix,:)
+        veg_fire_emissions_mt(ix_labile,:,inc) = veg_fire_emissions_mt(ix_labile,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_labile_ix,:)
+        veg_fire_emissions_mt(ix_reserve,:,inc) = veg_fire_emissions_mt(ix_reserve,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_reserve_ix,:)
+        veg_fire_emissions_mt(ix_sap_wood,:,inc) = veg_fire_emissions_mt(ix_sap_wood,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_sap_wood_ix,:)
+        veg_fire_emissions_mt(ix_heart_wood,:,inc) = veg_fire_emissions_mt(ix_heart_wood,:,inc) + &
+            emissions(inc,t_sf_fuel_live_fuel_heart_wood_ix,:)
+      END IF
+    END DO
+
+    !< Residue (add to veg_littefall_mt)
+    DO inc=1, SIZE(residue, DIM=1) ! 1=nc dim
+      IF (mask(inc)) THEN
+        veg_litterfall_mt(ix_fruit,:,inc) = veg_litterfall_mt(ix_fruit,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_fruit_ix,:)
+        veg_litterfall_mt(ix_leaf,:,inc) = veg_litterfall_mt(ix_leaf,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_leaf_ix,:)
+        veg_litterfall_mt(ix_labile,:,inc) = veg_litterfall_mt(ix_labile,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_labile_ix,:)
+        veg_litterfall_mt(ix_reserve,:,inc) = veg_litterfall_mt(ix_reserve,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_reserve_ix,:)
+        veg_litterfall_mt(ix_sap_wood,:,inc) = veg_litterfall_mt(ix_sap_wood,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_sap_wood_ix,:)
+        veg_litterfall_mt(ix_heart_wood,:,inc) = veg_litterfall_mt(ix_heart_wood,:,inc) + &
+            residue(inc,t_sf_fuel_live_fuel_heart_wood_ix,:)
+      END IF
+    END DO
+
+  END SUBROUTINE calc_sf_feedback_live
+#endif
+
+END MODULE mo_dfire_sf_feedback
+
