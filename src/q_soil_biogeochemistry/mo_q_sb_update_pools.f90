@@ -29,10 +29,12 @@ MODULE mo_q_sb_update_pools
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
-    &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
+    &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID, &
+    &                                   SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
 
   USE mo_dfire_util,              ONLY: dfire_update_pools
+  USE mo_dfire_constants,         ONLY: df_sf_spq_layer_top_sl
 
   IMPLICIT NONE
 
@@ -61,7 +63,7 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_, DFIRE_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
@@ -73,6 +75,7 @@ CONTAINS
     USE mo_spq_util,               ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(DFIRE_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -126,6 +129,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SPQ_)                             ! TYPE(t_spq_memory),     POINTER :: spq__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_spq_memory),     POINTER :: spq__mem
@@ -355,6 +359,7 @@ CONTAINS
     ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(DFIRE_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SPQ_)
