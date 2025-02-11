@@ -30,8 +30,7 @@ MODULE mo_dfire_sf_feedback
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
                                       t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
-                                      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
-                                      t_sf_fuel_live_fuel_nr
+                                      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 
   USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
                                       t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
