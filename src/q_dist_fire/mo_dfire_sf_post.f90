@@ -53,7 +53,9 @@ MODULE mo_dfire_sf_post
                                             sf_calc_live_fuel_consumption_populate_elements
 
   USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
-  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, &
+                                      SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
+                                      VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
 
   IMPLICIT NONE
 
@@ -135,6 +137,8 @@ CONTAINS
     REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
 
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
+    REAL(wp), ALLOCATABLE                 :: emissions_dead_in_m3(:,:,:)        !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
+    REAL(wp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
 
     INTEGER                               :: ip ! iterate
 
@@ -171,6 +175,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_emissions_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_litter_ash_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
@@ -235,6 +243,10 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_EMISSIONS_ID, sb_fire_emissions_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_LITTER_ASH_ID, sb_fire_litter_ash_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_EMISSIONS_ID, veg_fire_emissions_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_LITTERFALL_ID, veg_fire_litterfall_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init here
@@ -375,8 +387,23 @@ CONTAINS
                           mass_imbalance_emitted_live_el) ! [molX/m2]
 
     ! Feedbacks
-
     IF (dsl4jsb_Config(DFIRE_)%flag_has_dead_feedback) THEN
+      ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
+      ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
+      ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
+      emissions_dead_in_m3(:,t_sf_fuel_dead_fuel_woody_ix,:) = sf_convert_units("-/m2", "-/m3", &
+                            emissions_dead_el(:,t_sf_fuel_dead_fuel_woody_ix,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+      emissions_dead_in_m3(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sf_convert_units("-/m2", "-/m3", &
+                            emissions_dead_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+      residue_dead_in_m3(:,t_sf_fuel_dead_fuel_woody_ix,:) = sf_convert_units("-/m2", "-/m3", &
+                            residue_dead_el(:,t_sf_fuel_dead_fuel_woody_ix,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+      residue_dead_in_m3(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sf_convert_units("-/m2", "-/m3", &
+                            residue_dead_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+
       !< Feedback: dead fuel consumption is removed through veg_fire_emissions, sb_fire_emissions_mt for emissions
       !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall
       CALL calc_sf_feedback_dead(emissions_dead_in_m3, &
@@ -384,18 +411,18 @@ CONTAINS
                                 sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), & ! todo: create flux pool with top layer only
                                 sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
                                 veg_fire_emissions_mt, veg_fire_litterfall_mt, &
-                                sf_spitfire % is_fire_intense_enough)
+                                mask=is_fire_intense_enough)
 
     END IF
 
     IF (dsl4jsb_Config(DFIRE_)%flag_has_live_feedback) THEN
       !< Feedback: live fuel consumption is removed using veg_fire_emissions (combusted)
       !< Residue is transfered through veg_litterfall
-      CALL calc_sf_feedback_live(sf_spitfire % emissions_live_el, &
-                                sf_spitfire % residue_live_el, &
+      CALL calc_sf_feedback_live(emissions_live_el, &
+                                residue_live_el, &
                                 veg_fire_emissions_mt, &
                                 veg_fire_litterfall_mt, &
-                                mask=sf_spitfire % is_fire_intense_enough)
+                                mask=is_fire_intense_enough)
 
     END IF
 

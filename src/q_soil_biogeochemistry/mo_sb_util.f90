@@ -25,7 +25,9 @@ MODULE mo_sb_util
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, &
+                                        SB_BGCM_MYCO_EXPORT_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
+                                        SB_BGCM_FIRE_EMISSIONS_ID
 
   IMPLICIT NONE
 
@@ -65,6 +67,8 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
     dsl4jsb_Def_mt2L3D :: sb_transport_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_emissions_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_litter_ash_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -89,6 +93,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_EMISSIONS_ID, sb_fire_emissions_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_LITTER_ASH_ID, sb_fire_litter_ash_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 bgcm fluxes
@@ -98,6 +104,8 @@ CONTAINS
     sb_loss_mt(:,:,:,:)            = zero
     sb_transport_mt(:,:,:,:)       = zero
     sb_mycorrhiza_export_mt(:,:,:) = zero
+    sb_fire_emissions_mt(:,:,:,:)  = zero
+    sb_fire_litter_ash_mt(:,:,:,:) = zero
 
     !>2.0 variables
     !>
