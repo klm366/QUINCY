@@ -385,20 +385,20 @@ CONTAINS
   !>
   !> Calculate residue and any mass imbalance
   !>
-  SUBROUTINE sf_calc_residue(fuel_consumption, emitted_elements, residue, mass_overflow)
-    REAL(wp), INTENT(in) :: fuel_consumption(:,:,:) !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(in) :: emitted_elements(:,:,:) !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(out) :: residue(:,:,:)         !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(out) :: mass_overflow(:,:,:)   !< (#nc,#pools,#elements) [molX/m2]
+  ELEMENTAL SUBROUTINE sf_calc_residue(fuel_consumption, emitted_elements, residue, mass_overflow)
+    REAL(wp), INTENT(in) :: fuel_consumption !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(in) :: emitted_elements !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(out) :: residue         !< (#nc,#pools,#elements) [molX/m2]
+    REAL(wp), INTENT(out) :: mass_overflow   !< (#nc,#pools,#elements) [molX/m2]
 
     !< Compute residue, where Emitted elements < FC
     residue = fuel_consumption - emitted_elements
     mass_overflow = 0._wp
 
-    WHERE (residue < 0._wp)
+    IF (residue < 0._wp) THEN
       mass_overflow = ABS(residue)
       residue = fuel_consumption ! set to max value
-    END WHERE
+    END IF
     ! Use for debugging
     !DO ic=1, SIZE(residue, DIM=1) ! 1= nc dimension index
     !  DO ipool=1, SIZE(residue, DIM=2) ! 2=pool dimension index
