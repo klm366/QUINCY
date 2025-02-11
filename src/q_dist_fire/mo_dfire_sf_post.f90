@@ -376,6 +376,29 @@ CONTAINS
 
     ! Feedbacks
 
+    IF (dsl4jsb_Config(DFIRE_)%flag_has_dead_feedback) THEN
+      !< Feedback: dead fuel consumption is removed through veg_fire_emissions, sb_fire_emissions_mt for emissions
+      !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall
+      CALL calc_sf_feedback_dead(emissions_dead_in_m3, &
+                                residue_dead_in_m3, &
+                                sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), & ! todo: create flux pool with top layer only
+                                sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                                veg_fire_emissions_mt, veg_fire_litterfall_mt, &
+                                sf_spitfire % is_fire_intense_enough)
+
+    END IF
+
+    IF (dsl4jsb_Config(DFIRE_)%flag_has_live_feedback) THEN
+      !< Feedback: live fuel consumption is removed using veg_fire_emissions (combusted)
+      !< Residue is transfered through veg_litterfall
+      CALL calc_sf_feedback_live(sf_spitfire % emissions_live_el, &
+                                sf_spitfire % residue_live_el, &
+                                veg_fire_emissions_mt, &
+                                veg_fire_litterfall_mt, &
+                                mask=sf_spitfire % is_fire_intense_enough)
+
+    END IF
+
 !    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
   END SUBROUTINE update_dfire_sf_post
