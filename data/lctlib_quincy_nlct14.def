@@ -356,3 +356,10 @@ q_emissions_nh3_mol 0.076 0.062 0.082 0.082 0.082 0.082 0.082 0.062 0.082 0.062 
 q_emissions_n2o_mol 0.009 0.010 0.012 0.012 0.012 0.012 0.012 0.010 0.012 0.010 0.012 0.010 0.000 0.000
 q_emissions_n2_mol 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.221 0.000 0.000
 
+# TODO: scientific discussion on how to deal with them
+# emissions_voc: VOC [g VOC / kg of DM burned] emission factor from Thonicke et al. (2010), Table 1
+#emissions_voc 8.1 5.7 3.4 5.7 5.7 5.7 5.7 3.4 5.7 3.4 5.7 3.4 0.0 0.0
+# emissions_tpm: TPM [g TPM / kg of DM burned] emission factor from Thonicke et al. (2010), Table 1
+#emissions_tpm 8.5 17.6 8.5 17.6 17.6 17.6 17.6 8.5 17.6 8.5 17.6 8.5 0.0 0.0
+# emissions_nox: NOx [g NOx / kg of DM burned] emission factor from Thonicke et al. (2010), Table 1
+#emissions_nox 1.85 3.0 2.35 3.0 3.0 3.0 3.0 2.35 3.0 2.35 3.0 2.35 0.0 0.0
