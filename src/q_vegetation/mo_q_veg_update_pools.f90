@@ -52,7 +52,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_RAD_, Q_ASSIMI_, Q_PHENO_, SB_, DFIRE_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
@@ -73,6 +73,7 @@ CONTAINS
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
@@ -122,6 +123,7 @@ CONTAINS
     dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
@@ -259,6 +261,7 @@ CONTAINS
     dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)

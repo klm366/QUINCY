@@ -39,7 +39,9 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_constants,       ONLY: df_sf_species_nr
   USE mo_dfire_constants,       ONLY: df_sf_elements_nr
 
-  USE mo_dfire_constants,         ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix
+
+  USE mo_dfire_constants,       ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
                                         df_sf_species_ch4_idx, &
                                         !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
@@ -51,6 +53,8 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                             sf_calc_dead_fuel_consumption_populate_elements, &
                                             sf_calc_live_fuel_consumption_populate_elements
+
+  USE mo_dfire_sf_feedback,     ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
 
   USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, &
