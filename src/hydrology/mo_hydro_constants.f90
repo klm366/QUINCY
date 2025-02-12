@@ -56,8 +56,10 @@ MODULE mo_hydro_constants
     ! Parameters required for ARNO Scheme
     & oro_var_min = 100._wp,               & !< ARNO Scheme minimum orographic standard deviation threshold
     & oro_var_max = 1000._wp,              & !< ARNO Scheme maximum orographic standard deviation threshold
-    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & !< minimum (slow) subsurface drainage
-    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum (fast) subsurface drainage
+    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & !< maximum flux for slow subsurface drainage, i.e. below field capacity
+                                                      !< (Todini, 1996; Duemenil, 1992)
+    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum flux for fast subsurface drainage, i.e. above field capacity
+                                                      !< (Todini, 1996; Duemenil, 1992)
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
     ! Parameters used for pond computations
@@ -90,7 +92,9 @@ MODULE mo_hydro_constants
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
-    & beta_perc               = 0.139_wp         !< Parameter from percolation theory
+    & beta_perc               = 0.139_wp,      & !< Parameter from percolation theory
+    ! Parameters for bedrock
+    & k_brock                 = 1.E-6_wp         !< Hydrologic conductivity (fractured) bedrock [m/s] (Freeze & Cherry, 1979)
 
 #endif
 END MODULE mo_hydro_constants
