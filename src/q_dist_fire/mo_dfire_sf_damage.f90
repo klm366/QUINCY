@@ -159,8 +159,8 @@ CONTAINS
         !< probability of mortality
         prob_mort % scorch_height(inc) = lctlib_F_scorch_height * (i_surface(inc) ** 0.667) ! (Eq. 16 from Thonicke et al. (2010))
         prob_mort % crown_length(inc) = lctlib_crown_length * height(inc)
-        WRITE(*,*) "calc_prob_mortality:: inc, height, crown lenght =", inc, height(inc), &
-                                prob_mort % crown_length(inc)
+        !WRITE(*,*) "calc_prob_mortality:: inc, height, crown lenght =", inc, height(inc), &
+        !                        prob_mort % crown_length(inc)
         prob_mort % prop_ck(inc) = calc_prop_ck(prob_mort % scorch_height(inc), &
             height(inc), &
             prob_mort % crown_length(inc))

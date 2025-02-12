@@ -57,6 +57,7 @@ MODULE mo_dfire_fuel
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
   USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
+  USE mo_dfire_sf_ros_class,    ONLY: calc_fbd
 
   !USE mo_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
 
@@ -289,9 +290,13 @@ CONTAINS
     !> Aggregation average's the PFT values
 
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
+    !WRITE(*,*) "fuel.f90:: ic, dead fuel spread =", 1, dead_fuel_spread_fcl(1,:) 
     DO ic = 1, nc
-      fuel_bulk_density(:) = lctlib%q_fuel_bulk_density * SUM(dead_fuel_spread_fcl(ic,:) * df_sf_fuel_class_factors)
+      IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._wp) THEN
+        fuel_bulk_density(ic) = calc_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:))
+      ENDIF
     END DO
+    !WRITE(*,*) "fuel.f90:: ic, fuel_bulk_density=", 1, lctlib%q_fuel_bulk_density, fuel_bulk_density(1)
 
     dead_fuel_1hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     dead_fuel_10hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_10hr_idx)
@@ -313,9 +318,9 @@ CONTAINS
     live_fuel_100hr_lfp = live_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     live_fuel_1000hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
-    WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
-                        ", area, fraction ref, tile func, forest_fract, height=", grid_cell_area(1),  &
-                        tile_fract_ref(1), tile_fract(1), forest_fract(1), height(1)
+    !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
+    !                    ", area, fraction ref, tile func, forest_fract, height=", grid_cell_area(1),  &
+    !                    tile_fract_ref(1), tile_fract(1), forest_fract(1), height(1)
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel
