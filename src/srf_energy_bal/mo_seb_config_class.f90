@@ -34,6 +34,7 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
+     INTEGER                     :: le_test
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -54,6 +55,7 @@ CONTAINS
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
+    INTEGER                     :: le_test
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
@@ -65,7 +67,8 @@ CONTAINS
       coef_ril_t,                  &
       coef_ril_tp1,                &
       l_ice_on_lakes,              &
-      niter_tmx
+      niter_tmx,                   &
+      le_test
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -85,6 +88,7 @@ CONTAINS
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
+    le_test         = 0
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -102,6 +106,7 @@ CONTAINS
     config%coef_ril_tp1              = coef_ril_tp1
     config%l_ice_on_lakes            = l_ice_on_lakes
     config%niter_tmx                 = niter_tmx
+    config%le_test                   = le_test
 
     CALL close_nml(nml_handler)
 

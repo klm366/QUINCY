@@ -90,9 +90,9 @@ CONTAINS
     & weq_pond_max, fract_snow, fract_skin, fract_pond, fract_pond_max, hcap_grnd,  &
     & evapotrans, evapopot, transpiration, rain, snow, lex_srf_excess,  &
     & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
-    & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
-    & snow_soil_dens, wtr_pond, ice_pond,                           &
-    & wtr_latflow_res_srf, q_snocpymlt, new_snow_soil,              &
+    & ice_impedance, le_phase, wtr_skin, weq_snow_soil, weq_snow_can, &
+    & snow_soil_dens, wtr_pond, ice_pond, wtr_latflow_res_srf,      &
+    & le_phase_srf, le_phase_blg,q_snocpymlt, new_snow_soil,        &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
@@ -114,12 +114,13 @@ CONTAINS
       & fract_snow(:), fract_skin(:), fract_pond(:), fract_pond_max(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
       & lex_srf_excess(:), weq_rootzone(:), weq_rootzone_max(:), weq_soil(:), &
-      & hyd_cond_sat_sl1(:), ice_impedance(:)
+      & hyd_cond_sat_sl1(:), ice_impedance(:), le_phase(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:), wtr_latflow_res_srf(:)
     REAL(wp), INTENT(out)   :: &
-      & q_snocpymlt(:), new_snow_soil(:), snow_accum(:), snowmelt_soil(:), &
+      & le_phase_srf(:), le_phase_blg(:),q_snocpymlt(:),   &
+      & new_snow_soil(:), snow_accum(:), snowmelt_soil(:), &
       & pond_freeze(:), pond_melt(:), evapotrans_soil(:), evapo_skin(:),   &
       & evapo_snow(:), evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:), &
       & evapo_deficit(:), infilt(:), runoff(:), runoff_horton(:), wtr_latflow_srf(:)
@@ -179,6 +180,7 @@ CONTAINS
 
     DO ic = 1, nc
       new_snow_soil(ic)     = 0._wp
+      le_phase_blg(ic)      = le_phase(ic)
       snow_accum(ic)        = 0._wp
       weq_snow_soil_old     = weq_snow_soil(ic)
       snowmelt_soil(ic)     = 0._wp
@@ -250,11 +252,10 @@ CONTAINS
       !  Snow melt
       !------------------------
       IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-        IF (t_unfilt(ic) > tmelt .AND. weq_snow_soil(ic) > 0._wp) THEN
-          snowmelt_pot_in_m = hcap_grnd(ic) * (t_unfilt(ic)-tmelt)/(alf*rhoh2o)      ! potential snow and ice melt [m]
-          snowmelt_soil(ic) = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil(ic)), 0._wp)  ! snow melt limited by actual snow depth
+        IF (le_phase(ic) > 0._wp .AND. weq_snow_soil(ic) > 0._wp) THEN
+          snowmelt_soil(ic) = MIN(le_phase(ic) * dtime / (rhoh2o * alf), weq_snow_soil(ic))
+          le_phase_blg(ic)  = le_phase_blg(ic) - snowmelt_soil(ic) * rhoh2o * alf / dtime
           weq_snow_soil(ic) = weq_snow_soil(ic) - snowmelt_soil(ic)                  ! reduce snow depth according to melting
-          ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
         END IF
       END IF
 
@@ -276,20 +277,23 @@ CONTAINS
       !       and move to sse routine. Also use ice density for ice fluxes
       !------------------------
       ! 1.) Potential melting:
-      t_pond = t_unfilt(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
-      IF (t_pond > tmelt .AND. ice_pond(ic) > 0._wp) THEN
-        pond_change_pot      = hcap_grnd(ic) * (t_pond-tmelt)/(alf*rhoh2o)
-        pond_melt(ic)        = MAX(MIN(pond_change_pot, ice_pond(ic)), 0._wp)
+      IF (le_phase_blg(ic) > 0._wp .AND. ice_pond(ic) > 0._wp) THEN
+        pond_melt(ic)        = MIN(le_phase_blg(ic) * dtime / (rhoh2o * alf), ice_pond(ic))
+        le_phase_blg(ic)     = le_phase_blg(ic) - pond_melt(ic) * rhoh2o * alf / dtime
         ice_pond(ic)         = ice_pond(ic) - pond_melt(ic)
         wtr_pond(ic)         = wtr_pond(ic) + pond_melt(ic)
         wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + pond_melt(ic)
-      ELSE IF (t_pond < tmelt .AND. wtr_pond(ic) > 0._wp) THEN
-        pond_change_pot      = hcap_grnd(ic) * (tmelt-t_pond)/(alf*rhoh2o)
-        pond_freeze(ic)      = MAX(MIN(pond_change_pot, wtr_pond(ic)), 0._wp)
+      ! 1.) Potential freezing:
+      ELSE IF (le_phase_blg(ic) < 0._wp .AND. wtr_pond(ic) > 0._wp) THEN
+        pond_freeze(ic)      = MIN(ABS(le_phase_blg(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
+        le_phase_blg(ic)     = le_phase_blg(ic) + pond_freeze(ic) * rhoh2o * alf / dtime
         wtr_pond(ic)         = wtr_pond(ic) - pond_freeze(ic)
         ice_pond(ic)         = ice_pond(ic) + pond_freeze(ic)
         wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) - pond_freeze(ic)
       END IF
+
+      ! Splitting phase change heat fluxes in surface (snow and pond) and below ground (upper most soil layer)
+      le_phase_srf(ic) = le_phase(ic) - le_phase_blg(ic)
 
       !-----------------------------------------------------------
       !   Budget of water in skin and pond reservoir (canopy and ground)
