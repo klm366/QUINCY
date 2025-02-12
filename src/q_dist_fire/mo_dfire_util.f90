@@ -90,7 +90,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire, maybe?"
+    !write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire, maybe?"
 
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
@@ -110,7 +110,7 @@ CONTAINS
     ! DFIRE_
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
     ! ----------------------------------------------------------------------------------------------------- !
-    write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire..."
+    !write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire..."
 
     precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
 
@@ -185,7 +185,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ---------------------------
-    write(*,*) "dfire_util.f90:: calculate_daily_weather, maybe?"
+    !write(*,*) "dfire_util.f90:: calculate_daily_weather, maybe?"
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -213,8 +213,8 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    write(*,*) "dfire_util.f90:: calculate_daily_weather..., t_air_min(1), t_air_max =", &
-            t_air_min(1), t_air_max(1)
+    !write(*,*) "dfire_util.f90:: calculate_daily_weather..., t_air_min(1), t_air_max =", &
+    !        t_air_min(1), t_air_max(1)
 
     !> 1.0 init
     !!
@@ -286,7 +286,7 @@ CONTAINS
         CALL finish("calc_daily_weather", "t_air_min cant be higher than t_air_max")
       ENDIF
     ENDIF
-    write(*,*) "dfire_util.f90:: (end) calculate_daily_weather, t_air_min(1), t_air_max(1) =", t_air_min(1), t_air_max(1)
+    !write(*,*) "dfire_util.f90:: (end) calculate_daily_weather, t_air_min(1), t_air_max(1) =", t_air_min(1), t_air_max(1)
 
     !> 3.0 update cos_zenith_angle of previous time steps
     !!
@@ -348,7 +348,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    write(*,*) "dfire_util.f90:: calculate_pure_moving_averages, maybe?"
+    !write(*,*) "dfire_util.f90:: calculate_pure_moving_averages, maybe?"
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
@@ -368,7 +368,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
 
-    write(*,*) "dfire_util.f90:: calculate_pure_moving_averages..."
+    !write(*,*) "dfire_util.f90:: calculate_pure_moving_averages..."
 
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))
