@@ -553,7 +553,7 @@ CONTAINS
           DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
             IF (model%config%is_element_used(ielem)) THEN
               ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-              DO ix_comp = 1, nc
+              DO ix_comp = 1, n_veg_bgcm_comp 
                 veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
                     veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
               END DO ! ix_comp
