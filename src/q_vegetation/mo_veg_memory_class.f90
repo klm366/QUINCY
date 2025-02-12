@@ -28,6 +28,7 @@ MODULE mo_veg_memory_class
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,               &
     &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                            &
+    &                                  VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID,                   &
     &                                  VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
     &                                  VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
     &                                  VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_FPROD_DECAY_ID
@@ -390,6 +391,8 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfrac_alloc
+    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfireemissions
+    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfirelitterfall
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
@@ -504,6 +507,14 @@ CONTAINS
       mem%veg_bgcm_main%vegbfrac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
+      ! veg_fire_emissions
+      mem%veg_bgcm_main%vegbfireemissions => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,      &
+          & VEG_BGCM_FIRE_EMISSIONS_ID, name = 'vegetation_bgcm_fire_emissions', shortname = 'veg_bgcm_fire_emissions', &
+          & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
+      ! veg_fire_litterfall
+      mem%veg_bgcm_main%vegbfirelitterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,      &
+          & VEG_BGCM_FIRE_LITTERFALL_ID, name = 'vegetation_bgcm_fire_litterfall', shortname = 'veg_bgcm_fire_litterfall', &
+          & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material elements structures
@@ -591,6 +602,22 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp)
+      CALL mem%Add_var(mem%veg_bgcm_main%vegbfireemissions,                                            &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & output_level = FULL,                                                                         &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp)
+      CALL mem%Add_var(mem%veg_bgcm_main%vegbfirelitterfall,                                             &
+        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)

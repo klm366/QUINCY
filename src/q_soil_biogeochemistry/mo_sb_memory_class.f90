@@ -27,7 +27,8 @@ MODULE mo_sb_memory_class
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
   USE mo_lnd_bgcm_store_class,   ONLY: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
-    &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
+    &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID, &
+    &                                  SB_BGCM_FIRE_LITTER_ASH_ID, SB_BGCM_FIRE_EMISSIONS_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
@@ -398,6 +399,8 @@ MODULE mo_sb_memory_class
     TYPE(t_sb_bgcm_with_components), POINTER :: sbbformation
     TYPE(t_sb_bgcm_with_components), POINTER :: sbbloss
     TYPE(t_sb_bgcm_with_components), POINTER :: sbbtransport
+    TYPE(t_sb_bgcm_with_components), POINTER :: sbbfirelitterash !< Todo: (pools,elements,nc,nsoil), no need for soil layers (fire only requires top layer)
+    TYPE(t_sb_bgcm_with_components), POINTER :: sbbfireemissions !< Todo: (pools,elements,nc,nsoil), no need for soil layers (fire only requires top layer)
     TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbmyco_export
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_main_get_element_name_by_id
@@ -503,6 +506,16 @@ CONTAINS
       mem%sb_bgcm_main%sbbtransport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_TRANSPORT_ID, name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
+      ! sb_fire_litter_ash
+      mem%sb_bgcm_main%sbbfirelitterash => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+        & SB_BGCM_FIRE_LITTER_ASH_ID, name = 'soil_biogeochemistry_bgcm_fire_litter_ash', &
+        &  shortname = 'sb_bgcm_fire_litter_ash', &
+        & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
+      ! sb_fire_emissions
+      mem%sb_bgcm_main%sbbfireemissions => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+          & SB_BGCM_FIRE_EMISSIONS_ID, name = 'soil_biogeochemistry_bgcm_fire_emissions', &
+          & shortname = 'sb_bgcm_fire_emissions', &
+          & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
 
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material elements structures
@@ -546,6 +559,22 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_bgcm_main%sbbtransport, &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & output_level = FULL,                                                                       &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sbbfirelitterash, &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & output_level = FULL,                                                                       &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sbbfireemissions, &
         & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
