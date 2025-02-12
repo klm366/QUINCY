@@ -48,7 +48,7 @@ MODULE mo_interface_parflow
   LOGICAL :: received_fract_parflow = .FALSE.
 
   INTEGER, ALLOCATABLE :: field_id(:)
-  LOGICAL, ALLOCATABLE, TARGET :: received_soil_water(:,:)
+  LOGICAL, ALLOCATABLE, TARGET :: received_soil_water(:,:,:)
   REAL(wp), ALLOCATABLE, TARGET :: is_valid_parflow(:,:)
   REAL(wp), ALLOCATABLE, TARGET :: parflow_buffer(:,:,:)
 
@@ -123,11 +123,11 @@ CONTAINS
     field_name(3)             = "soil_water"
     collection_size(3)        = nsoil
 
-    ALLOCATE(received_soil_water(nproma,patch_horz%nblks_c))
+    ALLOCATE(received_soil_water(nproma,nsoil,patch_horz%nblks_c))
     ALLOCATE(is_valid_parflow(nproma,patch_horz%nblks_c))
     ALLOCATE(parflow_buffer(nproma,nsoil,patch_horz%nblks_c))
 
-    received_soil_water(:,:) = .FALSE.
+    received_soil_water(:,:,:) = .FALSE.
     is_valid_parflow(:,:) = 0.0_wp
 
     DO jc = 1, no_of_fields
@@ -202,17 +202,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, evapotrans_to_parflow)
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, nsoil))
+    !$ACC DATA CREATE(buffer)
 
     ! Send water_to_parflow
     ! --------------------
 
-    !$OMP PARALLEL
-    CALL init(buffer(:,:))
-    !$OMP END PARALLEL
+!$OMP PARALLEL
+    CALL init(buffer(:,:), lacc=.TRUE.)
+!$OMP END PARALLEL
 
     write_coupler_restart = .FALSE.
 
-    !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
       IF (iblk /= grid%nblks) THEN
@@ -220,27 +223,37 @@ CONTAINS
       ELSE
         nlen = grid%npromz
       END IF
+      !$ACC LOOP GANG VECTOR
       DO n = 1, nlen
         buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) * 3600.0_wp / dz(1)
       END DO
     END DO
-    !$OMP END PARALLEL DO
+    !$ACC END PARALLEL
+    !$ACC UPDATE HOST(buffer(:,1)) ASYNC(1)
+    !$ACC WAIT(1)
+!$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(is, iblk, nn, nlen, n)
-    DO is = 2, nsoil
-      DO iblk = 1, grid%nblks
-        nn = (iblk - 1) * grid%nproma
-        IF (iblk /= grid%nblks) THEN
-          nlen = grid%nproma
-        ELSE
-          nlen = grid%npromz
-        END IF
+!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, is, n)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO iblk = 1, grid%nblks
+      nn = (iblk - 1) * grid%nproma
+      IF (iblk /= grid%nblks) THEN
+        nlen = grid%nproma
+      ELSE
+        nlen = grid%npromz
+      END IF
+      !$ACC LOOP GANG VECTOR COLLAPSE(2)
+      DO is = 2, nsoil
         DO n = 1, nlen
           buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk) * 3600.0_wp / dz(is)
         END DO
       END DO
     END DO
-    !$OMP END PARALLEL DO
+    !$ACC END PARALLEL
+    !$ACC UPDATE HOST(buffer(:,2:nsoil)) ASYNC(1)
+    !$ACC WAIT(1)
+!$OMP END PARALLEL DO
 
 #ifdef YAC_coupling
     CALL yac_fput(field_id(1), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
@@ -254,9 +267,9 @@ CONTAINS
     ! Receive fract_parflow
     ! --------------------
 
-    !$OMP PARALLEL
-    CALL init(buffer(:,:))
-    !$OMP END PARALLEL
+!$OMP PARALLEL
+    CALL init(buffer(:,:), lacc=.TRUE.)
+!$OMP END PARALLEL
 
 #ifdef YAC_coupling
     IF ( .NOT. received_fract_parflow ) THEN
@@ -266,7 +279,11 @@ CONTAINS
       END IF
 
       IF ( info > 0 ) THEN
-        !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+        !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:1)) ASYNC(1)
+        !$ACC DATA COPYOUT(is_valid_parflow)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) NO_CREATE(is_valid_parflow)
+        !$ACC LOOP SEQ
         DO iblk = 1, grid%nblks
           nn = (iblk - 1) * grid%nproma
           IF (iblk /= grid%nblks) THEN
@@ -274,11 +291,15 @@ CONTAINS
           ELSE
             nlen = grid%npromz
           END IF
+          !$ACC LOOP GANG VECTOR
           DO n = 1, nlen
             is_valid_parflow(n,iblk) = buffer(nn+n,1)
           END DO
         END DO
-        !$OMP END PARALLEL DO
+        !$ACC END PARALLEL
+        !$ACC WAIT(1)
+        !$ACC END DATA
+!$OMP END PARALLEL DO
 
         received_fract_parflow = .TRUE.
       END IF
@@ -288,34 +309,43 @@ CONTAINS
     ! Receive soil_water
     ! --------------------
 
-    !$OMP PARALLEL
-    CALL init(buffer(:,:))
-    !$OMP END PARALLEL
+!$OMP PARALLEL
+    CALL init(buffer(:,:), lacc=.TRUE.)
+!$OMP END PARALLEL
 
 #ifdef YAC_coupling
     CALL yac_fget(field_id(3), nbr_hor_cells, nsoil, buffer(1:nbr_hor_cells,1:nsoil), info, ierror)
 
     IF ( info > 0 ) THEN
-      !$OMP PARALLEL DO PRIVATE(is, iblk, nn, nlen, n)
-      DO is = 1, nsoil
-        DO iblk = 1, grid%nblks
-          nn = (iblk - 1) * grid%nproma
-          IF (iblk /= grid%nblks) THEN
-            nlen = grid%nproma
-          ELSE
-            nlen = grid%npromz
-          END IF
+!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, is, n)
+      !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:nsoil)) ASYNC(1)
+      !$ACC DATA COPYOUT(parflow_buffer)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) NO_CREATE(parflow_buffer)
+      !$ACC LOOP SEQ
+      DO iblk = 1, grid%nblks
+        nn = (iblk - 1) * grid%nproma
+        IF (iblk /= grid%nblks) THEN
+          nlen = grid%nproma
+        ELSE
+          nlen = grid%npromz
+        END IF
+        !$ACC LOOP GANG VECTOR COLLAPSE(2)
+        DO is = 1, nsoil
           DO n = 1, nlen
             parflow_buffer(n,is,iblk) = buffer(nn+n,is)
           END DO
         END DO
       END DO
-      !$OMP END PARALLEL DO
+      !$ACC END PARALLEL
+      !$ACC WAIT(1)
+      !$ACC END DATA
+!$OMP END PARALLEL DO
 
-      received_soil_water(:,:) = .TRUE.
+      received_soil_water(:,:,:) = .TRUE.
     END IF
 #endif
 
+    !$ACC END DATA
     DEALLOCATE(buffer)
 
   END SUBROUTINE interface_parflow

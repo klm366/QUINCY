@@ -600,8 +600,7 @@ CONTAINS
     & tpe_overflow, evapo_deficit,                                                       &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
-    & drainage_sl, wtr_transp_down, wtr_soilhyd_res, evapotrans_to_parflow,              &
-    & tracked_diff_parflow, deficit_corr_parflow                                         &
+    & drainage_sl, wtr_transp_down, wtr_soilhyd_res, evapotrans_to_parflow               &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -624,9 +623,9 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_net_flx
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
-      & wtr_soil_sl, ice_soil_sl, tracked_diff_parflow
+      & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & runoff_dunne, drainage, wtr_soilhyd_res, deficit_corr_parflow
+      & runoff_dunne, drainage, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down, drainage_sl, evapotrans_to_parflow
@@ -685,20 +684,28 @@ CONTAINS
     ! PFL TODO
     ! Calculate evapotrans_to_parflow
     ! (positive contributions are already included in water_to_parflow)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
         evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
           & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,1)/SUM(root_depth_sl(ic,:))) / dtime
-        DO is = 2, nsoil
-          evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
-        END DO
       ELSE
         evapotrans_to_parflow(ic,1) = MIN(evapo_soil_in_m(ic), 0.0_wp) / dtime
-        DO is = 2, nsoil
-          evapotrans_to_parflow(ic,is) = 0.0_wp
-        END DO
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
+    
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 2, nsoil
+      DO ic = 1, nc
+        IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
+          evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
+        ELSE
+          evapotrans_to_parflow(ic,is) = 0.0_wp
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, enforce_water_budget,          &
@@ -709,8 +716,8 @@ CONTAINS
       &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
       &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
       &    infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down,            &
-      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res, tracked_diff_parflow,       &
-      &    deficit_corr_parflow, ltpe_closed, ltpe_open)
+      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res,                             &
+      &    ltpe_closed, ltpe_open)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
@@ -906,7 +913,7 @@ CONTAINS
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,            &
     & infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down, &
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                  &
-    & tracked_diff_parflow, deficit_corr_parflow, ltpe_closed, ltpe_open)
+    & ltpe_closed, ltpe_open)
 
     USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
     USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_, &
@@ -950,8 +957,6 @@ CONTAINS
     REAL(wp), INTENT(OUT)           :: drainage_sl(:,:)           !< subsurface drainage on soil layers [m]
     REAL(wp), INTENT(OUT)           :: wtr_transp_down(:,:)       !< Vertical water transport into the next deeper soil layer [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
-    REAL(wp), INTENT(INOUT)         :: tracked_diff_parflow(:,:)  ! Water excess in ParFlow [m]
-    REAL(wp), INTENT(OUT)           :: deficit_corr_parflow(:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -1359,7 +1364,6 @@ CONTAINS
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_sevap(ic)        ! remaining demand is added to deficit
     END DO
 
-    ! PFL TODO
     ! Correct remaining evapotranspiration deficit
     ! @todo this is an unfortunate necessity as sometimes the evaporative demand is not fully
     !       backed by the water available in the land surface reservoirs.
@@ -1369,24 +1373,13 @@ CONTAINS
     DO ic = 1, nc
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
       weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
-      ! Try to compensate the deficit with the excess from ParFlow
-      deficit_corr_parflow(ic) = 0._wp
-      IF (deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. SUM(tracked_diff_parflow(ic,:)) > 0._wp) THEN
-        deficit_corr_parflow(ic) = MIN( - deficit_evapotrans(ic), SUM(tracked_diff_parflow(ic,:)) )
-        DO is = 1, nsoil
-          tracked_diff_parflow(ic,is) = MAX( 0._wp, tracked_diff_parflow(ic,is) + deficit_evapotrans(ic) * tracked_diff_parflow(ic,is) / SUM(tracked_diff_parflow(ic,:)) )
-        END DO
-        deficit_evapotrans(ic) = deficit_evapotrans(ic) + deficit_corr_parflow(ic)
-        !WRITE (message_text,*) 'Compensated ET deficit with ParFlow excess'
-        !CALL message ('soilhyd', message_text, all_print=.TRUE.)
-      END IF
 #ifndef _OPENACC
-      !IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
-      !  WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
-      !  IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-      !    CALL message ('soilhyd', message_text, all_print=.TRUE.)
-      !  END IF
-      !END IF
+      IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
+          CALL message ('soilhyd', message_text, all_print=.TRUE.)
+        END IF
+      END IF
 #endif
     END DO
 

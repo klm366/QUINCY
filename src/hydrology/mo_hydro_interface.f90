@@ -816,10 +816,12 @@ CONTAINS
       ! ELSE: add evapo_pond to evapotrans_to_parflow
       ! -> just add evapo_pond to water_to_parflow
       ! -> water_to_parflow = water_to_soil + wtr_pond_net_flux - (pond_melt - pond_freeze)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         water_to_parflow(ic) = water_to_soil(ic) / dtime &
           & + ( wtr_pond_net_flx(ic) - pond_melt(ic) + pond_freeze(ic) ) / rhoh2o ! m -> m/s, kg m-2 s-1 -> m/s
       END DO
+      !$ACC END PARALLEL LOOP
 
       ! Update weq_pond storage
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1249,7 +1251,7 @@ CONTAINS
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     LOGICAL :: l_fract(options%nc)
-    LOGICAL, POINTER :: received_onChunk(:)
+    LOGICAL, POINTER :: received_onChunk(:,:)
     REAL(wp), POINTER :: is_valid_onChunk(:)
     REAL(wp), POINTER :: parflow_buffer_onChunk(:,:)
     REAL(wp) :: soil_water_tmp
@@ -1280,7 +1282,7 @@ CONTAINS
     area => grid%area(ics:ice, iblk)
     lat => grid%lat(ics:ice, iblk)
     lon => grid%lon(ics:ice, iblk)
-    IF (ALLOCATED(received_soil_water)) received_onChunk => received_soil_water(ics:ice, iblk)
+    IF (ALLOCATED(received_soil_water)) received_onChunk => received_soil_water(ics:ice, :, iblk)
     IF (ALLOCATED(is_valid_parflow)) is_valid_onChunk => is_valid_parflow(ics:ice, iblk)
     IF (ALLOCATED(parflow_buffer)) parflow_buffer_onChunk => parflow_buffer(ics:ice, :, iblk)
 
@@ -1358,9 +1360,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & ! lateral downards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow),  &
-      &                                tracked_diff_parflow(:,:), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, deficit_corr_parflow)    &
+      & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow)   &
       & )
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -1371,20 +1371,38 @@ CONTAINS
       weq_pond(ic) = wtr_pond(ic) + ice_pond(ic)
     END DO
 
+    ! Convert soil hydrology balance error to volume
+    !$ACC LOOP GANG VECTOR
+    DO ic = 1, nc
+      wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
+    END DO
+    !ACC END LOOP
+
+    !$ACC END PARALLEL
+
+    !$ACC WAIT(1)
+    !$ACC END DATA
+
     ! PFL TODO
-    IF (ALLOCATED(is_valid_parflow)) THEN
-      DO ic = 1, nc
-        fract_parflow(ic) = is_valid_onChunk(ic)
-      END DO
-    END IF
     ! If running with ParFlow, copy the values from the ParFlow buffer
     ! (but only within the ParFlow coverage)
     ! and do not overwrite soil water with zeros at the first time step
     IF (ALLOCATED(is_valid_parflow)) THEN
-      change_by_parflow(:,:) = 0.0_wp
+      !$ACC DATA CREATE(soil_water_tmp) &
+      !$ACC & COPY(received_soil_water(ics:ice, :, iblk)) &
+      !$ACC & COPYIN(is_valid_parflow(ics:ice, iblk), parflow_buffer(ics:ice, :, iblk)) &
+      !$ACC & PRESENT(received_onChunk, is_valid_onChunk, parflow_buffer_onChunk)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
-        IF ( is_valid_onChunk(ic) > 0.0_wp .AND. received_onChunk(ic) ) THEN
-          DO is = 1, nsoil
+        fract_parflow(ic) = is_valid_onChunk(ic)
+      END DO
+      change_by_parflow(:,:) = 0.0_wp
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR PRIVATE(soil_water_tmp)
+        DO ic = 1, nc
+          IF ( is_valid_onChunk(ic) > 0.0_wp .AND. received_onChunk(ic,is) ) THEN
             soil_water_tmp = is_valid_onChunk(ic) * parflow_buffer_onChunk(ic,is) &
               & + ( 1.0_wp - is_valid_onChunk(ic) ) * wtr_soil_sl(ic,is)
 
@@ -1398,23 +1416,13 @@ CONTAINS
               tracked_diff_parflow(ic,is) = 0.0_wp
               wtr_soil_sl(ic,is) = soil_water_tmp
             END IF
-          END DO
-          received_onChunk(ic) = .FALSE.
-        END IF
+            received_onChunk(ic,is) = .FALSE.
+          END IF
+        END DO
       END DO
+      !$ACC END PARALLEL
+      !$ACC END DATA
     END IF
-
-    ! Convert soil hydrology balance error to volume
-    !$ACC LOOP GANG VECTOR
-    DO ic = 1, nc
-      wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
-    END DO
-    !ACC END LOOP
-
-    !$ACC END PARALLEL
-
-    !$ACC WAIT(1)
-    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1471,7 +1479,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_to_parflow, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, change_by_parflow, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, tracked_diff_parflow, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, deficit_corr_parflow, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2427,16 +2434,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
 #ifndef _OPENACC
-    ! IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
-    !   IF (ANY(t(:) < 50._wp)) THEN
-    !     ic = MINLOC(t(:), DIM=1)
-    !   ELSE
-    !     ic = MaxLOC(t(:), DIM=1)
-    !   END IF
-    !   WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, ' at ', '(', &
-    !     &                    grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t: ', t(ic)
-    !   CALL finish(TRIM(routine), message_text)
-    ! END IF
+    IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
+      IF (ANY(t(:) < 50._wp)) THEN
+        ic = MINLOC(t(:), DIM=1)
+      ELSE
+        ic = MaxLOC(t(:), DIM=1)
+      END IF
+      WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, ' at ', '(', &
+        &                    grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t: ', t(ic)
+      CALL finish(TRIM(routine), message_text)
+    END IF
 #endif
 
     !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef)
@@ -2623,8 +2630,7 @@ CONTAINS
       & weq_fluxes, &         ! [m3 s-1]
       & weq_land, &           ! [m3]
       & weq_balance_err, &    ! [m3/(time step)]
-      & weq_balance_err_count, & ! [time steps]
-      & deficit_corr_parflow
+      & weq_balance_err_count ! [time steps]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl, &
@@ -2686,7 +2692,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    change_by_parflow)   ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    deficit_corr_parflow) ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
@@ -2696,7 +2701,7 @@ CONTAINS
 
     ! PFL TODO
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(tile_area, weq_land_new)
+    !$ACC   PRIVATE(tile_area, weq_land_new, err_corr_parflow)
     DO ic=1,nc
       tile_area  = tile_fract(ic) * area(ic)
 
@@ -2708,7 +2713,7 @@ CONTAINS
       IF (tile_contains_soil) THEN
         weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
           &              * tile_area          ! m -> m^3
-        err_corr_parflow = ( SUM(change_by_parflow(ic,:)) + deficit_corr_parflow(ic) ) * tile_area
+        err_corr_parflow = SUM(change_by_parflow(ic,:)) * tile_area
       ELSE
         weq_land_new = 0._wp
       END IF
@@ -2723,37 +2728,37 @@ CONTAINS
       ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
       wb_threshold = 1.0e-11_wp * tile_area * dtime
 
-      ! IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
-      !   weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
-      !   WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
-      !     & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
-      !     & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
-      !     & 'WB Error:           ', weq_balance_err(ic),                               NEW_LINE('a'), &
-      !     & 'Rainfall:           ', rain(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
-      !     & 'Snowfall:           ', snow(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
-      !     & 'Evapotranspiration: ', evapotrans(ic) * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
-      !     & 'Runoff:             ', runoff(ic)     * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
-      !     & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
-      !   IF (tile%contains_soil) THEN
-      !     WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
-      !       & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
-      !       & 'Snow reservoir:     ', weq_snow(ic)           * tile_area
-      !     IF (.NOT. tile%is_lake) THEN
-      !       WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
-      !         & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
-      !     END IF
-      !     WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
-      !       & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
-      !       & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
-      !       & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
-      !       & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
-      !   END IF
-      !   IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_ERROR) THEN
-      !     CALL finish (TRIM(routine), message_text_long)
-      !   ELSE IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_LOGGING) THEN
-      !     CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
-      !   END IF
-      ! END IF
+      IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
+        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp
+        WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',               NEW_LINE('a'), &
+          & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
+          & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',             NEW_LINE('a'), &
+          & 'WB Error:           ', weq_balance_err(ic),                               NEW_LINE('a'), &
+          & 'Rainfall:           ', rain(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
+          & 'Snowfall:           ', snow(ic)       * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
+          & 'Evapotranspiration: ', evapotrans(ic) * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
+          & 'Runoff:             ', runoff(ic)     * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
+          & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
+        IF (tile%contains_soil) THEN
+          WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
+            & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(ic)           * tile_area
+          IF (.NOT. tile%is_lake) THEN
+            WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
+              & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
+          END IF
+          WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
+            & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
+            & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
+            & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
+            & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_ERROR) THEN
+          CALL finish (TRIM(routine), message_text_long)
+        ELSE IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_LOGGING) THEN
+          CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+        END IF
+      END IF
 #endif
     END DO
     !$ACC END PARALLEL LOOP
