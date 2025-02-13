@@ -339,6 +339,7 @@ CONTAINS
           ! In the albedo update time step the albedo should be updated after the SEB process, so that also
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
+      CALL model%Queue_task(SEB_,    "energy_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
 
       ! Fuel is calculated last in a timestep to be right available in the next timestep

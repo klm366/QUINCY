@@ -89,6 +89,16 @@ MODULE mo_seb_interface
     PROCEDURE Create_task_surface_fluxes
   END INTERFACE tsk_surface_fluxes
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_energy_balance
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_energy_balance
+    PROCEDURE, NOPASS :: Aggregate => aggregate_energy_balance
+  END TYPE tsk_energy_balance
+
+  INTERFACE tsk_energy_balance
+    PROCEDURE Create_task_energy_balance
+  END INTERFACE tsk_energy_balance
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_interface'
 
 CONTAINS
@@ -160,6 +170,22 @@ CONTAINS
 
   END FUNCTION Create_task_surface_fluxes
 
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for energy balance residual computation
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "energy_balance"
+  !!
+  FUNCTION Create_task_energy_balance(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_energy_balance::return_ptr)
+    CALL return_ptr%Construct(name='energy_balance', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_energy_balance
+
   ! =======================================================================================================
   !> Register tasks for surface energy process
   !!
@@ -175,6 +201,7 @@ CONTAINS
     CALL this%Register_task(tsk_snowmelt_correction(model_id))
     CALL this%Register_task(tsk_asselin_filter(model_id))
     CALL this%Register_task(tsk_surface_fluxes(model_id))
+    CALL this%Register_task(tsk_energy_balance(model_id))
 
   END SUBROUTINE Register_seb_tasks
 
@@ -610,6 +637,91 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_fluxes
+
+  ! ================================================================================================================================
+  !>
+  !> Implementation of "update" for task "energy balance"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_energy_balance(tile, options)
+
+  !  USE mo_seb_land, ONLY: update_surface_fluxes_land
+  !  USE mo_seb_lake, ONLY: update_surface_fluxes_lake
+
+  CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+  TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+  TYPE(t_jsb_model), POINTER :: model
+
+  CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
+
+  IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
+
+  model => Get_model(tile%owner_model_id)
+
+  !  IF (tile%contains_lake) THEN
+  !    CALL update_surface_fluxes_lake(tile, options)
+  !  ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+  !    CALL update_surface_fluxes_land(tile, options)
+  !  ELSE IF (model%config%use_tmx) THEN
+  !    CALL update_surface_fluxes_land(tile, options)
+  !  ELSE
+  !    CALL finish(TRIM(routine), 'Called for invalid lct_type')
+  !  END IF
+
+  END SUBROUTINE update_energy_balance
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "energy_balance"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  SUBROUTINE aggregate_energy_balance(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(SEB_)
+
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_energy_balance'
+
+    INTEGER :: iblk , ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_memory(SEB_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
+
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_lnd,    weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
+    ! IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    !   dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
+    !   dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    ! END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_energy_balance
 
   !-----------------------------------------------------------------------------------------------------
   !> Make sure temperature is within a realistic range and finish the simulation with a meaningfull
