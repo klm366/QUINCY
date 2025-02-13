@@ -33,13 +33,15 @@ MODULE mo_seb_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
+  dsl4jsb_Use_processes SEB_, HYDRO_, SSE_, A2L_, RAD_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(RAD_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -647,29 +649,132 @@ CONTAINS
   !!
   SUBROUTINE update_energy_balance(tile, options)
 
-  !  USE mo_seb_land, ONLY: update_surface_fluxes_land
-  !  USE mo_seb_lake, ONLY: update_surface_fluxes_lake
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_jsb_grid_class,         ONLY: t_jsb_grid
 
-  CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-  TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-  TYPE(t_jsb_model), POINTER :: model
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER    :: grid
 
-  CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(SSE_)
 
-  IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & lw_srf_down,        &               !< Longwave downwards radiation                        [W m-2]
+      & swvis_srf_down,     &               !< Shortwave visible downwards radiation               [W m-2]
+      & swnir_srf_down,     &               !< Shortwave near infrared downwards radiation         [W m-2]
+      & swpar_srf_down,     &               !< Shortwave downwards photosynthetic active radiation [W m-2]
+      & lw_srf_net,         &               !< Longwave net radiation on land surface              [W m-2]
+      & sw_srf_net,         &               !< Shortwave net radiation on land surface             [W m-2]
+      & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
+      & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
+      & grnd_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & snowmelt,           &               !< Snow melt flux                                 [kg m-2 s-1]
+      & energy_balance_res                  !< Energy balance residual                             [W m-2]
 
-  model => Get_model(tile%owner_model_id)
+    REAL(wp), POINTER :: &
+      & tile_fract(:), area(:), lat(:), lon(:)
 
-  !  IF (tile%contains_lake) THEN
-  !    CALL update_surface_fluxes_lake(tile, options)
-  !  ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
-  !    CALL update_surface_fluxes_land(tile, options)
-  !  ELSE IF (model%config%use_tmx) THEN
-  !    CALL update_surface_fluxes_land(tile, options)
-  !  ELSE
-  !    CALL finish(TRIM(routine), 'Called for invalid lct_type')
-  !  END IF
+    ! Locally allocated vectors
+    !
+    REAL(wp) :: &
+      & tile_area
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & lw_srf_up,   &
+      & sw_srf_up,   &
+      & sw_srf_down, &
+      & snowmelt_energy
+
+    INTEGER  :: iblk, ics, ice, nc, ic
+
+    REAL(wp) :: dtime
+    LOGICAL  :: is_experiment_start, tile_contains_soil
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
+    CHARACTER(len=5000)         :: message_text_long
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
+    is_experiment_start = is_time_experiment_start(options%current_datetime)
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    tile_fract => tile%fract(ics:ice, iblk)
+    area       => grid%area (ics:ice, iblk)
+    lat        => grid%lat(ics:ice, iblk)
+    lon        => grid%lon(ics:ice, iblk)
+
+    tile_contains_soil = tile%contains_soil .OR. tile%is_glacier
+
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(RAD_)
+    IF (tile_contains_soil) THEN
+      dsl4jsb_Get_memory(SSE_)
+    END IF
+
+    dsl4jsb_Get_var2D_onChunk(A2L_,      lw_srf_down)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swvis_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swnir_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      lw_srf_net)                 ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      sw_srf_net)                 ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)                ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)                   ! in
+    IF (tile%contains_soil) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,    grnd_hflx)                  ! in
+    END IF
+    dsl4jsb_Get_var2D_onChunk(SEB_,      energy_balance_res)         ! out
+
+    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy)
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(tile_area, lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy)
+    DO ic=1,nc
+      tile_area  = tile_fract(ic) * area(ic)  ! Currently not needed, is it useful for anything here?
+
+      ! Compute upwards fluxes for error message output
+      lw_srf_up(ic)   = lw_srf_net(ic) - lw_srf_down(ic)
+      sw_srf_down(ic) = swvis_srf_down(ic) + swnir_srf_down(ic) + swpar_srf_down(ic)
+      sw_srf_up(ic)   = sw_srf_net(ic) - sw_srf_down(ic)
+
+      ! Convert snow melt water flux to the energy equivalent (replace constant later)
+      snowmelt_energy(ic) = -333700._wp * snowmelt(ic)
+
+      ! Compute energy flux residual
+      energy_balance_res(ic) = lw_srf_net(ic) + sw_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
+        &                    + snowmelt_energy(ic)
+
+      IF (tile_contains_soil) THEN
+        energy_balance_res(ic) = energy_balance_res(ic) + grnd_hflx(ic)
+      END IF
+
+    END DO
+    !$ACC END PARALLEL
+    !$ACC END DATA
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_energy_balance
 
@@ -684,40 +789,16 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_memory(SEB_)
-
-    TYPE(t_jsb_model),       POINTER :: model
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_energy_balance'
 
-    INTEGER :: iblk , ics, ice
+    INTEGER :: iblk
 
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_config(SEB_)
-    dsl4jsb_Get_memory(SEB_)
-
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
-
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_lnd,    weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    ! IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-    !   dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
-    !   dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
-    ! END IF
+    ! Don't aggregate, but explicitely compute energy balance on each tile
+    CALL update_energy_balance(tile, options)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
