@@ -209,6 +209,7 @@ CONTAINS
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
+    LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
@@ -399,7 +400,7 @@ CONTAINS
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
-    write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
+    !write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -407,22 +408,10 @@ CONTAINS
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 
+    mask_is_tile_enabled = (tile_fract > 0._wp)
+
     tile_area = grid_cell_area * tile_fract
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
-!    WRITE(*,*) "(spitfire.f90) calc_spitfire:: tile_fract, tile_area, gc area", tile_fract(9), &
-!            tile_area(9), grid_cell_area(9)
-
-    ! assertion
-    IF (ANY(pot_burn_area > tile_area)) THEN
-      DO ic=1, nc
-        IF (pot_burn_area(ic) > tile_area(ic)) THEN
-          WRITE(*,*) "pot_burn_area, tile_fract=", grid_cell_area(ic), tile_fract(ic), &
-                                                   (grass_fract(ic) + forest_fract(ic))
-          WRITE(*,*) "pot_burn_area, tile_fract=", pot_burn_area(ic), tile_area(ic)
-        ENDIF
-      ENDDO
-      CALL finish(TRIM(routine), "potential_burn_area > tile_fract")
-    END IF
 
     !> Units conversion
     t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
@@ -435,7 +424,8 @@ CONTAINS
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
     ab_w_soil_fc_sl(:,:) = w_soil_fc_sl(:, [df_sf_sl_indices])
-    DO CONCURRENT(ic=1:nc, is=1:df_sf_sl_dims_nr, ab_w_soil_fc_sl(ic,is) > 0._wp) ! should it happen? (ab_w_soil_fc_sl = 0)
+    ! todo: change DO CONCURRENT to DO-IF construct
+    DO CONCURRENT(ic=1:nc, is=1:df_sf_sl_dims_nr, (mask_is_tile_enabled(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp)) ! should it happen? (ab_w_soil_fc_sl = 0)
       ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
     END DO
 
@@ -444,7 +434,7 @@ CONTAINS
 
     !< moisture average of above ground soil layers
     DO ic=1, nc
-      IF (SUM(ab_moisture_sl(ic,:)) > 0._wp) THEN
+      IF (mask_is_tile_enabled(ic)) THEN
         ab_moisture(ic) = sum(ab_moisture_sl(ic,:)) / size(ab_moisture_sl, dim=2) !< 2 = soil layers index
       END IF
     ENDDO
@@ -453,6 +443,8 @@ CONTAINS
       ALLOCATE(nesterov_index(nc))
       nesterov_index = 0._wp
     ENDIF
+
+    !WRITE(*,*) "spitfire.f90:: me, tile_fract=", moisture_extinction, ", ", tile_fract
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
@@ -470,7 +462,8 @@ CONTAINS
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
-                        sf_spitfire)
+                        sf_spitfire, &
+                        mask=mask_is_tile_enabled)
 
     dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx)
     dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
@@ -507,7 +500,8 @@ CONTAINS
                   veg_cover_frac, & ! in
                   nesterov_index, & ! inout
                   fuel_moisture, & ! out
-                  spitfire) ! out
+                  spitfire, & ! out
+                  mask)
     INTEGER, INTENT(in)   :: nc, nalphas, nfuelclasses
     REAL(wp), INTENT(in)  :: dtime, one_day
 
@@ -541,7 +535,10 @@ CONTAINS
 
     REAL(wp), INTENT(out) :: fuel_moisture(nc,df_sf_omegas_nr)     !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
-    TYPE(t_sf_spitfire), INTENT(out) :: spitfire                   !< Spitfire outputs
+    TYPE(t_sf_spitfire), INTENT(out)    :: spitfire                !< Spitfire outputs
+    LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)
+
+    LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
     TYPE(t_sf_ignitions)  :: sf_ignitions
@@ -557,6 +554,10 @@ CONTAINS
     ! todo: deal with tile_frac = 0?
 
     ndeadpools = SIZE(dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
+    mask_tile_enabled = .TRUE.
+    IF (PRESENT(mask)) THEN
+      mask_tile_enabled = mask
+    ENDIF
 
     sf_ignitions = t_sf_ignitions(nc)
     spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
@@ -593,7 +594,7 @@ CONTAINS
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
     has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions(:) = ANY(has_dead_fuel) .AND. ANY(spitfire % fdi > 1.e-6_wp)
+    has_fire_conditions(:) = mask_tile_enabled .AND. ANY(has_dead_fuel) .AND. ANY(spitfire % fdi > 1.e-6_wp)
 
     !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
     !< Previously initialized to zero.
