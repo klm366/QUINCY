@@ -710,7 +710,7 @@ CONTAINS
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
-      &                              'CS:   cold shrubs']
+      &                              'CSH:   cold shrubs']
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,14 /)
