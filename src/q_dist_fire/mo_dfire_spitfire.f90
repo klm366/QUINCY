@@ -267,7 +267,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: wind_10m          ! in A2L_ [m s-1]
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
-    dsl4jsb_Real2D_onChunk                :: pm_fire           ! Tree probability of mortality by fire [0 to 1]
+
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
 
@@ -334,7 +334,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
@@ -385,7 +384,6 @@ CONTAINS
 
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
-    pm_fire = 0._wp
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
     dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_1hr_dfp
