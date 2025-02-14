@@ -594,7 +594,7 @@ CONTAINS
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
     has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions(:) = mask_tile_enabled .AND. ANY(has_dead_fuel) .AND. ANY(spitfire % fdi > 1.e-6_wp)
+    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp)
 
     !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
     !< Previously initialized to zero.
