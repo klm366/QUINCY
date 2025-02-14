@@ -166,6 +166,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
     dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! out [-]
+    dsl4jsb_Real2D_onChunk                :: pm_fire                   ! out, Tree probability of mortality by fire [0 to 1]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! in [g DM m-2]
@@ -234,6 +235,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                   ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -258,6 +260,8 @@ CONTAINS
     tile_fract => tile%fract(ics:ice, iblk)
     is_fire_intense_enough = .FALSE.
     fc_live = 0._wp
+    pm_fire = 0._wp
+    pm_prop_ck = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -331,7 +335,12 @@ CONTAINS
                                               live_fuel_cls, &
                                               mask=is_fire_intense_enough)
 
+      !< output calculated values
       pm_prop_ck = prob_mort % prop_ck
+      If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) THEN
+        ! todo: add pm_fire_diag -> always output (even when false)
+        pm_fire = prob_mort % pm_fire * area_burned_fract_pft
+      End If
     END IF
 
     ! * Calc Emissions (by Species) *

@@ -85,6 +85,7 @@ MODULE mo_dfire_config_class
     !< Dev Flags
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
+    LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
 
   CONTAINS
     PROCEDURE :: Init => Init_dfire_config
@@ -132,6 +133,7 @@ CONTAINS
     REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
+    LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -151,8 +153,9 @@ CONTAINS
       & a_nd,                       &         ! 
       &  fract_crown_scorch,        &         ! 
       & ratio_polymeric_litter_to_dead_fuel, &
-      &  flag_has_dead_feedback,    &         !
-      &  flag_has_live_feedback               !
+      & flag_has_dead_feedback,     &
+      & flag_has_live_feedback,     &
+      & flag_has_prob_mort_feedback
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -174,6 +177,7 @@ CONTAINS
     ratio_polymeric_litter_to_dead_fuel = 0._wp
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
+    flag_has_prob_mort_feedback = .TRUE.
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -202,6 +206,7 @@ CONTAINS
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     config%flag_has_dead_feedback    = flag_has_dead_feedback         !
     config%flag_has_live_feedback    = flag_has_live_feedback         !
+    config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
