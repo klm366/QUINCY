@@ -649,7 +649,7 @@ CONTAINS
   !!
   SUBROUTINE update_energy_balance(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_physical_constants, ONLY: alf
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_grid_class,         ONLY: t_jsb_grid
 
@@ -678,25 +678,31 @@ CONTAINS
       & sw_srf_net,         &               !< Shortwave net radiation on land surface             [W m-2]
       & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
-      & grnd_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & heat_cap,           &               !< Surface heat capacity                           [J m-2 K-1]
       & snowmelt,           &               !< Snow melt flux                                 [kg m-2 s-1]
+      & t,                  &               !< Current time steps temperature                          [K]
+      & t_old,              &               !< Previous time steps temperature                         [K]
       & energy_balance_res                  !< Energy balance residual                             [W m-2]
 
     REAL(wp), POINTER :: &
-      & tile_fract(:), area(:), lat(:), lon(:)
+      & tile_fract(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
-    REAL(wp) :: &
-      & tile_area
 
     REAL(wp), DIMENSION(options%nc) :: &
-      & lw_srf_up,   &
-      & sw_srf_up,   &
-      & sw_srf_down, &
-      & snowmelt_energy
+      & lw_srf_up,       &
+      & sw_srf_up,       &
+      & sw_srf_down,     &
+      & snowmelt_energy, &
+      & delta_t_srf,     &
+      & t_energy
 
     INTEGER  :: iblk, ics, ice, nc, ic
+
+    INTEGER  :: n_errors, ie
+    INTEGER  :: error_idx(options%nc)
 
     REAL(wp) :: dtime
     LOGICAL  :: is_experiment_start, tile_contains_soil
@@ -717,7 +723,6 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     tile_fract => tile%fract(ics:ice, iblk)
-    area       => grid%area (ics:ice, iblk)
     lat        => grid%lat(ics:ice, iblk)
     lon        => grid%lon(ics:ice, iblk)
 
@@ -728,9 +733,6 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    IF (tile_contains_soil) THEN
-      dsl4jsb_Get_memory(SSE_)
-    END IF
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      lw_srf_down)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      swvis_srf_down)             ! in
@@ -740,39 +742,75 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_,      sw_srf_net)                 ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)                ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      forc_hflx)                  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      heat_cap)                   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)                      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)                   ! in
-    IF (tile%contains_soil) THEN
-      dsl4jsb_Get_var2D_onChunk(SSE_,    grnd_hflx)                  ! in
-    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,      energy_balance_res)         ! out
 
-    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy)
+    n_errors = 0   ! initialize error counter
+
+    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy, delta_t_srf, t_energy)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(tile_area, lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy)
+    !$ACC LOOP GANG(STATIC: 1) &
+    !$ACC & VECTOR PRIVATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy, delta_t_srf, t_energy)
     DO ic=1,nc
-      tile_area  = tile_fract(ic) * area(ic)  ! Currently not needed, is it useful for anything here?
-
       ! Compute upwards fluxes for error message output
       lw_srf_up(ic)   = lw_srf_net(ic) - lw_srf_down(ic)
       sw_srf_down(ic) = swvis_srf_down(ic) + swnir_srf_down(ic) + swpar_srf_down(ic)
       sw_srf_up(ic)   = sw_srf_net(ic) - sw_srf_down(ic)
 
-      ! Convert snow melt water flux to the energy equivalent (replace constant later)
-      snowmelt_energy(ic) = -333700._wp * snowmelt(ic)
+      ! Convert snow melt water flux to the energy equivalent
+      snowmelt_energy(ic) = -snowmelt(ic) * alf
 
-      ! Compute energy flux residual
-      energy_balance_res(ic) = lw_srf_net(ic) + sw_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
-        &                    + snowmelt_energy(ic)
+      ! Compute temperature change
+      delta_t_srf(ic) = t(ic) - t_old(ic)
+      t_energy(ic)    =  -heat_cap(ic) * (delta_t_srf(ic) / dtime)
 
-      IF (tile_contains_soil) THEN
-        energy_balance_res(ic) = energy_balance_res(ic) + grnd_hflx(ic)
+      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
+        ! Compute energy flux residual
+        energy_balance_res(ic) = lw_srf_net(ic) + sw_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
+          &                    + forc_hflx(ic) + snowmelt_energy(ic) + t_energy(ic)
       END IF
 
+#ifndef _OPENACC
+      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
+        IF (ABS(energy_balance_res(ic)) > dsl4jsb_Config(SEB_)%eb_threshold) THEN
+          n_errors = n_errors + 1       ! Count number of energy balance issues of this time step
+          error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
+        END IF
+      END IF
+#endif
     END DO
     !$ACC END PARALLEL
     !$ACC END DATA
+
+#ifndef _OPENACC
+    IF (tile%name == 'land') THEN ! .NOT. tile%is_lake) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
+        WRITE (message_text_long,*) 'Energy balance flux residual [W m-2]',            NEW_LINE('a'), &
+          & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
+          & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',            NEW_LINE('a'), &
+          & 'Energy balance residual: ', energy_balance_res(ic),                       NEW_LINE('a'), &
+          & 'Longwave downwards:      ', lw_srf_down(ic),                              NEW_LINE('a'), &
+          & 'Longwave upwards:        ', lw_srf_up(ic),                                NEW_LINE('a'), &
+          & 'Shortwave downwards:     ', sw_srf_down(ic),                              NEW_LINE('a'), &
+          & 'Shortwave upwards:       ', sw_srf_up(ic),                                NEW_LINE('a'), &
+          & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
+          & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
+          & 'Ground heat flux:        ', forc_hflx(ic),                                NEW_LINE('a'), &
+          & 'Snow melt flux:          ', snowmelt_energy(ic),                          NEW_LINE('a'), &
+          & 'Surface temp. change:    ', t_energy(ic),                                 NEW_LINE('a'), &
+          & 'Temperature change [K]:  ', delta_t_srf(ic)
+        CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+      END DO
+    END IF
+#endif
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
