@@ -322,7 +322,8 @@ CONTAINS
                                       lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                       lctlib%q_F_scorch_height, & 
                                       lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
-                                      height, dbh, & ! Tree characteristics
+                                      height * dsl4jsb_Config(DFIRE_)%tree_height_factor, & ! Tree characteristics
+                                      dbh * dsl4jsb_Config(DFIRE_)%tree_diameter_factor, &
                                       i_surface, & ! Fire intensity
                                       w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                       dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
