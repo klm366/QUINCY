@@ -86,6 +86,8 @@ MODULE mo_dfire_config_class
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
+    REAL(wp)          :: tree_height_factor          !< Tree height factor for spitfire
+    REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
 
   CONTAINS
     PROCEDURE :: Init => Init_dfire_config
@@ -134,6 +136,8 @@ CONTAINS
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
+    REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
+    REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -155,7 +159,10 @@ CONTAINS
       & ratio_polymeric_litter_to_dead_fuel, &
       & flag_has_dead_feedback,     &
       & flag_has_live_feedback,     &
-      & flag_has_prob_mort_feedback
+      & flag_has_prob_mort_feedback, &
+      & tree_height_factor,         &
+      & tree_diameter_factor
+
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -178,6 +185,8 @@ CONTAINS
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
     flag_has_prob_mort_feedback = .TRUE.
+    tree_height_factor       = 1._wp
+    tree_diameter_factor     = 1._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -207,6 +216,8 @@ CONTAINS
     config%flag_has_dead_feedback    = flag_has_dead_feedback         !
     config%flag_has_live_feedback    = flag_has_live_feedback         !
     config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
+    config%tree_height_factor        = tree_height_factor             !
+    config%tree_diameter_factor      = tree_diameter_factor           !
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
