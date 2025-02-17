@@ -33,34 +33,37 @@ MODULE mo_lnd_bgcm_store_class
     &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                            &
     &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
     &       VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
-    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_FPROD_DECAY_ID
+    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,           &
+    &       VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
 
   ! ======================================================================================================= !
   !>
   !> IDs of all bgc materials that are to be used in the store
   ENUM, BIND(C)
-    ENUMERATOR ::                   &
-      & SB_BGCM_POOL_ID = 1,        &   !< soil biogeochemistry bgcm pool
-      & SB_BGCM_DELTA_POOLS_ID,     &   !< soil biogeochemistry bgcm delta pools
-      & SB_BGCM_FORMATION_ID,       &   !< soil biogeochemistry bgcm formation
-      & SB_BGCM_LOSS_ID,            &   !< soil biogeochemistry bgcm loss
-      & SB_BGCM_TRANSPORT_ID,       &   !< soil biogeochemistry bgcm transport
-      & SB_BGCM_MYCO_EXPORT_ID,     &   !< soil biogeochemistry bgcm mycorrhiza export
-      & VEG_BGCM_POOL_ID,           &   !< vegetation bgcm pool
-      & VEG_BGCM_TOTAL_BIO_ID,      &   !< vegetation bgcm total biomass
-      & VEG_BGCM_GROWTH_ID,         &   !< vegetation bgcm growth
-      & VEG_BGCM_LITTERFALL_ID,     &   !< vegetation bgcm litterfall
-      & VEG_BGCM_FRAC_ALLOC_ID,     &   !< vegetation bgcm frac_alloc
-      & VEG_BGCM_EXUDATION_ID,      &   !< vegetation bgcm exudation
-      & VEG_BGCM_ESTABLISHMENT_ID,  &   !< vegetation bgcm establishment
-      & VEG_BGCM_RESERVE_USE_ID,    &   !< vegetation bgcm reserve_use
-      & VEG_BGCM_PP_FUEL_ID,        &   !< vegetation bgcm fuel product pool
-      & VEG_BGCM_PP_PAPER_ID,       &   !< vegetation bgcm paper product pool
-      & VEG_BGCM_PP_FIBERBOARD_ID,  &   !< vegetation bgcm fiberboard product pool
-      & VEG_BGCM_PP_OIRW_ID,        &   !< vegetation bgcm other industrial roundwood product pool
-      & VEG_BGCM_PP_PV_ID,          &   !< vegetation bgcm plywood and veneer product pool
-      & VEG_BGCM_PP_SAWNWOOD_ID,    &   !< vegetation bgcm sawnwood product pool
-      & VEG_BGCM_FPROD_DECAY_ID         !< vegetation bgcm flux from product pool decay
+    ENUMERATOR ::                    &
+      & SB_BGCM_POOL_ID = 1,         &   !< soil biogeochemistry bgcm pool
+      & SB_BGCM_DELTA_POOLS_ID,      &   !< soil biogeochemistry bgcm delta pools
+      & SB_BGCM_FORMATION_ID,        &   !< soil biogeochemistry bgcm formation
+      & SB_BGCM_LOSS_ID,             &   !< soil biogeochemistry bgcm loss
+      & SB_BGCM_TRANSPORT_ID,        &   !< soil biogeochemistry bgcm transport
+      & SB_BGCM_MYCO_EXPORT_ID,      &   !< soil biogeochemistry bgcm mycorrhiza export
+      & VEG_BGCM_POOL_ID,            &   !< vegetation bgcm pool
+      & VEG_BGCM_TOTAL_BIO_ID,       &   !< vegetation bgcm total biomass
+      & VEG_BGCM_GROWTH_ID,          &   !< vegetation bgcm growth
+      & VEG_BGCM_LITTERFALL_ID,      &   !< vegetation bgcm litterfall
+      & VEG_BGCM_FRAC_ALLOC_ID,      &   !< vegetation bgcm frac_alloc
+      & VEG_BGCM_EXUDATION_ID,       &   !< vegetation bgcm exudation
+      & VEG_BGCM_ESTABLISHMENT_ID,   &   !< vegetation bgcm establishment
+      & VEG_BGCM_RESERVE_USE_ID,     &   !< vegetation bgcm reserve_use
+      & VEG_BGCM_PP_FUEL_ID,         &   !< vegetation bgcm fuel product pool
+      & VEG_BGCM_PP_PAPER_ID,        &   !< vegetation bgcm paper product pool
+      & VEG_BGCM_PP_FIBERBOARD_ID,   &   !< vegetation bgcm fiberboard product pool
+      & VEG_BGCM_PP_OIRW_ID,         &   !< vegetation bgcm other industrial roundwood product pool
+      & VEG_BGCM_PP_PV_ID,           &   !< vegetation bgcm plywood and veneer product pool
+      & VEG_BGCM_PP_SAWNWOOD_ID,     &   !< vegetation bgcm sawnwood product pool
+      & VEG_BGCM_PROD_DECAY_ID,      &   !< vegetation bgcm flux from product pool decay
+      & VEG_BGCM_HARVEST_TO_PROD_ID, &   !< vegetation bgcm flux to product pools
+      & VEG_BGCM_HARVEST_LITTER_ID    !< vegetation bgcm flux due to harvest
   END ENUM
 
   ! ======================================================================================================= !

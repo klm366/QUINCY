@@ -1349,6 +1349,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,           ONLY: debug_on
     USE mo_exception,             ONLY: message
+    USE mo_rad_constants,         ONLY: AlbedoCanopySnow_simple
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
@@ -1401,6 +1402,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onChunk :: fract_snow_can
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: w_snow_snl
     ! VEG_ 2D
@@ -1465,6 +1468,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)           ! in
+
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
     ! ---------------------------
@@ -1481,6 +1487,7 @@ CONTAINS
 
     !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
     !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
     !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
@@ -1489,11 +1496,16 @@ CONTAINS
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
-                     lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:),&
-                     alb_vis_soil(:), &
-                     arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
-                     arad_vis_can(:),arad_vis_soil(:), &
-                     alb_vis_can(:),alb_vis_lnd(:))
+                     lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
+                     alb_vis_soil(:), fract_snow_can(:), &
+                     arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:), fleaf_sunlit_vis_cl(:,:), &
+                     arad_vis_can(:), arad_vis_soil(:), &
+                     alb_vis_can(:), alb_vis_lnd(:))
+    ! correct canopy albedo by fraction covered with snow
+    DO ic=1,nc
+      alb_vis_lnd(ic) = alb_vis_lnd(ic) * (1._wp - fract_snow_can(ic)) + AlbedoCanopySnow_simple * fract_snow_can(ic)
+    END DO
+
     !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
     !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
@@ -1505,6 +1517,7 @@ CONTAINS
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
     !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil(:)) &
+    !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
     !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
@@ -1514,10 +1527,14 @@ CONTAINS
                      "nir", &
                      swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_nir_soil(:), &
-                     arad_sunlit_nir_cl(:,:),arad_shaded_nir_cl(:,:),fleaf_sunlit_nir_cl(:,:), &
-                     arad_nir_can(:),arad_nir_soil(:), &
-                     alb_nir_can(:),alb_nir_lnd(:))
+                     alb_nir_soil(:), fract_snow_can(:), &
+                     arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:), fleaf_sunlit_nir_cl(:,:), &
+                     arad_nir_can(:), arad_nir_soil(:), &
+                     alb_nir_can(:), alb_nir_lnd(:))
+                     ! correct canopy albedo by fraction covered with snow
+    DO ic=1,nc
+      alb_nir_lnd(ic) = alb_nir_lnd(ic) * (1._wp - fract_snow_can(ic)) + AlbedoCanopySnow_simple * fract_snow_can(ic)
+    END DO
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
     !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
@@ -1586,6 +1603,7 @@ CONTAINS
                               lai_cl              , &   ! in
                               cumm_lai_cl         , &   ! in
                               alb_surface         , &   ! in
+                              fract_snow_can      , &   ! in   ! NOTE: not used so far !
                               arad_sunlit_cl      , &   ! out
                               arad_shaded_cl      , &   ! out
                               fleaf_sunlit_cl     , &   ! out
@@ -1616,6 +1634,7 @@ CONTAINS
     REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
     REAL(wp), DIMENSION(:)                 , INTENT(in)  :: alb_surface        !< merged soil and snow albedo
+    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: fract_snow_can     !< fraction of snow on canopy ?
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: arad_sunlit_cl     !< absorbed radiation on sunlit leaves (W m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: arad_shaded_cl     !< absorbed radiation of shaded leaves (W m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)

@@ -87,7 +87,7 @@ CONTAINS
   SUBROUTINE q_rad_init_ic(tile)
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_rad_constants,         ONLY: AlbedoVisInitial, AlbedoNirInitial
+    USE mo_rad_constants,         ONLY: AlbedoVisInitial, AlbedoNirInitial, albedo_vis_soil_initial, albedo_nir_soil_initial
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
 
@@ -97,6 +97,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: alb_vis
     dsl4jsb_Real2D_onDomain      :: alb_nir
+    dsl4jsb_Real2D_onDomain      :: alb_nir_soil
+    dsl4jsb_Real2D_onDomain      :: alb_vis_soil
     dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
@@ -110,6 +112,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(RAD_, alb_vis)
     dsl4jsb_Get_var2D_onDomain(RAD_, alb_nir)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_vis_soil)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_nir_soil)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
@@ -124,6 +128,8 @@ CONTAINS
     ! these variables are initialized with the mem%Add_var() routine in addition (same values) !
     alb_vis(:,:)                        = AlbedoVisInitial
     alb_nir(:,:)                        = AlbedoNirInitial
+    alb_vis_soil(:,:)                   = albedo_vis_soil_initial
+    alb_nir_soil(:,:)                   = albedo_nir_soil_initial
   END SUBROUTINE q_rad_init_ic
 #else
   SUBROUTINE rad_finalize_init_vars

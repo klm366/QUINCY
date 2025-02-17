@@ -200,9 +200,10 @@ CONTAINS
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>
-  !! Calculates the relative soil humidity wrt field capacity
-  !!
-  REAL(wp) FUNCTION relative_humidity_soil(ws, fc)
+  !> Calculates the relative soil humidity in the range between maximum soil water capacity
+  !> and residual water content
+  !>
+  REAL(wp) FUNCTION relative_humidity_soil(ws, ws_min, ws_max)
 
     !$ACC ROUTINE SEQ
 
@@ -210,14 +211,17 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
-      fc                      !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
+      & ws_min,             & !< minimum moisture content [m], e.g. of uppermost soil layer
+      & ws_max                !< maximum moisture content [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
 
-    moisture = MIN(ws, fc)
+    moisture = MIN(ws, ws_max)
     IF (moisture > 0._wp) THEN
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
-                                                                          !  lower fc. Note, fc has to be  >= than moisture!
+      ! Soil moisture values below ws_min result in a rel. humidity of 0, for values above ws_max the
+      ! rel. humidity is 1. Between ws_min and ws_max rel. humidity increases using the Cosine function
+      ! resulting leads in a smooth transitions at ws_min and was_max.
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(MAX(moisture - ws_min, 0._wp) / (ws_max - ws_min) * pi))
     ELSE
       relative_humidity_soil = 0._wp
     END IF
@@ -312,7 +316,7 @@ CONTAINS
   !! Calculates the soil layer temperatures, a/b coefficients, ground heat flux and ground heat capacity.
   !!
   SUBROUTINE calc_soil_temperature(       &
-    & nc, nsoil, dz, mids,                &
+    & nc, nsoil, dz, mids, bots,          &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
     & enforce_water_budget,               &
@@ -323,8 +327,8 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matric_pot, bclapp, wtr,    &
-    & ice, frozen, melt, liquid_max       &
+    & dsoil, ws_max, matric_pot, bclapp,  &
+    & wtr, ice, frozen, melt, liquid_max  &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
@@ -344,6 +348,7 @@ CONTAINS
     INTEGER,  INTENT(IN)    ::  enforce_water_budget     !! Water balance check setting
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
+    REAL(wp), INTENT(in)    ::  bots(:)                  !! lower boundary of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
@@ -355,6 +360,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(wp), INTENT(in), OPTIONAL    ::  dsoil(:,:)        !! soil depth until bedrock [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
@@ -553,34 +559,74 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
-      ! Thawing depth
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP GANG VECTOR
-      DO ic=1,nc
-        thaw_depth(ic) = mids(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil_sl(ic,1) <= tmelt) THEN ! Top soil layer is frozen
-          thaw_depth(ic) = 0._wp
-        END IF
-        !$ACC LOOP SEQ
-        DO is=2,nsoil
-          IF  (       thaw_depth(ic)  == mids(nsoil) & ! still the inital value
-            &   .AND. t_soil_sl(ic,is-1) >  tmelt &
-            &   .AND. t_soil_sl(ic,is  ) <= tmelt &
-            & ) THEN
-            thaw_depth(ic) = mids(is-1) + (mids(is)-mids(is-1)) * (t_soil_sl(ic,is-1) - &
-              & tmelt) / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is))
+      ! Thaw depth
+      ! The general idea of the thaw depth calculation is to not simply determine the first layer with sub-zero temperatures,
+      ! but to assume a linear temperatur gradient between two layers (either layer centers or layer bottoms) and determine
+      ! the depth at which the temperature is zero between an unfrozen and a frozen layer. The underlying assumption is thus,
+      ! that a layer with an average temperature below the melting point may contain an unfrozen part if the temperature of
+      ! the overlying layer is above the melting point. Here, the unfrozen fraction of an, on average, frozen layer is
+      ! determined by scaling the temperature excess of the overlying layer (t_lm1-tmelt) by the temperature differences
+      ! between the layer and the overlying layer (t_lm1-t_l). For layers above the bedrock boundary the ice content needs to
+      ! be accounted for since this represents an additionional energy sink. This is done including the temperature change
+      ! corresponding to the latent energy of thaw at the soils current heat capacity. For layers at the thaw front
+      ! (temperature at 0C) it is simply assumed that the unfrozen fraction of the layer is proportional to the liquid
+      ! water content, relative to the total water content.
+      ! Calculation for full layers (bots), rather than layer centers (mids) appears more consistant with the actual energy
+      ! balance in the soil since temperatures can only increase above the melting point when the entirety of the ice in the
+      ! respective layer has completly melted. However, thaw depths are quite large, so it may become necessary to switch
+      ! back to the assumption that temepratures are valid for the center rather than the whole layer.
+      IF (PRESENT(wtr)) THEN              ! Not under glacier
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          thaw_depth(ic) = bots(nsoil)      ! Initialize with maximum thaw depth
+          IF (t_soil_sl(ic,1) < tmelt) THEN ! Top soil layer is frozen
+            thaw_depth(ic) = 0._wp
+          ELSE IF (t_soil_sl(ic,1) == tmelt) THEN ! Top soil layer is thawing
+            ! in case water is present we diagnose thaw depth using ration of liquid / total water
+            IF (ice(ic,1) > 0._wp) THEN
+              thaw_depth(ic) = dsoil(ic,1) * wtr(ic,1) / (wtr(ic,1) + ice(ic,1))
+            ELSE
+              thaw_depth(ic) = dz(1)
+            END IF
           END IF
         END DO
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP SEQ
+        DO is = 2, nsoil
+          !$ACC LOOP GANG VECTOR
+          DO ic = 1, nc
+            IF (thaw_depth(ic) == bots(nsoil)) THEN
+              IF  (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is) == tmelt) THEN ! Lower layer is at zero degrees
+                IF (ice(ic,is) > 0._wp) THEN
+                ! in case water is present we diagnose thaw depth using ration of liquid / total water
+                  thaw_depth(ic) = bots(is-1) + dsoil(ic,is) * wtr(ic,is) / (wtr(ic,is) + ice(ic,is))
+                ELSE
+                  thaw_depth(ic) = bots(is)
+                END IF
+              ELSE IF (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is  ) < tmelt) THEN
+                  ! in case water is present this would increase the energy required to bring temperatures above the melting point
+                  thaw_depth(ic) = bots(is-1) + dsoil(ic,is) * (t_soil_sl(ic,is-1) - tmelt) &
+                    & / (t_soil_sl(ic,is-1) - t_soil_sl(ic,is) + ice(ic,is) * alf * rhoi / heat_cap(ic,is))
+              END IF
+            END IF
+          END DO
+          !$ACC END LOOP
+        END DO
         !$ACC END LOOP
-      END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+        !$ACC END PARALLEL
+      ELSE
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          thaw_depth(ic) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
     ELSE ! lstart
       IF (l_freeze .AND. PRESENT(wtr)) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO is = 1, nsoil
-          DO ic=1,nc
+          DO ic = 1, nc
             liquid_max(ic,is) = 0._wp
           END DO
         END DO
