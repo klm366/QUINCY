@@ -18,7 +18,6 @@ MODULE mo_alcc_config_class
 
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
-  USE mo_util_string,        ONLY: tolower
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_kind,               ONLY: wp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -129,12 +128,11 @@ CONTAINS
     config%nr_of_pfts                                = nr_of_pfts
   
 
-    SELECT CASE (TRIM(tolower(config%scheme)))
+    SELECT CASE (TRIM(config%scheme))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
     CASE ('transitions')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
-      config%scheme=tolower(config%scheme)
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
