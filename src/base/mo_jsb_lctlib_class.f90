@@ -437,6 +437,7 @@ CONTAINS
     LOGICAL            :: exists_k_som_fast_init = .FALSE.
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
+    LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1001,6 +1002,10 @@ CONTAINS
           CASE ('albedolittervis')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterVIS
             exists_AlbedoLitterVIS = .TRUE.
+          ! jsbach parameter
+          CASE ('albedolitternir')
+            READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
+            exists_AlbedoLitterNIR = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1306,6 +1311,8 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_AlbedoLitterVIS) &
           CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_AlbedoLitterNIR) &
+          CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1640,6 +1647,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
       END IF
 #endif
     END IF

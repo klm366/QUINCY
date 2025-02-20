@@ -31,7 +31,7 @@ MODULE mo_fage_interface
   USE mo_fage_process,       ONLY: recalc_fract_per_age_proportionally
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FAGE_
+  dsl4jsb_Use_processes FAGE_, NLCC_
   dsl4jsb_Use_memory(FAGE_)
 
   IMPLICIT NONE
@@ -106,6 +106,7 @@ CONTAINS
     USE mo_fage_process,       ONLY: recalc_fract_per_age_upon_ageing, synchronise_fracts
 
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(NLCC_)
 
     IMPLICIT NONE
 
@@ -129,6 +130,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: ac_ubound(:)
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
@@ -147,6 +149,7 @@ CONTAINS
     ac_grid => Get_vgrid('age_classes_grid')
 
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(NLCC_)
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
@@ -172,6 +175,12 @@ CONTAINS
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(FAGE_)) RETURN
+
+    ! Consistency check
+    IF (model%Is_process_enabled(NLCC_)) THEN
+      CALL finish(routine, 'Setup ERROR: FAGE cannot be calculated with natural land cover change age (NLCC) enabled.')
+    END IF
+
 
     ! If not newyear, do nothing
     IF (.NOT. is_newyear(options%current_datetime,dtime)) RETURN
