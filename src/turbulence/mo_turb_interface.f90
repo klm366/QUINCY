@@ -715,6 +715,8 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc, ic
 
+    LOGICAL  :: jsb_standalone
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_humidity_scaling'
@@ -730,6 +732,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    jsb_standalone = jsbach_runs_standalone()
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -758,7 +762,11 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,   pch)               ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
+      END IF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         ch_tmp(ic) = pch(ic)

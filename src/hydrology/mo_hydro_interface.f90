@@ -24,7 +24,7 @@ MODULE mo_hydro_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, message_text, finish
@@ -2063,6 +2063,8 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen, alpha
 
+    LOGICAL  :: jsb_standalone
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
@@ -2079,6 +2081,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    jsb_standalone = jsbach_runs_standalone()
 
     ! Get reference to variables for current block
     !
@@ -2098,8 +2102,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)    ! out
       IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
+        IF (jsb_standalone) THEN
+          dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
+          dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
+        ELSE
+          dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
+          dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
+        END IF
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in
@@ -2172,8 +2181,14 @@ CONTAINS
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
 
-      dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)             ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)             ! in
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
+      END IF
+
       dsl4jsb_Get_var2D_onChunk(SEB_,  qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)          ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
@@ -2182,7 +2197,11 @@ CONTAINS
       IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
       ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
+        IF (jsb_standalone) THEN
+          dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
+        ELSE
+          dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
+        END IF
       END IF
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
@@ -2373,6 +2392,8 @@ CONTAINS
     INTEGER  :: pond_dynamics_scheme
     REAL(wp) :: dtime, steplen, alpha, config_w_skin_max
 
+    LOGICAL  :: jsb_standalone
+
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
@@ -2424,6 +2445,8 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
+    jsb_standalone = jsbach_runs_standalone()
+
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(HYDRO_)
@@ -2463,7 +2486,11 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)            ! in
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)       ! in
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
+      END IF
     END IF
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)        ! in

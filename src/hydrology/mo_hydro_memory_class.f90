@@ -616,9 +616,10 @@ CONTAINS
     END IF
 
     ! Additional variables for soil
-    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    IF ( (     One_of(VEG_TYPE,  lct_ids(:))    > 0 &
+      &   .OR. One_of(BARE_TYPE, lct_ids(:))    > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:))    > 0 &
       &  ) ) THEN
 
       CALL mem%Add_var( 'soil_depth', mem%soil_depth,                          &
@@ -1151,8 +1152,9 @@ CONTAINS
     END IF
 
     ! Additional variables for vegetation
-    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    IF ( (     One_of(VEG_TYPE,  lct_ids(:))    > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:))    > 0 &
       &  ) ) THEN
 
       CALL mem%Add_var( 'root_depth', mem%root_depth,                                    &

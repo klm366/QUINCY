@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
@@ -205,7 +205,8 @@ CONTAINS
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .AND. .NOT. model%config%use_tmx) .OR. &
+      &      tile%is_vegetation .OR. tile%is_glacier) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
@@ -236,6 +237,8 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice
 
+    LOGICAL  :: jsb_standalone
+
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
@@ -243,6 +246,8 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    jsb_standalone = jsbach_runs_standalone()
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
@@ -257,6 +262,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
+
+    IF (jsb_standalone) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_acoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, t_bcoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, q_acoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, q_bcoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, pch,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, drag_srf,     weighted_by_fract)
+    END IF 
 
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
@@ -459,7 +473,8 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .AND. .NOT. model%config%use_tmx) .OR. &
+     &        tile%contains_vegetation .OR. tile%contains_glacier) THEN
       CALL update_asselin_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
@@ -536,7 +551,8 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+    ELSE IF ((tile%is_land .AND. .NOT. model%config%use_tmx) .OR. &
+      &       tile%contains_vegetation .OR. tile%contains_glacier) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)

@@ -57,6 +57,8 @@ CONTAINS
     USE mo_lex_connectivities, ONLY: &
       & cmx_micro_ctc_2tilelex, cmx_micro_hfp_srf_2tilelex, cmx_micro_hfp_blg_2tilelex, &
       & cmx_macro_hfp_srf_2tilelex, cmx_macro_hfp_blg_2tilelex,                         &
+      & cmx_micro_ctc_3tilelex, cmx_micro_hfp_srf_3tilelex, cmx_micro_hfp_blg_3tilelex, &
+      & cmx_macro_hfp_srf_3tilelex, cmx_macro_hfp_blg_3tilelex,                         &
       & cmx_micro_ctc_topolex,  cmx_micro_hfp_srf_topolex, cmx_micro_hfp_blg_topolex,   &
       & cmx_macro_hfp_srf_topolex, cmx_macro_hfp_blg_topolex
 
@@ -217,6 +219,15 @@ CONTAINS
         cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_topolex, shape(cmx_micro_hfp_blg), order=(/2,1/))
         cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_topolex, shape(cmx_macro_hfp_blg), order=(/2,1/))
 
+      ELSE IF  (TRIM(model%config%usecase) == 'jsbach_topolex_sebt') THEN
+
+        cmx_micro_ctc = reshape(cmx_micro_ctc_topolex, shape(cmx_micro_ctc), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_topolex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_topolex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_topolex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_topolex, shape(cmx_macro_hfp_blg), order=(/2,1/))
+
       ELSE IF (TRIM(model%config%usecase) == 'jsbach_2tilelex') THEN
 
         cmx_micro_ctc = reshape(cmx_micro_ctc_2tilelex, shape(cmx_micro_ctc), order=(/2,1/))
@@ -225,6 +236,33 @@ CONTAINS
 
         cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_2tilelex, shape(cmx_micro_hfp_blg), order=(/2,1/))
         cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_2tilelex, shape(cmx_macro_hfp_blg), order=(/2,1/))
+
+      ELSE IF (TRIM(model%config%usecase) == 'jsbach_2tilelex_sebt') THEN
+
+        cmx_micro_ctc = reshape(cmx_micro_ctc_2tilelex, shape(cmx_micro_ctc), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_2tilelex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_2tilelex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_2tilelex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_2tilelex, shape(cmx_macro_hfp_blg), order=(/2,1/))
+
+      ELSE IF (TRIM(model%config%usecase) == 'jsbach_3tilelex') THEN
+
+        cmx_micro_ctc = reshape(cmx_micro_ctc_3tilelex, shape(cmx_micro_ctc), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_3tilelex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_3tilelex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_3tilelex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_3tilelex, shape(cmx_macro_hfp_blg), order=(/2,1/))
+
+      ELSE IF (TRIM(model%config%usecase) == 'jsbach_3tilelex_sebt') THEN
+
+        cmx_micro_ctc = reshape(cmx_micro_ctc_3tilelex, shape(cmx_micro_ctc), order=(/2,1/))
+        cmx_micro_hfp_srf = reshape(cmx_micro_hfp_srf_3tilelex, shape(cmx_micro_hfp_srf), order=(/2,1/))
+        cmx_macro_hfp_srf = reshape(cmx_macro_hfp_srf_3tilelex, shape(cmx_macro_hfp_srf), order=(/2,1/))
+
+        cmx_micro_hfp_blg = reshape(cmx_micro_hfp_blg_3tilelex, shape(cmx_micro_hfp_blg), order=(/2,1/))
+        cmx_macro_hfp_blg = reshape(cmx_macro_hfp_blg_3tilelex, shape(cmx_macro_hfp_blg), order=(/2,1/))
 
       ELSE
         CALL finish(TRIM(routine), '*** Lateral connection matrix not defined for usecase')

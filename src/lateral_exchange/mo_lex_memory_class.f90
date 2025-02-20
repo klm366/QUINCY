@@ -144,7 +144,7 @@ CONTAINS
         & t_cf('fact_lag_srf', 's-1', 'effective lag for lateral surface fluxes'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
-        & loutput=l_lex, output_level=FULL,                                           &
+        & loutput=l_lex, output_level=BASIC,                                          &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'fact_lag_blg', mem%fact_lag_blg,                               &
@@ -152,7 +152,7 @@ CONTAINS
         & t_cf('fact_lag_blg', '/', 'effective lag for lateral sub-surface fluxes'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
-        & loutput=l_lex, output_level=FULL,                                           &
+        & loutput=l_lex, output_level=BASIC,                                           &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_runoff_out', mem%wtr_runoff_out,                                   &

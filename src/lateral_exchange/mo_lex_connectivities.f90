@@ -103,6 +103,41 @@ MODULE mo_lex_connectivities
       &    0.0 ,0.0 /)
 
 ! -----------------------------------------------------------------------------------
+! 3tilelex
+
+  REAL(wp), PARAMETER, DIMENSION(9) ::  &
+    cmx_micro_ctc_3tilelex =            &
+      & (/ 0.0, 1.0, 0.0,               &
+      &    0.0, 0.0, 1.0,               &
+      &    0.0, 0.0, 0.0 /)
+
+  REAL(wp), PARAMETER, DIMENSION(9) ::  &
+    cmx_micro_hfp_srf_3tilelex =        &
+      & (/ 0.0, 1.0, 0.0,               &
+      &    0.0, 0.0, 1.0,               &
+      &    0.0, 0.0, 0.0 /)
+
+  REAL(wp), PARAMETER, DIMENSION(9) ::  &
+    cmx_micro_hfp_blg_3tilelex =        &
+      & (/ 0.0, 1.0, 0.0,               &
+      &    0.0, 0.0, 1.0,               &
+      &    0.0, 0.0, 0.0 /)
+
+  REAL(wp), PARAMETER, DIMENSION(9) ::  &
+    cmx_macro_hfp_srf_3tilelex =        &
+      & (/ 0.0, 0.0, 0.0,               &
+      &    0.0, 0.0, 0.0,               &
+      &    0.0, 0.0, 0.0 /)
+
+  REAL(wp), PARAMETER, DIMENSION(9) ::  &
+    cmx_macro_hfp_blg_3tilelex =        &
+      & (/ 0.0, 0.0, 0.0,               &
+      &    0.0, 0.0, 0.0,               &
+      &    0.0, 0.0, 0.0 /)
+
+! -----------------------------------------------------------------------------------
+
+! -----------------------------------------------------------------------------------
 ! topolex
 
   REAL(wp), PARAMETER, DIMENSION(16) :: &

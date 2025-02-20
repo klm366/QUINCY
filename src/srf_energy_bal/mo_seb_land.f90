@@ -141,6 +141,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)  :: &
      & qsat_srf_old,                    &
      & s_old,                           &
+     & s_air,                           &
      & dQdT,                            & !< Sensitivity of saturated surface specific humidity to temperature
      & t2s_conv,                        & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
      & le_phase_change_old,             &
@@ -192,11 +193,10 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
+    jsb_standalone = jsbach_runs_standalone()
     use_tmx = model%config%use_tmx
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
-
-    jsb_standalone         = jsbach_runs_standalone()
 
     IF (use_tmx) THEN
       cpd_or_cvd = cvd
@@ -217,16 +217,21 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN/OUT (coupled/standalone)
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
     IF (jsb_standalone) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
-      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   pch)          ! -/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)   ! -/OUT (coupled/standalone)
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)      ! IN/OUT (coupled/standalone)
     END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -279,7 +284,11 @@ CONTAINS
     IF (use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      END IF
     END IF
 
     !$ACC DATA &
@@ -937,7 +946,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen, alpha
-    LOGICAL  :: use_tmx
+    LOGICAL  :: jsb_standalone, use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -955,6 +964,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    jsb_standalone = jsbach_runs_standalone()
     use_tmx = model%config%use_tmx
 
     ! Get reference to variables for current block
@@ -963,16 +973,20 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)             ! in
-
+    IF (jsb_standalone) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)           ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)           ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)           ! in
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)           ! in
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)          ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)            ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)          ! in
     END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx)       ! out
@@ -984,7 +998,11 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)                 ! in
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)            ! in
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, drag_srf)          ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)          ! in
+      END IF
     END IF
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution

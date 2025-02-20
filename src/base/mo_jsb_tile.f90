@@ -243,7 +243,8 @@ CONTAINS
         ! TODO hard coded checks of process dependencies - should not be handled here
         IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
           IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
-            CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+            CALL message(TRIM(routine), &
+              & 'Experimental: SEB_ process usually only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
           END IF
         END IF
         IF (PRESENT(process_actions)) THEN
