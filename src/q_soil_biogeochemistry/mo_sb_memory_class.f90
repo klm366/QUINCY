@@ -343,6 +343,14 @@ MODULE mo_sb_memory_class
       & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
                                    !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
 
+    !------------------------------------------------------------------------------------------------------ !
+    !> monthly n and p deposition forcing as read from a depositon bc file
+    !>
+    TYPE(t_jsb_var_real3d)  :: &
+      & nhx_deposition_monthly,  &            !< surface downward reduced nitrogen deposition velocity [kg/m2/s]
+      & noy_deposition_monthly,  &            !< surface downward oxidised nitrogen deposition velocity [kg/m2/s]
+      & p_deposition_monthly                  !< surface downward reduced phosphorus deposition velocity [kg/m2/s]
+
   CONTAINS
     PROCEDURE :: Init => Init_sb_memory
   END TYPE t_sb_memory
@@ -414,7 +422,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -433,6 +441,7 @@ CONTAINS
     TYPE(t_jsb_grid),                POINTER :: hgrid                       !< Horizontal grid
     TYPE(t_jsb_vgrid),               POINTER :: surface                     !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_soil_sb               !< Vertical grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_month                 !< Vertical grid
     CHARACTER(len=30)                        :: unit_sb_pool                !< unit of element var
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
@@ -446,6 +455,7 @@ CONTAINS
     hgrid         => Get_grid(model%grid_id)
     surface       => Get_vgrid('surface')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    vgrid_month   => Get_vgrid('time_months')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
 
@@ -453,6 +463,40 @@ CONTAINS
     ! init local variables
     unit_sb_pool = "mol m-3"
     unit_sb_flux = "mol m-3 timestep-1"
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Monthly deposition data is only required on the grid-box level
+    IF (.NOT. ASSOCIATED(mem%parent)) THEN
+      CALL mem%Add_var('nhx_deposition_monthly', mem%nhx_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('nhx_deposition_monthly', 'kg/m2/s', 'surface downward reduced nitrogen deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('noy_deposition_monthly', mem%noy_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('noy_deposition_monthly', 'kg/m2/s', 'surface downward oxidised nitrogen deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('p_deposition_monthly', mem%p_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('p_deposition_monthly', 'kg/m2/s', 'surface downward reduced phosphorus deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! add memory only for LAND & PFT tiles
@@ -2378,7 +2422,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-			
+
       CALL mem%Add_var('qmax_fast_po4', mem%qmax_fast_po4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('qmax_fast_po4', 'mol P m-3 soil', 'sorption capacity of po4 of the clay(Fe/Al) and SOM pool'), &

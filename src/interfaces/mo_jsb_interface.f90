@@ -34,10 +34,10 @@ MODULE mo_jsb_interface
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -695,6 +695,9 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
+#ifndef __NO_QUINCY__
+    USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -724,7 +727,16 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
-    ENDIF
+    END IF
+
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      ! For the SB process data on n and p deposition might have to be read once a year and updated once a month
+      IF (is_newmonth(current_datetime,dtime) .AND. model%processes(SB_)%p%config%active) THEN
+        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+      END IF
+    END IF
+#endif
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

@@ -87,7 +87,7 @@ MODULE mo_a2l_memory_class
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
-      & p_deposition               !< surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
+      & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::   &
@@ -567,7 +567,7 @@ CONTAINS
 
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
-        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
+        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphorus deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
