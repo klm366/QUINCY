@@ -122,6 +122,7 @@ CONTAINS
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
+    USE mo_jsb_time,               ONLY: is_newyear
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -163,6 +164,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -255,7 +258,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)          ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)  ! out
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
@@ -517,6 +522,7 @@ CONTAINS
         & nsoil                                    , &
         & soil_e%dz(:)                             , &
         & soil_e%levels(:)                         , &
+        & soil_e%ubounds(:)                        , &
         & dtime                                    , &
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
@@ -556,6 +562,7 @@ CONTAINS
         & nsoil                                    , &
         & soil_e%dz(:)                             , &
         & soil_e%levels(:)                         , &
+        & soil_e%ubounds(:)                        , &
         & dtime                                    , &
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
@@ -573,6 +580,7 @@ CONTAINS
         & grnd_hflx_soil                      (:  ), &
         & thaw_depth                          (:  ), &
         ! optional, in
+        & soil_depth_sl                       (:,:), &
         & ws_max_sl                           (:,:), &
         & matric_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
@@ -612,6 +620,31 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
+    END IF
+
+    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+#else
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+#endif
+      DO ic = 1,nc
+        thaw_depth_max_ym1(ic) = thaw_depth_max(ic)
+        thaw_depth_max(ic)     = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+#ifdef _CRAYFTN
+      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+#else
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+#endif
+      DO ic = 1,nc
+        thaw_depth_max(ic) = MAX(thaw_depth_max(ic),thaw_depth(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     IF (.NOT. tile%is_glacier) THEN
@@ -691,6 +724,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
 

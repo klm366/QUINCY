@@ -214,7 +214,7 @@ CONTAINS
         END DO
       END IF
       DO add_group = 1, no_add_groups
-        igroup = no_groups + add_group
+        igroup = 3 + no_groups + add_group
         groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! e.g. group jsb_mon for monitoring output
       END DO
     ELSE
@@ -389,7 +389,7 @@ CONTAINS
         END DO
       END IF
       DO add_group = 1, no_add_groups
-        igroup = no_groups + add_group
+        igroup = 3 + no_groups + add_group
         groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
       END DO
     ELSE
@@ -567,7 +567,7 @@ CONTAINS
     END IF
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
@@ -582,6 +582,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'

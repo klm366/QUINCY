@@ -68,9 +68,6 @@ MODULE mo_jsb_config_class
 #endif
 
     ! quincy @TODO temporary solution for model%config%options
-    LOGICAL           :: flag_stand_harvest
-    INTEGER           :: stand_replacing_year
-    LOGICAL           :: l_do_stand_replacing_harvest
     LOGICAL           :: l_transient_spinup
     ! quincy - end
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
@@ -334,9 +331,6 @@ CONTAINS
 #endif
 
     ! quincy - temporary solution @TODO
-    model_config%flag_stand_harvest           = .FALSE.
-    model_config%stand_replacing_year         = 1500
-    model_config%l_do_stand_replacing_harvest = .FALSE.
     model_config%l_transient_spinup           = .FALSE.
     ! quincy - end
     model_config%init_from_ifs              = init_from_ifs

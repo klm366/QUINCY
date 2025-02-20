@@ -1492,7 +1492,8 @@ CONTAINS
                                                                nitrification_no3, &               ! out
                                                                denitrification_n2)
 
-    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification
+    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification, &
+                                   c_limit_on_nitrification_min, c_limit_on_denitrification_min
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1527,14 +1528,14 @@ CONTAINS
       DO is = 1,INT(num_sl_above_bedrock(ic))
         ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    (1._wp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_wp
 
         ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]
         denitrification_n2(ic,is)  = vmax_denitrification * rtm_denitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_denitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    anaerobic_volume_fraction(ic,is) * no3_solute(ic,is) / &
                                    (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_wp
       ENDDO

@@ -121,7 +121,9 @@ MODULE mo_hydro_memory_class
       & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme                         [m]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
-      & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
+      & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
+      & wtr_latflow_res_srf,  & !< Water content of latflow res. srf.                                       [m]
+      & wtr_latflow_srf         !< Outflow from latflow res. srf                                            [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -144,8 +146,9 @@ MODULE mo_hydro_memory_class
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice) [m]
       & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice)            [m]
-      & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
-
+      & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
+      & wtr_latflow_res_sl,   & !< Water content of latflow res. on soil layers                             [m]
+      & wtr_latflow_sl          !< Outflow from latflow res. on soil layers                                 [kg m-2 s-1]
     ! Additional variables for PFT lct_type
 
     ! Parameters
@@ -212,6 +215,8 @@ CONTAINS
       & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
       & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
 
+    USE mo_hydro_constants,        ONLY: Semi_Distributed_, Uniform_
+
     CLASS(t_hydro_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)    :: prefix
     CHARACTER(len=*),      INTENT(in)    :: suffix
@@ -232,6 +237,7 @@ CONTAINS
 
     REAL(wp) :: ini_snow_dens
     LOGICAL  :: l_ponds
+    LOGICAL  :: l_uniform     !< Restart switch for variables used in the uniform-scale soil hydrology parametrization
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
 
@@ -252,6 +258,13 @@ CONTAINS
       ini_snow_dens = dens_snow_min
     ELSE
       ini_snow_dens = dens_snow
+    END IF
+
+    ! Set restart switch for variables used in the uniform-scale soil hydrology parametrization
+    IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
+      l_uniform = .TRUE.
+    ELSE
+      l_uniform = .FALSE.
     END IF
 
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
@@ -892,6 +905,37 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+
+      CALL mem%Add_var( 'wtr_latflow_res_sl', mem%wtr_latflow_res_sl,                         &
+        & hgrid, soil_w,                                                                      &
+        & t_cf('wtr_latflow_res_sl', 'm', 'Water content of latflow res. on soil layers'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
+        & prefix, suffix,                                                                     &
+        & lrestart=l_uniform, lrestart_cont=.TRUE.,                                           &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_latflow_sl', mem%wtr_latflow_sl,                                 &
+        & hgrid, soil_w,                                                                      &
+        & t_cf('wtr_latflow_sl', 'kg m-2 s-1', 'Outflow from latflow res. on soil layers'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
+        & prefix, suffix, lrestart=.FALSE.,                                                   &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
+        & hgrid, surface,                                                           &
+        & t_cf('wtr_latflow_res_srf', 'm', 'Water content of latflow res. srf.'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=l_uniform, lrestart_cont=.TRUE.,                                 &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_latflow_srf', mem%wtr_latflow_srf,                     &
+        & hgrid, surface,                                                           &
+        & t_cf('wtr_latflow_srf', 'kg m-2 s-1', 'Outflow from latflow res. srf'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix, lrestart=.FALSE.,                                         &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
         & hgrid, surface,                                                                &
