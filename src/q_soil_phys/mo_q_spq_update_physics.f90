@@ -1306,11 +1306,15 @@ CONTAINS
           hlp1(ic) = hlp2(ic)
         ENDIF
         ! avoid soil water content exceeding soil water capacity
-        IF (hlp1(ic) < 0.0_wp) THEN
-          hlp1(ic) = MAX( &
-            &       MIN(w_soil_fc_sl(ic,is-1) - w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio, hlp1(ic)), &
+        IF (hlp1(ic) < 0.0_wp) THEN ! a negative hlp1 means an upward diffusion flux
+          ! Limit upward diffusion to available pore space in top layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of bottom layer to w_soil_fc_sl
+          hlp1(ic) = -MAX( &
+            &       MIN(w_soil_fc_sl(ic,is-1) - (w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio), -hlp1(ic)), &
             &       w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio - w_soil_fc_sl(ic,is))
-        ELSE
+        ELSE ! downward diffusion
+          ! Limit downward diffusion to available pore space in bottom layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of top layer to w_soil_fc_sl
           hlp1(ic) = MAX(MIN(hlp1(ic),w_soil_fc_sl(ic,is) - (w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio)), &
             &       w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio - w_soil_fc_sl(ic,is-1))
         ENDIF

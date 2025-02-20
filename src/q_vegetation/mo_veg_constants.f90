@@ -199,10 +199,12 @@ MODULE mo_veg_constants
 
   ! parameters used for herbivory
   REAL(wp), SAVE :: &
-      k_herbivory,           &      !< asymptotic daily rate of herbivory (1/day)
-      ftroph_loss_herbivory, &      !< carbon respiration associated with herbivory (unitless)
-      min_net_growth_herbivory, &   !< minimum long-term average productivity for herbivory to occur (mol / m2 / yr)
-      min_lai_herbivory             !< minimum LAI beyond which herbivory can occur
+    & ftroph_loss_herbivory, &            !< carbon respiration associated with herbivory (unitless)
+    & k_herbivory_grass,     &            !< asymptotic daily rate of herbivory in natural grasslands (1/day)
+    & k_herbivory_pasture,   &            !< asymptotic daily rate of herbivory in pasture (1/day)
+    & min_net_growth_herbivory_grass, &   !< minimum long-term average productivity for herbivory to occur in natural grasslands (mol / m2 / yr)
+    & min_net_growth_herbivory_pasture, & !< minimum long-term average productivity for herbivory to occur in pasture (mol / m2 / yr)
+    & min_lai_herbivory                   !< minimum LAI beyond which herbivory can occur
 
   ! red to far red ratio calculations
   REAL(wp), SAVE :: &
@@ -386,10 +388,12 @@ CONTAINS
 
     ! parameters used for herbivory
     ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150
-      k_herbivory              = 0.01_wp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
-      ftroph_loss_herbivory    = 0.9_wp  !< assumuming a typical 90% loss of energy per trophic level
-      min_net_growth_herbivory = 20.8_wp !< 250 gC/m2/yr converted to mol
-      min_lai_herbivory        = 0.1_wp  !< set to min_lai value, needs evaluation
+      ftroph_loss_herbivory             = 0.9_wp   !< assumuming a typical 90% loss of energy per trophic level
+      k_herbivory_grass                 = 0.01_wp  !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      k_herbivory_pasture               = 0.015_wp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      min_net_growth_herbivory_grass    = 20.8_wp  !< 250 gC/m2/yr converted to mol
+      min_net_growth_herbivory_pasture  = 4.16_wp  !< 50 gC/m2/yr converted to mol
+      min_lai_herbivory                 = 0.1_wp   !< set to min_lai value, needs evaluation
 
     ! red to far red ratio calculations
       rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998
