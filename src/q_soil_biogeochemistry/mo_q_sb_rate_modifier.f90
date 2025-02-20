@@ -48,7 +48,7 @@ CONTAINS
       &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
       &                                  t_opt_nitrification, lambda_anvf, k_anvf, &
       &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition, &
-      &                                  kmr_asymb_bnf, temp_freeze_window_bio
+      &                                  kmr_asymb_bnf, min_rmm_gasdiffusion, temp_freeze_window_bio
     USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf
     USE mo_phy_schemes,            ONLY: calc_peaked_arrhenius_function
     ! ----------------------------------------------------------------------------------------------------- !
@@ -190,7 +190,8 @@ CONTAINS
         rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion, &
           &                                                                    temp_freeze_window_bio)
         rmm_nitrification(ic, is)             = calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
-        rmm_gasdiffusion(ic, is)              = 1.0_wp - calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic, is))
+        rmm_gasdiffusion(ic, is)              = MAX(min_rmm_gasdiffusion, &
+                                                    &1.0_wp - calc_moisture_modifier(w_soil_sl(ic, is), w_soil_fc_sl(ic,is)))
         anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(w_soil_sl(ic, is), w_ice_sl(ic, is), &
           &                                     w_soil_sat_sl(ic, is), lambda_anvf, k_anvf)
 

@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SH_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -152,6 +152,7 @@ CONTAINS
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
+    USE mo_q_sh_init,           ONLY: q_sh_init
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
@@ -386,6 +387,31 @@ CONTAINS
       ENDIF
 
       !-- science
+
+      ! ------------------------ Any tasks that might change the land cover need to come first in the timestep
+      !
+      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area is active (currently none for QS)
+      ! or if harvest is active because it already now needs information on the forested area
+      !
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        ! Prepare LCC tasks
+        CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+
+        ! Here all lcc tasks need to be called
+
+        ! Do postprocessing after all LCC tasks were executed
+        CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+      END IF
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        IF(model%processes(Q_SH_)%p%config%active) THEN
+          CALL model%Queue_task(Q_SH_, "simple_harvest")          ! LAND ONLY; if Q_SH active
+          CALL model%Queue_task(VEG_, "pools_on_harvest")          ! LAND ONLY; if Q_SH active
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SH active
+        END IF
+      END IF
+
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
@@ -398,7 +424,7 @@ CONTAINS
 
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
         IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT
+          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
         ENDIF
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
@@ -414,6 +440,8 @@ CONTAINS
       ENDIF
 
       CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
+      CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
+
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
       ENDIF
@@ -553,6 +581,11 @@ CONTAINS
         IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
           IF (tile%Is_process_active(SB_)) THEN
             CALL sb_init(tile)
+          END IF
+        ENDIF
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (tile%Is_process_active(Q_SH_)) THEN
+            CALL q_sh_init(tile)
           END IF
         ENDIF
 #endif
