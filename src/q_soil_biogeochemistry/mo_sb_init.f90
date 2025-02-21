@@ -1635,6 +1635,18 @@ CONTAINS
       qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle(:,:,iblk), &
         &                                           silt_sl(:,:,iblk), &
         &                                           clay_sl(:,:,iblk))
+      !! deep soil qmax correction for OM
+	  !! if we need to fix it also for NH4, and PO4, we need to modify calc_qmax_texture with the following code
+      DO ic = 1,nproma
+        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * 7._wp / 15._wp) )
+          qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
+          IF (soil_lay_depth_ubound_sl(ic, is, iblk) > 2._wp) THEN
+            qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * 0.1_wp
+          ENDIF
+		END DO
+      END DO
+
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &    ! in
         & volume_min_sl(:,:,iblk), &
