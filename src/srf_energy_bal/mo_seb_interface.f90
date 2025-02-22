@@ -651,10 +651,12 @@ CONTAINS
 
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
-      IF (tile%visited(no_omp_thread) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
+      IF ((tile%Has_children() .AND. .NOT. tile%visited(no_omp_thread)) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
+
+      ! We're on a leaf or on the way up.
 
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)

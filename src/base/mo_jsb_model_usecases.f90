@@ -433,8 +433,8 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_  ,    HYDRO_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -451,28 +451,29 @@ CONTAINS
 
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, TURB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
         !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
-        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
         !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & processes       = (/SEB_,     TURB_,    HYDRO_,   SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', &
-          & processes       = (/ASSIMI_,   PHENO_/),    &
-          & process_actions = (/ON_LEAFS_, ON_LEAFS_/), &
+          & processes       = (/SEB_,     TURB_,    HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+          & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
           & fract_varname='fract_veg')
         !$ACC ENTER DATA COPYIN(veg_tile)

@@ -744,7 +744,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
-      IF (tile%Is_process_calculated(ASSIMI_)) THEN
+      IF (tile%Is_process_active(ASSIMI_)) THEN
         dsl4jsb_Get_memory(ASSIMI_)
       END IF
     END IF
@@ -787,7 +787,7 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
-      IF (tile%Is_process_calculated(ASSIMI_)) THEN
+      IF (tile%Is_process_active(ASSIMI_)) THEN
         dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited)         ! in
       ELSE
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
