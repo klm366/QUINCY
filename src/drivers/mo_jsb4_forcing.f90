@@ -1368,7 +1368,7 @@ CONTAINS
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
-    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_) .AND. (frequency /= SUBDAILY_)) &
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_)  .AND. (frequency /= SUBDAILY_)) &
       &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
       &  'daily, subdaily or timestep frequency, please check program flow')
 
