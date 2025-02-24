@@ -42,15 +42,6 @@ Test build doc:
     expire_in: 20min
   when: manual
 
-test-job:
-  script:
-  - sh ./build-doc.sh -q
-  tags:
-    - sphinx
-  rules:
-    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
-      when: manual
-
 pages:
   stage: build_doc
   before_script:
@@ -64,3 +55,9 @@ pages:
   tags:
     - sphinx
   artifacts:
+    paths:
+      - public
+    expire_in: 10min
+  rules:
+    - if: ($CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule")
+

@@ -18,6 +18,3 @@ doc/latex
 *.pp-*.f90
 *.xmodstamp
 .dirstamp
-run/*.config
-*.bak
-*.swp
