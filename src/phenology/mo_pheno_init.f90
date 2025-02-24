@@ -26,8 +26,10 @@ MODULE mo_pheno_init
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
 
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_memory(PHENO_)
 
   IMPLICIT NONE
@@ -44,6 +46,10 @@ MODULE mo_pheno_init
   END TYPE t_pheno_init_vars
 
   TYPE(t_pheno_init_vars) :: pheno_init_vars
+
+  dsl4jsb_Def_config(PHENO_)
+  dsl4jsb_Def_config(HYDRO_)
+  dsl4jsb_Def_config(RAD_)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
@@ -88,8 +94,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    dsl4jsb_Def_config(PHENO_)
-
     REAL(wp), POINTER ::  &
       & ptr_mon(:,:,:),   &
       & ptr_2D(:,:)
@@ -117,6 +121,8 @@ CONTAINS
     pheno_init_vars%fract_fpc_max(:,:)   = missval
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting phenology init vars from ' &
       &                          //TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
@@ -144,12 +150,14 @@ CONTAINS
     DEALLOCATE(ptr_mon)
 
     ! Forest fraction
-    ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='forest_fract',  &
-      & fill_array = pheno_init_vars%fract_forest)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
+      &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='forest_fract',  &
+        & fill_array = pheno_init_vars%fract_forest)
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    END IF
 
     CALL input_file%Close()
 
@@ -172,7 +180,6 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
@@ -180,6 +187,8 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_memory(PHENO_)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
@@ -198,10 +207,12 @@ CONTAINS
     !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%fract_fpc_mon) ASYNC(1)
 
     ! Forest fraction
-    ! TODO: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
-    dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest)) ASYNC(1)
+    IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
+      &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
+      dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest)) ASYNC(1)
+    END IF
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
@@ -248,7 +259,6 @@ CONTAINS
       & lai_mon(:,:,:), &
       & fract_fpc_mon(:,:,:)
 
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
     REAL(wp) :: wgt1, wgt2

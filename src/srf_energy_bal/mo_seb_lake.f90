@@ -13,6 +13,7 @@
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__

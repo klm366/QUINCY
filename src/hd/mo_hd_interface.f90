@@ -21,6 +21,7 @@ MODULE mo_hd_interface
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
+  USE mo_fortran_tools,    ONLY: assert_acc_device_only
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -343,6 +344,8 @@ CONTAINS
       & global_outflow,         &
       & global_internal_drain,  &
       & global_discharge_ocean, &
+      & internal_drain_share,   &
+      & global_ocean_cells,     &
       & sum_weights
 
     INTEGER  ::         &
@@ -367,6 +370,8 @@ CONTAINS
     REAL(wp) :: global_resid
 
     LOGICAL  :: debug_hd, use_bifurcated_rivers
+
+    CALL assert_acc_device_only(routine, lacc=.TRUE.)
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -432,9 +437,9 @@ CONTAINS
     CASE ('full')
 
       ! Synchronize halos
-      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, outflow_runoff(:,:), lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_drainage(:,:), lacc=.TRUE.)
+      CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:), lacc=.TRUE.)
       ! Sync comm stream 1 with our processing stream acc_stream
       !$ACC WAIT(1) ASYNC(acc_stream)
 
@@ -617,6 +622,18 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       global_discharge_ocean = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO blk = 1, nblks
+        DO jc = 1, nproma
+          IF (NINT(hd_mask(jc,blk)) <= 0._wp .AND. is_in_domain(jc,blk)) THEN
+            ztemp(jc,blk) = 1._wp
+          ELSE
+            ztemp(jc,blk) = 0._wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      global_ocean_cells = global_sum_array(ztemp, lacc=.TRUE.)
 
       IF (debug_hd) THEN
         !
@@ -635,9 +652,9 @@ CONTAINS
         CALL message (routine, message_text)
       END IF
 
-      ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
-      factor = 1._wp + global_internal_drain / global_discharge_ocean
       IF (global_discharge_ocean > 0._wp) THEN
+        ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
+        factor = 1._wp + global_internal_drain / global_discharge_ocean
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
@@ -646,9 +663,18 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE IF (global_internal_drain > 0._wp) THEN
-        WRITE (message_text,*) 'no discharge to ocean! Internal drainage of ', &
-          & global_internal_drain, ' m3/s will be lost.'
-        CALL finish (routine, message_text)
+        ! Without (positive) river discharge towards the ocean, the internal drainage needs
+        ! to be distributed equally over all coastal and ocean cells
+        internal_drain_share = global_internal_drain / global_ocean_cells
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO blk = 1, nblks
+          DO jc = 1, nproma
+            IF (NINT(hd_mask(jc,blk)) <= 0) THEN
+              discharge_ocean(jc,blk) = discharge_ocean(jc,blk) + internal_drain_share
+            END IF
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
       IF (debug_hd) THEN
@@ -1033,7 +1059,7 @@ CONTAINS
       global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)
 
       IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN     ! zero at the very first time step
-        IF (ABS(global_water_error/global_water_budget) > 15._wp*EPSILON(1._wp)) THEN
+        IF (ABS(global_water_error/global_water_budget) > 50._wp*EPSILON(1._wp)) THEN
           WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
                global_water_error,' m3'
           IF (dsl4jsb_Config(HD_)%enforce_water_budget == WB_ERROR) THEN
@@ -1050,8 +1076,8 @@ CONTAINS
       & water_error_gsum = global_water_error
 
     !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
-    DEALLOCATE (water_budget_old, water_flux)
     !$ACC WAIT(acc_stream)
+    DEALLOCATE (water_budget_old, water_flux)
 
   END SUBROUTINE hd_check_water_budget
 

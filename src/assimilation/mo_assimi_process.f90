@@ -790,7 +790,7 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
     REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
     REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
-    REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
+    REAL(wp), INTENT(in)    :: seconds_year       ! number of seconds in previous year
     REAL(wp), INTENT(inout) :: NPP_sum_year       !
     REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
@@ -809,10 +809,6 @@ CONTAINS
          NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
       END IF
    ENDIF
-
-   ! count time in seconds that has passed till summing of NPP started
-   seconds_year = seconds_year + delta_time
-   IF (new_year) seconds_year = delta_time
 
   END SUBROUTINE calc_NPPbuf
 

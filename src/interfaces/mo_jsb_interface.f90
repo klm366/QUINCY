@@ -30,14 +30,15 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
   USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
-  USE mo_quincy_model_config, ONLY: QLAND
+  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newday, is_time_experiment_start, is_time_restart
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, &
+                                    is_time_experiment_start, is_time_restart
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -117,6 +118,8 @@ CONTAINS
     & nhx_n15_deposition,     & !< in
     & noy_n15_deposition,     & !< in
     & p_deposition,           & !< in
+    & CO2_mixing_ratio_c13,   &
+    & CO2_mixing_ratio_c14,   &
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
@@ -172,6 +175,8 @@ CONTAINS
       & nhx_n15_deposition(:), &
       & noy_n15_deposition(:), &
       & p_deposition      (:), &
+      & CO2_mixing_ratio_c13 (:), &
+      & CO2_mixing_ratio_c14 (:), &
       ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -308,6 +313,14 @@ CONTAINS
           &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
       ENDIF
 
+#ifdef _OPENACC
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+
+      IF (model%config%qmodel_id /= QCANOPY) THEN
+        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      ENDIF
+#endif
+
       CALL update_atm2land_quincy(                    &
         & tile,                                       &
         & model%options(no_omp_thread),               &
@@ -336,7 +349,9 @@ CONTAINS
         & noy_deposition     = noy_deposition,        &
         & nhx_n15_deposition = nhx_n15_deposition,    &
         & noy_n15_deposition = noy_n15_deposition,    &
-        & p_deposition       = p_deposition          &
+        & p_deposition       = p_deposition,          &
+        & CO2_mixing_ratio_c13 = CO2_mixing_ratio_c13(:), &
+        & CO2_mixing_ratio_c14 = CO2_mixing_ratio_c14(:)  &
         ! For lakes
         ! & drag_wtr           = drag_wtr,              &
         ! & drag_ice           = drag_ice,              &
@@ -684,6 +699,9 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
+#ifndef __NO_QUINCY__
+    USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -713,7 +731,16 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
-    ENDIF
+    END IF
+
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      ! For the SB process data on n and p deposition might have to be read once a year and updated once a month
+      IF (is_newmonth(current_datetime,dtime) .AND. model%processes(SB_)%p%config%active) THEN
+        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+      END IF
+    END IF
+#endif
 
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
     invalidate_cuda_graphs = .FALSE.

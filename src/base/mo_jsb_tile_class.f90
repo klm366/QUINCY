@@ -884,34 +884,32 @@ CONTAINS
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
 
-    CHARACTER(len=256) :: routine
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_2d'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    IF (debug_on()) THEN
-      routine = modname//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
-    ELSE
-      routine = modname//':Aggregate_weighted_by_fract_2d'
-    END IF
-
     no_children = tile%Get_no_of_children()
-    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+    IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+      &  'This should never happen!')
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
-    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+    IF (iproc < 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+      & 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
     ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
     ! and that number of children matches the child indices.
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+      CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+        &  'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+      CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+        &  'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
     ! Needed for GPUs
@@ -1055,34 +1053,32 @@ CONTAINS
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
 
-    CHARACTER(len=256) :: routine
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_3d'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    IF (debug_on()) THEN
-      routine = modname//':Aggregate_weighted_by_fract_3d'//'(called by '//TRIM(caller)//')'
-    ELSE
-      routine = modname//':Aggregate_weighted_by_fract_3d'
-    END IF
-
     no_children = tile%Get_no_of_children()
-    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+    IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+      &  'This should never happen!')
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
-    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+    IF (iproc < 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+      &  'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
     ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
     ! and that number of children matches the child indices.
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+      CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+        &  'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+      CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
+        &  'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
     ! Needed for GPUs

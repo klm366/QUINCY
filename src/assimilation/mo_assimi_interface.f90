@@ -12,6 +12,7 @@
 !> ---------------------------------------
 !>
 
+!NEC$ options "-finline-functions"
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/assimilation/mo_assimi_process.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/hydrology/mo_hydro_process.pp-jsb.f90"
@@ -26,7 +27,7 @@ MODULE mo_assimi_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, get_previous_year_length
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
@@ -43,6 +44,7 @@ MODULE mo_assimi_interface
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_assimi_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -311,6 +313,9 @@ CONTAINS
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
+#       ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#       endif
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -469,10 +474,15 @@ CONTAINS
     CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
-    ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = 0._wp
+    END DO
+
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
         & C4Flag,                      &
@@ -485,17 +495,17 @@ CONTAINS
         & CO2_air_mol(ic),             &
         & scaling_fact_cl(ic,icanopy)  &
         & )
+
+        canopy_cond_unlimited(ic) =    &
+          &  canopy_cond_unlimited(ic) + canopy_cond_cl(ic,icanopy) * lai_cl(ic,icanopy)
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
     END DO
 
-    ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
+      canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -731,6 +741,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
 
@@ -781,6 +792,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -815,9 +827,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
-
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
-
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)           ! inout
+    END IF
     ! ---------------------------
     ! Go
 
@@ -843,28 +855,44 @@ CONTAINS
         & )
     END DO
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      ! convert from leaf area of layer to canopy ground area
-      gross_assimilation_ca(ic) = SUM(gross_assimilation_cl(ic,:) * lai_cl(ic,:))
+      gross_assimilation_ca(ic) = 0._wp
+      dark_respiration_ca(ic) = 0._wp
+    END DO
+
+    !$ACC LOOP SEQ
+    DO icanopy=1,ncanopy
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        ! convert from leaf area of layer to canopy ground area
+        gross_assimilation_ca(ic) =    &
+          & gross_assimilation_ca(ic) + gross_assimilation_cl(ic,icanopy) * lai_cl(ic,icanopy)
+        dark_respiration_ca(ic) =      &
+          & dark_respiration_ca(ic) + dark_respiration_cl(ic,icanopy) * lai_cl(ic,icanopy)
+      END DO
+    END DO
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
       ! convert from canopy area to tile box area
       gross_assimilation(ic) = gross_assimilation_ca(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
-
-      dark_respiration_ca(ic) = SUM(dark_respiration_cl(ic,:) * lai_cl(ic,:))
-      ! convert from canopy area to tile box area
-      dark_respiration(ic) =  dark_respiration_ca(ic)  * veg_fract_correction(ic) * fract_fpc_max(ic)
+      dark_respiration(ic)   = dark_respiration_ca(ic)   * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
-    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
-    ! update_phenology_logrop at the beginning of each day.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic=1,nc
-      day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (dsl4jsb_Config(PHENO_)%scheme == 'logrop') THEN
+      ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+      ! update_phenology_logrop at the beginning of each day.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        day_NPP_sum(ic) = day_NPP_sum(ic) + NPP_pot_rate_ca(ic) * dtime
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -944,6 +972,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice !, nc
+    REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
     REAL(wp)                   :: dtime
     LOGICAL                    :: lstart, init_running_means, init_npp, new_year
 
@@ -956,7 +985,6 @@ CONTAINS
     ! Declare pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: seconds_year
     dsl4jsb_Real2D_onChunk :: NPP_sum_year
     dsl4jsb_Real2D_onChunk :: NPP_mean_5year
     dsl4jsb_Real2D_onChunk :: land_cover_class
@@ -990,7 +1018,6 @@ CONTAINS
     ! Get process variables
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)         ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   seconds_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_sum_year)            ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_mean_5year)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   land_cover_class)        ! out
@@ -1004,6 +1031,7 @@ CONTAINS
     ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
+    seconds_year = get_previous_year_length(options%current_datetime)
 
     init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
     init_NPP = .TRUE.
@@ -1064,7 +1092,6 @@ CONTAINS
 
     CALL weighted_by_fract%BeginAggregate()
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, seconds_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_sum_year,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_mean_5year,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, land_cover_class,         weighted_by_fract)

@@ -29,6 +29,8 @@ MODULE mo_q_pheno_parameters
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_pheno_parameters'
 
+  !$ACC DECLARE CREATE(gdd_t_air_threshold)
+
 CONTAINS
 
   ! ======================================================================================================= !
@@ -42,6 +44,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_pheno_parameters'
 
     gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
+
+    !$ACC UPDATE DEVICE(gdd_t_air_threshold) ASYNC(1)
+
   END SUBROUTINE init_q_pheno_parameters
 
 #endif

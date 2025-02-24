@@ -87,7 +87,7 @@ MODULE mo_a2l_memory_class
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
-      & p_deposition               !< surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
+      & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::   &
@@ -196,6 +196,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -206,6 +207,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -216,6 +218,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -519,6 +522,7 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
+
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
@@ -563,7 +567,7 @@ CONTAINS
 
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
-        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
+        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphorus deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

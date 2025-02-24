@@ -38,7 +38,8 @@ MODULE mo_spq_init
       & soil_silt               (:,:) => NULL(), &
       & soil_clay               (:,:) => NULL(), &
       & soil_sat_water_content  (:,:) => NULL(), &
-      & soil_bulk_density       (:,:) => NULL()
+      & soil_bulk_density       (:,:) => NULL(), &
+      & elevation               (:,:) => NULL()
   END TYPE t_spq_init_vars
 
   TYPE(t_spq_init_vars) :: spq_init_vars
@@ -123,6 +124,7 @@ CONTAINS
     dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! SPQ_ 2D
+    dsl4jsb_Real2D_onDomain    :: elevation
     dsl4jsb_Real2D_onDomain    :: soil_depth
     dsl4jsb_Real2D_onDomain    :: root_depth
     dsl4jsb_Real2D_onDomain    :: t_srf_new
@@ -167,7 +169,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: t_snow_snl
     dsl4jsb_Real3D_onDomain    :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
+    IF (.NOT. tile%Is_process_active(SPQ_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
@@ -193,6 +195,7 @@ CONTAINS
     ALLOCATE(silt_spq_init_sl(nproma, nsoil_sb, nblks))
     ! ----------------------------------------------------------------------------------------------------- !
     ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onDomain(SPQ_, elevation)
     dsl4jsb_Get_var2D_onDomain(SPQ_, soil_depth)
     dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)
     dsl4jsb_Get_var2D_onDomain(SPQ_, t_srf_new)
@@ -486,6 +489,9 @@ CONTAINS
       w_soil_pot_sl(:,:,:) = 0.0_wp
     ENDWHERE
 
+    !> get elevation
+    elevation(:,:) = spq_init_vars%elevation(:,:)
+
     ! Deallocate local allocatable variables
     DEALLOCATE(soil_awc)
     DEALLOCATE(hlp2)
@@ -496,6 +502,18 @@ CONTAINS
     DEALLOCATE(sand_spq_init_sl)
     DEALLOCATE(clay_spq_init_sl)
     DEALLOCATE(silt_spq_init_sl)
+
+    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_srf_old(:,:), t_srf_new(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:), fact_q_air(:,:), fact_qsat_srf(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(z0h(:,:), z0m(:,:), w_skin(:,:), w_soil_root(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(w_soil_root_theta(:,:), w_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), w_soil_pwp_sl(:,:,:), w_soil_fc_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(w_soil_sat_sl(:,:,:), w_soil_sl(:,:,:), w_soil_pot_sl(:,:,:), w_ice_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), volume_min_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:)) ASYNC(1)
 
   END SUBROUTINE spq_init_ic_bc
 
@@ -508,7 +526,8 @@ CONTAINS
       & spq_init_vars%soil_silt, &
       & spq_init_vars%soil_clay, &
       & spq_init_vars%soil_sat_water_content, &
-      & spq_init_vars%soil_bulk_density)
+      & spq_init_vars%soil_bulk_density, &
+      & spq_init_vars%elevation)
   END SUBROUTINE spq_finalize_init_vars
 
 #ifdef __QUINCY_STANDALONE__
@@ -548,7 +567,8 @@ CONTAINS
       & spq_init_vars%soil_silt               (nproma, nblks),       &
       & spq_init_vars%soil_clay               (nproma, nblks),       &
       & spq_init_vars%soil_sat_water_content  (nproma, nblks),       &
-      & spq_init_vars%soil_bulk_density       (nproma, nblks)        &
+      & spq_init_vars%soil_bulk_density       (nproma, nblks),       &
+      & spq_init_vars%elevation               (nproma, nblks)        &
       & )
 
     spq_init_vars%soil_sand              (:,:) = missval
@@ -556,6 +576,7 @@ CONTAINS
     spq_init_vars%soil_clay              (:,:) = missval
     spq_init_vars%soil_sat_water_content (:,:) = missval
     spq_init_vars%soil_bulk_density      (:,:) = missval
+    spq_init_vars%elevation              (:,:) = missval
 
     dsl4jsb_Get_config(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -579,6 +600,10 @@ CONTAINS
     !> saturated water content (awc)
     !>
     spq_init_vars%soil_sat_water_content(:,:) = dsl4jsb_Config(SPQ_)%soil_awc_prescribe
+
+    !> elevation
+    !>
+    spq_init_vars%elevation(:,:) = dsl4jsb_Config(SPQ_)%elevation
   END SUBROUTINE spq_qs_read_init_vars
 #else
   ! ======================================================================================================= !
@@ -623,7 +648,8 @@ CONTAINS
       & spq_init_vars%soil_silt               (nproma, nblks),       &
       & spq_init_vars%soil_clay               (nproma, nblks),       &
       & spq_init_vars%soil_sat_water_content  (nproma, nblks),       &
-      & spq_init_vars%soil_bulk_density       (nproma, nblks)        &
+      & spq_init_vars%soil_bulk_density       (nproma, nblks),       &
+      & spq_init_vars%elevation               (nproma, nblks)        &
       & )
 
     spq_init_vars%soil_sand              (:,:) = missval
@@ -631,12 +657,13 @@ CONTAINS
     spq_init_vars%soil_clay              (:,:) = missval
     spq_init_vars%soil_sat_water_content (:,:) = missval
     spq_init_vars%soil_bulk_density      (:,:) = missval
+    spq_init_vars%elevation              (:,:) = missval
 
     dsl4jsb_Get_config(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! Read data from quincy_soil file
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SPQ_)%bc_quincy_soil_filename), model%grid_id)
-
 
     !> sand
     !>
@@ -673,8 +700,6 @@ CONTAINS
     ptr_2D => input_file%Read_2d(  &
       & variable_name='AWCtS',     &
       & fill_array = spq_init_vars%soil_sat_water_content)
-    ! multiply with -1 to get positive values
-    spq_init_vars%soil_sat_water_content(:,:) = -1.0_wp * spq_init_vars%soil_sat_water_content(:,:)
     ! replace values larger than 2000 with 300
     ! that would cover missing values (e.g. grid cells over ocean with value 9999, after multiplication with -1)
     spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 300.0_wp, ptr_2D < 2000.0_wp)
@@ -684,6 +709,19 @@ CONTAINS
     spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 10.0_wp, ptr_2D > 10.0_wp)
 
     CALL input_file%Close()
+
+    ! Read data from sso file
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SPQ_)%bc_sso_filename), model%grid_id)
+
+    !> elevation
+    !>
+    ptr_2D => input_file%Read_2d(  &
+      & variable_name='elevation', &
+      & fill_array = spq_init_vars%elevation)
+    spq_init_vars%elevation = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
   END SUBROUTINE spq_read_init_vars
 #endif
 

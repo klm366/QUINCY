@@ -35,7 +35,7 @@ MODULE mo_pplcc_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   !USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
@@ -401,6 +401,7 @@ CONTAINS
     INTEGER                              :: iblk, ics, ice
     INTEGER                              :: ilct, nlct
     INTEGER                              :: ipft, npft
+    REAL(wp), DIMENSION(options%nc)      :: correction_factor
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(PPLCC_)
@@ -427,16 +428,20 @@ CONTAINS
     ice   = options%ice
 
     dsl4jsb_Get_memory(PPLCC_)
-    dsl4jsb_Get_memory(PHENO_)
-
     model => Get_model(tile%owner_model_id)
 
     ! The fraction variables are defined as fractions relative to the grid cell fraction. Thus
     ! only calculations on the box tile make sense.
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    ! Get required variables on this tile
-    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in
+    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+      dsl4jsb_Get_memory(PHENO_)
+      ! Get required variables on this tile
+      dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in
+      correction_factor(:) = fract_fpc_max(:)
+    ELSE
+      correction_factor(:) = 1.0_wp !TODO: get the corresponding variable from quincy
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(PPLCC_, tree_fract)           ! out
     dsl4jsb_Get_var2D_onChunk(PPLCC_, shrub_fract)          ! out
@@ -500,21 +505,21 @@ CONTAINS
 
       IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%NaturalVegFlag) THEN
         IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%ForestFlag) THEN
-          tree_fract(:) = tree_fract(:) + pft_fract(:) * fract_fpc_max
+          tree_fract(:) = tree_fract(:) + pft_fract(:) * correction_factor(:)
         ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%GrassFlag) THEN
-          grass_fract(:) = grass_fract(:) + pft_fract(:) * fract_fpc_max
+          grass_fract(:) = grass_fract(:) + pft_fract(:) * correction_factor(:)
         ELSE   ! Current lctlib file does not include a shrub flag
-          shrub_fract(:) = shrub_fract(:) + pft_fract(:) * fract_fpc_max
+          shrub_fract(:) = shrub_fract(:) + pft_fract(:) * correction_factor(:)
         END IF
       ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%CropFlag) THEN
-        crop_fract(:) = crop_fract(:) + pft_fract(:) * fract_fpc_max
+        crop_fract(:) = crop_fract(:) + pft_fract(:) * correction_factor(:)
       ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%PastureFlag) THEN
-        pasture_fract(:) = pasture_fract(:) + pft_fract(:) * fract_fpc_max
+        pasture_fract(:) = pasture_fract(:) + pft_fract(:) * correction_factor(:)
       END IF
       IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%C4flag) THEN
-        C4pft_fract(:) = C4pft_fract(:) + pft_fract(:) * fract_fpc_max
+        C4pft_fract(:) = C4pft_fract(:) + pft_fract(:) * correction_factor(:)
       ELSE
-        C3pft_fract(:) = C3pft_fract(:) + pft_fract(:) * fract_fpc_max
+        C3pft_fract(:) = C3pft_fract(:) + pft_fract(:) * correction_factor(:)
       END IF
 
     END DO ! ipft
@@ -528,7 +533,7 @@ CONTAINS
     bare_fract(:)=0._wp
 
     ! Baresoil fraction
-    baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-fract_fpc_max(:))
+    baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-correction_factor(:))
 
 
   END SUBROUTINE pplcc_fraction_diagnostics

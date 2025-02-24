@@ -303,8 +303,7 @@ CONTAINS
         & t_cf('hd_water_error_gsum', 'm3', 'Total HD water imbalance during time step'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & lrestart=.FALSE.,                                                                &
-        & initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     ENDIF
 
   END SUBROUTINE Init_hd_memory

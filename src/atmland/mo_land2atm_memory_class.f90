@@ -211,7 +211,7 @@ CONTAINS
 
       CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
         & hgrid, surface, &
-        & t_cf('q_c_conservation_test', '[mol m-2]', 'difference in change in quincy total C and nbp'), &
+        & t_cf('q_c_conservation_test', '[mol m-2 timestep-1]', 'difference in change in quincy total C and nbp'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
