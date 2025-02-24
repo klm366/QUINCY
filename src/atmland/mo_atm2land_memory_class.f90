@@ -81,17 +81,13 @@ MODULE mo_a2l_memory_class
       q_bcoef_ice
 
 #ifndef __NO_QUINCY__
-    ! ga   ( @TODO quincy - may be moved elsewhere in the future )
-    TYPE(t_jsb_var_real2d) :: &
-      & ga                         !< aerodynamic conductance [m s-1]
-
     ! N & P deposition
     TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
-      & p_deposition               !< surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
+      & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::   &
@@ -166,36 +162,40 @@ CONTAINS
 
 
 #ifndef __NO_QUINCY__
-    CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level=FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level=FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
-      & hgrid, surface, &
-      & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+        CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
+          & hgrid, surface, &
+          & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level=FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
 #endif
+      END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! default jsbach4 memory
@@ -524,15 +524,6 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      CALL mem%Add_var('ga', mem%ga, &
-        & hgrid, surface, &
-        & t_cf('ga', 'm s-1', 'aerodynamic conductance'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
@@ -578,7 +569,7 @@ CONTAINS
 
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
-        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
+        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphorus deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

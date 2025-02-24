@@ -28,15 +28,18 @@ Check Style:
 Test build doc:
   stage: test
   before_script:
-    - apk add --update --no-cache graphviz ttf-freefont
-    - python --version ; python -m pip --version  # For debugging
+    - apk add --update --no-cache graphviz ttf-freefont perl
+    - python --version
     - export PATH="/root/.local/bin:$PATH"
   script:
   - rm -rf doc/html
-  - sh ./build-doc.sh -q
-  - rm -rf doc/html
+  - sh ./build-doc.sh -v
   tags:
     - sphinx
+  artifacts:
+    paths:
+      - doc/html
+    expire_in: 20min
   when: manual
 
 test-job:
@@ -51,8 +54,8 @@ test-job:
 pages:
   stage: build_doc
   before_script:
-    - apk add --update --no-cache graphviz ttf-freefont
-    - python --version ; python -m pip --version  # For debugging
+    - apk add --update --no-cache graphviz ttf-freefont perl
+    - python --version
     - export PATH="/root/.local/bin:$PATH"
   script:
   - rm -rf doc/html

@@ -88,33 +88,6 @@ MODULE mo_q_assimi_memory_class
       tau_c_woods                   ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
 
-!                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
-!                                         CO2_conc_leaf_acc,              & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
-!                                                                           ! (mean value)
-!                                         CO2_conc_leaf_unlimited_acc,    & ! CO2 concentration inside leaf for no water stress
-!                                                                           ! [MOL(CO2)/MOL(AIR)] (mean value)
-!
-!                                         carbox_rate_max,                & ! Maximum carboxylation rate (=VCmax)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         e_transport_rate_max,           & ! Maximum electron transport rate (=Jmax)
-!                                                                           ! (only C3 plants)[MOL(CO2)/M^2 S]
-!                                         carbox_rate,                    & ! Actual carboxylation rate (=JC)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         e_transport_rate,               & ! Actual electron transport rate (=JE)
-!                                                                           ! [MOL(CO2)/M^2 S]
-!                                         net_assimilation,               & ! Canopy net assimilation assimilation
-!                                                                           ! [MOL(CO2)/m^2 s] (mean value)
-
-!
-!      REAL(wp), POINTER, DIMENSION(:,:) ::                               &
-!                                         CO2_flux_net_acc,               & ! net CO2 flux to the atmosphere
-!                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
-!                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
-!                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_nlcc_acc                 ! CO2 flux to the atmosphere from vegetation dynamics
-!                                                                           ! (disturbance?)
-!
-
     ! t_canopy variables
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
@@ -145,6 +118,9 @@ MODULE mo_q_assimi_memory_class
       & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [micro-mol CO2 m-2 s-1]
 
     TYPE(t_jsb_var_real3d)    :: &
+      & ftranspiration_sl              !< fraction of transpiration []
+
+    TYPE(t_jsb_var_real3d)    :: &
       & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
       & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [micro-mol CO2 m-2 s-1]
 
@@ -154,6 +130,7 @@ MODULE mo_q_assimi_memory_class
       & beta_soa       , &  !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, calculated from soa_tsoa_mavg [unitless]
       & beta_soil_ps   , &  !< scaling factor to account for soil moisture constraints on photosynthesis [unitless]
       & beta_soil_gs   , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
+      & aerodyn_cond   , &  !< ga -- aerodynamic conductance [m s-1]
       & canopy_cond    , &  !< canopy-integrated conductance for water [m s-1]
       & co2_conc_leaf  , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
       & t_jmax_opt     , &  !< optimal temperature for electron transport of photosynthesis [degC]
@@ -206,6 +183,12 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_process_class, ONLY: VEG_, Q_ASSIMI_
+    USE mo_jsb_class,         ONLY: Get_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_q_assimi_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)               :: prefix
@@ -213,16 +196,26 @@ CONTAINS
     INTEGER,               INTENT(in)               :: lct_ids(:)
     INTEGER,               INTENT(in)               :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),  POINTER :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi        ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_sb                !< Vertical grid for soil layers
     INTEGER                     :: table                        ! ...
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_assimi_memory_quincy'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     table                 = tables(1)
     hgrid                 => Get_grid(mem%grid_id)
     surface               => Get_vgrid('surface')
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
+    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    model                 => Get_model(model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
@@ -246,7 +239,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('ftranspiration_sl', mem%ftranspiration_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('ftranspiration_sl', '?', 'fraction of transpiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('aerodyn_cond', mem%aerodyn_cond, &
+        & hgrid, surface, &
+        & t_cf('aerodyn_cond', 'm s-1', 'ga -- aerodynamic conductance'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -259,7 +274,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
@@ -270,7 +285,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_assimilation_C13', mem%gross_assimilation_C13, &
@@ -279,7 +294,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -290,7 +305,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -301,7 +316,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -358,7 +373,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soa', mem%beta_soa, &
@@ -369,7 +384,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soil_ps', mem%beta_soil_ps, &
@@ -380,7 +395,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soil_gs', mem%beta_soil_gs, &
@@ -391,7 +406,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('canopy_cond', mem%canopy_cond, &
@@ -402,7 +417,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('co2_conc_leaf', mem%co2_conc_leaf, &
@@ -413,7 +428,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('t_jmax_opt', mem%t_jmax_opt, &
@@ -424,7 +439,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('vpd', mem%vpd, &
@@ -435,7 +450,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('jmax_cl', mem%jmax_cl, &
@@ -446,7 +461,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('vcmax_cl', mem%vcmax_cl, &
@@ -457,7 +472,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('chlfl_yield_cl', mem%chlfl_yield_cl, &
@@ -490,7 +505,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
@@ -501,41 +516,80 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
+        CALL mem%Add_var('beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
-      CALL mem%Add_var('beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
+        CALL mem%Add_var('beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
-      CALL mem%Add_var('beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor for evergreen conifers in spring, tphen time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
+        CALL mem%Add_var('beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor for evergreen conifers in spring, tphen time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor for evergreen conifers in spring, tphen time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
       CALL mem%Add_var('beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
         & hgrid, surface, &
@@ -545,7 +599,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
@@ -556,30 +610,56 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
+        CALL mem%Add_var('beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
-      CALL mem%Add_var('beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
+        CALL mem%Add_var('beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
       CALL mem%Add_var('beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
         & hgrid, surface, &
@@ -589,7 +669,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
@@ -600,7 +680,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
@@ -614,27 +694,53 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
+        CALL mem%Add_var('beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
-      CALL mem%Add_var('beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
-        & hgrid, surface, &
-        & t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+      IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
+        CALL mem%Add_var('beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ELSE
+        CALL mem%Add_var('beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
+          & hgrid, surface, &
+          & t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
 
     END IF
   END SUBROUTINE Init_q_assimi_memory

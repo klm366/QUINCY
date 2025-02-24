@@ -17,7 +17,7 @@ MODULE mo_iq_atm2land_process
 #ifndef __NO_QUINCY__
 
   USE mo_kind,                  ONLY: wp
-  USE mo_jsb_math_constants,    ONLY: eps1, eps8, one_year, one_day
+  USE mo_jsb_math_constants,    ONLY: eps1, eps8
 
   IMPLICIT NONE
   PRIVATE
@@ -34,6 +34,8 @@ CONTAINS
   !>
   PURE ELEMENTAL SUBROUTINE update_local_time_and_daytime_counter( &
       &                       global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+
+    !$ACC ROUTINE SEQ
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER ,  INTENT(in)        :: global_seconds_day     !< seconds passed on this day (global time)
@@ -72,6 +74,9 @@ CONTAINS
   !>
   PURE ELEMENTAL SUBROUTINE update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, max_executions, frequency, start_year, &
       &                                                                execution_counter, execute_accelerator)
+
+  !$ACC ROUTINE SEQ
+
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp),  INTENT(in)    :: dtime               !< timestep
     INTEGER ,  INTENT(in)    :: current_year        !< simulation year

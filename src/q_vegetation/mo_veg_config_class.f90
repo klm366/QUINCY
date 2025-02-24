@@ -42,7 +42,6 @@ MODULE mo_veg_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id                     !< ID of the PFT (at the moment [1,8] see lctlib file for details)
-    REAL(wp)         :: cohort_harvest_interval    !< interval of harvesting plants [yr], used with veg_dynamics_scheme="cohort"
     CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate symbiotic BNF (biological nitrogen fixation)
                                                    !! identical with the asymbiotic N fixation in SB_
                                                    !! none:      symbiotic N fixation = 0
@@ -52,13 +51,23 @@ MODULE mo_veg_config_class
                                                    !! unlimited: symbiotic N fixation set to satify plant growth demands at any point in time
     CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
                                                    !! none: constant mortality
-                                                   !! "none population cohort"
+                                                   !! "none population"
+      ! Note: in previous versions of QS an additional "cohorts" scheme was available.
+      !       SZ: "To enable a cohort like behaviour of the population mode in QS only (not possible in IQ),
+      !       force the stand_replacing harvest to be triggered as a function of time since last disturbance
+      !       (this will likely require to add a new memory variable to determine the tile age)."
+      !       The initial planting (mo_veg_dynamics) may need to be adjusted to represent initial stand density.
+      !       The function calc_veg_establishment needs to be disabled at all time-steps.
+      !       And some parameters need to be adjusted (such as background_mort rates and stand density).
+
     CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
     CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
                                                    !! by default; this is hard-coded in SPQ_ init
+    LOGICAL          :: l_use_product_pools        !< enable product pools (required for harvest process); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
+    LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -88,27 +97,25 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_config), INTENT(inout) :: config    !< config type for veg
     ! ---------------------------
     ! 0.2 Local
-    ! variables for reading from namlist, identical to variable-name in namelist
+    ! variables for reading from namelist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename,   &
-                                   bc_filename
+      &                            bc_filename
     INTEGER                     :: plant_functional_type_id
-    REAL(wp)                    :: cohort_harvest_interval
     CHARACTER(15)               :: veg_bnf_scheme
     CHARACTER(15)               :: veg_dynamics_scheme
     CHARACTER(15)               :: biomass_alloc_scheme
     CHARACTER(15)               :: leaf_stoichom_scheme
     LOGICAL                     :: flag_dynamic_roots
     LOGICAL                     :: flag_dynroots_h2o_n_limit
+    LOGICAL                     :: flag_herbivory
+    LOGICAL                     :: l_use_product_pools
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
 #ifdef __QUINCY_STANDALONE__
@@ -117,32 +124,36 @@ CONTAINS
     NAMELIST /jsb_veg_nml/          &
 #endif
       active,                       &
+      lrestart_cont,                &
       ic_filename,                  &
       bc_filename,                  &
       plant_functional_type_id,     &
-      cohort_harvest_interval,      &
       veg_bnf_scheme,               &
       veg_dynamics_scheme,          &
       biomass_alloc_scheme,         &
       leaf_stoichom_scheme,         &
       flag_dynamic_roots,           &
-      flag_dynroots_h2o_n_limit
+      flag_dynroots_h2o_n_limit,    &
+      flag_herbivory,               &
+      l_use_product_pools
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
     active                         = .TRUE.
+    lrestart_cont                  = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
     bc_filename                    = 'bc_land_phys.nc'
     ic_filename                    = 'ic_land_phys.nc'
     plant_functional_type_id       = 1
-    cohort_harvest_interval        = 80.0_wp
     veg_bnf_scheme                 = "dynamic"
     veg_dynamics_scheme            = "population"
     biomass_alloc_scheme           = "dynamic"
     leaf_stoichom_scheme           = "dynamic"
     flag_dynamic_roots             = .TRUE.
     flag_dynroots_h2o_n_limit      = .FALSE.
+    flag_herbivory                 = .FALSE.
+    l_use_product_pools            = .FALSE.
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -158,16 +169,18 @@ CONTAINS
 
     ! pass values as read from file
     config%active                        = active
+    config%lrestart_cont                 = lrestart_cont
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
     config%pft_id                        = plant_functional_type_id
-    config%cohort_harvest_interval       = cohort_harvest_interval
     config%bnf_scheme                    = TRIM(veg_bnf_scheme)
     config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
     config%biomass_alloc_scheme          = TRIM(biomass_alloc_scheme)
     config%leaf_stoichom_scheme          = TRIM(leaf_stoichom_scheme)
     config%flag_dynamic_roots            = flag_dynamic_roots
     config%flag_dynroots_h2o_n_limit     = flag_dynroots_h2o_n_limit
+    config%flag_herbivory                = flag_herbivory
+    config%l_use_product_pools           = l_use_product_pools
 
   END SUBROUTINE Init_veg_config
 

@@ -56,7 +56,7 @@ CONTAINS
 
     CLASS(t_nlcc_config), INTENT(inout) :: config
     TYPE(t_jsb_vgrid), POINTER  :: pft_layer
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     LOGICAL                     :: init_nlcc
@@ -64,6 +64,7 @@ CONTAINS
 
     NAMELIST /jsb_nlcc_nml/  &
       &  active,             &
+      &  lrestart_cont,      &
       &  ic_filename,        &
       &  bc_filename,        &
       &  init_running_means, &
@@ -78,6 +79,7 @@ CONTAINS
 
     ! Set defaults
     active              = .FALSE.
+    lrestart_cont       = .FALSE.      ! TRUE: Continue although NLCC variables are missing in restart file
     bc_filename         = 'bc_land_nlcc.nc'
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
@@ -92,6 +94,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means

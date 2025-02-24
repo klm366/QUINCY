@@ -21,14 +21,16 @@ MODULE mo_veg_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
-  USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
 
-  USE mo_jsb_process_class,      ONLY: VEG_
+  USE mo_jsb_process_class,      ONLY: VEG_, Q_SH_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
-  USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
-    &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,              &
-    &                                  VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID
+  USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,               &
+    &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                            &
+    &                                  VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
+    &                                  VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
+    &                                  VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,           &
+    &                                  VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
@@ -84,7 +86,9 @@ MODULE mo_veg_memory_class
       & veg_pool_wood_n           , &     !< sapwood + heartwood nitrogen [mol m-2]
       & veg_pool_fine_root_c      , &     !< fine root carbon             [mol m-2]
       & veg_pool_fine_root_n              !< fine root nitrogen           [mol m-2]
-
+    TYPE(t_jsb_var_real2d) :: &
+      & veg_products_total_c, &           !< total c in product pools     [mol m-2]
+      & veg_products_total_n              !< total n in product pools     [mol m-2]
     !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
     !>
@@ -93,10 +97,12 @@ MODULE mo_veg_memory_class
                                     diameter          , &            !< plant diameter [m]
                                     dens_ind          , &            !< density of individuals [# m-2]
                                     lai               , &            !< actual leaf area index [m2 m-2]
+                                    sai               , &            !< actual stem area index [m2 m-2]
                                     target_cn_leaf    , &            !< target foliar C:N ratio [mol C mol-1 N]
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
-                                    cohort_age        , &            !< age of the cohort in years, used with veg_dynamics_scheme cohort [years]
+                                    fract_fpc         , &            !< foliage projected cover fraction of the tile
+                                    blended_height    , &            !< foliage weighted height of the tile for turbulence calculations [m]
                                     f_n_demand        , &            !< relative plant demand for N
                                     f_p_demand        , &            !< relative plant demand for P
                                     beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis [unitless]
@@ -107,9 +113,6 @@ MODULE mo_veg_memory_class
                                     target_lai        , &            !< LAI implied from sap wood area [m2 m-2]
                                     kstar_labile      , &            !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry [day-1]
                                     root_limitation_state            !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1) [unitless]
-    ! used as logical: 0 = FALSE / 1 = TRUE
-    TYPE(t_jsb_var_real2d)          :: &
-                                    do_cohort_harvest                !< logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort [logical]
     ! basic plant 3D
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl          , &    !< fractions of root per layer [unitless]
@@ -121,14 +124,14 @@ MODULE mo_veg_memory_class
     !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
     !>
     TYPE(t_jsb_var_real2d)          :: &
-                                    target_cn_fine_root       , &   !<
-                                    target_cn_coarse_root     , &   !<
-                                    target_cn_sap_wood        , &   !<
-                                    target_cn_fruit           , &   !<
-                                    target_np_fine_root       , &   !<
-                                    target_np_coarse_root     , &   !<
-                                    target_np_sap_wood        , &   !<
-                                    target_np_fruit                 !<
+                                    target_cn_fine_root       , &   !< target C:N ratio for fine roots [mol/mol]
+                                    target_cn_coarse_root     , &   !< target C:N ratio for coarse roots [mol/mol]
+                                    target_cn_sap_wood        , &   !< target C:N ratio for sap wood  [mol/mol]
+                                    target_cn_fruit           , &   !< target C:N ratio for fruit pool [mol/mol]
+                                    target_np_fine_root       , &   !< target N:P ratio for fine roots [mol/mol]
+                                    target_np_coarse_root     , &   !< target N:P ratio for coarse roots [mol/mol]
+                                    target_np_sap_wood        , &   !< target N:P ratio for sap wood pool [mol/mol]
+                                    target_np_fruit                 !< target N:P ratio for fruit pool [mol/mol]
 
     !------------------------------------------------------------------------------------------------------ !
     !>canopy layer information
@@ -178,6 +181,13 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_n15      , & !< net flux of 15N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     net_growth                        !< npp minus turnover [micro-mol CO2 m-2 s-1]
+    TYPE(t_jsb_var_real2d)          :: &
+                                    herbivory_leaf_resp           , & !< respiration associated with herbivory on leaves [micro-mol CO2 m-2 s-1]
+                                    herbivory_leaf_resp_c13       , & !< respiration associated with herbivory on leaves [micro-mol 13CO2 m-2 s-1]
+                                    herbivory_leaf_resp_c14       , & !< respiration associated with herbivory on leaves [micro-mol 14CO2 m-2 s-1]
+                                    herbivory_fruit_resp          , & !< respiration associated with herbivory on fruits [micro-mol CO2 m-2 s-1]
+                                    herbivory_fruit_resp_c13      , & !< respiration associated with herbivory on fruits [micro-mol 13CO2 m-2 s-1]
+                                    herbivory_fruit_resp_c14          !< respiration associated with herbivory on fruits [micro-mol 14CO2 m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
     !>everything else
@@ -192,9 +202,9 @@ MODULE mo_veg_memory_class
                                     unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [micro-mol P m-2 s-1]
                                     delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
-                                    mortality_rate            , & !< background_mort_rate_tree / grass [timestep-1]
-                                    k1_opt                    , & !< coefficient for optimal leaf:root ratio
-                                    k2_opt                    , & !< coefficient for optimal leaf:root ratio
+                                    mortality_rate            , & !< mortality rate of tree/grass [fraction of population timestep-1]
+                                    k1_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
+                                    k2_opt                    , & !< coefficient for optimal leaf:root ratio [unitless]
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio [unitless]
                                     leaf2root_mass_ratio          !< leaf to root mass ratio [unitless]
 
@@ -312,14 +322,22 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &
                                     t_air_week_mavg                , &  !< air temperature time-averaged [K]
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
-                                    t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
+                                    t_jmax_opt_mavg                , &  !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
+                                    t_soil_root                         !< Temperature of fine roots in the soil [K]
 
-    ! 1.11 helper variables for L2A_ process
+    ! 1.11 bottom of the canopy radiation
+    TYPE(t_jsb_var_real2d)          :: &
+      & rfr_ratio_boc                   , & !< red to far-red ratio at the bottom of the canopy [unitless]
+      & rfr_ratio_boc_tvegdyn_mavg          !< red to far-red ratio at the bottom of the canopy time-averaged [unitless]
+
+    ! 1.12 helper variables for L2A_ process
     !      these var are used at PFT tiles and aggregated to box tile
     !      in 'mo_atmland_interface:update_land2atm' their values are added to the "L2A_ counterpart variables"
     !      this is needed because the L2A_ var are not available at other tiles than the box tile (i.e., top tile)
     TYPE(t_jsb_var_real2d) ::       &
-      & net_biosphere_production  , & !< = 'GPP - maint_resp - growth_resp - n_transform_resp - het_resp - fFire - FLuc' && 'NPP - het_resp - fFire - FLUC' [micro-mol CO2 m-2 s-1]
+      & net_biosphere_production  , & !< Balance between carbon losses and gains [micro-mol CO2 m-2 s-1]
+      & net_biosphere_production_c13  , & !< Balance between carbon13 losses and gains [micro-mol CO2 m-2 s-1]
+      & net_biosphere_production_c14  , & !< Balance between carbon14 losses and gains [micro-mol CO2 m-2 s-1]
       & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
 
   CONTAINS
@@ -371,6 +389,13 @@ MODULE mo_veg_memory_class
     !! pools
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbtotal_biomass
+    ! ... and if with product pools
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_fuel
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_paper
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_fiberboard
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_oirw
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_pv
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_sawnwood
     !! fluxes
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
@@ -378,6 +403,12 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
+    ! ... and if with product pools
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: prod_decay
+    ! ... and if with simple harvest
+    TYPE(t_veg_bgcm_with_components),  POINTER :: harvest_litter
+    ! ... and if with simple harvest and with product pools
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: harvest_to_prod
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_main_get_element_name_by_id
     PROCEDURE :: Init                       => veg_bgcm_main_init
@@ -394,19 +425,21 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
+    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,     ONLY: t_jsb_model
+    USE mo_jsb_class,           ONLY: Get_model
+    USE mo_quincy_output_class, ONLY: unitless
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_SH_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_memory),  INTENT(inout), TARGET :: mem             !< veg memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),                POINTER :: model                      !< model
     TYPE(t_jsb_grid),                 POINTER :: hgrid                      !< Horizontal grid
@@ -421,6 +454,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER               :: routine = TRIM(modname)//':Init_veg_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_SH_)
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
     table                 =  tables(1)
@@ -430,6 +464,7 @@ CONTAINS
     vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_SH_)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! init local variables
@@ -487,6 +522,14 @@ CONTAINS
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
+      IF (dsl4jsb_Config(Q_SH_)%active) THEN
+        ! flux represented as bgcm with compartments: fluxes due to harvest
+        mem%veg_bgcm_main%harvest_litter => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,  &
+          & VEG_BGCM_HARVEST_LITTER_ID, name = 'vegetation_bgcm_flux_harvest_litter',             &
+          & shortname = 'veg_bgcm_harvest_litter',                                                   &
+          & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
+      ENDIF
+
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material elements structures
       !>
@@ -508,6 +551,45 @@ CONTAINS
         & name = 'vegetation_bgcm_reserve_use', shortname = 'veg_bgcm_reserve_use',                     &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
+      IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+        ! 6 product pools represented as bgcms with elements
+        ! the fuelwood product pool
+        mem%veg_bgcm_main%veg_pp_fuel => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_fuelwood', shortname = 'veg_bgcm_pp_fuel',            &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_FUEL_ID)
+        ! the paper product pool
+        mem%veg_bgcm_main%veg_pp_paper => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_paper', shortname = 'veg_bgcm_pp_paper',               &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_PAPER_ID)
+        ! the fiberboard product pool
+        mem%veg_bgcm_main%veg_pp_fiberboard => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_fiberboard', shortname = 'veg_bgcm_pp_fiberboard',          &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_FIBERBOARD_ID)
+        ! the other industrial roundwood product pool
+        mem%veg_bgcm_main%veg_pp_oirw => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_other_irw', shortname = 'veg_bgcm_pp_oirw',           &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_OIRW_ID)
+        ! the plywood and veneer product pool
+        mem%veg_bgcm_main%veg_pp_pv => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_plywood_and_veneer', shortname = 'veg_bgcm_pp_pv',  &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_PV_ID)
+        ! the sawnwood product pool
+        mem%veg_bgcm_main%veg_pp_sawnwood => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_product_pool_sawnwood', shortname = 'veg_bgcm_pp_sawnwood',            &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_SAWNWOOD_ID)
+        ! one flux represented as bgcm with elements: the product pool decay flux
+        mem%veg_bgcm_main%prod_decay => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
+          & name = 'vegetation_bgcm_flux_product_pool_decay', shortname = 'veg_bgcm_prod_decay',      &
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_PROD_DECAY_ID)
+
+          IF (dsl4jsb_Config(Q_SH_)%active) THEN
+            ! and another flux represented as bgcm with elements: the flux to the product pools due to harvest
+            mem%veg_bgcm_main%harvest_to_prod => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,             &
+              & name = 'vegetation_bgcm_flux_harvest_to_product_pools', shortname = 'veg_bgcm_harvest_to_prod',    &
+              & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
+          END IF
+      END IF
+
       ! create list of CHARACTERs with names veg_bgcm_main to the "lowest childs" of bgcm structures
       CALL mem%bgc_material%Set_paths()
 
@@ -516,7 +598,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .TRUE.,                                                                           &
         & initval_r = 0.0_wp)
@@ -524,7 +606,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -532,7 +614,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -540,7 +622,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -548,7 +630,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -556,7 +638,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -564,7 +646,7 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
@@ -572,11 +654,91 @@ CONTAINS
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
+        & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
+      ! Product pools and decay
+      IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_fuel, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_paper, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_fiberboard, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_oirw, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_pv, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_sawnwood, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .TRUE.,                                                                           &
+          & initval_r = 0.0_wp)
+        CALL mem%Add_var(mem%veg_bgcm_main%prod_decay, &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .FALSE.,                                                                          &
+          & initval_r = 0.0_wp)
+      END IF
+      ! Flux to litter due to harvest
+      IF (dsl4jsb_Config(Q_SH_)%active) THEN
+        CALL mem%Add_var(mem%veg_bgcm_main%harvest_litter,                                            &
+          & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+          & prefix, suffix,                                                                              &
+          & output_level = MEDIUM,                                                                       &
+          & loutput = .TRUE.,                                                                            &
+          & lrestart = .FALSE.,                                                                          &
+          & initval_r = 0.0_wp)
 
+        IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          CALL mem%Add_var(mem%veg_bgcm_main%harvest_to_prod, &
+            & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+            & prefix, suffix,                                                                              &
+            & output_level = MEDIUM,                                                                       &
+            & loutput = .TRUE.,                                                                            &
+            & lrestart = .FALSE.,                                                                          &
+            & initval_r = 0.0_wp)
+        END IF
+      END IF
       ! --------------------------------------------------------------------------------------------------- !
       !> 2.0 bgc_material diagnostics variables - used for model output with IQ
       !>
@@ -608,7 +770,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -619,7 +781,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -630,7 +792,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -641,7 +803,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -653,7 +815,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -664,7 +826,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -675,7 +837,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -686,7 +848,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -697,7 +859,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -708,7 +870,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -742,7 +904,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -753,7 +915,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -764,7 +926,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -846,6 +1008,30 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
+      IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+        CALL mem%Add_var('veg_products_total_c', mem%veg_products_total_c, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_c', 'mol m-2', 'total c in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('veg_products_total_n', mem%veg_products_total_n, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_n', 'mol m-2', 'total n in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = MEDIUM, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+      END IF
+
       ! --------------------------------------------------------------------------------------------------- !
       !> 3.0 2D & 3D variables
       !>
@@ -901,6 +1087,17 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('sai', mem%sai, &
+        & hgrid, surface, &
+        & t_cf('sai', 'm2 m-2', 'actual stem area index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & grib2_desc, &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
         & hgrid, surface, &
         & t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
@@ -934,14 +1131,25 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('cohort_age', mem%cohort_age, &
+      CALL mem%Add_var('fract_fpc', mem%fract_fpc, &
         & hgrid, surface, &
-        & t_cf('cohort_age', '', 'age of the cohort in years, used with veg_dynamics_scheme cohort'), &
+        & t_cf('fract_fpc', '', 'foliage projected cover fraction'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('blended_height ', mem%blended_height, &
+        & hgrid, surface, &
+        & t_cf('blended_height', '', 'foliage weighted height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -953,7 +1161,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('f_p_demand', mem%f_p_demand, &
@@ -964,7 +1172,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_sinklim_ps', mem%beta_sinklim_ps, &
@@ -973,9 +1181,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('dphi', mem%dphi, &
@@ -986,7 +1194,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('growth_req_n', mem%growth_req_n, &
@@ -997,7 +1205,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('growth_req_p', mem%growth_req_p, &
@@ -1008,7 +1216,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaf_cn_direction', mem%leaf_cn_direction, &
@@ -1019,7 +1227,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_lai', mem%target_lai, &
@@ -1028,7 +1236,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1041,23 +1249,12 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('root_limitation_state', mem%root_limitation_state, &
         & hgrid, surface, &
         & t_cf('root_limitation_state', '', 'root_limitation_state'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('do_cohort_harvest', mem%do_cohort_harvest, &
-        & hgrid, surface, &
-        & t_cf('do_cohort_harvest', '', 'logical: cohort harvest on/off, in veg_dynamics_scheme cohort'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1085,7 +1282,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lai_cl', mem%lai_cl, &
@@ -1094,7 +1291,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1112,7 +1309,7 @@ CONTAINS
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
         & hgrid, surface, &
-        & t_cf('target_cn_fine_root', '', ' '), &
+        & t_cf('target_cn_fine_root', 'mol/mol', 'target C:N ratio for fine roots'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1123,40 +1320,40 @@ CONTAINS
 
       CALL mem%Add_var('target_cn_coarse_root', mem%target_cn_coarse_root, &
         & hgrid, surface, &
-        & t_cf('target_cn_coarse_root', '', ' '), &
+        & t_cf('target_cn_coarse_root', 'mol/mol', 'target C:N ratio for coarse roots'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_cn_sap_wood', mem%target_cn_sap_wood, &
         & hgrid, surface, &
-        & t_cf('target_cn_sap_wood', '', ' '), &
+        & t_cf('target_cn_sap_wood', 'mol/mol', 'target C:N ratio for sap wood '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_cn_fruit', mem%target_cn_fruit, &
         & hgrid, surface, &
-        & t_cf('target_cn_fruit', '', ' '), &
+        & t_cf('target_cn_fruit', 'mol/mol', 'target C:N ratio for fruit pool'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_np_fine_root', mem%target_np_fine_root, &
         & hgrid, surface, &
-        & t_cf('target_np_fine_root', '', ' '), &
+        & t_cf('target_np_fine_root', 'mol/mol', 'target N:P ratio for fine roots'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1167,35 +1364,35 @@ CONTAINS
 
       CALL mem%Add_var('target_np_coarse_root', mem%target_np_coarse_root, &
         & hgrid, surface, &
-        & t_cf('target_np_coarse_root', '', ' '), &
+        & t_cf('target_np_coarse_root', 'mol/mol', 'target N:P ratio for coarse roots'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_np_sap_wood', mem%target_np_sap_wood, &
         & hgrid, surface, &
-        & t_cf('target_np_sap_wood', '', ' '), &
+        & t_cf('target_np_sap_wood', 'mol/mol', 'target N:P ratio for sap wood pool'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_np_fruit', mem%target_np_fruit, &
         & hgrid, surface, &
-        & t_cf('target_np_fruit', '', ' '), &
+        & t_cf('target_np_fruit', 'mol/mol', 'target N:P ratio for fruit pool'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
@@ -1211,7 +1408,7 @@ CONTAINS
 
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
+        & t_cf('fn_chl_cl', unitless, 'fraction of N in chlorophyll, pigments only'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1222,7 +1419,7 @@ CONTAINS
 
       CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
+        & t_cf('fn_et_cl', unitless, 'fraction of N in electron transport '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1233,7 +1430,7 @@ CONTAINS
 
       CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
+        & t_cf('fn_rub_cl', unitless, 'fraction of N in Rubisco '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1244,7 +1441,7 @@ CONTAINS
 
       CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
+        & t_cf('fn_pepc_cl', unitless, 'fraction of N in PEP carboylase, C4 plants only'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1255,7 +1452,7 @@ CONTAINS
 
       CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
+        & t_cf('fn_oth_cl', unitless, 'fraction of N not associated with photosynthesis '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1266,13 +1463,13 @@ CONTAINS
 
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
+        & t_cf('fleaf_sunlit_cl', unitless, 'fraction of layer which is sunlit'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
@@ -1303,7 +1500,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1314,7 +1511,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1336,7 +1533,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1347,7 +1544,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1358,7 +1555,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1369,7 +1566,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1391,7 +1588,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1402,7 +1599,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1424,7 +1621,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1435,7 +1632,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1457,7 +1654,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1479,7 +1676,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1490,7 +1687,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1501,7 +1698,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1512,7 +1709,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1523,7 +1720,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1624,6 +1821,72 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp', mem%herbivory_leaf_resp, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp', 'micro-mol CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp_c13', mem%herbivory_leaf_resp_c13, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp_c13', 'micro-mol 13CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_leaf_resp_c14', mem%herbivory_leaf_resp_c14, &
+        & hgrid, surface, &
+        & t_cf('herbivory_leaf_resp_c14', 'micro-mol 14CO2 m-2 s-1', 'respiration associated with herbivory on leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp', mem%herbivory_fruit_resp, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp', 'micro-mol CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp_c13', mem%herbivory_fruit_resp_c13, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp_c13', 'micro-mol 13CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('herbivory_fruit_resp_c14', mem%herbivory_fruit_resp_c14, &
+        & hgrid, surface, &
+        & t_cf('herbivory_fruit_resp_c14', 'micro-mol 14CO2 m-2 s-1', 'respiration associated with herbivory on fruits'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -1728,18 +1991,18 @@ CONTAINS
 
       CALL mem%Add_var('mortality_rate', mem%mortality_rate, &
         & hgrid, surface, &
-        & t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
+        & t_cf('mortality_rate', 'mortality rate of trees / grass per timestep-1', 'mortality rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('k1_opt', mem%k1_opt, &
         & hgrid, surface, &
-        & t_cf('k1_opt', '', 'coefficient for optimal leaf:root ratio'), &
+        & t_cf('k1_opt', unitless, 'coefficient for optimal leaf:root ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1750,7 +2013,7 @@ CONTAINS
 
       CALL mem%Add_var('k2_opt', mem%k2_opt, &
         & hgrid, surface, &
-        & t_cf('k2_opt', '', 'coefficient for optimal leaf:root ratio'), &
+        & t_cf('k2_opt', unitless, 'coefficient for optimal leaf:root ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1761,7 +2024,7 @@ CONTAINS
 
       CALL mem%Add_var('leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
         & hgrid, surface, &
-        & t_cf('leaf2sapwood_mass_ratio', '', 'leaf to shoot mass ratio'), &
+        & t_cf('leaf2sapwood_mass_ratio', unitless, 'leaf to shoot mass ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1772,7 +2035,7 @@ CONTAINS
 
       CALL mem%Add_var('leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
         & hgrid, surface, &
-        & t_cf('leaf2root_mass_ratio', '', 'leaf to root mass ratio'), &
+        & t_cf('leaf2root_mass_ratio', unitless, 'leaf to root mass ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1783,7 +2046,7 @@ CONTAINS
 
       CALL mem%Add_var('fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fleaf_sunlit_daytime_cl', '', 'average of the previous day'), &
+        & t_cf('fleaf_sunlit_daytime_cl', unitless, 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1794,7 +2057,7 @@ CONTAINS
 
       CALL mem%Add_var('t_air_daytime', mem%t_air_daytime, &
         & hgrid, surface, &
-        & t_cf('t_air_daytime', '', 'average of the previous day'), &
+        & t_cf('t_air_daytime', 'K', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1805,7 +2068,7 @@ CONTAINS
 
       CALL mem%Add_var('press_srf_daytime', mem%press_srf_daytime, &
         & hgrid, surface, &
-        & t_cf('press_srf_daytime', '', 'average of the previous day'), &
+        & t_cf('press_srf_daytime', 'Pa', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1816,7 +2079,7 @@ CONTAINS
 
       CALL mem%Add_var('co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
         & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_daytime', '', 'average of the previous day'), &
+        & t_cf('co2_mixing_ratio_daytime', 'co2 in ppm', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1827,7 +2090,7 @@ CONTAINS
 
       CALL mem%Add_var('ga_daytime', mem%ga_daytime, &
         & hgrid, surface, &
-        & t_cf('ga_daytime', '', 'average of the previous day'), &
+        & t_cf('ga_daytime', 'co2 in ppm', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1838,7 +2101,7 @@ CONTAINS
 
       CALL mem%Add_var('beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
         & hgrid, surface, &
-        & t_cf('beta_sinklim_ps_daytime', 'unitless', 'average of the previous day'), &
+        & t_cf('beta_sinklim_ps_daytime', unitless, 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1849,7 +2112,7 @@ CONTAINS
 
       CALL mem%Add_var('t_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
         & hgrid, surface, &
-        & t_cf('t_jmax_opt_daytime', '', 'average of the previous day'), &
+        & t_cf('t_jmax_opt_daytime', 'deg C', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1860,7 +2123,7 @@ CONTAINS
 
       CALL mem%Add_var('fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
-        & t_cf('fleaf_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
+        & t_cf('fleaf_sunlit_daytime_dacc_cl', unitless, 'value accumulated over current day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1871,7 +2134,7 @@ CONTAINS
 
       CALL mem%Add_var('t_air_daytime_dacc', mem%t_air_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('t_air_daytime_dacc', '', 'average of the previous day'), &
+        & t_cf('t_air_daytime_dacc', 'K', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1882,7 +2145,7 @@ CONTAINS
 
       CALL mem%Add_var('press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('press_srf_daytime_dacc', '', 'average of the previous day'), &
+        & t_cf('press_srf_daytime_dacc', 'Pa', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1893,7 +2156,7 @@ CONTAINS
 
       CALL mem%Add_var('co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('co2_mixing_ratio_daytime_dacc', '', 'average of the previous day'), &
+        & t_cf('co2_mixing_ratio_daytime_dacc', 'co2 in ppm', 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1904,7 +2167,7 @@ CONTAINS
 
       CALL mem%Add_var('ga_daytime_dacc', mem%ga_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('ga_daytime_dacc', '', 'average of the previous day'), &
+        & t_cf('ga_daytime_dacc', 'm s-1', 'aerodynamic conductance average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1915,7 +2178,7 @@ CONTAINS
 
       CALL mem%Add_var('beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('beta_sinklim_ps_daytime_dacc', '', 'average of the previous day'), &
+        & t_cf('beta_sinklim_ps_daytime_dacc', unitless, 'average of the previous day'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1926,7 +2189,7 @@ CONTAINS
 
       CALL mem%Add_var('t_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
         & hgrid, surface, &
-        & t_cf('t_jmax_opt_daytime_dacc', '', 'value accumulated over current day '), &
+        & t_cf('t_jmax_opt_daytime_dacc', 'deg C', 'value accumulated over current day '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2596,6 +2859,17 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
+        & hgrid, surface, &
+        & t_cf('t_soil_root', 'K', 'Temperature of fine roots in the soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 273.15_wp)
+
       CALL mem%Add_var('t_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
         & hgrid, surface, &
         & t_cf('t_soil_root_tacclim_mavg', '', 'average root temperature for respiration acclimation'), &
@@ -2640,13 +2914,56 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('rfr_ratio_boc', mem%rfr_ratio_boc, &
+        & hgrid, surface, &
+        & t_cf('rfr_ratio_boc', unitless, 'red to far-red ratio at the bottom of the canopy'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
+        & hgrid, surface, &
+        & t_cf('rfr_ratio_boc_tvegdyn_mavg', unitless, 'avrg red to far-red ratio at the bottom of the canopy'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('net_biosphere_production', mem%net_biosphere_production, &
         & hgrid, surface, &
-        & t_cf('net_biosphere_production', '[micro-mol CO2 m-2 s-1]', '(NPP - het_resp - fFire - fLUC)'), &
+        & t_cf('net_biosphere_production', '[micro-mol CO2 m-2 s-1]', 'Balance between carbon losses and gains'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('net_biosphere_production_c14', mem%net_biosphere_production_c14, &
+        & hgrid, surface, &
+        & t_cf('net_biosphere_production_c14', '[micro-mol CO2 m-2 s-1]', 'Balance between carbon14 losses and gains'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('net_biosphere_production_c13', mem%net_biosphere_production_c13, &
+        & hgrid, surface, &
+        & t_cf('net_biosphere_production_c13', '[micro-mol CO2 m-2 s-1]', 'Balance between carbon13 losses and gains'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)

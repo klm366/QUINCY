@@ -150,6 +150,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(CH4_)
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(RAD_)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
@@ -164,6 +166,8 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CH4_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -226,12 +230,15 @@ CONTAINS
         & output_level=FULL,                                                   &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'fract_forest', mem%fract_forest,                      &
-        & hgrid, surface,                                                      &
-        & t_cf('forest_fraction', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & initval_r=0.0_wp )
+      IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
+        &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+        CALL mem%Add_var( 'fract_forest', mem%fract_forest,                      &
+          & hgrid, surface,                                                      &
+          & t_cf('forest_fraction', '', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & initval_r=0.0_wp )
+      END IF
 
       CALL mem%Add_var( 'veg_fract_correction', mem%veg_fract_correction,      &
         & hgrid, surface,                                                      &
@@ -408,7 +415,6 @@ CONTAINS
         END IF ! l_forestRegrowth
       END IF ! logrop
 
-#ifdef __ICON__
       ! Diagnostic global carbon sums for experiment monitoring
       !   (1d stream variables are not supported with echam)
       IF (TRIM(suffix) == 'box') THEN
@@ -418,17 +424,16 @@ CONTAINS
           & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
         CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
           & hgrid, surface,                                                           &
           & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
       END IF
-#endif
     END IF !  VEG / LAND
 
   END SUBROUTINE Init_pheno_memory

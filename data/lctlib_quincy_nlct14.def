@@ -297,3 +297,25 @@ k_som_fast_init 10.0 8.0 10.0 7.0 5.0 5.7 5.0 7.0 5.0 5.0 7.0 7.0 7.0 7.0
 
 #k_som_slow_init: slow pools SOM init value, empirically calibrated values to equilibrium soil profiles (unitless)
 k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5
+
+#
+# the following parameters have been copied from the JSBACH lctlib file (lctlib_nlct21.def)
+# Quincy (nlct14) PFT -> JSBACH (nlct21) PFT
+#
+# 1 -> 2
+# 2 -> 3
+# 3 -> 3
+# 4 -> 7
+# 5 -> 8
+# 6 -> 9
+# 7 =  9 = 11 -> 12
+# 8 = 10 = 12 -> 13
+# 13 -> best guess or just zero (there is no matching jsbach PFT)
+# 14 -> best guess or just zero (there is no matching jsbach PFT)
+#
+
+#AlbedoLitterVIS: Albedo of litter in the visible range                     
+AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0
+
+#AlbedoLitterNIR: Albedo of litter in the near infrared range                     
+AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0

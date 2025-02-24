@@ -294,7 +294,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
@@ -304,10 +303,8 @@ CONTAINS
         & t_cf('hd_water_error_gsum', 'm3', 'Total HD water imbalance during time step'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & lrestart=.FALSE.,                                                                &
-        & initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     ENDIF
-#endif
 
   END SUBROUTINE Init_hd_memory
 

@@ -87,14 +87,14 @@ CONTAINS
       return_value = 'hydro'
     CASE (RAD_)
       return_value = 'rad'
-    CASE (Q_RAD_)
-      return_value = 'q_rad'
     CASE (ASSIMI_)
       return_value = 'assimi'
     CASE (Q_ASSIMI_)
       return_value = 'q_assimi'
     CASE (PHENO_)
       return_value = 'pheno'
+    CASE (Q_SH_)
+      return_value = 'q_sh'
     CASE (Q_PHENO_)
       return_value = 'q_pheno'
 #ifndef __NO_JSBACH_HD__
@@ -157,14 +157,14 @@ CONTAINS
       return_value = HYDRO_
     CASE ('rad')
       return_value = RAD_
-    CASE ('q_rad')
-      return_value = Q_RAD_
     CASE ('assimi')
       return_value = ASSIMI_
     CASE ('q_assimi')
       return_value = Q_ASSIMI_
     CASE ('pheno')
       return_value = PHENO_
+    CASE ('q_sh')
+      return_value = Q_SH_
     CASE ('q_pheno')
       return_value = Q_PHENO_
 #ifndef __NO_JSBACH_HD__

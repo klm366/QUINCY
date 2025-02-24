@@ -47,41 +47,50 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_
-    USE mo_jsb_grid_class,                  ONLY: t_jsb_grid
-    USE mo_jsb_grid,                        ONLY: Get_grid
+    USE mo_jsb_process_class,               ONLY: VEG_, SPQ_
+    USE mo_jsb_grid_class,                  ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,                        ONLY: Get_grid, Get_vgrid
     USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
-      &                                           background_mort_rate_grass, w_root_lim_max
+      &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),              POINTER :: model                !< the model
     TYPE(t_lnd_bgcm_store),         POINTER :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
+    TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_sb        !< Vertical grid
     TYPE(t_lctlib_element),         POINTER :: lctlib               !< land-cover-type library - parameter across pft's
     REAL(wp)                                :: hlp1                 !< helper variable
     REAL(wp)                                :: ref_lai              !< LAI                                 | for canopy model init
     REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
-    INTEGER                                 :: iblk, ic             !< loop dimensions
+    INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
+    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
     REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onDomain    :: root_depth
+    dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
+    ! SPQ_ 3D
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain      :: target_cn_leaf
     dsl4jsb_Real2D_onDomain      :: target_np_leaf
@@ -157,12 +166,15 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onDomain      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: exudation_c_tmyc_mavg
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
-    dsl4jsb_Real3D_onDomain      :: fleaf_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real3D_onDomain      :: fleaf_sunlit_tcnl_mavg_cl
-    dsl4jsb_Real3D_onDomain      :: fn_oth_cl
-    dsl4jsb_Real3D_onDomain      :: leaf_nitrogen_cl
-    dsl4jsb_Real3D_onDomain      :: lai_cl
+    dsl4jsb_Real3D_onDomain    :: root_fraction_sl
+    dsl4jsb_Real3D_onDomain    :: fleaf_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain    :: fleaf_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onDomain    :: fn_oth_cl
+    dsl4jsb_Real3D_onDomain    :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onDomain    :: lai_cl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -173,14 +185,22 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      = vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
     veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)
+    dsl4jsb_Get_var2D_onDomain(SPQ_, num_sl_above_bedrock)
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_depth_ubound_sl)
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)
@@ -256,7 +276,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc_tvegdyn_mavg)
     ! VEG_ 3D
+    dsl4jsb_Get_var3D_onDomain(VEG_, root_fraction_sl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fn_oth_cl)
@@ -284,45 +307,6 @@ CONTAINS
       target_np_fine_root(:,:) = target_np_leaf(:,:) / root2leaf_np
       ! differ between vegetation dynamics schemes
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-      ! start bareground with vegetation dynamics switched on: cohort scheme
-      CASE ("cohort")
-        background_mort_rate_tree  = 0.0_wp    ! default: 0.01_wp
-        background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp
-        dens_ind(:,:)              = 1.0_wp
-        ! pool%reserve% C N P
-        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 1.0_wp
-        veg_pool_mt_domain(ix_reserve, ixN, :, :) &
-          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
-        ! pool%reserve%carbon13
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC13, ic, iblk) = calc_fractionation(def_co2_mixing_ratio,           &
-              &                                                                  def_co2_mixing_ratio_C13, hlp1) &
-              &                                                          * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-          ENDDO
-        ENDDO
-        ! pool%reserve%carbon14
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC14, ic, iblk) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-              &                                                           def_co2_deltaC14 - hlp1 )    &
-              &                                    * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-            ! pool%reserve%nitrogen15
-            veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
-              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-          ENDDO
-        ENDDO
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
         veg_pool_mt_domain(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
@@ -436,13 +420,78 @@ CONTAINS
       CALL finish(TRIM(routine), 'Invalid QUINCY model name. Use either land, plant, soil, canopy, test_canopy or test_radiation.')
     ENDSELECT
 
-    !> 2.0 set veg_pool bgcm to zero for tiles such as bare soil and urban area
+    !> 2.0 root fraction
+    !>
+
+    ! QSOIL, QCANOPY, Q_TEST_CANOPY and Q_TEST_RADIATION need fixed roots.
+    ! (QSOIL cannot be properly initialised with dyn roots and
+    ! the other modes would be subject to water limitations with dyn roots.)
+    ! We thus switch off dynamic roots for these modes.
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+      dsl4jsb_Config(VEG_)%flag_dynamic_roots = .FALSE.
+      IF (iblk==1) CALL message(TRIM(routine), &
+          & ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
+    END SELECT
+
+    ! init root fraction
+    IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
+      !>     - dynamic root fractions (see mo_q_veg_growth)
+      !>
+      root_fraction_sl(:, 1, :)          = 1.0_wp
+      root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
+    ELSE
+      !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
+      !>
+      ! root fractions assuming an exponential distribution of roots \n
+      !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
+      ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) \n
+      !   thus for each layer
+      !
+      ! NOTE: upper bound of a layer is the larger value compared to lower bound !
+      !
+      DO iblk = 1,nblks
+        DO ic = 1,nproma
+          ! soil layer 1
+          IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
+            root_fraction_sl(:, 1, :) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:, 1, :))) &
+              &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
+          ELSE
+            root_fraction_sl(ic, 1, iblk) = 0.0_wp
+          END IF
+          ! soil layers 2 to x
+          DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+            IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
+              IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
+                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                  &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
+                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+              ELSE
+                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                  &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
+                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+              ENDIF
+            ELSE
+              root_fraction_sl(ic, is, iblk) = 0.0_wp
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDIF  ! flag_dynamic_roots
+
+    !>   2.1 set root fraction to zero for tiles such as bare soil and urban area
+    !>
+    IF (lctlib%BareSoilFlag) THEN
+      root_fraction_sl(:, :, :) = 0.0_wp
+    END IF
+
+    !> 3.0 set veg_pool bgcm to zero for tiles such as bare soil and urban area
     !>
     IF (lctlib%BareSoilFlag) THEN
       veg_pool_mt_domain(:,:,:,:) = 0.0_wp
     END IF
 
-    !> 3.0 vegetation init for all QUINCY models
+    !> 4.0 vegetation init for all QUINCY models
     !>
     ! plant variables
     dphi(:,:)                             = -1.0_wp * lctlib%phi_leaf_min
@@ -522,6 +571,35 @@ CONTAINS
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp
+    ! bottom of the canopy radiation
+    rfr_ratio_boc(:,:)                    = rfr_ratio_toc
+    rfr_ratio_boc_tvegdyn_mavg(:,:)       = rfr_ratio_boc(:,:)
+
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:)) &
+    !$ACC   DEVICE(height(:,:), leaf_nitrogen_cl(:,:,:), lai(:,:), lai_cl(:,:,:)) &
+    !$ACC   DEVICE(dphi(:,:), beta_sinklim_ps(:,:), leaf_cn_direction(:,:), fn_oth_cl(:,:,:), npp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(n_fixation_talloc_mavg(:,:), transpiration_talloc_mavg(:,:), unit_transpiration_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(unit_uptake_n_talloc_mavg(:,:), unit_uptake_p_talloc_mavg(:,:), dphi_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_cn_talloc_mavg(:,:), unit_npp_talloc_mavg(:,:), growth_cp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_talloc_mavg(:,:), labile_carbon_talloc_mavg(:,:), labile_nitrogen_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(labile_phosphorus_talloc_mavg(:,:), growth_p_limit_based_on_n_mavg(:,:), reserve_carbon_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), w_root_lim_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(exudation_c_tmyc_mavg(:,:), fleaf_sunlit_tfrac_mavg_cl(:,:,:), t_air_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tfrac_mavg(:,:), co2_mixing_ratio_tfrac_mavg(:,:), ga_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_tfrac_mavg(:,:), fleaf_sunlit_tcnl_mavg_cl(:,:,:), t_air_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tcnl_mavg(:,:), co2_mixing_ratio_tcnl_mavg(:,:), growth_cn_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_tcnl_mavg(:,:), uptake_n_tcnl_mavg(:,:), npp_tcnl_mavg(:,:), t_air_daytime(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime(:,:), co2_mixing_ratio_daytime(:,:), ga_daytime(:,:), beta_sinklim_ps_daytime(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_daytime(:,:), t_jmax_opt_daytime_dacc(:,:), t_air_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime_dacc(:,:), co2_mixing_ratio_daytime_dacc(:,:), ga_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_daytime_dacc(:,:), growth_req_n_tlabile_mavg(:,:), growth_req_p_tlabile_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tphen_mavg(:,:), t_soil_srf_tphen_mavg(:,:), npp_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(demand_uptake_n_tuptake_mavg(:,:), demand_uptake_p_tuptake_mavg(:,:), growth_req_n_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(growth_req_p_tuptake_mavg(:,:), ga_tcnl_mavg(:,:), leaf2root_troot_mavg(:,:), an_boc_tvegdyn_mavg(:,:)) &
+    !$ACC   DEVICE(net_growth_tvegdyn_mavg(:,:), lai_tvegdyn_mavg(:,:), beta_sinklim_ps_tacclim_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
+    !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
 
   END SUBROUTINE veg_init
 

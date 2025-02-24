@@ -24,13 +24,13 @@ MODULE mo_spq_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE, LAKE_TYPE, BARE_TYPE, GLACIER_TYPE
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_spq_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 80
+  INTEGER, PARAMETER :: max_no_of_vars      = 240
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -56,8 +56,8 @@ MODULE mo_spq_memory_class
 
     TYPE(t_jsb_var_real2d)          :: &
       & evapotranspiration, &             !< evapotranspiration [kg m-2 s-1]
-      & z0h, &                            !< surface roughness length for heat
-      & z0m                               !< surface roughness length for momentum
+      & z0h, &                            !< surface roughness length for heat [m]
+      & z0m                               !< surface roughness length for momentum [m]
 
     TYPE(t_jsb_var_real2d)          :: &
       &   num_sl_above_bedrock                          !< number of soil layers above bedrock, i.e., with a width larger eps8
@@ -85,13 +85,20 @@ MODULE mo_spq_memory_class
       & fact_q_air                      , &  !< factor representing air at actual water content [unitless]
       & fact_qsat_srf                        !< factor representing air at saturating water content [unitless]
 
+    TYPE(t_jsb_var_real2d)          :: &
+      spq_drag_srf           , &          !< surface_drag
+      spq_t_acoef            , &          !< temperature_acoef (Richtmyer-Morton coefficient)
+      spq_t_bcoef            , &          !< temperature_bcoef (Richtmyer-Morton coefficient)
+      spq_q_acoef            , &          !< specific_humidity_acoef (Richtmyer-Morton coefficient)
+      spq_q_bcoef            , &          !< specific_humidity_bcoef (Richtmyer-Morton coefficient)
+      spq_pch
+
     ! Additional variables for spq
     TYPE(t_jsb_var_real2d)          :: &
                                     w_skin,           & !< Water content in skin reservoir                                          [m]
                                     w_soil_root,      & !< Water content in root zone of the soil                                   [m]
                                     w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
-                                    w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
-                                    t_soil_root         !< Temperature of fine roots in the soil                                    [K]
+                                    w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
 
     TYPE(t_jsb_var_real3d)          :: &
       & frac_w_lat_loss_sl, &   !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
@@ -105,9 +112,9 @@ MODULE mo_spq_memory_class
                                                         !! (derived from volumetric field capacity)                                 [m]
                                     w_soil_pwp_sl,    & !< Water content of soil layers at permanent wilting point
                                                         !! (derived from vol. perm wilt point)                                      [m]
-                                    saxtonA,          & !< coefficient in moisture-tension relationship
-                                    saxtonB,          & !< coefficient in moisture-tension relationship
-                                    saxtonC,          & !< exponent of moisture-conductivity relationship
+                                    saxtonA,          & !< coefficient in moisture-tension relationship [unitless]
+                                    saxtonB,          & !< coefficient in moisture-tension relationship [unitless]
+                                    saxtonC,          & !< exponent of moisture-conductivity relationship [unitless]
                                     kdiff_sat_sl,     & !< saturated hydraulic conductivity                                         [m s-1]
                                     w_ice_sl            !< ice content of soil layer                                                [m]
 
@@ -124,7 +131,7 @@ MODULE mo_spq_memory_class
 
     !Soil Water addons for SLM in HYDRO
     TYPE(t_jsb_var_real2d)          :: &
-                                    w_soil_root_theta, & !< root zone integrated plant available water, fraction of maximum
+                                    w_soil_root_theta, & !< root zone integrated plant available water [fraction of maximum saturation]
                                     w_soil_root_pot      !< soil water potential [MPa]
 
     TYPE(t_jsb_var_real3d)          :: &
@@ -154,17 +161,86 @@ MODULE mo_spq_memory_class
                                     qmax_po4_om_sl           !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
 
     ! variables for snow
-    TYPE(t_jsb_var_real2d)          :: snow_height, &           !< height (thickness) of all snow layers                                 [m]
-                                       snow_soil_heat_flux, &   !< heat flux between snow and soil                          [J m-2]
-                                       snow_srf_heat_flux,  &   !< ..
+    TYPE(t_jsb_var_real2d)          :: snow_height, &           !< height (thickness) of all snow layers                         [m]
+                                       snow_soil_heat_flux, &   !< heat flux between snow and soil                          [W m-2]
+                                       snow_srf_heat_flux,  &   !< heat flux between atmoshere and snow                     [W m-2]
                                        snow_melt_to_soil        !< Snow melt water to soil flux                              [kg m-2 s-1]
 
-    TYPE(t_jsb_var_real3d)          :: snow_present_snl       , &  !< variable to check if there is any snow for each layer     [-]
+    TYPE(t_jsb_var_real3d)          :: snow_present_snl       , &  !< variable to check if there is any snow for each layer     [unitless]
                                        t_snow_snl             , &  !< temperature of snow layer                                 [K]
                                        w_snow_snl             , &  !< water content of snow layer                               [m]
                                        snow_lay_thickness_snl , &  !< snow layer thickness                                      [m]
                                        w_snow_max_snl         , &  !< maximum water content of snow layer                       [m]
                                        w_liquid_snl                !< Liquid water in snow layers                               [m]
+
+    !> ---------------------------------------------------------------------------------------------------- !
+    !> temporary SPQ_ variables - used during implementation of using jsbach physics in quincy
+    !>
+
+    !> SEB_
+    !>
+    ! Common variables
+    TYPE(t_jsb_var_real2d) ::   &
+      & t,                      & !< Surface temperature                                             [K]
+      & t_old,                  & !< Surface temperature at previous timestep                        [K]
+      & t_unfilt,               & !< Surface temperature, unfiltered (before Asselin)                [K]
+      & t_rad4,                 & !< Surface radiative temperature **4                               [K**4]
+      & t_eff4,                 & !< Effective surface temperature **4                               [K**4]
+                                  !! This is the surface temperature used in the atmospheric
+                                  !! radiative heating
+      ! & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
+      !                             !! This is the qsat_srf that is used in the vertical diffusion
+      !                             !! scheme in the atmosphere
+      & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
+      & latent_hflx,            & !< Latent heat flux                                                [W m-2]
+      & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
+      & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
+                                  !! (additional to radiative fluxes and latent and sensible
+                                  !!  heat fluxes, e.g. ground heat flux)
+      & richardson                !< Richardson number (standalone model)                            []
+
+
+    ! Additional variables for LAKE lct_type
+    TYPE(t_jsb_var_real2d) :: &
+      & t_lwtr,               & !< Lake surface temperature (water)                                [K]
+      & t_lice,               & !< Lake surface temperature (ice)                                  [K]
+      & s_lwtr,               & !< Surface dry static energy over lake water                       [m2 s-2]
+      & qsat_lwtr,            & !< Saturation specific humidity at surface over lake water        [kg kg-1]
+      & s_lice,               & !< Surface dry static energy over lake ice                         [m2 s-2]
+      & qsat_lice,            & !< Saturation specific humidity at surface over lake ice           [kg kg-1]
+      & latent_hflx_wtr,      &
+      & sensible_hflx_wtr,    &
+      & latent_hflx_ice,      &
+      & sensible_hflx_ice,    &
+      & depth_lice,           & !< Thickness of ice on lake                                        [m]
+      & fract_lice,           & !< Fraction of lake ice                                            []
+      & hflx_form_ice,        & !< Heat flux for ice formation                                     [W m-2]
+      & hflx_cond_ice,        & !< Conductive heat flux for ice on lakes
+      & hflx_melt_lice,       & !< Heat flux from melting ice on lakes
+      & hflx_melt_snow          !< Heat flux from melting snow on lake ice
+
+    !> HYDRO_
+    !>
+    TYPE(t_jsb_var_real2d) :: &
+      & fract_pond,           & !< Fraction of tile assumed inundated at given water level              []
+      & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
+      & ice_pond                !< Frozen water content of pond reservoir                               [m water equivalent]
+
+    ! Additional variables for land type
+    TYPE(t_jsb_var_real2d) :: &
+      & fract_snow_can,       & !< Snow fraction on canopy                                             []
+      & fract_snow_soil,      & !< Snow fraction on soil                                               []
+      & weq_snow_soil,        & !< Water content of snow reservoir of soil                             [m water equivalent]
+      & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
+      & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
+      & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
+
+    ! Additional variables for LAKE lct_type
+    TYPE(t_jsb_var_real2d) :: &
+      & evapo_wtr,            & !< Evaporation over lake water
+      & evapo_ice,            & !< Evaporation over lake ice
+      & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
+      & weq_snow_lice           !< Water content of snow on lake ice                                        [m water equivalent]
 
 
   CONTAINS
@@ -182,24 +258,35 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_spq_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC , MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_varlist,         ONLY: BASIC , MEDIUM, FULL
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,     ONLY: t_jsb_model
+    USE mo_quincy_output_class, ONLY: unitless
+    USE mo_jsb_physical_constants, ONLY: &
+      & Tzero,                           &
+      & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
+      & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
+    dsl4jsb_Use_processes SPQ_
+    dsl4jsb_Use_config(SPQ_)
+    USE mo_jsb_control,            ONLY: jsbach_runs_standalone
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !> spq memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !< spq memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(SPQ_)
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_spq               ! Vertical grid
     INTEGER                    :: table
+    REAL(wp)                   :: ini_snow_dens
+    LOGICAL                    :: l_ponds
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(model_id)
@@ -209,6 +296,14 @@ CONTAINS
     vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
 
+    dsl4jsb_Get_config(SPQ_)
+
+    IF (dsl4jsb_Config(SPQ_)%l_dynsnow) THEN !SSE_)%l_dynsnow) THEN
+      ini_snow_dens = dens_snow_min
+    ELSE
+      ini_snow_dens = dens_snow
+    END IF
+    l_ponds = dsl4jsb_Config(SPQ_)%l_ponds ! HYDRO_
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! add memory only for LAND & PFT tiles
@@ -327,7 +422,7 @@ CONTAINS
 
       CALL mem%Add_var('z0h', mem%z0h, &
         & hgrid, surface, &
-        & t_cf('z0h', '[]', 'surface roughness length for heat'), &
+        & t_cf('z0h', 'm', 'surface roughness length for heat'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -338,7 +433,7 @@ CONTAINS
 
       CALL mem%Add_var('z0m', mem%z0m, &
         & hgrid, surface, &
-        & t_cf('z0m', '[]', 'surface roughness length for momentum'), &
+        & t_cf('z0m', 'm', 'surface roughness length for momentum'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -430,7 +525,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -503,7 +598,7 @@ CONTAINS
 
       CALL mem%Add_var('fact_q_air', mem%fact_q_air, &
         & hgrid, surface, &
-        & t_cf('fact_q_air', 'unitless', 'factor representing air at actual water content'), &
+        & t_cf('fact_q_air', unitless, 'factor representing air at actual water content'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -514,7 +609,7 @@ CONTAINS
 
       CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
         & hgrid, surface, &
-        & t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &
+        & t_cf('fact_qsat_srf', unitless, 'factor representing air at saturating water content'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -567,17 +662,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
-        & hgrid, surface, &
-        & t_cf('t_soil_root', 'K', 'Temperature of fine roots in the soil'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 273.15_wp)
-
       CALL mem%Add_var('frac_w_lat_loss_sl', mem%frac_w_lat_loss_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('frac_w_lat_loss_sl', '', 'fraction of lateral (horizontal) water loss of w_soil_sl_old'), &
@@ -606,7 +690,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -617,7 +701,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -668,7 +752,7 @@ CONTAINS
 
       CALL mem%Add_var('saxtonA', mem%saxtonA, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'), &
+        & t_cf('saxtonA', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -679,7 +763,7 @@ CONTAINS
 
       CALL mem%Add_var('saxtonB', mem%saxtonB, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'), &
+        & t_cf('saxtonB', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -690,7 +774,7 @@ CONTAINS
 
       CALL mem%Add_var('saxtonC', mem%saxtonC, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'), &
+        & t_cf('saxtonC', unitless, 'exponent of moisture-conductivity relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -716,7 +800,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -778,11 +862,11 @@ CONTAINS
 
       CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta, &
         & hgrid, surface, &
-        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_cf('w_soil_root_theta', 'fraction of maximum saturation', 'root zone integrated plant avail water, fract of max'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -793,7 +877,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -804,7 +888,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -969,25 +1053,14 @@ CONTAINS
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
           &  prefix, suffix, &
-          & output_level = BASIC, &
+          & output_level = FULL, &
           &  loutput = .TRUE., &
           &  lrestart = .TRUE., &
           &  initval_r = 0.0_wp) ! initvalue
 
       CALL mem%Add_var( 'snow_soil_heat_flux', mem%snow_soil_heat_flux, &
           &  hgrid, surface, &
-          &  t_cf('snow_soil_heat_flux','J m-2', 'snow soil heat flux'), &
-          &  t_grib1(table, 255, grib_bits), &
-          &  t_grib2(255, 255, 255, grib_bits), &
-          &  prefix, suffix, &
-          & output_level = FULL, &
-          &  loutput = .FALSE., &
-          &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
-
-      CALL mem%Add_var('snow_melt_to_soil', mem%snow_melt_to_soil, &
-          &  hgrid, surface, &
-          &  t_cf('snow_melt_to_soil','m', 'snow melt water to soil'), &
+          &  t_cf('snow_soil_heat_flux','W m-2', 'snow soil heat flux'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
           &  prefix, suffix, &
@@ -998,7 +1071,18 @@ CONTAINS
 
       CALL mem%Add_var('snow_srf_heat_flux', mem%snow_srf_heat_flux, &
           &  hgrid, surface, &
-          &  t_cf('snow_srf_heat_flux','m', 'snow srf heat flux'), &
+          &  t_cf('snow_srf_heat_flux','W m-2', 'snow srf heat flux'), &
+          &  t_grib1(table, 255, grib_bits), &
+          &  t_grib2(255, 255, 255, grib_bits), &
+          &  prefix, suffix, &
+          & output_level = FULL, &
+          &  loutput = .FALSE., &
+          &  lrestart = .TRUE., &
+          &  initval_r = 0.0_wp) ! initvalue
+
+      CALL mem%Add_var('snow_melt_to_soil', mem%snow_melt_to_soil, &
+          &  hgrid, surface, &
+          &  t_cf('snow_melt_to_soil','kg m-2 s-1', 'snow melt water to soil'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
           &  prefix, suffix, &
@@ -1009,7 +1093,7 @@ CONTAINS
 
       CALL mem%Add_var('snow_present_snl', mem%snow_present_snl, &
           &  hgrid, vgrid_snow_spq, &
-          &  t_cf('snow_present_snl','-', 'check if there is snow'), &
+          &  t_cf('snow_present_snl',unitless, 'check if there is snow'), &
           &  t_grib1(table, 255, grib_bits), &
           &  t_grib2(255, 255, 255, grib_bits), &
           &  prefix, suffix, &
@@ -1073,7 +1157,404 @@ CONTAINS
           &  lrestart = .TRUE., &
           &  initval_r = 0.0_wp) ! initvalue
 
+      CALL mem%Add_var('spq_drag_srf', mem%spq_drag_srf,                       &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.TRUE.,                                                     &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_pch', mem%spq_pch,                                 &
+        & hgrid, surface,                                                      &
+        & t_cf('pch', '', ''),                                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_t_acoef', mem%spq_t_acoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_t_bcoef', mem%spq_t_bcoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_q_acoef', mem%spq_q_acoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_acoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var('spq_q_bcoef', mem%spq_q_bcoef,                         &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_bcoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                  &
+        & initval_r=0.0_wp )
+
     END IF ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
+
+    !> ---------------------------------------------------------------------------------------------------- !
+    !> temporary SPQ_ variables - used during implementation of using jsbach physics in quincy
+    !>
+
+    CALL mem%Add_var( 't', mem%t,                                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & initval_r=280.0_wp )
+
+    ! IF (model%config%use_tmx) THEN
+    !   CALL mem%Add_var( 't_rad**4', mem%t_rad4,                                      &
+    !     & hgrid, surface,                                                            &
+    !     & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),         &
+    !     & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+    !     & prefix, suffix,                                                            &
+    !     & output_level=BASIC,                                                        &
+    !     & initval_r=280.0_wp**4 )
+    ! END IF
+
+    CALL mem%Add_var( 't_old', mem%t_old,                                            &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=280.0_wp )
+
+    CALL mem%Add_var( 't_unfilt', mem%t_unfilt,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & initval_r=280.0_wp )
+
+    CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'sensible_hflx', mem%sensible_hflx,                            &
+      & hgrid, surface,                                                              &
+      & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    IF (jsbach_runs_standalone()) THEN
+      CALL mem%Add_var( 'richardson', mem%richardson,                                &
+        & hgrid, surface,                                                            &
+        & t_cf('richardson', '-', 'Richardson number'),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.TRUE.,                                                           &
+        & initval_r=0.0_wp )
+    END IF
+
+    ! IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
+    !   CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
+    !     & hgrid, surface,                                                                    &
+    !     & t_cf('surface_temperature_eff**4', 'K', 'effective surface temperature**4'),       &
+    !     & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+    !     & prefix, suffix,                                                                    &
+    !     & lrestart=.FALSE.,                                                                  &
+    !     & initval_r=280.0_wp**4 )
+    ! END IF
+
+    ! Additional variables for lakes
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
+
+      CALL mem%Add_var( 't_lwtr', mem%t_lwtr,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=280.0_wp )
+
+      CALL mem%Add_var( 's_lwtr', mem%s_lwtr,                                                  &
+        & hgrid, surface,                                                                      &
+        & t_cf('sfc_dry_static_energy_wtr', 'm2 s-2', 'surface dry static energy (lake wtr)'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+        & prefix, suffix,                                                                      &
+        & lrestart=.FALSE.,                                                                    &
+        & initval_r=2.9E5_wp )
+
+      CALL mem%Add_var( 'qsat_lwtr', mem%qsat_lwtr,                                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('sfc_qsat_lwtr', 'm2 s-2', 'surface specific humidity at saturation (lake wtr)'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE.,                                                                      &
+        & initval_r=0.0075_wp )
+
+      CALL mem%Add_var( 'latent_hflx_wtr', mem%latent_hflx_wtr,                        &
+        & hgrid, surface,                                                              &
+        & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over lake water'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.TRUE.,                                                             &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'sensible_hflx_wtr', mem%sensible_hflx_wtr,                    &
+        & hgrid, surface,                                                              &
+        & t_cf('sensible_hflx_wtr', 'W m-2', 'sensible heat flux over lake water'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.TRUE.,                                                             &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      ! Fraction of ice on lake
+      CALL mem%Add_var( 'fract_lice', mem%fract_lice,                                  &
+        & hgrid, surface,                                                              &
+        & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN !SEB_)%l_ice_on_lakes) THEN
+
+        CALL mem%Add_var( 't_lice', mem%t_lice,                                          &
+          & hgrid, surface,                                                              &
+          & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=Tzero )
+
+        CALL mem%Add_var( 's_lice', mem%s_lice,                                                  &
+          & hgrid, surface,                                                                      &
+          & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+          & prefix, suffix,                                                                      &
+          & lrestart=.FALSE.,                                                                    &
+          & initval_r=2.9E5_wp )
+
+        CALL mem%Add_var( 'qsat_lice', mem%qsat_lice,                                              &
+          & hgrid, surface,                                                                        &
+          & t_cf('sfc_qsat_lice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix,                                                                        &
+          & lrestart=.FALSE.,                                                                      &
+          & initval_r=0.0075_wp )
+
+        CALL mem%Add_var( 'latent_hflx_ice', mem%latent_hflx_ice,                        &
+          & hgrid, surface,                                                              &
+          & t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over lake ice'),          &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & lrestart=.TRUE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        CALL mem%Add_var( 'sensible_hflx_ice', mem%sensible_hflx_ice,                    &
+          & hgrid, surface,                                                              &
+          & t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over lake ice'),      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & lrestart=.TRUE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        CALL mem%Add_var( 'depth_lice', mem%depth_lice,                                  &
+          & hgrid, surface,                                                              &
+          & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'hflx_form_ice', mem%hflx_form_ice,                            &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_form_ice', 'W m-2)', 'heat flux for ice formation on lake ice'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        CALL mem%Add_var( 'hflx_cond_ice', mem%hflx_cond_ice,                            &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_cond_ice', 'W m-2)', 'conductive heat flux on lake ice'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        CALL mem%Add_var( 'hflx_melt_lice', mem%hflx_melt_lice,                          &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),        &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        CALL mem%Add_var( 'hflx_melt_snow', mem%hflx_melt_snow,                          &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_melt_snow', 'W m-2)', 'heat_flux from snow melt on lakes'),       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      END IF  ! l_ice_on_lakes
+    END IF    ! LAKE_TYPE
+
+
+
+    IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
+      &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
+      &  ) ) THEN
+
+      CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
+        & hgrid, surface,                                                              &
+        & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
+        & hgrid, surface,                                                              &
+        & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
+        & hgrid, surface,                                                              &
+        & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_snow_can', mem%fract_snow_can,                        &
+        & hgrid, surface,                                                            &
+        & t_cf('fract_snow_can', '-', 'Snow fraction on canopy'),                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                      &
+        & hgrid, surface,                                                            &
+        & t_cf('fract_snow_soil', '-', 'Snow fraction on soil'),                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'weq_snow_soil', mem%weq_snow_soil,                          &
+        & hgrid, surface,                                                            &
+        & t_cf('weq_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'snow_soil_dens', mem%snow_soil_dens,                        &
+        & hgrid, surface,                                                            &
+        & t_cf('snow_soil_dens', 'kg m-3', 'Density of snow on soil'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
+
+      ! Total evapotranspiration, including sublimation
+      CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
+        & hgrid, surface,                                                                                         &
+        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+        & prefix, suffix,                                                                                         &
+        & lrestart=.FALSE.,                                                                                       &
+        & loutput=.TRUE., output_level=BASIC,                                                                     &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      ! IF (.NOT. model%config%use_tmx) THEN
+      !   CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                                 &
+      !     & hgrid, surface,                                                               &
+      !     & t_cf('heating_snow_cpy_melt', 'W m-2', 'Heating due to snow melt on canopy'), &
+      !     & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+      !     & prefix, suffix,                                                               &
+      !     & lrestart=.FALSE.,                                                             &
+      !     & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      ! END IF
+    END IF   ! lct
+
+    ! Additional variables for LAKE lct
+    IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
+
+      CALL mem%Add_var( 'evapo_wtr', mem%evapo_wtr,                                &
+        & hgrid, surface,                                                          &
+        & t_cf('evapo_wtr', 'kg m-2 s-1', 'Evaporation from lake water'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & lrestart=.FALSE.,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN !SEB_)%l_ice_on_lakes) THEN
+        CALL mem%Add_var( 'evapo_ice', mem%evapo_ice,                              &
+          & hgrid, surface,                                                        &
+          & t_cf('evapo_ice', 'kg m-2 s-1', 'Evaporation from lake ice'),          &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & prefix, suffix,                                                        &
+          & lrestart=.FALSE.,                                                      &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+        !Fraction of snow on lake ice, rel. to ice fraction
+        CALL mem%Add_var( 'fract_snow_lice', mem%fract_snow_lice,                  &
+          & hgrid, surface,                                                        &
+          & t_cf('fract_snow_lice', '-',                                           &
+          &      'Snow fraction on lake ice (rel. to ice fraction)'),              &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & prefix, suffix,                                                        &
+          & output_level=BASIC,                                                    &
+          & initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'weq_snow_lice', mem%weq_snow_lice,                        &
+          & hgrid, surface,                                                          &
+          & t_cf('weq_snow_lice', 'm water equivalent', 'Snow amount on lake ice'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & prefix, suffix,                                                          &
+          & output_level=BASIC,                                                      &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      END IF
+    END IF
+
   END SUBROUTINE Init_spq_memory
 
 #endif
