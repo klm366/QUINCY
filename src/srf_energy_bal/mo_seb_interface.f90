@@ -666,10 +666,10 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SSE_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
+      & rad_srf_net,        &               !< Surface net radiation                               [W m-2]
       & lw_srf_down,        &               !< Longwave downwards radiation                        [W m-2]
       & swvis_srf_down,     &               !< Shortwave visible downwards radiation               [W m-2]
       & swnir_srf_down,     &               !< Shortwave near infrared downwards radiation         [W m-2]
@@ -738,6 +738,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      swvis_srf_down)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      swnir_srf_down)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      rad_srf_net)                ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      lw_srf_net)                 ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      sw_srf_net)                 ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)                ! in
@@ -772,7 +773,7 @@ CONTAINS
 
       IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
         ! Compute energy flux residual
-        energy_balance_res(ic) = lw_srf_net(ic) + sw_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
+        energy_balance_res(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
           &                    + forc_hflx(ic) + snowmelt_energy(ic) + t_energy(ic)
       END IF
 
@@ -789,7 +790,7 @@ CONTAINS
     !$ACC END DATA
 
 #ifndef _OPENACC
-    IF (tile%name == 'land') THEN ! .NOT. tile%is_lake) THEN
+    IF (tile%name /= 'box') THEN
       DO ie = 1, n_errors
         ic = error_idx(ie)
 
@@ -801,6 +802,7 @@ CONTAINS
           & 'Longwave upwards:        ', lw_srf_up(ic),                                NEW_LINE('a'), &
           & 'Shortwave downwards:     ', sw_srf_down(ic),                              NEW_LINE('a'), &
           & 'Shortwave upwards:       ', sw_srf_up(ic),                                NEW_LINE('a'), &
+          & 'Net surface radiation:   ', rad_srf_net(ic),                              NEW_LINE('a'), &
           & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
           & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
           & 'Ground heat flux:        ', forc_hflx(ic),                                NEW_LINE('a'), &
