@@ -23,9 +23,11 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO_, CH4_
+  dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_, CH4_
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(CH4_)
 
   IMPLICIT NONE

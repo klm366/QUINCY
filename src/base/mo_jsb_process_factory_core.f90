@@ -108,7 +108,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_, MEGAN_, &
-    & Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    & Q_PHENO_, Q_ASSIMI_, Q_SH_
 
   IMPLICIT NONE
   PRIVATE
