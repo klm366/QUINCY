@@ -1785,12 +1785,12 @@ CONTAINS
     REAL(wp) :: weq_sl(nc,nsoil)             ! total water content of soil layer [m]
     REAL(wp) :: field_cap_sl(nc,nsoil)       ! field capacity of soil layer [m]
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(drain_bot_pot, weq_sl, field_cap_sl)
 
     drain_bot_act = 0._wp
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         wtr_latflow_sl(ic,is) = 0._wp
@@ -1802,7 +1802,7 @@ CONTAINS
 
 
     ! Determining the potential loss from the intermediate storage from the bottom of the soil column
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (l_pf_soil(ic)) THEN
         drain_bot_pot(ic) = 0._wp
@@ -1812,7 +1812,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is=1,nsoil
       !$ACC LOOP GANG VECTOR
@@ -1844,7 +1844,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE soilhyd_lat

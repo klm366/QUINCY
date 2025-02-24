@@ -287,7 +287,7 @@ CONTAINS
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
         ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           drag_ice(ic)    = drag_wtr(ic)
           t_acoef_ice(ic) = t_acoef_wtr(ic)

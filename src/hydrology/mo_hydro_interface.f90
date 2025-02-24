@@ -1332,7 +1332,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Setting the depth limit until which the presence of permafrost may affect bottom drainage
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
       l_pf_soil(ic)   = (thaw_depth_max_ym1(ic) < depth_thrsh(ic) .AND. &
@@ -1343,7 +1343,7 @@ CONTAINS
     ! Set to true, until HydroTiles are implemented
     l_latflow_to_streamflow = .TRUE.
     ret_macro_blg = dsl4jsb_Config(HYDRO_)%ret_macro_blg
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       slope_used(ic)   = steepness(ic)
       flowlag_used(ic) = dtime / ret_macro_blg
@@ -1427,7 +1427,7 @@ CONTAINS
 
     ! Compute volumetric soil moisture (liquid + ice) in m3/m3 (= m/m) water equivalent
     ! Note that the soil ice content needs to be converted to water equivalent first.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * (rhoi / rhoh2o)) / soil_w%dz(is)
@@ -1435,7 +1435,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

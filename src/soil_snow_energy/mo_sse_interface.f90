@@ -623,9 +623,9 @@ CONTAINS
     IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         thaw_depth_max_ym1(ic) = thaw_depth_max(ic)
@@ -635,9 +635,9 @@ CONTAINS
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         thaw_depth_max(ic) = MAX(thaw_depth_max(ic),thaw_depth(ic))

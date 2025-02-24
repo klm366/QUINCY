@@ -622,7 +622,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       global_discharge_ocean = global_sum_array(ztemp, lacc=.TRUE.)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
           IF (NINT(hd_mask(jc,blk)) <= 0._wp .AND. is_in_domain(jc,blk)) THEN
@@ -666,7 +666,7 @@ CONTAINS
         ! Without (positive) river discharge towards the ocean, the internal drainage needs
         ! to be distributed equally over all coastal and ocean cells
         internal_drain_share = global_internal_drain / global_ocean_cells
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
             IF (NINT(hd_mask(jc,blk)) <= 0) THEN

@@ -550,7 +550,7 @@ CONTAINS
         END IF
 #endif
         ! Correct for numerical errors
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is=1,nsoil
           DO ic=1,nc
             wtr(ic,is) = MAX(0._wp, wtr(ic,is))

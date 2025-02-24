@@ -755,7 +755,7 @@ CONTAINS
 
     nc = SIZE(burned_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
       non_woody_litter = c_green(ic) + c_reserve(ic)
@@ -902,7 +902,7 @@ CONTAINS
     ! Initializations
     nc = SIZE(damaged_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
 
