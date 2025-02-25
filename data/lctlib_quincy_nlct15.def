@@ -303,3 +303,5 @@ k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5 2.0
 #
 #AlbedoLitterVIS: Albedo of litter in the visible range                     
 AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.11
+#AlbedoLitterNIR: Albedo of litter in the near infrared range
+AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.20
