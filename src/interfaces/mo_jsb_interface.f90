@@ -750,7 +750,7 @@ CONTAINS
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
-  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen, init)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
@@ -776,12 +776,14 @@ CONTAINS
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: steplen
+    LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     REAL(wp)                            :: dtime
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
+    LOGICAL                             :: linit
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -791,6 +793,9 @@ CONTAINS
     no_omp_thread = Get_omp_thread()
 
     model => Get_model(model_id)
+
+    linit = .FALSE.
+    IF (PRESENT(init)) linit = init
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
@@ -833,7 +838,10 @@ CONTAINS
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
-    CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    IF (.NOT. linit) THEN
+      ! Do not couple to ocean during initialisation step.
+      CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    END IF
 #endif
 
 ! #ifdef _OPENACC
