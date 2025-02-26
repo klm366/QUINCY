@@ -38,7 +38,7 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_, TOP_, CH4_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_, TOP_, CH4_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
@@ -360,16 +360,11 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-<<<<<<< HEAD
-    grid  => Get_grid(model%grid_id)
-    lat   => grid%lat(ics:ice,iblk)
     dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_config(TOP_)
-=======
 
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
->>>>>>> land4icon-mpim
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)

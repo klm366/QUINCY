@@ -231,8 +231,6 @@ CONTAINS
     dsl4jsb_Get_memory(DISTURB_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
@@ -470,10 +468,8 @@ CONTAINS
     dsl4jsb_Def_memory(NLCC_)
 
     ! Local variables
-    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
     INTEGER  :: iblk, ics, ice, nc
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-    dsl4jsb_Def_memory(NLCC_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_nlcc'
 

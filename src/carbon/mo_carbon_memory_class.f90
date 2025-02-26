@@ -24,7 +24,7 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes PHENO_, CARBON_, NLCC_
+  dsl4jsb_Use_processes PHENO_, CARBON_, NLCC_, CH4_
 
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth

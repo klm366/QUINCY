@@ -61,6 +61,8 @@ MODULE mo_ch4_config_class
     INTEGER           :: CH4_source                    ! Source of atmospheric CH4 (opt 2 not available yet)
     INTEGER           :: CO2_source                    ! Source of atmospheric CO2
     INTEGER           ::  O2_source                    ! Source of atmospheric O2 (opt 2 not available yet)
+    INTEGER           :: run_case
+
     ! Source type for GHG are:
     ! 1 : Constant in time and space from this namelist
     ! 2 : Temporarily and spatially varying field from atmospheric host model (not available for all GHGs yet)
@@ -162,6 +164,7 @@ CONTAINS
     INTEGER                     :: minimum_no_layers         ! Minimum number of soil layers to consider for methane
     INTEGER                     :: nstep_per_day             ! Number of methane process time steps per day
     INTEGER                     :: nstep_diffusion           ! Number of diffusion time steps per methane process time step
+    INTEGER                     :: run_case
 
     NAMELIST /jsb_methane_nml/     &
          active,                   &
@@ -200,7 +203,8 @@ CONTAINS
          frac_inun_min,            &
          polar_anoxic_fac,         &
          nstep_per_day,            &
-         nstep_diffusion
+         nstep_diffusion,          &
+         run_case
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -250,6 +254,7 @@ CONTAINS
     do_fire                = .TRUE.
     do_termite             = .TRUE.
     do_herbivore           = .TRUE.
+    run_case               = 1
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
