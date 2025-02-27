@@ -1053,11 +1053,6 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, p_deposition),                                &
           & co2_air_dc13,                                                              &
           & co2_air_Dc14                                                               &
           & )
@@ -1127,7 +1122,7 @@ CONTAINS
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
-        global_seconds_day = get_secs_of_day(datetime_new)
+        global_seconds_day = NINT(get_secs_of_day(datetime_new)) ! TODO time steps w/ fractional seconds not supported by quincy, yet!
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks

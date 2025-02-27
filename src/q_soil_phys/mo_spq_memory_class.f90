@@ -228,6 +228,7 @@ MODULE mo_spq_memory_class
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
+      & fract_snow_can,       & !< Snow fraction on canopy                                             []
       & fract_snow_soil,      & !< Snow fraction on soil                                               []
       & weq_snow_soil,        & !< Water content of snow reservoir of soil                             [m water equivalent]
       & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
@@ -1463,6 +1464,13 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_snow_can', mem%fract_snow_can,                        &
+        & hgrid, surface,                                                            &
+        & t_cf('fract_snow_can', '-', 'Snow fraction on canopy'),                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                      &

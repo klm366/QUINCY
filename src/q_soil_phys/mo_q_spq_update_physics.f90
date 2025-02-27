@@ -129,6 +129,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: snow_melt_to_soil
     dsl4jsb_Real2D_onChunk                :: snow_srf_heat_flux
     dsl4jsb_Real2D_onChunk                :: num_sl_above_bedrock
+    dsl4jsb_Real2D_onChunk                :: fract_snow_soil
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: soil_lay_depth_ubound_sl
@@ -243,6 +244,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_melt_to_soil)    ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_srf_heat_flux)   ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock) ! in
+    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_soil)      ! inout
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_ubound_sl) ! in
@@ -325,7 +327,8 @@ CONTAINS
     !$ACC   HOST(zril_old(:), t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), evapopot(:), evaporation(:)) &
     !$ACC   HOST(evaporation_snow(:), interception(:), transpiration(:), sensible_heat_flx(:), latent_heat_flx(:)) &
     !$ACC   HOST(ground_heat_flx(:), snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux(:)) &
-    !$ACC   HOST(snow_melt_to_soil(:), therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
+    !$ACC   HOST(snow_melt_to_soil(:), fract_snow_soil(:)) &
+    !$ACC   HOST(therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
     !$ACC   HOST(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
     !$ACC   HOST(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
     !$ACC WAIT(1)
@@ -350,6 +353,7 @@ CONTAINS
                                      sensible_heat_flx(:), latent_heat_flx(:), ground_heat_flx(:), &                   ! inout
                                      snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux (:), &                 ! inout
                                      snow_melt_to_soil(:), &                                                           ! inout
+                                     fract_snow_soil(:), &                                                             ! inout
                                      therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), &                             ! inout
                                      w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), &                                          ! inout
                                      w_ice_sl(:,:), &                                                                  ! inout
@@ -366,7 +370,8 @@ CONTAINS
     !$ACC   DEVICE(zril_old(:), t_srf_new(:), t_srf_old(:), temp_srf_eff_4(:), evapopot(:), evaporation(:)) &
     !$ACC   DEVICE(evaporation_snow(:), interception(:), transpiration(:), sensible_heat_flx(:), latent_heat_flx(:)) &
     !$ACC   DEVICE(ground_heat_flx(:), snow_height(:), snow_soil_heat_flux(:), snow_srf_heat_flux(:)) &
-    !$ACC   DEVICE(snow_melt_to_soil(:), therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
+    !$ACC   DEVICE(snow_melt_to_soil(:), fract_snow_soil(:)) &
+    !$ACC   DEVICE(therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
     !$ACC   DEVICE(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
     !$ACC   DEVICE(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
 #ifdef _OPENACC
@@ -527,6 +532,7 @@ CONTAINS
                                          sensible_heat_flx, latent_heat_flx, ground_heat_flx, &                       ! inout
                                          snow_height, snow_soil_heat_flux, snow_srf_heat_flux, &                      ! inout
                                          snow_melt_to_soil, &                                                         ! inout
+                                         fract_snow_soil, &                                                           ! inout
                                          therm_cond_sl,t_soil_sl,w_soil_sl, &                                         ! inout
                                          w_soil_fc_sl, w_soil_pwp_sl, &                                               ! inout
                                          w_ice_sl, &                                                                  ! inout
@@ -599,6 +605,7 @@ CONTAINS
                                                                        snow_soil_heat_flux, & !< snow soil heat flux [W/m2]
                                                                        snow_srf_heat_flux, &  !< snow heat flux from top snow layer to layer below [W / m2]
                                                                        snow_melt_to_soil      !< liquid water flux to soil [m]
+    REAL(wp), DIMENSION(nc),                          INTENT(inout) :: fract_snow_soil
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: therm_cond_sl, &       !< thermal conductivity of the soil layer [J / m / s ]
                                                                        t_soil_sl, &           !< soil temperature [K]
                                                                        w_soil_sl, &           !< soil water content [m]
@@ -630,7 +637,7 @@ CONTAINS
                                                      hlp2_2d
     REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv
     REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff
-    REAL(wp), DIMENSION(nc)                       :: fract_snow,fract_water,fact_qsat_trans_srf
+    REAL(wp), DIMENSION(nc)                       :: fract_water,fact_qsat_trans_srf
     REAL(wp), DIMENSION(nc)                       :: evaporation_bare
     REAL(wp), DIMENSION(nc)                       :: srf_heat_capa,srf_depth,srf_dens,srf_heat_flx_old !< Local variables to define surface properties
                                                                                                        !  for implicit surface heat  exchange
@@ -679,12 +686,12 @@ CONTAINS
                                   0.0_wp, &     ! jsb4: w_snow_can
                                   hlp1(:), &          ! out
                                   fract_water(:), &   ! out
-                                  fract_snow(:))      ! out
+                                  fract_snow_soil(:)) ! out
 
     !>   1.4 calculate humidity scaling factors for energy balance calculation
     !>
     CALL update_humidity_scaling(nc, &
-                                 fract_snow, fract_water, fract_fpc, &
+                                 fract_snow_soil, fract_water, fract_fpc, &
                                  q_sat_srf, q_air, &
                                  wind_air, pch, &
                                  canopy_cond, rel_hum, &
@@ -713,12 +720,12 @@ CONTAINS
     DO ichunk=1,nc
       nsnow_top = MAX(NINT(SUM(snow_present_snl(ichunk,:))), 1)
       IF (w_snow_snl(ichunk,1) > w_snow_min) THEN
-        srf_heat_capa(ichunk) = snow_heat_capa * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * heat_capa_sl(ichunk,1)
-        srf_dens(ichunk)  = snow_dens * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * bulk_dens_sl(ichunk,1)
+        srf_heat_capa(ichunk) = snow_heat_capa * fract_snow_soil(ichunk) + (1 - fract_snow_soil(ichunk)) * heat_capa_sl(ichunk,1)
+        srf_dens(ichunk)  = snow_dens * fract_snow_soil(ichunk) + (1 - fract_snow_soil(ichunk)) * bulk_dens_sl(ichunk,1)
         srf_depth(ichunk) = snow_lay_thickness_snl(ichunk,nsnow_top) &
-          & * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * soil_depth_sl(ichunk,1)
+          & * fract_snow_soil(ichunk) + (1 - fract_snow_soil(ichunk)) * soil_depth_sl(ichunk,1)
         srf_heat_flx_old(ichunk) = snow_srf_heat_flux(ichunk) &
-          & * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * ground_heat_flx(ichunk)
+          & * fract_snow_soil(ichunk) + (1 - fract_snow_soil(ichunk)) * ground_heat_flx(ichunk)
       ELSE
         srf_heat_capa(ichunk) = heat_capa_sl(ichunk,1)
         srf_dens(ichunk)  = bulk_dens_sl(ichunk,1)
@@ -742,7 +749,7 @@ CONTAINS
                                       heat_transfer_coefficient(:), &
                                       fact_q_air(:), &
                                       fact_qsat_srf(:), &
-                                      fract_snow(:), &
+                                      fract_snow_soil(:), &
                                       srf_heat_capa(:) * srf_dens(:) * srf_depth(:))
 
     ! time-filtering as in JSBACH3
@@ -763,8 +770,8 @@ CONTAINS
     !> 3.1 convert to positive fluxes for water module
     !! needed for QUINCY, but not JSBACH4
     transpiration(:)    = -1._wp * fact_qsat_trans_srf(:) * evapopot(:)
-    interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * evapopot(:)
-    evaporation_snow(:) = -1._wp * fract_snow(:) * evapopot(:)
+    interception(:)     = -1._wp * (1._wp - fract_snow_soil(:)) * fract_water(:) * evapopot(:)
+    evaporation_snow(:) = -1._wp * fract_snow_soil(:) * evapopot(:)
     ! interception evaporation must be less than the total skin water
     interception(:) = MIN(interception(:) * dtime / 1000._wp, w_skin(:)) * 1000._wp / dtime
     ! snow evaparation must be less than the total snow water
@@ -792,7 +799,7 @@ CONTAINS
 
     ! Compute latent heat flux
     latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) + &
-                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow(:) * evapopot(:)
+                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow_soil(:) * evapopot(:)
 
     !> 5.0 update surface temperature and remember previous value
     !>
@@ -1299,11 +1306,15 @@ CONTAINS
           hlp1(ic) = hlp2(ic)
         ENDIF
         ! avoid soil water content exceeding soil water capacity
-        IF (hlp1(ic) < 0.0_wp) THEN
-          hlp1(ic) = MAX( &
-            &       MIN(w_soil_fc_sl(ic,is-1) - w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio, hlp1(ic)), &
+        IF (hlp1(ic) < 0.0_wp) THEN ! a negative hlp1 means an upward diffusion flux
+          ! Limit upward diffusion to available pore space in top layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of bottom layer to w_soil_fc_sl
+          hlp1(ic) = -MAX( &
+            &       MIN(w_soil_fc_sl(ic,is-1) - (w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio), -hlp1(ic)), &
             &       w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio - w_soil_fc_sl(ic,is))
-        ELSE
+        ELSE ! downward diffusion
+          ! Limit downward diffusion to available pore space in bottom layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of top layer to w_soil_fc_sl
           hlp1(ic) = MAX(MIN(hlp1(ic),w_soil_fc_sl(ic,is) - (w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio)), &
             &       w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio - w_soil_fc_sl(ic,is-1))
         ENDIF
@@ -1323,7 +1334,7 @@ CONTAINS
     gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_sb), DIM=2)
     ! Layer one: water balance of surface layer
     WHERE(w_soil_sl(:,1) > eps8)
-      percolation_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000_wp * dtime) / &
+      percolation_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000._wp * dtime) / &
         &                   (w_soil_sl_old(:,1)), -0.75_wp), 0.75_wp) * 1000._wp / dtime
     ELSEWHERE
       percolation_sl(:,1) = 0.0_wp
@@ -1335,9 +1346,9 @@ CONTAINS
     !   of the previous timestep
     DO isoil = 1,nsoil_sb
       WHERE(w_soil_sl(:,isoil) > eps8)
-        percolation_sl(:,isoil)     = MIN( MAX((drainage_sl(:,isoil) / 1000_wp * dtime) / &
+        percolation_sl(:,isoil)     = MIN( MAX((drainage_sl(:,isoil) / 1000._wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), percolation_up_max), percolation_down_max) * 1000._wp / dtime
-        frac_w_lat_loss_sl(:,isoil) = MIN( MAX((gw_runoff_sl(:,isoil) / 1000_wp * dtime) / &
+        frac_w_lat_loss_sl(:,isoil) = MIN( MAX((gw_runoff_sl(:,isoil) / 1000._wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
       ELSEWHERE
         percolation_sl(:,isoil)     = 0.0_wp
@@ -1426,7 +1437,7 @@ CONTAINS
   !!  mimicks the JSBACH4 routine calc_wskin_fractions_veg in
   !!   hydroloogy/mo_hyrology_interface:calc_wskin_fractions_veg
   !!
-  !! Calculates scaling factors fract_snow and fract_water
+  !! Calculates scaling factors fract_snow_soil and fract_water
   !-----------------------------------------------------------------------------------------------------
  ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
@@ -1514,7 +1525,7 @@ CONTAINS
   !! Calculates scaling factors fact_qair and fact_qsat_srf
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_humidity_scaling(nc, &
-                                     fract_snow, fract_water, fract_fpc, &
+                                     fract_snow_soil, fract_water, fract_fpc, &
                                      q_sat_srf, q_air, &
                                      wind_air, pch, &
                                      canopy_cond, rel_hum, &
@@ -1526,7 +1537,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER, INTENT(in)                  :: nc                     !< dimensions
-    REAL(wp), DIMENSION(nc), INTENT(in)  :: fract_snow,  &         !< surface fraction covered with snow
+    REAL(wp), DIMENSION(nc), INTENT(in)  :: fract_snow_soil,  &    !< surface fraction covered with snow
                                             fract_water, &         !< surface fraction covered with water
                                             fract_fpc,   &         !< surface fraction covered with vegetation
                                             q_sat_srf,   &         !< surface saturated specific humidity
@@ -1545,14 +1556,14 @@ CONTAINS
     !>1.0 vegetation
     !>
     WHERE(canopy_cond(:) > eps8 .AND.(q_sat_srf(:) - q_air(:)) > 0.0_wp)
-       fact_qsat_veg(:) =  fract_snow(:) + (1._wp - fract_snow(:)) *   &
+       fact_qsat_veg(:) =  fract_snow_soil(:) + (1._wp - fract_snow_soil(:)) *   &
           (fract_water(:) + ( 1._wp - fract_water(:)) /              &
           (1._wp + pch(:) * wind_air(:) / canopy_cond(:)))
-       fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
+       fact_qsat_trans(:) = (1._wp - fract_snow_soil(:)) * &
           (1._wp - fract_water(:)) /                  &
           (1._wp + pch(:) * wind_air(:) / canopy_cond(:))
     ELSEWHERE
-       fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+       fact_qsat_veg(:)   = fract_snow_soil(:) + (1._wp - fract_snow_soil(:)) * fract_water(:)
        fact_qsat_trans(:) = 0._wp
     ENDWHERE
     fact_qair_veg(:) = fact_qsat_veg(:)
@@ -1560,11 +1571,11 @@ CONTAINS
     !>2.0 soil evaporation
     !>
     WHERE (q_sat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > eps8)
-       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &
+       fact_qsat_soil(:) = fract_snow_soil(:) + (1._wp - fract_snow_soil(:)) * &
          & (fract_water(:) + (1._wp - fract_water(:)) * rel_hum(:) )
        fact_qair_soil(:) = 1._wp
     ELSEWHERE
-       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+       fact_qsat_soil(:) = fract_snow_soil(:) + (1._wp - fract_snow_soil(:)) * fract_water(:)
        fact_qair_soil(:) = fact_qsat_soil(:)
     END WHERE
     WHERE (q_air(:) > q_sat_srf(:))
