@@ -146,7 +146,7 @@ CONTAINS
     ELSE
         message_text = "Units conversion from "// src //" to "// dst &
         & // " not yet implemented"
-        call finish("convert_units_real_wp_r1", message_text, stacktrace=.TRUE.)
+        call finish("convert_units_real_wp_r1", message_text)
     END IF
   END FUNCTION convert_units_real_wp_r1
 
@@ -225,7 +225,7 @@ CONTAINS
     ELSE
       message_text = "Units conversion from "// src //" to "// dst &
               & // " not yet implemented"
-      call finish("convert_units_real_wp_r2", message_text, stacktrace=.TRUE.)
+      call finish("convert_units_real_wp_r2", message_text)
     END IF
 
   CONTAINS
@@ -358,7 +358,7 @@ CONTAINS
     ELSE
       message_text = "Units conversion from "// src //" to "// dst &
               & // " not yet implemented"
-      call finish("convert_units_real_wp_r3", message_text, stacktrace=.TRUE.)
+      call finish("convert_units_real_wp_r3", message_text)
     END IF
 
   CONTAINS
