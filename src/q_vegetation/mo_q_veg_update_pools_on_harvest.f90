@@ -156,13 +156,15 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(Q_SH_)
     dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_harvest)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)
+    IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)
+    END IF
 
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock)

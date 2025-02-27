@@ -1306,11 +1306,15 @@ CONTAINS
           hlp1(ic) = hlp2(ic)
         ENDIF
         ! avoid soil water content exceeding soil water capacity
-        IF (hlp1(ic) < 0.0_wp) THEN
-          hlp1(ic) = MAX( &
-            &       MIN(w_soil_fc_sl(ic,is-1) - w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio, hlp1(ic)), &
+        IF (hlp1(ic) < 0.0_wp) THEN ! a negative hlp1 means an upward diffusion flux
+          ! Limit upward diffusion to available pore space in top layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of bottom layer to w_soil_fc_sl
+          hlp1(ic) = -MAX( &
+            &       MIN(w_soil_fc_sl(ic,is-1) - (w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio), -hlp1(ic)), &
             &       w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio - w_soil_fc_sl(ic,is))
-        ELSE
+        ELSE ! downward diffusion
+          ! Limit downward diffusion to available pore space in bottom layer in MIN() function
+          ! MAX() function: hlp1 needs to be large enough to reduce water content of top layer to w_soil_fc_sl
           hlp1(ic) = MAX(MIN(hlp1(ic),w_soil_fc_sl(ic,is) - (w_soil_sl(ic,is) + w_ice_sl(ic,is) * water2ice_density_ratio)), &
             &       w_soil_sl(ic,is-1) + w_ice_sl(ic,is-1) * water2ice_density_ratio - w_soil_fc_sl(ic,is-1))
         ENDIF
@@ -1330,7 +1334,7 @@ CONTAINS
     gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_sb), DIM=2)
     ! Layer one: water balance of surface layer
     WHERE(w_soil_sl(:,1) > eps8)
-      percolation_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000_wp * dtime) / &
+      percolation_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000._wp * dtime) / &
         &                   (w_soil_sl_old(:,1)), -0.75_wp), 0.75_wp) * 1000._wp / dtime
     ELSEWHERE
       percolation_sl(:,1) = 0.0_wp
@@ -1342,9 +1346,9 @@ CONTAINS
     !   of the previous timestep
     DO isoil = 1,nsoil_sb
       WHERE(w_soil_sl(:,isoil) > eps8)
-        percolation_sl(:,isoil)     = MIN( MAX((drainage_sl(:,isoil) / 1000_wp * dtime) / &
+        percolation_sl(:,isoil)     = MIN( MAX((drainage_sl(:,isoil) / 1000._wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), percolation_up_max), percolation_down_max) * 1000._wp / dtime
-        frac_w_lat_loss_sl(:,isoil) = MIN( MAX((gw_runoff_sl(:,isoil) / 1000_wp * dtime) / &
+        frac_w_lat_loss_sl(:,isoil) = MIN( MAX((gw_runoff_sl(:,isoil) / 1000._wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
       ELSEWHERE
         percolation_sl(:,isoil)     = 0.0_wp

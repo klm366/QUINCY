@@ -1053,11 +1053,6 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, p_deposition),                                &
           & co2_air_dc13,                                                              &
           & co2_air_Dc14                                                               &
           & )

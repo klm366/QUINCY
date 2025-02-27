@@ -700,8 +700,6 @@ CONTAINS
     ptr_2D => input_file%Read_2d(  &
       & variable_name='AWCtS',     &
       & fill_array = spq_init_vars%soil_sat_water_content)
-    ! multiply with -1 to get positive values
-    spq_init_vars%soil_sat_water_content(:,:) = -1.0_wp * spq_init_vars%soil_sat_water_content(:,:)
     ! replace values larger than 2000 with 300
     ! that would cover missing values (e.g. grid cells over ocean with value 9999, after multiplication with -1)
     spq_init_vars%soil_sat_water_content(:,:) = MERGE(ptr_2D, 300.0_wp, ptr_2D < 2000.0_wp)

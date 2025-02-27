@@ -147,14 +147,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_SH_)
     dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_harvest)               ! out
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)         ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)       ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)      ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard) ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)       ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)         ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)   ! in
-
+    IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)         ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)       ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)      ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard) ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)       ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)         ! in
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)   ! in
+    END IF
     ! ----------------------------------------------------------------------------------------------------- !
     ! Since harvest only is happening daily or annually (or in QS even just once at the stand replacing year)
     ! the default would be that nothing is harvested in this timestep
@@ -243,15 +244,17 @@ CONTAINS
           CALL finish(TRIM(routine),message_text)
         END IF
 
-        ! Assert: sum of allocation fractions to different product pools should sum up to 1._
-        !         !NOTE: i.e. not including the slash fraction!
-        fract_sum = fract_wood_to_pp_fuel(ic) + fract_wood_to_pp_paper(ic)        &
-          &         + fract_wood_to_pp_fiberboard(ic) + fract_wood_to_pp_oirw(ic) + fract_wood_to_pp_pv(ic) &
-          &         + fract_wood_to_pp_sawnwood(ic)
-        IF (ABS(fract_sum - 1._wp) >= eps8) THEN
-          WRITE(message_text,*) 'A sum of allocation fractions to different pools does not sum up to one, but was: ', &
-            &                    fract_sum,'! Please check!'
-          CALL finish(TRIM(routine),message_text)
+        IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          ! Assert: sum of allocation fractions to different product pools should sum up to 1._
+          !         !NOTE: i.e. not including the slash fraction!
+          fract_sum = fract_wood_to_pp_fuel(ic) + fract_wood_to_pp_paper(ic)        &
+            &         + fract_wood_to_pp_fiberboard(ic) + fract_wood_to_pp_oirw(ic) + fract_wood_to_pp_pv(ic) &
+            &         + fract_wood_to_pp_sawnwood(ic)
+          IF (ABS(fract_sum - 1._wp) >= eps8) THEN
+            WRITE(message_text,*) 'A sum of allocation fractions to different pools does not sum up to one, but was: ', &
+              &                    fract_sum,'! Please check!'
+            CALL finish(TRIM(routine),message_text)
+          END IF
         END IF
       END DO
 

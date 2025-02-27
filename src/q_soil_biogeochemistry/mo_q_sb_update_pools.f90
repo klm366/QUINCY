@@ -1504,12 +1504,12 @@ CONTAINS
     REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
-    REAL, DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
-    REAL, DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
-    REAL                      :: tau_slow !< slow soil pool turnover rate [timestep]
-    REAL                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
-    REAL                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
-    INTEGER                   :: ilength, i_soil !counter for loops
+    REAL(wp), DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
+    REAL(wp), DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
+    REAL(wp)                      :: tau_slow !< slow soil pool turnover rate [timestep]
+    REAL(wp)                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
+    REAL(wp)                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
+    INTEGER                       :: ilength, i_soil !counter for loops
     ! ------------------------------------------------------------------------------------------------------------
     !> accelerating the spin-up of slow pool
     !!

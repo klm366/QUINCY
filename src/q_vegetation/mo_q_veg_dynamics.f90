@@ -235,7 +235,8 @@ CONTAINS
         & dtime, &                              ! in
         & model%config%elements_index_map(:), & ! in
         & model%config%is_element_used(:), &    ! in
-        & lctlib%growthform, &                  ! in
+        & lctlib%GrassFlag, &                   ! in
+        & lctlib%PastureFlag, &                 ! in
         & lctlib%cn_leaf_min, &                 ! in
         & lai(:), &                             ! in
         & net_growth_tvegdyn_mavg(:), &         ! in
@@ -448,7 +449,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc)     :: greff_mortality_rate           !< rate of mortality due to low growth efficiency
     REAL(wp), DIMENSION(nc)     :: self_thinning_mortality_rate   !< rate of mortality due to self-thinning
     REAL(wp), DIMENSION(nc)     :: bg_mortality_rate              !< background rate of mortality
-    REAL                        :: eff_mortality_rate             !< effective mortality rate of biomass
+    REAL(wp)                    :: eff_mortality_rate             !< effective mortality rate of biomass
                                                                   !<  (corrected by ancedent litterfall)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -578,7 +579,8 @@ CONTAINS
       & dtime, &
       & elements_index_map, &
       & is_element_used, &
-      & lctlib_growthform, &
+      & lctlib_GrassFlag, &
+      & lctlib_PastureFlag, &
       & lctlib_cn_leaf_min, &
       & lai, &
       & net_growth_tvegdyn_mavg, &
@@ -593,16 +595,18 @@ CONTAINS
       & fract_herbivory, &
       & veg_litterfall_mt)
 
-    USE mo_veg_constants,               ONLY: igrass, itree, min_lai_herbivory, k_herbivory, &
-      &                                       ftroph_loss_herbivory, min_net_growth_herbivory
+    USE mo_veg_constants,               ONLY: igrass, itree, min_lai_herbivory, ftroph_loss_herbivory, &
+      &                                       min_net_growth_herbivory_grass, k_herbivory_grass, &
+      &                                       min_net_growth_herbivory_pasture, k_herbivory_pasture
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                           !< dimensions
     REAL(wp), INTENT(in)    :: dtime                        !< timestep length
     INTEGER,  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
-    INTEGER,  INTENT(in)    :: lctlib_growthform            !< lctlib paramter
-    REAL(wp), INTENT(in)    :: lctlib_cn_leaf_min           !< lctlib paramter
+    LOGICAL,  INTENT(in)    :: lctlib_GrassFlag             !< if tile is natural grassland (TRUE) or not
+    LOGICAL,  INTENT(in)    :: lctlib_PastureFlag           !< if tile is pasture (TRUE) or not
+    REAL(wp), INTENT(in)    :: lctlib_cn_leaf_min           !< lctlib paramter (minimal leaf C:N ratio, molar units)
     REAL(wp), INTENT(in)    :: lai(:)                       !< current LAI (m2/m2)
     REAL(wp), INTENT(in)    :: net_growth_tvegdyn_mavg(:)   !< long-term average net growth (micro-mol / m2 / s)
     REAL(wp), INTENT(in)    :: mortality_rate(:)            !< mortality rate
@@ -620,10 +624,12 @@ CONTAINS
     INTEGER                 :: ic                           !< loop over nc
     INTEGER                 :: ielem                        !< loop over bgcm elements
     INTEGER                 :: ix_comp, ix_elem             !< index of element and compartment in bgcm, used for looping
+    REAL(wp)                :: k_herbivory_act              !< asymptotic herbivory fraction of net growth
+    REAL(wp)                :: min_net_growth_herbivory_act !< minimal net growth above which herbivory occurs (mol/m2/yr)
     REAL(wp)                :: eff_fract_herbivory          !< updated herbivory fraction
-    REAL(wp), DIMENSION(nc) :: fact_lim_carbon              !< carbon limitation of herbivory (unitless)
-    REAL(wp), DIMENSION(nc) :: fact_lim_nitrogen            !< nitrogen limitation of herbivory (unitless)
-    REAL(wp), DIMENSION(nc) :: hlp1                         !< helper var
+    REAL(wp)                :: fact_lim_carbon              !< carbon limitation of herbivory (unitless)
+    REAL(wp)                :: fact_lim_nitrogen            !< nitrogen limitation of herbivory (unitless)
+    REAL(wp)                :: hlp1                         !< helper var
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_herbivory'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -633,30 +639,38 @@ CONTAINS
 
     !> 1.0 herbivory rate for grass PFT
     !>
-    SELECT CASE (lctlib_growthform)
-    CASE (igrass)
+    IF (lctlib_GrassFlag .OR. lctlib_PastureFlag) THEN
       DO ic = 1,nc
+        ! set minimum net growth threshold for herbivory according to land cover class
+        IF (lctlib_GrassFlag) THEN
+          min_net_growth_herbivory_act = min_net_growth_herbivory_grass
+          k_herbivory_act              = k_herbivory_grass
+        END IF
+        IF (lctlib_PastureFlag) THEN
+          min_net_growth_herbivory_act = min_net_growth_herbivory_pasture
+          k_herbivory_act              = k_herbivory_pasture
+        END IF
         ! long-term average productivity (mol/m2/year)
-        hlp1(ic) = net_growth_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_wp
+        hlp1 = net_growth_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_wp
 
         ! limit herbivory to only occur beyond minimal LAI and vegetation net growth
-        IF (lai(ic) > min_lai_herbivory .AND. hlp1(ic) > min_net_growth_herbivory ) THEN
+        IF (lai(ic) > min_lai_herbivory .AND. hlp1 > min_net_growth_herbivory_act ) THEN
           ! maximum herbivory fraction increases with long-term average productivity according to
           ! power law (Cyr & Pace, 1993). Following McNaughton et al. 1989, a lower limit of herbivory is applied
           ! note that this leads to a quadratic rise in the flux because that is fherbivory * pool
-          fact_lim_carbon(ic) = (hlp1(ic) - min_net_growth_herbivory) ** (4._wp / 3._wp - 1._wp)
+          fact_lim_carbon = (hlp1 - min_net_growth_herbivory_act) ** (4._wp / 3._wp - 1._wp)
           ! herbivory fraction increases with N content, note this is
           ! rearranged from (leafN/leafC)/(maximum leaf N:C)
-          fact_lim_nitrogen(ic) = veg_pool_mt(ix_leaf, ixN, ic) / veg_pool_mt(ix_leaf, ixC, ic) * &
-            &                     lctlib_cn_leaf_min
+          fact_lim_nitrogen = veg_pool_mt(ix_leaf, ixN, ic) / veg_pool_mt(ix_leaf, ixC, ic) &
+            &                 * lctlib_cn_leaf_min
           ! herbivory fraction is limited to the fraction that has not died yet
           fract_herbivory(ic) = fract_herbivory(ic) &
             &                   + (1.0_wp - mortality_rate(ic)) &
-            &                   * fact_lim_carbon(ic) * fact_lim_nitrogen(ic) &
-            &                   * k_herbivory / one_day * dtime
+            &                   * fact_lim_carbon * fact_lim_nitrogen &
+            &                   * k_herbivory_act / one_day * dtime
         END IF
       END DO
-    END SELECT
+    END IF
 
     !> 2.0 calculate litter fall from herbivory
     !>
@@ -684,30 +698,29 @@ CONTAINS
                 veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
                   &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
                   &                                       * (1._wp - ftroph_loss_herbivory) * eff_fract_herbivory)
-                hlp1(ic) = ftroph_loss_herbivory * eff_fract_herbivory &
-                           * veg_pool_mt(ix_comp, ix_elem, ic) * 1.e6_wp / dtime
+                hlp1 = ftroph_loss_herbivory * eff_fract_herbivory * veg_pool_mt(ix_comp, ix_elem, ic) * 1.e6_wp / dtime
                 ! leaf herbivory
                 IF (ix_comp == ix_leaf) THEN
                   IF (ix_elem == ixC) THEN
-                    herbivory_leaf_resp(ic)      = herbivory_leaf_resp(ic)     + hlp1(ic)
+                    herbivory_leaf_resp(ic)      = herbivory_leaf_resp(ic)      + hlp1
                   END IF
                   IF (ix_elem == ixC13) THEN
-                    herbivory_leaf_resp_c13(ic)  = herbivory_leaf_resp_c13(ic)  + hlp1(ic)
+                    herbivory_leaf_resp_c13(ic)  = herbivory_leaf_resp_c13(ic)  + hlp1
                   END IF
                   IF (ix_elem == ixC14) THEN
-                    herbivory_leaf_resp_c14(ic)  = herbivory_leaf_resp_c14(ic)  + hlp1(ic)
+                    herbivory_leaf_resp_c14(ic)  = herbivory_leaf_resp_c14(ic)  + hlp1
                   END IF
                 END IF
                 ! fruit herbivory
                 IF (ix_comp == ix_fruit) THEN
                   IF (ix_elem == ixC) THEN
-                    herbivory_fruit_resp(ic)     = herbivory_fruit_resp(ic)     + hlp1(ic)
+                    herbivory_fruit_resp(ic)     = herbivory_fruit_resp(ic)     + hlp1
                   END IF
                   IF (ix_elem == ixC13) THEN
-                    herbivory_fruit_resp_c13(ic) = herbivory_fruit_resp_c13(ic) + hlp1(ic)
+                    herbivory_fruit_resp_c13(ic) = herbivory_fruit_resp_c13(ic) + hlp1
                   END IF
                   IF (ix_elem == ixC14) THEN
-                    herbivory_fruit_resp_c14(ic) = herbivory_fruit_resp_c14(ic) + hlp1(ic)
+                    herbivory_fruit_resp_c14(ic) = herbivory_fruit_resp_c14(ic) + hlp1
                   END IF
                 END IF
               ! for all elements but carbon and carbon isotopes

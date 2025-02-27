@@ -161,11 +161,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER :: model                             !< this model instance
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
-
-    model => Get_model(tile%owner_model_id)
 
     !> - Read hydrology initial and boundary condition data <br>
     !>   The initial data is read only once - by the top tile - and is made avilable to the other tiles.
