@@ -173,7 +173,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: radiation
   !>
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -189,6 +189,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
 #ifndef __QUINCY_STANDALONE__

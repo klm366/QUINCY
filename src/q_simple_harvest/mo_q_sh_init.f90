@@ -58,7 +58,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: fract_wood_to_pp_pv
     dsl4jsb_Real2D_onDomain :: fract_wood_to_pp_sawnwood
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(Q_SH_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_SH_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of sh memory (quincy) for tile '// &
       &                          TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
