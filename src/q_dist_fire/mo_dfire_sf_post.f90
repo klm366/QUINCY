@@ -234,8 +234,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                   ! out [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_prop_ck)           ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_fire)              ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in

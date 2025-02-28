@@ -218,6 +218,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, pm_fire      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, pm_prop_ck   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_dfire_sf_post

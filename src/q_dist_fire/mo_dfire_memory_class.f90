@@ -53,8 +53,6 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
-    TYPE(t_jsb_var_real2d)               :: pm_fire             !< Tree probability of mortality of tree [-]
-    TYPE(t_jsb_var_real2d)               :: pm_prop_ck          !< Prob mortality: fraction of the crown scorch [-]
 
     TYPE(t_jsb_var_real2d)               :: mask_is_fire_intense_enough !< Mask (LOGICAL): TRUE=current fire is intense enough to exist [-]
                                                                 !< Conversion required from REAL(wp) <-> LOGICAL
@@ -142,28 +140,6 @@ CONTAINS
     CALL mem%Add_var('t_air_min', mem%t_air_min, &
         & hgrid, vgrid_surface, &
         & t_cf('t_air_min', 'K', 'Min temperature of the previous day (daytime_counter)'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('pm_fire', mem%pm_fire, &
-        & hgrid, vgrid_surface, &
-        & t_cf('pm_fire', '-', 'Tree probability of mortality by fire'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('pm_prop_ck', mem%pm_prop_ck, &
-        & hgrid, vgrid_surface, &
-        & t_cf('pm_prop_ck', '-', 'Proportion of the crown scorch'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
