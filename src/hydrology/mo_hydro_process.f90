@@ -1792,20 +1792,20 @@ CONTAINS
 
     USE mo_hydro_constants,    ONLY: k_brock
 
-    LOGICAL, INTENT(IN)             :: l_pf_soil(:)               !> Permafrost within the soil above bedrock
-    INTEGER,  INTENT(IN)            :: nc                         !> number of cells
-    INTEGER,  INTENT(IN)            :: nsoil                      !> number of soil layers
-    REAL(wp), INTENT(IN)            :: delta_time                 !> time step length
-    REAL(wp), INTENT(IN)            :: flowlag(:)                 !> lag factor determining the outflow [/]
-    REAL(wp), INTENT(IN)            :: hyd_cond_bot(:)            !> hydraulic conductivity of the bottom soil layer [m/s]
-    REAL(wp), INTENT(IN)            :: soil_depth_sl(:,:)         !> thicknesses of soil layers until edrock [m]
-    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      !> volumetric field capacity
-    REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           !> ice content [m]
-    REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           !> soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_sl(:,:)    !> water content in lateral flow reservoir [m]
-    REAL(wp), INTENT(INOUT)         :: drainage_sl(:,:)           !> drainage on layers [m]
-    REAL(wp), INTENT(INOUT)         :: drain_bot(:)               !> bottom layer drainge [m]
-    REAL(wp), INTENT(OUT)           :: wtr_latflow_sl(:,:)        !> lateral flux to downstream unit / river
+    LOGICAL, INTENT(IN)             :: l_pf_soil(:)               !< Permafrost within the soil above bedrock
+    INTEGER,  INTENT(IN)            :: nc                         !< number of cells
+    INTEGER,  INTENT(IN)            :: nsoil                      !< number of soil layers
+    REAL(wp), INTENT(IN)            :: delta_time                 !< time step length
+    REAL(wp), INTENT(IN)            :: flowlag(:)                 !< lag factor determining the outflow [/]
+    REAL(wp), INTENT(IN)            :: hyd_cond_bot(:)            !< hydraulic conductivity of the bottom soil layer [m/s]
+    REAL(wp), INTENT(IN)            :: soil_depth_sl(:,:)         !< thicknesses of soil layers until edrock [m]
+    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      !< volumetric field capacity
+    REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           !< ice content [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           !< soil moisture of each layer [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_sl(:,:)    !< water content in lateral flow reservoir [m]
+    REAL(wp), INTENT(INOUT)         :: drainage_sl(:,:)           !< drainage on layers [m]
+    REAL(wp), INTENT(INOUT)         :: drain_bot(:)               !< bottom layer drainge [m]
+    REAL(wp), INTENT(OUT)           :: wtr_latflow_sl(:,:)        !< lateral flux to downstream unit / river
 
     ! local variables
 
@@ -1888,10 +1888,10 @@ CONTAINS
 
   !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(IN)            :: flowlag               !> Outflow coefficient from reservoir      [-]
-    REAL(wp), INTENT(INOUT)         :: runoff                !> Surface runoff                          [m]
-    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_srf   !> water content in lateral flow reservoir [m]
-    REAL(wp), INTENT(OUT)           :: wtr_latflow_srf       !> lateral flux to downstream unit / river [m]
+    REAL(wp), INTENT(IN)            :: flowlag               !< Outflow coefficient from reservoir      [-]
+    REAL(wp), INTENT(INOUT)         :: runoff                !< Surface runoff                          [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_srf   !< water content in lateral flow reservoir [m]
+    REAL(wp), INTENT(OUT)           :: wtr_latflow_srf       !< lateral flux to downstream unit / river [m]
 
     ! Adding surface runoff to storage reservoir and setting runoff to 0.
     wtr_latflow_res_srf = wtr_latflow_res_srf + runoff

@@ -224,19 +224,55 @@ CONTAINS
   END SUBROUTINE hydro_finalize_init_vars
 
   ! ====================================================================================================== !
+!vg>>
+!>* * *
+!>
+!>#### Ford Syntax tests (Heading H4)
+!>##### Heading H5
+!> Ordinary text nnm fef grqjiiof fhre hfuikkl
+!> oorejnbv gye Ordinary text nnm fef grqjiiof fhre hfuif
+!>
+!> - List: The blank line above is mandatory!
+!>     - first item
+!>     - second item
+!> - This will be all
+!>   in one row, as there is no blank line.
+!>   Inlinig does not matter but is recomended.
+!>
+!> - Another item ...
+!>
+!>    Second paragraph of the same item:
+!>    indentation of at least 4 blanks mandatory!
+!>
+!>   Ordinary text (only 3-blank-indentation)
+!>
+!> - A new bullet list with numberer sub-items (blank line above mandatory)
+!>     1. only the first item needs a number
+!>     - the following items are numbered automatically
+!>     4. Existing wrong numbers do not matter
+!>
+!>        Second paragraph of the item: needs at least 8-blank-indentation (and an empty line above)
+!>
+!> * It does not matter whether '*' or '-' is used to indicate bullets.
+!> * But it matters, whether or not
+!> * Empty lines are used between (or above or below!) the list items.
+!>
+!>-----------------------
+!vg<<
   !
-  !>#### Read variables from initial files
+  !>#### Read boundary and initial conditions
   !>
   !> Soil parameters and initial conditions for the hydrology need to be set on all tiles on which
   !> the HYDRO_ process is active. Currently, the data is identical for all tiles. We thus only read it
   !> once by the top tile and store it in variable [[mo_hydro_init:hydro_init_vars]] of type
   !> [[t_hydro_init_vars]]. The remaining tiles are then using this variable to initialize their memories.
   !>
+
   SUBROUTINE hydro_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
-    dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO_ process
+    dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
 
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
@@ -352,7 +388,7 @@ CONTAINS
     ! Open input file - bc_sso
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
 
-    !>     - Orography
+    !>      - Orography
     IF (jsbach_runs_standalone()) THEN
        ptr_2D => input_file%Read_2d(  &
          & variable_name='elevation', &
@@ -387,18 +423,22 @@ CONTAINS
     ! Close bc_sso input file
     CALL input_file%Close()
 
-    !>
     ! -------------------------------------------------------------------------------------------------- !
     !>
-    !> - Read soil properties or soil textures from input file `bc_filename`:
-    !>   Depending on namelist parameter `l_soil_texture` (jsb_hydro_nml) the soil properties are
-    !>   either read in directly or soil textures are read in and the soil properties are calculated
-    !>   from this data. 
+    !> - Read soil properties or soil textures from input file `bc_filename`
+    !>
+    !>    Depending on namelist parameter `l_soil_texture` (jsb_hydro_nml) the soil properties are
+    !>    either read in directly or soil textures are read in and the soil properties are calculated
+    !>    from this data.
 
     IF (tile%contains_soil) THEN ! for tiles containing soil
 
       ! Open input file - bc
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
+
+      !>
+      !>    A: Soil properties read in all configurations
+      !>
 
       !>     - Soil depth until bedrock
       ptr_2D => input_file%Read_2d(   &
@@ -408,7 +448,7 @@ CONTAINS
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         !>
-        !>     Soil properties only read if not calculated from soil textures:
+        !>    B: Soil properties only read if not calculated from soil textures
         !>
         !>     - Volumetric soil porosity
         IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -540,7 +580,7 @@ CONTAINS
 
       ELSE   ! l_soil_texture
         !>
-        !>     Soil textur maps only read if needed to calculate soil properties:
+        !>    C: Read soil textur maps - only if soil properties are to be calculated from them
         !>
         !>     - Fraction of sand in upper soil
         ptr_2D => input_file%Read_2d(                  &
@@ -578,14 +618,17 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        !>     Calculate volumetric soil porosity of mineral soil
+        !>
+        !>    ... and calculate the soil properties.
+        !>
+        ! Calculate volumetric soil porosity of mineral soil
         CALL soil_init_from_texture( &
           & porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
           & hydro_init_vars%vol_porosity(:,:))
 
-        !>     Calculate saturated hydraulic conductivity of mineral soil
+        ! Calculate saturated hydraulic conductivity of mineral soil
         CALL soil_init_from_texture( &
           & hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                                &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -593,42 +636,42 @@ CONTAINS
           & hydro_init_vars%hyd_cond_sat(:,:))
         hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
 
-        !>     Calculate volumetric field capacity [m/m] of mineral soil
+        ! Calculate volumetric field capacity [m/m] of mineral soil
         CALL soil_init_from_texture( &
           & field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                            &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
           & hydro_init_vars%vol_field_cap(:,:))
 
-        !>     Calculate plant wilting point of mineral soil
+        ! Calculate plant wilting point of mineral soil
         CALL soil_init_from_texture( &
           & wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                                &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
           & hydro_init_vars%vol_p_wilt(:,:))
 
-        !>     Calculate residual soil water content of mineral soil
+        ! Calculate residual soil water content of mineral soil
         CALL soil_init_from_texture( &
            wres_sand, wres_silt, wres_clay, wres_oc,                                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
            hydro_init_vars%vol_wres(:,:))
 
-        !>     Calculate matric potential of mineral soil
+        ! Calculate matric potential of mineral soil
         CALL soil_init_from_texture( &
            matric_pot_sand, matric_pot_silt, matric_pot_clay, matric_pot_oc,                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
            hydro_init_vars%matric_pot(:,:))
 
-        !>     Calculate pore_size_index of mineral soil
+        ! Calculate pore_size_index of mineral soil
         CALL soil_init_from_texture( &
           & pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                    &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
           & hydro_init_vars%pore_size_index(:,:))
 
-        !>     Calculate exponent b in Clapp & Hornberger of mineral soil
+        ! Calculate exponent b in Clapp & Hornberger of mineral soil
         CALL soil_init_from_texture( &
           & bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                        &
           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -637,7 +680,8 @@ CONTAINS
 
       END IF ! l_soil_texture
 
-      !>     Read further soil date:
+      !>
+      !>    D: Further soil data
       !>
       !>     - Soil organic carbon fractions for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
@@ -649,6 +693,8 @@ CONTAINS
         END DO
       END IF
 
+      ! TODO Move up reading root depth to section of variables read in all configurations to
+      !      get documentation (and code) clearer.
       !>     - Root depth [m]
       ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
       ptr_2D => input_file%Read_2d(   &
@@ -673,25 +719,33 @@ CONTAINS
 
     IF (tile%contains_soil) THEN ! for tiles containing soil
 
+      !>
+      !> -  Read initial conditons of the hydrology
+      !>
+      !>    Depending on the configuration, the initial state of the hydrology is read from
+      !>   `ic_filename` (typically "ic_land_soil.nc") or from an IFS initial file.
+      !>
+      ! Note: The initial conditions are also read in restarted simulations, but the restart
+      !       file will be read later and the variables will be overwritten.
+
       IF (.NOT. model%config%init_from_ifs .OR. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
         input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
       END IF
 
       !>
-      !> - Initialize hydrology variables from ic file
-      !>   .... Hier geht' weiter ....
+      !>     - Initial snow depth:
+      !
+      !> With init_from_ifs = T (namelist jsb_model_nml), snow water equivalent is read
+      !> from the IFS initial file, while it is othervise read from `ic_filename`.
 
       IF (model%config%init_from_ifs) THEN
-        !>     - If [[t_jsb_model_config:init_from_ifs]] == .TRUE., read soil moisture index and snow water
-        !>       equivalent from IFS initial file [[t_jsb_model_config:ifs_filename]]
-
+        !vg !>     - With [[t_jsb_model_config:init_from_ifs]] == .TRUE., read soil moisture index and snow water
+        !vg !>       equivalent from IFS initial file [[t_jsb_model_config:ifs_filename]]
         ptr_3D => model%config%ifs_input_file%Read_2d_time( &
           & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
         hydro_init_vars%ifs_weq_snow(:,:) = ptr_3D(:,:,1)
 
       ELSE
-
-        ! Initial snow depth
         IF (input_file%Has_var('snow')) THEN
           ptr_2D => input_file%Read_2d( &
             & variable_name='snow',     &
@@ -704,6 +758,14 @@ CONTAINS
 
       END IF
 
+      !>
+      !>     - Initial water content:
+      !
+      !> With init_from_ifs = T (namelist jsb_model_nml), the initial water content
+      !> is calculated from a soil moisture index which is read here. However, with
+      !> `l_read_initial_moist` = F, reading the IFS data is suppressed and initial
+      !> data is read from `ic_filename`, as if init_from_ifs was false.
+      !>
       IF (model%config%init_from_ifs .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
 
         DO isoil=1,ifs_nsoil
@@ -733,27 +795,28 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Set soil properties for hydrology process on tiles
+  !>#### Set boundary conditions for the hydrology process on each tile
   !>
-  !> This subroutine uses the input variables already read from [[mo_hydro_init:hydro_init_vars]]
-  !> in [[hydro_read_init_vars]].
+  !> The subroutine makes use of the data structure [[mo_hydro_init:hydro_init_vars]] containing the input
+  !> variables read in subrotine [[hydro_read_init_vars]] and provides this data to all tiles on which the
+  !> the HYDRO process is active and the data is needed.
   !
   SUBROUTINE hydro_init_bc(tile)
 
     USE mo_util,          ONLY: soil_depth_to_layers_2d
     USE mo_hydro_process, ONLY: calc_orographic_features
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< current tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
-    dsl4jsb_Def_config(HYDRO_) !< configuration of `HYDRO_` process
-    dsl4jsb_Def_memory(HYDRO_) !< memory of `HYDRO_` process
+    dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
 
-    TYPE(t_jsb_model), POINTER :: model  !< pointer to model
-    TYPE(t_jsb_grid),  POINTER :: grid   !< pointer to horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_w !< pointer to vertical hydrology grid
-    INTEGER                    :: nsoil  !< number of soil layers
+    TYPE(t_jsb_model), POINTER :: model               !< Current instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: grid                !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w              !< Vertical grid used for hydrology
+    INTEGER                    :: nsoil               !< Number of soil layers
 
-    INTEGER :: i
+    INTEGER :: i                                      !< Looping index
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
@@ -777,14 +840,16 @@ CONTAINS
     !
     !>     - Elevation (for standalone model)
     IF (jsbach_runs_standalone()) dsl4jsb_var2D_onDomain(HYDRO_,elevation) = hydro_init_vars%elevation
-    !>     - Standard deviation of orography
+
+    !>     - Standard deviation of the orography
     dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
 
-    !>     - Steepness parameter for surface runoff (see [[arno_scheme(subroutine)]])
+    !>     - Steepness parameter for surface runoff
+    !>       (calculated from standard deviation of the orography; see [[arno_scheme(subroutine)]])
     DO i = 1, grid%Get_nblks()
       CALL calc_orographic_features(                    &
         ! in
@@ -796,11 +861,12 @@ CONTAINS
         & )
     END DO
 
+    !>     - Maximum depth and extent of surface water ponds
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      ! Maximum depth and extent of surface water ponds
+
       IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        ! Note, surface depression depth is given as negative value in the data, but represent
-        !   a storage on top of the soil --> needs to be converted to positive values!
+        ! Surface depression depth is given as negative value in the data, but represents
+        ! a storage on top of the soil and thus needs to be converted to positive values.
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
       ELSE
@@ -813,53 +879,56 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
+
+      ! ------------------------------------------------------------------------------------------------ !
       !>
-      !> If `tile` contains soil:
-      !>
-      ! -------------------------------------------------------------------------------------------------- !
-      !>
-      !> - Set total and layer soil depths
+      !> - Set soil depths
       !
       !>     - Total soil depth until bedrock
       dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) = hydro_init_vars%soil_depth
-      !>     - Actual soil layer depths based on the fixed layer thicknesses from the vertical grid and
-      !>       the total bedrock depth
+
+      !>     - Soil depth within each soil layer:
+      !>       calculated from total soil depth until bedrock and the fixed layer thiknesses of the
+      !>       vertical grid.
       dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), & ! Total soil depth until bedrock
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
-      !
+
       ! -------------------------------------------------------------------------------------------------- !
       !>
-      !> - Set hydrologic properties
+      !> - Set hydrological properties
       !
       !>     - Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
+
       !>     - Saturated hydraulic conductivity
       dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat) = hydro_init_vars%hyd_cond_sat
 
       !>     - Matric potential
       dsl4jsb_var_ptr(HYDRO_, matric_pot) = hydro_init_vars%matric_pot
 
-      !>     - Exponent B in Clapp and Hornberger
-      dsl4jsb_var_ptr(HYDRO_, bclapp) = hydro_init_vars%bclapp
-      !>     - Pore size distribution index
+      !>     - Pore size index
       dsl4jsb_var_ptr(HYDRO_, pore_size_index) = hydro_init_vars%pore_size_index
+
       !>     - Volumetric field capacity
       dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
-      !>     - Get water content at field capacity by multiplying volumetric field capacity with
-      !>       soil layer thicknesses
-      !>       _Note_: At this point a potential ice fraction is ignored.
+
+      !>     - Water content at field capacity:
+      !>       Calculated from volumetric field capacity and soil layer thicknesses
+      !   Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
+
       !>     - Volumetric permanent wilting point
       ! TODO: Do we need this for bare soil tiles?
       dsl4jsb_var_ptr(HYDRO_, vol_p_wilt) = hydro_init_vars%vol_p_wilt
-      !>     - Get permanent wilting point by multiplying volumetric permanent wilting point
-      !>       with soil layer thicknesses
-      !>       _Note_: At this point a potential ice fraction is ignored.
+
+      !>     - Permanent wilting point:
+      !>       calculated from volumetric permanent wilting point and soil layer thicknesses
+      !   Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
@@ -868,42 +937,23 @@ CONTAINS
       !>     - Volumetric residual water contant
       dsl4jsb_var_ptr(HYDRO_, vol_wres) = hydro_init_vars%vol_wres
 
-      ! Get absolute residual water content by multiplying with soil layer thicknesses
-      ! Note: At this point a potential ice fraction is ignored.
+      !>     - Residual water content:
+      !>       calculated from volumetric residual soil moisture and soil layer thicknesses
+      !   Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_res_sl) (:,i,:) = hydro_init_vars%vol_wres(:,:) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      ! Volumetric residual water contant
-      dsl4jsb_var_ptr(HYDRO_, vol_wres) = hydro_init_vars%vol_wres
-
-      !>     - Get absolute residual water content by multiplying with soil layer thicknesses
-      !>       _Note: At this point a potential ice fraction is ignored.
-      DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,wtr_soil_res_sl) (:,i,:) = hydro_init_vars%vol_wres(:,:) * &
-          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
-      END DO
-
-      !>     - Volumetric residual water contant
-      dsl4jsb_var_ptr(HYDRO_, vol_wres) = hydro_init_vars%vol_wres
-
-      ! Get absolute residual water content by multiplying with soil layer thicknesses
-      ! Note: At this point a potential ice fraction is ignored.
-      DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,wtr_soil_res_sl) (:,i,:) = hydro_init_vars%vol_wres(:,:) * &
-          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
-      END DO
-
-      !>     - Get water holding capacity (water content at saturation) by multiplying volumetric porosity
-      !>       with soil layer thicknesses
-      !>       _Note_: At this point a potential ice fraction is ignored.
+      !>     - Water holding capacity (water content at saturation):
+      !>       calculated from volumetric porosity and soil layer thicknesses
+      !   Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      !>     - Soil organic carbon fraction from map if [[t_hydro_config:l_socmap]] == .TRUE.
+      !>     - Soil organic carbon fraction (if l_socmap = T)
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
@@ -930,26 +980,27 @@ CONTAINS
     END IF ! contains_soil
 
     IF (tile%contains_vegetation) THEN ! tile contains vegetation
-      !>
-      !> If `tile` contains vegetation:
-      !>
       ! -------------------------------------------------------------------------------------------------- !
       !>
-      !> - Set total and layer root depths
+      !> - Set rooting depths
       !
       !>     - Total root depth
       dsl4jsb_var_ptr(HYDRO_, root_depth) = hydro_init_vars%root_depth
-      !>     - Actual root depths based on the fixed layer thicknesses from the vertical grid and
-      !>       the total root depth
+
+      !>     - Root depth within the soil layers:
+      !>       calculated from the total root depth and the layer thicknesses
       dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
         & dsl4jsb_var2D_onDomain(HYDRO_, root_depth), & ! Total rooting depth
         & soil_w%dz(:))                                 ! Soil layer thicknesses from vertical grid
 
-      !> - Set maximum root zone soil moisture
-      !>   _Note1: This corresponds to water content at field capacity.
+      ! -------------------------------------------------------------------------------------------------- !
+      !
+      !> - Set maximum root zone soil moisture (water plus ice)
+      !  Note: This corresponds to the water content at field capacity.
       dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = &
         & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth
-      !>   _Note2_: Uses [[t_hydro_config:w_soil_limit]] > 0 as upper limit but this is disabled per default.
+
+      ! Recalculate maximum root zone soil moisture in case a maximum was set (default is no limit)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MIN( &
           & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
@@ -965,24 +1016,25 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Set initial conditions for hydrology process on tiles
+  !>#### Set initial conditions for hydrology process on each tile
   !>
-  !> This subroutine uses the input variables stored in [[mo_hydro_init:hydro_init_vars]] that had been
-  !> read in [[hydro_read_init_vars]].
+  !> The subroutine makes use of the data structure [[mo_hydro_init:hydro_init_vars]] containing the input
+  !> variables read in subrotine [[hydro_read_init_vars]] and provides this data to all tiles on which the
+  !> the HYDRO process is active and the data is needed.
   !
   SUBROUTINE hydro_init_ic(tile)
 
     USE mo_hydro_util,          ONLY: get_amount_in_rootzone
     USE mo_util,                ONLY: ifs2soil
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< current tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
-    dsl4jsb_Def_config(HYDRO_) !< configuration of `HYDRO_` process
-    dsl4jsb_Def_memory(HYDRO_) !< memory of `HYDRO_` process
-    dsl4jsb_Def_memory(PHENO_) !< memory of `PHENO_` process
+    dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
+    dsl4jsb_Def_memory(PHENO_)                        !< Memory of the PHENO process
 
-    TYPE(t_jsb_model), POINTER :: model   !< pointer to model
-    TYPE(t_jsb_vgrid), POINTER :: soil_w  !< pointer to vertical hydrology grid
+    TYPE(t_jsb_model), POINTER :: model               !< Current instance of ICON-Land
+    TYPE(t_jsb_vgrid), POINTER :: soil_w              !< Vertical grid used for hydrology
 
     INTEGER :: i
 
@@ -1002,12 +1054,9 @@ CONTAINS
       dsl4jsb_Get_memory(PHENO_)
     END IF
 
-    !----------
 
     IF (tile%contains_soil) THEN ! for tiles containing soil
-      !>
-      !> If `tile` contains soil:
-      !>
+
       ! -------------------------------------------------------------------------------------------------- !
       !>
       !> - Set initial soil water and snow water equivalent If [[t_jsb_model_config:init_from_ifs]] == .TRUE.

@@ -40,7 +40,7 @@ MODULE mo_hydro_config_class
                                 !< i.e. at which water stress starts to be above zero
       & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
                                 !< i.e. when no transpiration occurs anymore
-      & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !< infinitely growing snow depth; -1. for no limitation
       & ret_macro_blg,        & !< Assumed retention time for below ground runoff [s],
                                 !< i.e. avg. time before water reaches tributary
