@@ -132,7 +132,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
     REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2], todo: set as ALLOCATABLE
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2]
 
     REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
     REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
