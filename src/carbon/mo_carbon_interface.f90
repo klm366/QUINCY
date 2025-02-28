@@ -360,6 +360,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice,iblk)
     dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_config(TOP_)
 
