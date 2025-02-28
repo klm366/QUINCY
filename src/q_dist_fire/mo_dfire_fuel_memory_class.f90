@@ -76,6 +76,8 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_100hr_lfp   !< 100hr dead fuel [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_1000hr_lfp  !< 1000hr dead fuel [g DM m-2], _lfp = live fuel pools
 
+    TYPE(t_jsb_var_real2d)  :: pm_fire                    !< Tree probability of mortality of tree [-]
+    TYPE(t_jsb_var_real2d)  :: pm_prop_ck                 !< Prob mortality: fraction of the crown scorch [-]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -325,6 +327,28 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_fire', mem%pm_fire, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_fire', '-', 'Tree probability of mortality by fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_prop_ck', mem%pm_prop_ck, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_prop_ck', '-', 'Proportion of the crown scorch'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

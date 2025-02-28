@@ -92,6 +92,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: fuel_bulk_density
     dsl4jsb_Real2D_onDomain      :: moisture_extinction
     dsl4jsb_Real2D_onDomain      :: fwd_wind_factor
+
+    dsl4jsb_Real2D_onDomain      :: pm_fire
+    dsl4jsb_Real2D_onDomain      :: pm_prop_ck
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -126,6 +129,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fuel_bulk_density)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, moisture_extinction)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fwd_wind_factor)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_prop_ck)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -152,6 +158,8 @@ CONTAINS
     moisture_extinction = 0._wp
     fwd_wind_factor = 0._wp
 
+    pm_fire = 0._wp
+    pm_prop_ck = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif
