@@ -132,7 +132,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
     REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2], todo: set as ALLOCATABLE
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2]
 
     REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
     REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
@@ -234,8 +234,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough)! in [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_prop_ck)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                   ! out [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_prop_ck)           ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_fire)              ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
