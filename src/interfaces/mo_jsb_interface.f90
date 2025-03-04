@@ -895,11 +895,12 @@ CONTAINS
     & tile,                  &
     & ics, ice, iblk,        &
     & arr1d, arr2d, arr3d,   &
-    & ptr1d, ptr2d, ptr3d, lacc)
+    & ptr1d, ptr2d, ptr3d,   &
+    & lacc, opt_acc_async_queue)
 
     USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
     USE mo_jsb_process_class, ONLY: Get_process_id
-    USE mo_fortran_tools,     ONLY: copy, set_acc_host_or_device
+    USE mo_fortran_tools,     ONLY: copy, set_acc_host_or_device, set_acc_async_queue
 
     CHARACTER(len=*),  INTENT(in)          :: var_name
                                               !< Name of requested variable including the leading process name
@@ -916,6 +917,9 @@ CONTAINS
                                               !< Pointers to the requested variable (section); must not be associated
     LOGICAL, OPTIONAL, INTENT(in)          :: lacc
                                               !< Switch whether the variables should be copied to GPU
+    INTEGER, OPTIONAL, INTENT(in)          :: opt_acc_async_queue
+                                              !< OpenACC async queue to use, default is 1
+    INTEGER :: acc_async_queue
 
     TYPE(t_jsb_model),           POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
@@ -930,6 +934,7 @@ CONTAINS
     LOGICAL :: lzacc
 
     CALL set_acc_host_or_device(lzacc, lacc)
+    CALL set_acc_async_queue(acc_async_queue, opt_acc_async_queue)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -1011,7 +1016,7 @@ CONTAINS
           IF (SIZE(arr1d,1) /= nc) THEN
             CALL finish(routine, 'arr1d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:), lacc=lzacc)
+            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr1d or arr1d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -1023,7 +1028,7 @@ CONTAINS
           IF (SIZE(arr2d,1) /= nc .OR. SIZE(arr2d,2) /= SIZE(var_ptr%ptr3d,2)) THEN
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr2d or arr2d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -1040,7 +1045,7 @@ CONTAINS
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
 !$OMP END PARALLEL
           END IF
         ELSE
@@ -1055,7 +1060,7 @@ CONTAINS
             CALL finish(routine, 'arr3d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
 !$OMP END PARALLEL
           END IF
         ELSE
