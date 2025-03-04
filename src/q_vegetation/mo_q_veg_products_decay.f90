@@ -85,25 +85,29 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
+    IF (lctlib%ForestFlag) THEN
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
+    END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    prod_decay_mt(:,:) = 0._wp
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
-    CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
+    IF (lctlib%ForestFlag) THEN
+      prod_decay_mt(:,:) = 0._wp
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
+    END IF
 
   END SUBROUTINE update_products_decay
 
