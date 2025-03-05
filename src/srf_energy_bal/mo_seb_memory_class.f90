@@ -122,7 +122,7 @@ MODULE mo_seb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
@@ -133,6 +133,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(SEB_)
@@ -490,9 +491,7 @@ CONTAINS
 
     END IF
 
-#ifdef __ICON__
     ! Diagnostic global carbon sums for experiment monitoring
-    !       (1d stream variables are not supported with echam)
     !
     IF (TRIM(suffix) == 'box') THEN
 
@@ -501,10 +500,9 @@ CONTAINS
         & t_cf('t_gmean', 'K', 'Global land mean surface temperature'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
-        & lrestart=.FALSE., initval_r=280.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=280.0_wp )
 
     END IF
-#endif
 
   END SUBROUTINE Init_seb_memory
 

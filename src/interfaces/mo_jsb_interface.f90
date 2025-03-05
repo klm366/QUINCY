@@ -30,14 +30,14 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
   USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
-  USE mo_quincy_model_config, ONLY: QLAND
+  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -114,6 +114,8 @@ CONTAINS
     & nhx_n15_deposition,     & !< in
     & noy_n15_deposition,     & !< in
     & p_deposition,           & !< in
+    & CO2_mixing_ratio_c13,   &
+    & CO2_mixing_ratio_c14,   &
     ! For lakes
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
@@ -129,9 +131,6 @@ CONTAINS
     & evapopot                                                          & !< out
     & )
 
-#ifndef __ICON__
-    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: &
       & model_id,          &
@@ -172,6 +171,8 @@ CONTAINS
       & nhx_n15_deposition(:), &
       & noy_n15_deposition(:), &
       & p_deposition      (:), &
+      & CO2_mixing_ratio_c13 (:), &
+      & CO2_mixing_ratio_c14 (:), &
       ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -238,16 +239,6 @@ CONTAINS
 
     no_omp_thread = Get_omp_thread()
 
-    ! Note: Since write_interface_variables is not yet implemented for ICON, the call to it is suppressed here for ICON.
-    !       This is an exception since we don't want to use conditional compiling, but otherwise there are lots
-    !       of compiler warnings about unused dummy arguments.
-#ifndef __ICON__
-    IF (write_interface_vars) THEN
-      CALL write_interface_variables(ics, ice, iblk, current_datetime, t_air, q_air, rain, snow, wind_air, wind_10m, &
-        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
-        & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
-    END IF
-#endif
     nc = ice - ics + 1
     model => Get_model(model_id)
 
@@ -271,12 +262,7 @@ CONTAINS
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 2.0 Associate variable pointers to current chunk of gridcells
-    !>
-    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 3.0 Put atmospheric forcing into the a2l memory
+    !> 2.0 Put atmospheric forcing into the a2l memory
     !>
     CALL model%Get_top_tile(tile)
     IF (.NOT. model_scheme == MODEL_QUINCY) THEN
@@ -323,6 +309,14 @@ CONTAINS
           &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
       ENDIF
 
+#ifdef _OPENACC
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+
+      IF (model%config%qmodel_id /= QCANOPY) THEN
+        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      ENDIF
+#endif
+
       CALL update_atm2land_quincy(                    &
         & tile,                                       &
         & model%options(no_omp_thread),               &
@@ -351,7 +345,9 @@ CONTAINS
         & noy_deposition     = noy_deposition,        &
         & nhx_n15_deposition = nhx_n15_deposition,    &
         & noy_n15_deposition = noy_n15_deposition,    &
-        & p_deposition       = p_deposition          &
+        & p_deposition       = p_deposition,          &
+        & CO2_mixing_ratio_c13 = CO2_mixing_ratio_c13(:), &
+        & CO2_mixing_ratio_c14 = CO2_mixing_ratio_c14(:)  &
         ! For lakes
         ! & drag_wtr           = drag_wtr,              &
         ! & drag_ice           = drag_ice,              &
@@ -370,14 +366,14 @@ CONTAINS
 
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 4.0 Run tasks in queue
+    !> 3.0 Run tasks in queue
     !>
     !>  Run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
     !>
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 5.0 Give the required variables back to the atmosphere
+    !> 4.0 Give the required variables back to the atmosphere
     !>
     CALL model%Get_top_tile(tile)
     IF (.NOT. model_scheme == MODEL_QUINCY) THEN
@@ -466,7 +462,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 6.0 messages
+    !> 5.0 messages
     !>
 !!$    IF (iblk == 1)                                                              &
 !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
@@ -476,7 +472,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 7.0 update timer
+    !> 6.0 update timer
     !>
     IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
 
@@ -522,10 +518,6 @@ CONTAINS
     & kh_neutral,       &
     & km_neutral        &
     & )
-
-#ifndef __ICON__
-    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
-#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_tmx'
 
@@ -603,8 +595,6 @@ CONTAINS
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
       & dtime=dtime, steplen=steplen, alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-
-    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Put atmospheric forcing into the a2l memory.
 
@@ -705,6 +695,9 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
+#ifndef __NO_QUINCY__
+    USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -734,7 +727,16 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
-    ENDIF
+    END IF
+
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      ! For the SB process data on n and p deposition might have to be read once a year and updated once a month
+      IF (is_newmonth(current_datetime,dtime) .AND. model%processes(SB_)%p%config%active) THEN
+        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+      END IF
+    END IF
+#endif
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -748,7 +750,7 @@ CONTAINS
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
-  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen, init)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
@@ -774,12 +776,14 @@ CONTAINS
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: steplen
+    LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     REAL(wp)                            :: dtime
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
+    LOGICAL                             :: linit
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -789,6 +793,9 @@ CONTAINS
     no_omp_thread = Get_omp_thread()
 
     model => Get_model(model_id)
+
+    linit = .FALSE.
+    IF (PRESENT(init)) linit = init
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
@@ -831,7 +838,10 @@ CONTAINS
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
-    CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    IF (.NOT. linit) THEN
+      ! Do not couple to ocean during initialisation step.
+      CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    END IF
 #endif
 
 ! #ifdef _OPENACC

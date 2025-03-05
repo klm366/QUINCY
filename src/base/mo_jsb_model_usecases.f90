@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
-    &                               Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    &                               Q_PHENO_, Q_SH_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -63,14 +63,18 @@ CONTAINS
     ! jsbach physics
     CASE ('jsbach_lite')
       IF (model%config%use_tmx) THEN
-        CALL init_usecase_lite_new(model)
+        CALL init_usecase_lite_tmx(model)
       ELSE
         CALL init_usecase_lite(model)
       END IF
 
     ! jsbach 11 PFTs
     CASE ('jsbach_pfts')
-      CALL init_usecase_pfts(model)
+      IF (model%config%use_tmx) THEN
+        CALL init_usecase_pfts_tmx(model)
+      ELSE
+        CALL init_usecase_pfts(model)
+      END IF
 
     CASE ('jsbach_forest_age_classes')
       ! jsbach 11 PFTs + forest age-classes
@@ -92,7 +96,7 @@ CONTAINS
   END SUBROUTINE init_usecase
 
   ! ======================================================================================================= !
-  !>init routine for usecase lite
+  !>init routine for usecase lite with TMX (explicit coupling)
   !>
   SUBROUTINE init_usecase_lite(model)
 
@@ -164,13 +168,13 @@ CONTAINS
 
   END SUBROUTINE init_usecase_lite
 
-  SUBROUTINE init_usecase_lite_new(model)
+  SUBROUTINE init_usecase_lite_tmx(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_new'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_tmx'
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -230,7 +234,7 @@ CONTAINS
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
-  END SUBROUTINE init_usecase_lite_new
+  END SUBROUTINE init_usecase_lite_tmx
 
   ! ======================================================================================================= !
   !>init routine for usecase pfts
@@ -374,6 +378,144 @@ CONTAINS
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts
+
+  ! ======================================================================================================= !
+  !>init routine for usecase pfts with TMX (explicit coupling)
+  !>
+  SUBROUTINE init_usecase_pfts_tmx(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+
+    INTEGER :: i
+
+    INTEGER, PARAMETER :: npft = 11
+
+    CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
+      & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+      & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+      & 'Tropical broadleaf evergreen', &
+      & 'Tropical broadleaf deciduous', &
+      & 'Extra-tropical evergreen',     &
+      & 'Extra-tropical deciduous',     &
+      & 'Raingreen shrubs',             &
+      & 'Deciduous shrubs',             &
+      & 'C3 grass',                     &
+      & 'C4 grass',                     &
+      & 'C3 pasture',                   &
+      & 'C4 pasture',                   &
+      & 'C3 crops'                    ]
+
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts_tmx'
+
+    ! overview of tile structure:
+    !
+    !  box
+    !   |
+    !   |-------
+    !   |      |
+    !  land  lakes
+    !   |
+    !   |-------------
+    !   |            |
+    !  vegetation  glacier
+    !   |
+    !   |-----------------
+    !   |      |      |
+    !  pft01  pft02  pftXX
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_  ,    HYDRO_,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')
+    model%top => box_tile
+    !$ACC ENTER DATA COPYIN(box_tile)
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
+
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & fract_varname='equal')   ! Fraction = 1.
+        !$ACC ENTER DATA COPYIN(land_tile)
+      END IF
+
+        IF (model%config%use_glacier) THEN
+          glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+          !$ACC ENTER DATA COPYIN(glacier_tile)
+        END IF
+
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/ASSIMI_,   PHENO_/),    &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_/), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')
+        !$ACC ENTER DATA COPYIN(veg_tile)
+
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+        END IF
+
+        ! Note: FLCC and WLCC are required for the fage usecase. Here, they can be activated for testing,
+        !   however, for the pft usecase it currently makes more sense using DISTURB without FLCC and WLCC
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+        END IF
+        IF (model%processes(WLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+        END IF
+
+        IF (model%processes(NLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+        END IF
+        !
+        IF (model%processes(CARBON_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+        END IF
+        IF (model%processes(FUEL_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+        END IF
+        IF (model%processes(DISTURB_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+        END IF
+
+          DO i=1,npft
+            pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+            !$ACC ENTER DATA COPYIN(pft_tile)
+            NULLIFY(pft_tile)
+          END DO
+
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_lakes) NULLIFY(lake_tile)
+
+  END SUBROUTINE init_usecase_pfts_tmx
 
   ! ======================================================================================================= !
   !>init routine for usecase pfts with forest age classes
@@ -633,11 +775,17 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     Q_RAD_    /), &
+      & processes      =(/A2L_,     L2A_,     RAD_      /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
+
+    ! IF PPLCC is active, then PPLCC should run for Quincy
+    ! ... for now it will only be used to provide tree area to the Q_SH_ process ...
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
 
     !------------------------------------------------------------------------------------------------------ !
     ! land tile w/o process
@@ -669,6 +817,12 @@ CONTAINS
         &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
         &                    parent = veg_tile)
       !$ACC ENTER DATA COPYIN(pft_tile)
+
+        IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
+          IF (model%processes(Q_SH_)%p%config%active) THEN
+            CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+          END IF
+        END IF
     END DO
 
     ! catch compiler warnings and cleanup pointers
@@ -743,7 +897,7 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     SPQ_,     Q_RAD_    /), &
+      & processes      =(/A2L_,     L2A_,     SPQ_,     RAD_      /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile

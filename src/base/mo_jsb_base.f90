@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
-    USE mo_q_rad_parameters,    ONLY: init_q_rad_parameters
+    USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
     USE mo_veg_constants,       ONLY: init_veg_constants
@@ -144,25 +144,28 @@ CONTAINS
        IF (model_idx == 1) THEN
          CALL set_bgcm_element_idx(model%config%elements_index_map)
        END IF
+#else
+      IF (model_scheme == MODEL_QUINCY) THEN
+        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
+      END IF
 #endif
 
-       !> parameter init
+       !> parameter init and test for '--enable-quincy' compile flag
        !>
        IF (model_idx == 1) THEN
          ! assuming the shared/constants/ modules are available here already (impl, math, physical)
+         ! model specific
          SELECT CASE (model_scheme)
          CASE (MODEL_QUINCY)
            CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
 #ifndef __NO_QUINCY__
-           CALL init_q_rad_parameters
+           CALL init_rad_parameters
            CALL init_q_assimi_parameters
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
-#else
-           CALL finish(routine, 'Model has been compiled without support for QUINCY, use --enable-quincy')
 #endif
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
@@ -204,11 +207,12 @@ CONTAINS
       ! Configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
+      dsl4jsb_Get_config(RAD_)
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
         dsl4jsb_Get_config(HYDRO_)
-        dsl4jsb_Get_config(RAD_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -261,31 +265,10 @@ CONTAINS
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
         model%processes(SSE_)%p%config%active = .FALSE.
         model%processes(SEB_)%p%config%active = .FALSE.
-        model%processes(RAD_)%p%config%active = .FALSE.
         model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
-        IF (model%config%l_compat401) THEN
-          CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
-          CALL message('    ', '... using soil heat capacity from mineral soil map')
-          CALL message('    ', '... using soil heat conductivity from mineral soil map')
-          CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
-          CALL message('    ', '... not using multi-layer snow model')
-          CALL message('    ', '... not using dynamical snow density and thickness')
-          CALL message('    ', '... not using frozen ground')
-          CALL message('    ', '... not using organic soil fractions')
-          CALL message('    ', '... using canopy albedo from ini file')
-          dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
-          dsl4jsb_Config(SSE_)%l_snow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
-          dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
-          dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
-          dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
-        END IF
 
         IF (model%Do_fractions_change()) THEN
           IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN

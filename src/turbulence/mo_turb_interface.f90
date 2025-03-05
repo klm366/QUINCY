@@ -14,6 +14,7 @@
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/soil_snow_energy/mo_sse_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
 MODULE mo_turb_interface
 #ifndef __NO_JSBACH__
@@ -691,8 +692,9 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl,          &
-      & wtr_soil_fc_sl,       &
-      & wtr_soil_pwp_sl
+      & soil_depth_sl,        &
+      & vol_porosity_sl,      &
+      & vol_wres_sl
 
     ! Local variables
     REAL(wp) ::                    &
@@ -703,6 +705,8 @@ CONTAINS
       fact_qair_soil(options%nc),  &
       zfract_fpc(options%nc)
     REAL(wp) :: rel_hum,           &
+      weq_wsat_sl1,                &
+      weq_wres_sl1,                &
       ch_tmp(options%nc)
     LOGICAL :: &
       mask(options%nc)
@@ -770,8 +774,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  water_stress)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
     END IF
 
     ! ---------------------------
@@ -785,19 +790,11 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
       END IF
 
-      IF (model%config%l_compat401) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          mask(ic) = wtr_soil_sl(ic,1) > wtr_soil_pwp_sl(ic,1)
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          mask(ic) = water_stress(ic) >= 1._wp
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        mask(ic) = water_stress(ic) >= 1._wp
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -835,7 +832,9 @@ CONTAINS
     IF (tile%contains_soil) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(rel_hum)
       DO ic = 1, nc
-        rel_hum = relative_humidity_soil(wtr_soil_sl(ic,1), wtr_soil_fc_sl(ic,1))
+        weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
+        weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
+        rel_hum = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &
             & (fract_wet(ic) + (1._wp - fract_wet(ic)) * rel_hum)

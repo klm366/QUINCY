@@ -56,7 +56,7 @@ CONTAINS
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
-      &                                           background_mort_rate_grass, w_root_lim_max
+      &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
@@ -166,6 +166,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onDomain      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: exudation_c_tmyc_mavg
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onDomain    :: root_fraction_sl
     dsl4jsb_Real3D_onDomain    :: fleaf_sunlit_tfrac_mavg_cl
@@ -274,6 +276,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc)
+    dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc_tvegdyn_mavg)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onDomain(VEG_, root_fraction_sl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -303,45 +307,6 @@ CONTAINS
       target_np_fine_root(:,:) = target_np_leaf(:,:) / root2leaf_np
       ! differ between vegetation dynamics schemes
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-      ! start bareground with vegetation dynamics switched on: cohort scheme
-      CASE ("cohort")
-        background_mort_rate_tree  = 0.0_wp    ! default: 0.01_wp
-        background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp
-        dens_ind(:,:)              = 1.0_wp
-        ! pool%reserve% C N P
-        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 1.0_wp
-        veg_pool_mt_domain(ix_reserve, ixN, :, :) &
-          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
-        ! pool%reserve%carbon13
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC13, ic, iblk) = calc_fractionation(def_co2_mixing_ratio,           &
-              &                                                                  def_co2_mixing_ratio_C13, hlp1) &
-              &                                                          * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-          ENDDO
-        ENDDO
-        ! pool%reserve%carbon14
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC14, ic, iblk) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-              &                                                           def_co2_deltaC14 - hlp1 )    &
-              &                                    * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-            ! pool%reserve%nitrogen15
-            veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
-              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-          ENDDO
-        ENDDO
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
         veg_pool_mt_domain(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
@@ -465,7 +430,8 @@ CONTAINS
     SELECT CASE(model%config%qmodel_id)
     CASE(QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
       dsl4jsb_Config(VEG_)%flag_dynamic_roots = .FALSE.
-      CALL message(TRIM(routine), ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
+      IF (iblk==1) CALL message(TRIM(routine), &
+          & ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
     END SELECT
 
     ! init root fraction
@@ -605,6 +571,35 @@ CONTAINS
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp
+    ! bottom of the canopy radiation
+    rfr_ratio_boc(:,:)                    = rfr_ratio_toc
+    rfr_ratio_boc_tvegdyn_mavg(:,:)       = rfr_ratio_boc(:,:)
+
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:)) &
+    !$ACC   DEVICE(height(:,:), leaf_nitrogen_cl(:,:,:), lai(:,:), lai_cl(:,:,:)) &
+    !$ACC   DEVICE(dphi(:,:), beta_sinklim_ps(:,:), leaf_cn_direction(:,:), fn_oth_cl(:,:,:), npp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(n_fixation_talloc_mavg(:,:), transpiration_talloc_mavg(:,:), unit_transpiration_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(unit_uptake_n_talloc_mavg(:,:), unit_uptake_p_talloc_mavg(:,:), dphi_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_cn_talloc_mavg(:,:), unit_npp_talloc_mavg(:,:), growth_cp_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_talloc_mavg(:,:), labile_carbon_talloc_mavg(:,:), labile_nitrogen_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(labile_phosphorus_talloc_mavg(:,:), growth_p_limit_based_on_n_mavg(:,:), reserve_carbon_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), w_root_lim_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(exudation_c_tmyc_mavg(:,:), fleaf_sunlit_tfrac_mavg_cl(:,:,:), t_air_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tfrac_mavg(:,:), co2_mixing_ratio_tfrac_mavg(:,:), ga_tfrac_mavg(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_tfrac_mavg(:,:), fleaf_sunlit_tcnl_mavg_cl(:,:,:), t_air_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(press_srf_tcnl_mavg(:,:), co2_mixing_ratio_tcnl_mavg(:,:), growth_cn_tcnl_mavg(:,:)) &
+    !$ACC   DEVICE(growth_np_tcnl_mavg(:,:), uptake_n_tcnl_mavg(:,:), npp_tcnl_mavg(:,:), t_air_daytime(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime(:,:), co2_mixing_ratio_daytime(:,:), ga_daytime(:,:), beta_sinklim_ps_daytime(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_daytime(:,:), t_jmax_opt_daytime_dacc(:,:), t_air_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(press_srf_daytime_dacc(:,:), co2_mixing_ratio_daytime_dacc(:,:), ga_daytime_dacc(:,:)) &
+    !$ACC   DEVICE(beta_sinklim_ps_daytime_dacc(:,:), growth_req_n_tlabile_mavg(:,:), growth_req_p_tlabile_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tphen_mavg(:,:), t_soil_srf_tphen_mavg(:,:), npp_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(demand_uptake_n_tuptake_mavg(:,:), demand_uptake_p_tuptake_mavg(:,:), growth_req_n_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(growth_req_p_tuptake_mavg(:,:), ga_tcnl_mavg(:,:), leaf2root_troot_mavg(:,:), an_boc_tvegdyn_mavg(:,:)) &
+    !$ACC   DEVICE(net_growth_tvegdyn_mavg(:,:), lai_tvegdyn_mavg(:,:), beta_sinklim_ps_tacclim_mavg(:,:)) &
+    !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &
+    !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
+    !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
 
   END SUBROUTINE veg_init
 
