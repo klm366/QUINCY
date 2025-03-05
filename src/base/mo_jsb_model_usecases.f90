@@ -891,7 +891,7 @@ CONTAINS
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'Using the model_scheme MODEL_QUINCY')
     CASE DEFAULT
-      CALL finish(TRIM(routine), 'The quincy_11_pfts model usecase does work only with the model_scheme MODEL_QUINCY.')
+      CALL finish(TRIM(routine), 'The quincy_12_pfts model usecase does work only with the model_scheme MODEL_QUINCY.')
     END SELECT
 
     !------------------------------------------------------------------------------------------------------ !
