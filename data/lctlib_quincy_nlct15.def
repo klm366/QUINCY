@@ -47,8 +47,7 @@
 # 12: TrC:  C4 crop
 # 13: BSO:  bare soil
 # 14: UAR:  urban area
-# 15: CSH:  cold shrubs
-
+# 15: CSH:  cold shrubs                             
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 15 # number of landcover types
@@ -77,6 +76,7 @@ lai_max 5.0 4.0 5.0 5.0 3.0 3.0 2.0 2.0 2.0 2.0 4.0 4.0 0.0 0.0 3.0
 
 #vegetation_height: Vegetation height [m] only used for CANOPY mode
 vegetation_height 30.0 15.0 30.0 15.0 15.0 15.0 1.0 1.0 1.0 1.0 1.0 1.0 0.0 0.0 1.0
+
 #sla: specific leaf area (mm / mgDW)        
 # From Kattge et al. 2011, Table 5, converted internally from (mm/mgDW) to (m2/mol C)        
 sla 9.46 8.99 15.4 15.4 5.0 10.09 20.12 19.23 20.12 19.23 20.12 19.23 19.23 19.23 5.0
@@ -286,7 +286,7 @@ fstore_target 1.0 1.2 1.0 1.0 0.5 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.5
 #        
 # Soil        
 #        
-
+        
 #k_root_dist:         
 # tuned according to Jackson et al. 1996, Oecologia, to reproduce their cummulative root distribution profiles        
 # only making use of the contrast sclerophyllic, tree, grass        
@@ -299,9 +299,23 @@ k_som_fast_init 10.0 8.0 10.0 7.0 5.0 5.7 5.0 7.0 5.0 5.0 7.0 7.0 7.0 7.0 5.0
 k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5 2.0
 
 #
-# copy/paste from JSBACH (lctlib_nlct21.def) adapted to 14 PFT
+# the following parameters have been copied from the JSBACH lctlib file (lctlib_nlct21.def)
+# Quincy (nlct14) PFT -> JSBACH (nlct21) PFT
 #
+# 1 -> 2
+# 2 -> 3
+# 3 -> 3
+# 4 -> 7
+# 5 -> 8
+# 6 -> 9
+# 7 =  9 = 11 -> 12
+# 8 = 10 = 12 -> 13
+# 13 -> best guess or just zero (there is no matching jsbach PFT)
+# 14 -> best guess or just zero (there is no matching jsbach PFT)
+#
+
 #AlbedoLitterVIS: Albedo of litter in the visible range                     
 AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.11
-#AlbedoLitterNIR: Albedo of litter in the near infrared range
+
+#AlbedoLitterNIR: Albedo of litter in the near infrared range                     
 AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.20
