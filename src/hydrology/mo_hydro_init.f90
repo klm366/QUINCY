@@ -224,6 +224,14 @@ CONTAINS
   END SUBROUTINE hydro_finalize_init_vars
 
   ! ====================================================================================================== !
+  !
+  !>#### Read boundary and initial conditions
+  !>
+  !> Soil parameters and initial conditions for the hydrology need to be set on all tiles on which
+  !> the HYDRO_ process is active. Currently, the data is identical for all tiles. We thus only read it
+  !> once by the top tile and store it in variable [[mo_hydro_init:hydro_init_vars]] of type
+  !> [[t_hydro_init_vars]]. The remaining tiles are then using this variable to initialize their memories.
+  !>
 !vg>>
 !>* * *
 !>
@@ -257,17 +265,15 @@ CONTAINS
 !> * But it matters, whether or not
 !> * Empty lines are used between (or above or below!) the list items.
 !>
+!> New text block
+!>
+!> * bullet list, blank line above mandatory
+!> * list item2
+!> * list item3
+!>
+!> New text block, blank line above mandatory
 !>-----------------------
 !vg<<
-  !
-  !>#### Read boundary and initial conditions
-  !>
-  !> Soil parameters and initial conditions for the hydrology need to be set on all tiles on which
-  !> the HYDRO_ process is active. Currently, the data is identical for all tiles. We thus only read it
-  !> once by the top tile and store it in variable [[mo_hydro_init:hydro_init_vars]] of type
-  !> [[t_hydro_init_vars]]. The remaining tiles are then using this variable to initialize their memories.
-  !>
-
   SUBROUTINE hydro_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
@@ -1018,8 +1024,8 @@ CONTAINS
   !
   !>#### Set initial conditions for hydrology process on each tile
   !>
-  !> The subroutine makes use of the data structure [[mo_hydro_init:hydro_init_vars]] containing the input
-  !> variables read in subrotine [[hydro_read_init_vars]] and provides this data to all tiles on which the
+  !> The subroutine makes use of the data structure [[mo_hydro_init:hydro_init_vars]] containing the
+  !> initial data read in subrotine [[hydro_read_init_vars]] and provides this data to all tiles on which
   !> the HYDRO process is active and the data is needed.
   !
   SUBROUTINE hydro_init_ic(tile)
@@ -1279,9 +1285,17 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
+  !>#### Initialize soil properties
+  !>
+  !> The soil properties had been read/calculated in [[hydro_init_bc]] as two dimensional maps.
+  !> Here, they are defined for all soil levels.
+  !>
+  ! Note: Routine [[mo_hydro_interface:update_soil_properties]] does similar calculations at each time
+  ! step. We also need the routine here - within the initialization phase - because the soil snow and
+  ! energy (SSE) processes make use of the 3d soil properties and the SSE processes are updated before
+  ! the soil properties are calculated the first time in [[mo_hydro_interface:update_soil_properties]].
+  !
   SUBROUTINE init_soil_properties(tile)
-    ! This routine is needed because soil snow and energy (SSE) processes are calculated before
-    ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
     USE mo_hydro_constants, ONLY: &
       ! Parameters for organic soil component in top layer
@@ -1293,8 +1307,8 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(HYDRO_) !< configuration of `HYDRO_` process
-    dsl4jsb_Def_memory(HYDRO_) !< memory of `HYDRO_` process
+    dsl4jsb_Def_config(HYDRO_) !< Configuration of the HYDRO process
+    dsl4jsb_Def_memory(HYDRO_) !< Memory of the HYDRO process
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
@@ -1318,7 +1332,6 @@ CONTAINS
       & vol_wres_sl
 
     ! Locally allocated vectors
-    !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
@@ -1364,7 +1377,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !
-    !> Distribute 2d input parameters over soil layers
+    !> - Distribute 2d input parameters over all soil layers
     !
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
@@ -1377,9 +1390,8 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !
-    !> Update soil parameters with organic fractions for deep and top soil layers
-    !  Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
-    !
+    !> - Update soil parameters with organic fractions: Use the parameters for upper soil organic matter
+    !>   in the top soil layer and the parameters for deeper soils in the layers below.
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       DO i=1,nsoil
         IF (i == 1) THEN
@@ -1402,7 +1414,9 @@ CONTAINS
           vol_wres_org        = vol_wres_org_below
         END IF
 
-        ! DOCU
+        !>     The actual soil properties are calculated as weighted means from the properties of mineral
+        !> and organic soils.
+        ! Attention: hyd_cond_sat_sl is calculated in a more complex way in update_soil_properties!
         hyd_cond_sat_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * hyd_cond_sat_sl   (:,i,:) &
           & + fract_org_sl(:,i,:) * hyd_cond_sat_org
         vol_porosity_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_porosity_sl   (:,i,:) &
@@ -1431,12 +1445,12 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Sanitize hydro variables.
+  !>#### Sanitize HYDRO variables
   !>
   !> Loading a model state from a file with lower than double precision can lead to model aborts because
   !> the state violates model constraints due to rounding errors in soil water content and root depth.
-  !> This routine sanitizes the current state by limiting soil water and ice to the field capacity, and by
-  !> recomputing the root depth.
+  !> This routine sanitizes the current state by limiting soil water and ice to saturation capacity, and
+  !> by recomputing the root depth.
   !>
   SUBROUTINE hydro_sanitize_state(tile)
 
@@ -1447,28 +1461,28 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_sanitize_state'
 
     REAL(wp), PARAMETER :: warn_level_wpi_soil_excess = 1.05_wp
-                           !< If water content exceeds field capacity by more than this factor prior
+                           !< If water content exceeds saturation by more than this factor prior
                            !< to sanitization, a warning is issued.
-    REAL(wp), PARAMETER :: zfcmin = 1.e-10_wp
-                           !< minimum field capacity (or rather epsilon?)
+    REAL(wp), PARAMETER :: zfcmin = 1.e-10_wp   !TODO: Remove
 
-    INTEGER :: maxloc_wpi_soil_excess(3)
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
+    INTEGER :: maxloc_wpi_soil_excess(3)  !< Location of the maximum excess soil water
+    TYPE(t_jsb_vgrid), POINTER :: soil_w  !< Vertical grid of the hydrology
 
-    dsl4jsb_Def_memory(HYDRO_) !< memory of `HYDRO_` process
+    dsl4jsb_Def_memory(HYDRO_)            !< Memory of the HYDRO process
 
     dsl4jsb_Real2D_onDomain :: &
-      & root_depth,            &
-      & soil_depth
+      & root_depth,            &          !< Rooting depth
+      & soil_depth                        !< Soil depth until bedrock
 
     dsl4jsb_Real3D_onDomain :: &
-      & root_depth_sl,         &
-      & soil_depth_sl,         &
-      & vol_porosity_sl,       &
-      & wtr_soil_sat_sl,       &
-      & wtr_soil_sl,           &
-      & ice_soil_sl
+      & root_depth_sl,         &          !< Rooting depth within the layer
+      & soil_depth_sl,         &          !< Soil depth within the layer (until bedrock)
+      & vol_porosity_sl,       &          !< Volumetric soil porosity
+      & wtr_soil_sat_sl,       &          !< Amount of water within the layer at saturation
+      & wtr_soil_sl,           &          !< Actual amount of water within the layer
+      & ice_soil_sl                       !< Actual amount of ice within the layer
 
+    ! Do nothing if the hydrology is not calculated on the current tile
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     dsl4jsb_Get_memory(HYDRO_)
@@ -1485,8 +1499,8 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
 
-      ! Issue a warning if current soil water anywherer exceeds saturation capacity by more than a factor of
-      ! `warn_level_wpi_soil_excess`.
+      !> A warning is issued if the current soil water anywherer exceeds saturation capacity by more than a factor of
+      !> `warn_level_wpi_soil_excess`.
       IF (ANY(wtr_soil_sl(:,:,:) > warn_level_wpi_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
         maxloc_wpi_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
         WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_wpi_soil_excess(:), &
@@ -1496,6 +1510,7 @@ CONTAINS
           & wtr_soil_sat_sl(maxloc_wpi_soil_excess(1), maxloc_wpi_soil_excess(2), maxloc_wpi_soil_excess(3))
         CALL warning(routine, message_text)
       END IF
+
       ! Limit soil water and soil ice to saturation amounts.
       IF (ANY((wtr_soil_sl(:,:,:) + ice_soil_sl(:,:,:))                &
         &  > MAX(vol_porosity_sl (:,:,:) * soil_depth_sl(:,:,:), 0._wp))) THEN
