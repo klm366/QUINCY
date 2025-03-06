@@ -102,7 +102,9 @@ MODULE mo_veg_memory_class
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
                                     fract_fpc         , &            !< foliage projected cover fraction of the tile
-                                    blended_height    , &            !< foliage weighted height of the tile for turbulence calculations [m]
+                                    rough_veg_star, &                !< vegetation surface roughness length of the tile for turbulence calculations [m]
+                                                                     !! its a transformation of the 'vegetation surface roughness length'
+                                                                     !! used in the aggregation to box tile
                                     f_n_demand        , &            !< relative plant demand for N
                                     f_p_demand        , &            !< relative plant demand for P
                                     beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis [unitless]
@@ -1154,9 +1156,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('blended_height ', mem%blended_height, &
+      CALL mem%Add_var('rough_veg_star ', mem%rough_veg_star, &
         & hgrid, surface, &
-        & t_cf('blended_height', '', 'foliage weighted height'), &
+        & t_cf('rough_veg_star', '', 'transformation of vegetation surface roughness length of the tile'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

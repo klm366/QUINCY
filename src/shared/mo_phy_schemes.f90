@@ -24,7 +24,7 @@ MODULE mo_phy_schemes
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, qsat, &
+  PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, &
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
@@ -122,7 +122,7 @@ CONTAINS
     LOGICAL,  INTENT(in) :: use_convect_tables
 
     IF (use_convect_tables) THEN
-      qsat_water = qsat(temperature, pressure)
+      qsat_water = calc_qsat(temperature, pressure)
     ELSE
       qsat_water = specific_humidity(sat_pres_water(temperature), pressure)
     END IF
@@ -138,7 +138,7 @@ CONTAINS
     LOGICAL,  INTENT(in) :: use_convect_tables
 
     IF (use_convect_tables) THEN
-      qsat_ice = qsat(temperature, pressure)
+      qsat_ice = calc_qsat(temperature, pressure)
     ELSE
       qsat_ice = specific_humidity(sat_pres_ice(temperature), pressure)
     END IF
@@ -150,7 +150,7 @@ CONTAINS
   ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
   !
   ! Note: temporary for backward compatibility
-  REAL(wp) FUNCTION qsat(temperature, pressure)
+  FUNCTION calc_qsat(temperature, pressure) RESULT(qsat)
 
     !$ACC ROUTINE SEQ
 
@@ -158,8 +158,9 @@ CONTAINS
       &                                    jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
-    REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
-    REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
+    REAL(wp), INTENT(in) :: temperature      !< Air temperature [K]
+    REAL(wp), INTENT(in) :: pressure         !< Pressure [Pa]
+    REAL(wp)             :: qsat             !< saturation specific humidity
 
     INTEGER :: it
     REAL(wp) :: tluc
@@ -174,7 +175,7 @@ CONTAINS
       qsat = HUGE(1._wp)
     END IF
 
-  END FUNCTION qsat
+  END FUNCTION calc_qsat
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
@@ -194,7 +195,6 @@ CONTAINS
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
   END FUNCTION q_effective
-
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION surface_dry_static_energy
@@ -338,16 +338,19 @@ CONTAINS
   !> calculates surface drag and exchange coefficients for jsbach standalone simulation
   !>
   SUBROUTINE update_drag(nc, time_step_len, &
+      & config_model_scheme, &
       & temp_air, pressure, qair, wind, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & height_wind, height_humidity, coef_ril_tm1, coef_ril_t, coef_ril_tp1, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, &
-      & t_srf_upd, zril_old)
+      & height, t_srf_upd, zril_old)
 
+    USE mo_jsb_model_class,        ONLY: MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_physical_constants, ONLY: grav, rd, cpd, rvd1, cpvd1, von_karman, rd_o_cpd
 
     INTEGER,  INTENT(IN)  :: nc
     REAL(wp), INTENT(IN)  :: time_step_len
+    INTEGER,  INTENT(IN)  :: config_model_scheme
     REAL(wp), INTENT(IN)  :: temp_air(:)
     REAL(wp), INTENT(IN)  :: pressure(:)
     REAL(wp), INTENT(IN)  :: qair(:)
@@ -370,6 +373,8 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef (:)
     REAL(wp), INTENT(OUT) :: pch     (:)
 
+    ! Optional variable for QUINCY
+    REAL(wp), OPTIONAL, INTENT(IN)    :: height(:)     !< vegetation height
     ! Optional variables for the computation of a filtered Richardson number
     REAL(wp), OPTIONAL, INTENT(IN)    :: t_srf_upd(:)  !< Updated surface temperature
     REAL(wp), OPTIONAL, INTENT(inout) :: zril_old(:)   !< Richardson number at previous time step
@@ -380,12 +385,14 @@ CONTAINS
     REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf(nc), qsat_surf_upd(nc)
     REAL(wp) :: ztvs_act, ztvs_upd, zg, zgh, zril, zril_act, zril_upd
     REAL(wp) :: zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
+    !REAL(wp) :: zcons8, zcdnl, zucfl, zcfncl, zcfml   ! quincy specific
 
     REAL(wp), PARAMETER :: cb = 5._wp
     REAL(wp), PARAMETER :: cc = 5._wp
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_drag'
 
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
+    ! zcons8  = 2._wp * cb  ! quincy specific
     zcons9  = 3._wp * cb
     zcons11 = 3._wp * cb * cc
     zcons12 = time_step_len * grav / rd
@@ -402,6 +409,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) &
     !$ACC   PRIVATE(zdu2, air_pressure, ztvd, ztvir, ztvs_act, ztvs_upd, zg, zgh, zril) &
     !$ACC   PRIVATE(zril_act, zril_upd, zchnl, zscfl, zucfhl, zcons, zcfnchl, zcfhl)
+    ! !$ACC   PRIVATE(zcdnl, zucfl, zcfncl, zcfml)  ! quincy specific
     DO ic = 1, nc
       ! Initializations
       drag_srf(ic) = 0._wp
@@ -411,16 +419,16 @@ CONTAINS
       q_bcoef (ic) = 0._wp
       pch     (ic) = 0._wp
 
-      qsat_surf(ic)     = qsat(t_srf_proc(ic), pressure(ic))
+      qsat_surf(ic)     = calc_qsat(t_srf_proc(ic), pressure(ic))
       IF (l_zril_filter) THEN
-        qsat_surf_upd(ic) = qsat(t_srf_upd(ic), pressure(ic))
+        qsat_surf_upd(ic) = calc_qsat(t_srf_upd(ic), pressure(ic))
       END IF
 
       !------------------------------------------------------------------------------------
       ! Approximation of cdrag
       !------------------------------------------------------------------------------------
       ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-      zdu2 = MAX(wind(ic)**2, 1._wp)
+      zdu2 = MAX(wind(ic) ** 2, 1._wp)
 
       ! virtual potential air temperature (see mo_surface_boundary.f90)
       ! according to Saucier, WJ Principles of Meteoroligical Analyses
@@ -444,8 +452,16 @@ CONTAINS
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
       IF(height_wind > 0._wp .AND. height_humidity > 0._wp) THEN
-        zg  = height_wind * grav
-        zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
+        SELECT CASE (config_model_scheme)
+        CASE (MODEL_JSBACH)
+          zg  = height_wind * grav
+          zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
+#ifndef __NO_QUINCY__
+        CASE (MODEL_QUINCY)
+          zg  = (height_wind + 3._wp / 10._wp * height(ic)) * grav
+          zgh = zg
+#endif
+        END SELECT
       ELSE
         zg = ztvir * rd * LOG(1._wp / zsigma)
         zgh = zg
@@ -463,26 +479,45 @@ CONTAINS
           &  + coef_ril_tp1 * zril_upd
         zril_old(ic) = zril
       ELSE
-        zril = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp )
+        SELECT CASE (config_model_scheme)
+        CASE (MODEL_JSBACH)
+          zril = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp )
+#ifndef __NO_QUINCY__
+        CASE (MODEL_QUINCY)
+          zril = MIN(zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp ), 0.5_wp)
+#endif
+        END SELECT
       END IF
 
-      ! Neutral drag coefficient for momentum and heat
-      zchnl = von_karman**2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic) )) &
+      ! Neutral drag coefficient for
+      ! momentum
+      ! zcdnl = (von_karman / LOG(1._wp + zg / (grav * rough_m_srf_proc(ic) ))) ** 2
+      ! heat
+      zchnl = von_karman ** 2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic) )) &
                 * LOG( ( grav * rough_m_srf_proc(ic) + zgh ) / (grav * rough_h_srf_proc(ic) )))
 
       ! account for stable/unstable case: helper variables
       zscfl = SQRT ( 1._wp + 5._wp * ABS(zril))
-      zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp &
-        & + zgh / (grav * rough_h_srf_proc(ic)))))
+      ! momentum
+      ! zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp + zg  / (grav * rough_m_srf_proc(ic)))))
+      ! heat
+      zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp + zgh / (grav * rough_h_srf_proc(ic)))))
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
       zcons = zcons12 * pressure(ic) / ( temp_air(ic) * (1._wp + rvd1 * qair(ic)))
+      ! momentum
+      ! zcfncl   = zcons * SQRT(zdu2) * zcdnl
+      ! heat
       zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
       ! Stable / Unstable case
       IF ( zril > 0._wp ) THEN
+        ! momentum
+        ! zcfml = zcfncl  / (1._wp + zcons8 * zril / zscfl)
+        ! heat
         zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
       ELSE
+        ! zcfml = zcfncl  * (1._wp - zcons8 * zril * zucfl)
         zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
       END IF
 
@@ -494,7 +529,7 @@ CONTAINS
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
       t_acoef(ic) = 0.0_wp
-      t_bcoef(ic) = cpd * (1 + cpvd1 * qair(ic)) * temp_air(ic) + zgh
+      t_bcoef(ic) = cpd * (1._wp + cpvd1 * qair(ic)) * temp_air(ic) + zgh
       q_acoef(ic) = 0.0_wp
       q_bcoef(ic) = qair(ic)
 
