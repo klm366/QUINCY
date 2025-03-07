@@ -26,8 +26,8 @@
 !> [[t_hydro_config:ic_filename]] if [[t_jsb_model_config:init_from_ifs]] == .FALSE. otherwise they are
 !> derived from IFS initial data read from the file given by [[t_jsb_model_config:ifs_input_file]].
 !>
-!> In order to avoid reading the input data for each tile again they are read only once for the first tile
-!> in [[hydro_read_init_vars]] and stored in variable [[mo_hydro_init:hydro_init_vars]].
+!> To avoid reading the input data for each tile again it is stored in variable
+!> [[mo_hydro_init:hydro_init_vars]] after being read on the first tile (routine [[hydro_read_init_vars]]).
 !>
 MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
@@ -157,28 +157,30 @@ CONTAINS
   !>
   !>#### Intialize the hydrology process
   !>
+  !> Hydrological initial and boundary condition data is read only once - by the top tile - in subroutine
+  !> [[hydro_read_init_vars]] and is made avilable to the other tiles in subroutines [[hydro_init_bc]]
+  !> and [[hydro_init_ic]].
+  !>
   SUBROUTINE hydro_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
-    !> - Read hydrology initial and boundary condition data <br>
-    !>   The initial data is read only once - by the top tile - and is made avilable to the other tiles.
-    !>
+    ! Read initial and boundary condition data by the top tile, only.
     ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
     !       from the top tile!
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN  ! This is the top tile.
       CALL hydro_read_init_vars(tile)
     END IF
 
-    !> - Set soil properties (on all tiles)
+    ! Set soil properties (on all tiles)
     CALL hydro_init_bc(tile)
 
-    !> - Set soil initial conditions (on all tiles)
+    ! Set soil initial conditions (on all tiles)
     CALL hydro_init_ic(tile)
 
-    !> - Finalize hydrology initialization after the last tile has been initialized
+    ! Finalize hydrology initialization after the last tile has been initialized
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
