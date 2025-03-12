@@ -107,7 +107,7 @@ CONTAINS
     LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
-    scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
+    scheme               = 'trans'    !'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
