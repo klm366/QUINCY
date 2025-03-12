@@ -233,7 +233,7 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       ENDDO
         
-    CASE ('transitions')
+    CASE ('trans')
       !Mingyue Zhang added for reading in transition data start 
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop

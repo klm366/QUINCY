@@ -85,6 +85,7 @@ CONTAINS
          alcc_filename_prefix,   &
          alcc_transition_filename_prefix,    &       !Mingyue
          LC_type2LC_class_mapping,           &       !Mingyue
+         transitions,            &                   !Mingyue
          scheme,                 &
          l_daily_alcc,           &
          nr_of_pfts
@@ -132,7 +133,7 @@ CONTAINS
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
-    CASE ('transitions')
+    CASE ('trans')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
       config%scheme=tolower(config%scheme)
     CASE DEFAULT
