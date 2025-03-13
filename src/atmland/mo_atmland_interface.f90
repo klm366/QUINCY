@@ -274,7 +274,7 @@ CONTAINS
     IF (PRESENT(q_bcoef_ice)) THEN
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
     END IF
-    
+
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     IF (PRESENT(DEBUG_VAR)) THEN
