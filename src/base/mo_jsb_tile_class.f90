@@ -734,10 +734,10 @@ CONTAINS
       !$ACC EXIT DATA DELETE(aggregator%fractions)
       DEALLOCATE(aggregator%fractions)
     END IF
-    IF (ALLOCATED(aggregator%data_sum)) THEN
+    IF (ASSOCIATED(aggregator%data_sum)) THEN
       DEALLOCATE(aggregator%data_sum)
     END IF
-    IF (ALLOCATED(aggregator%fract_sum)) THEN
+    IF (ASSOCIATED(aggregator%fract_sum)) THEN
       DEALLOCATE(aggregator%fract_sum)
     END IF
 
