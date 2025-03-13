@@ -307,9 +307,7 @@ CONTAINS
     ! Go
 
     !$ACC DATA CREATE(declination) ASYNC(acc_stream)
-    !$ACC WAIT(acc_stream) ASYNC(1)
-    CALL inquire_declination(declination, .TRUE.) ! out
-    !$ACC WAIT(1) ASYNC(acc_stream)
+    CALL inquire_declination(declination, .TRUE., opt_acc_async_queue=acc_stream) ! out
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
