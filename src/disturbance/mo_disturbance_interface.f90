@@ -248,14 +248,14 @@ CONTAINS
     !$ACC WAIT(1)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC :1) VECTOR
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       q_rel_air_climbuf(ic) =  q_rel_air_climbuf(ic) * persist + q_rel_air(ic) * (1._wp - persist)
     END DO
     !$ACC END LOOP
 
     IF (.NOT. newday .OR. exp_start) THEN
-      !$ACC LOOP GANG(STATIC :1) VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (wind_10m(ic) > max_wind_10m_act(ic)) THEN
           max_wind_10m_act(ic) = wind_10m(ic)
@@ -264,7 +264,7 @@ CONTAINS
       !$ACC END LOOP
     ELSE
       ! Update previous day variabes at the beginning of the new day
-      !$ACC LOOP GANG(STATIC :1) VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         q_rel_air_climbuf_yDay(ic) = q_rel_air_climbuf(ic)
         prev_day_max_wind_10m(ic) = max_wind_10m_act(ic)

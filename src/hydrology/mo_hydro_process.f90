@@ -1053,9 +1053,9 @@ CONTAINS
 
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
-    !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
-    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl)               &
-    !$ACC   CREATE(wtr_residual_sl, wpi_wsat_sl, wpi_field_cap_sl, wpi_p_wilt_sl, wpi_wres_sl)                 &
+    !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl) &
+    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
+    !$ACC   CREATE(wtr_residual_sl, wpi_wsat_sl, wpi_field_cap_sl, wpi_p_wilt_sl, wpi_wres_sl) &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
     ice2weq = rhoi / rhoh2o
@@ -1537,7 +1537,7 @@ CONTAINS
     END IF
 #endif
 
-    !$ACC PARALLEL DEFAULT(PRESENT)ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
@@ -1559,7 +1559,7 @@ CONTAINS
       ! Initial estimate of layered drainage are too low if soils were dry at the beginning of time step.
       ! Hence, add water to layered drainage according to k_sat - k_act
       ! In case of last soil layer only k_sat since no layered drainage was calculated before
-      !$ACC PARALLEL DEFAULT(PRESENT)ASYNC(acc_stream)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1589,7 +1589,7 @@ CONTAINS
 
     ! In case of over-saturation, increase layer drainage to maximum and, if needed,
     ! pile water upwards
-    !$ACC PARALLEL DEFAULT(PRESENT)ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1642,7 +1642,7 @@ CONTAINS
 
     ELSE IF (ltpe_closed) THEN
       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-      !$ACC PARALLEL DEFAULT(PRESENT)ASYNC(acc_stream)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG(STATIC: 1) VECTOR
