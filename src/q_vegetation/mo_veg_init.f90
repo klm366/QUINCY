@@ -178,7 +178,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
