@@ -413,7 +413,7 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           temperature_surface(ic) = t(ic)
         END DO
@@ -423,7 +423,7 @@ CONTAINS
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(SPQ_,      t_srf_new)      ! in
         dsl4jsb_Get_var2D_onChunk(SPQ_,      t_srf_old)      ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           temperature_surface(ic) = t_srf_new(ic)
         END DO
@@ -456,7 +456,7 @@ CONTAINS
       ! re-calculate rad_srf_net for QUINCY
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_srf_old(ic) ** 4._wp
         END DO
@@ -1333,18 +1333,18 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(SB_,  sb_pool_total_bg_soil_c)   ! in
         dsl4jsb_Get_var2D_onChunk(SB_,  sb_pool_total_ag_litter_c) ! in
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           litter_carbon(ic) = sb_pool_total_ag_litter_c(ic)
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           soil_carbon(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
         !$ACC LOOP SEQ
         DO is = 1, nsoil_sb
           !$ACC LOOP GANG VECTOR
@@ -1371,7 +1371,7 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1,nc
         temperature_surface(ic) = t_unfilt(ic)
       END DO
@@ -1380,7 +1380,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var2D_onChunk(SPQ_,   t_srf_new)             ! in
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1,nc
         temperature_surface(ic) = t_srf_new(ic)
       END DO
