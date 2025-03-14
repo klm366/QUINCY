@@ -262,9 +262,9 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     !> Variables needed to calculate aggregation weights
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    REAL(wp), POINTER     :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
-    REAL(wp), POINTER     :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
+    REAL(wp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(wp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
+    REAL(wp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
 
     INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
