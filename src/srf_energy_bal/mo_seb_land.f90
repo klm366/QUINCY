@@ -305,7 +305,7 @@ CONTAINS
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=ics,ice
-      tile_fract_zero(ic) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._wp
+      tile_fract_zero(ic-ics+1) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._wp
     END DO
     !$ACC END PARALLEL LOOP
 
