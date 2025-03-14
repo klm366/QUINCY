@@ -132,7 +132,7 @@ CONTAINS
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
-    CASE ('transitions')
+    CASE ('trans')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
       config%scheme=tolower(config%scheme)
     CASE DEFAULT
