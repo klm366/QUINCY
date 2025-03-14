@@ -79,7 +79,6 @@ CONTAINS
       !
       nres_int(ic) = NINT(nres(ic))
     END DO
-    !$ACC END LOOP
 
     !$ACC LOOP SEQ
     DO res = 1, nres_max
@@ -94,16 +93,14 @@ CONTAINS
         END IF
         inflow_cascade(ic) = outflow(ic)
       END DO
-      !$ACC END LOOP
     END DO
-    !$ACC END LOOP
 
     ! conversions: [m3] -> [m3/s]
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       outflow(ic) = outflow(ic) / steplen
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
   END SUBROUTINE reservoir_cascade
 
