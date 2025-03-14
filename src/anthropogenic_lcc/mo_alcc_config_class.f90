@@ -85,7 +85,6 @@ CONTAINS
          alcc_filename_prefix,   &
          alcc_transition_filename_prefix,    &       !Mingyue
          LC_type2LC_class_mapping,           &       !Mingyue
-         transitions,            &                   !Mingyue
          scheme,                 &
          l_daily_alcc,           &
          nr_of_pfts
@@ -107,7 +106,7 @@ CONTAINS
     LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
-    scheme               = 'trans'    !'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
+    scheme               = 'maps'  ! switch to transitions when using transition scheme (Mingyue Zhang)
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -133,7 +132,7 @@ CONTAINS
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
-    CASE ('trans')
+    CASE ('transitions')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
       config%scheme=tolower(config%scheme)
     CASE DEFAULT
