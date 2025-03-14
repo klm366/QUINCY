@@ -1262,8 +1262,7 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
-    REAL(wp), POINTER :: area(:), lat(:), lon(:)
-    REAL(wp) :: tile_fract(options%nc)
+    REAL(wp), POINTER :: area(:), lat(:), lon(:), tile_fract(:)
     REAL(wp) :: slope_used(options%nc)
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
@@ -1295,9 +1294,10 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
 
-    area => grid%area(ics:ice, iblk)
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
+    tile_fract => tile%fract(ics:ice, iblk)
+    area       => grid%area (ics:ice, iblk)
+    lat        => grid%lat  (ics:ice, iblk)
+    lon        => grid%lon  (ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1321,12 +1321,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
-    !$ACC DATA ASYNC(acc_stream) CREATE(l_fract, tile_fract) &
+    !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = ics, ice
-      tile_fract(ic) = tile%fract(ic,iblk)
+    DO ic = 1, nc
       l_fract(ic) = tile_fract(ic) > 0._wp
     END DO
     !$ACC END PARALLEL LOOP
@@ -2705,8 +2704,8 @@ CONTAINS
 
     tile_fract => tile%fract(ics:ice, iblk)
     area       => grid%area (ics:ice, iblk)
-    lat        => grid%lat(ics:ice, iblk)
-    lon        => grid%lon(ics:ice, iblk)
+    lat        => grid%lat  (ics:ice, iblk)
+    lon        => grid%lon  (ics:ice, iblk)
 
     tile_contains_soil = tile%contains_soil
 
