@@ -1366,7 +1366,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)                  ! in
 
     ALLOCATE(temperature_surface(nc))
-    !$ACC ENTER DATA CREATE(temperature_surface)
+    !$ACC ENTER DATA CREATE(temperature_surface) ASYNC(acc_stream)
     SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
@@ -1742,7 +1742,6 @@ CONTAINS
           END IF
         END IF
 
-        !$ACC WAIT(1)
 
         ! improve indentation !
         SELECT CASE (model%config%model_scheme)
@@ -1820,7 +1819,6 @@ CONTAINS
     END IF      ! NOT use_alb_veg_simple
       ! <<< TODO: correct indentation
     END IF      ! IF (tile%is_vegetation)
-    !$ACC WAIT(1)
 
     !> 6.0 pass the "land albedo" to the "tile albedo"
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly
@@ -1880,10 +1878,11 @@ CONTAINS
 
     dsl4jsb_Get_memory(RAD_)
 
+    CALL weighted_by_fract%BeginAggregate()
+
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! RAD_ 2D
-      CALL weighted_by_fract%EndAggregate()
 
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,                weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,                weighted_by_fract)
@@ -1899,7 +1898,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
 
-      CALL weighted_by_fract%EndAggregate()
     CASE (MODEL_JSBACH)
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
@@ -1907,8 +1905,6 @@ CONTAINS
       & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
       & .NOT. jsbach_runs_standalone()) RETURN
 #endif
-
-      CALL weighted_by_fract%EndAggregate()
 
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
@@ -1928,8 +1924,9 @@ CONTAINS
         dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
       ENDIF
 
-      CALL weighted_by_fract%EndAggregate()
     END SELECT
+
+    CALL weighted_by_fract%EndAggregate()
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
