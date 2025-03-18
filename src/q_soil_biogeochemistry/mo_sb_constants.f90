@@ -402,7 +402,7 @@ CONTAINS
     ! fast and slow parameters for simple_1d SB model
     k_fast_som_cn_max       = 13._wp * molar_mass_N / molar_mass_C   ! Manzoni et al. 2008, slightly tighter than than (was 13)
     k_fast_som_cn_min       = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
-    f_fast_som_cn           = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
+    f_fast_som_cn           = 100000.0_wp                            ! tuned to make fast som C:N vary from minimum to maximum
     k_slow_som_cn           = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
     k_fast_som_np           = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     kref_fast_som_np        = 0.1_wp                                 ! an average value chosen as reference level (SZ)
