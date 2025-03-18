@@ -452,6 +452,7 @@ CONTAINS
       & bulk_dens_sl(:,:), &
       & w_soil_sl(:,:), &
       & nh4_solute(:,:), &
+      & no3_solute(:,:), &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
       & rtm_sorption(:,:), &
@@ -1061,6 +1062,7 @@ CONTAINS
     & bulk_dens_sl, &
     & w_soil_sl, &
     & nh4_solute, &
+    & no3_solute, &
     & rtm_hsc, &
     & rmm_hsc, &
     & rtm_sorption, &
@@ -1105,6 +1107,7 @@ CONTAINS
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3]
                                                                 w_soil_sl, &                 !< water content of a layer [m]
                                                                 nh4_solute, &                !< NH4 content of a layer [mol m-3]
+                                                                no3_solute, &                !< NO3 content of a layer [mol m-3]
                                                                 rtm_hsc, &                   !< temperature response scalar for half-saturation constants
                                                                 rmm_hsc, &                   !< moisture response scalar for half-saturation constants
                                                                 rtm_sorption, &              !< temperature response scalar for po4 sorption
@@ -1134,6 +1137,7 @@ CONTAINS
                                                                 km_dip_biochem_po4_act    !< actual km for soluble P control on biochem_mineralisation_po4
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, is
+    REAL(wp)                        :: hlp1
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_local_soil_profile_values'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1163,22 +1167,28 @@ CONTAINS
     !>
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
-        km1_uptake_nh4_act(ic, is) = km1_up_nh4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km1_uptake_no3_act(ic, is) = km1_up_no3 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km1_uptake_po4_act(ic, is) = km1_up_po4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is)) &
+        IF ((rtm_hsc(ic, is) * rmm_hsc(ic, is)) < eps8) THEN
+          hlp1 = eps8
+        ELSE
+          hlp1 = rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        END IF
+        km1_uptake_nh4_act(ic, is) = km1_up_nh4 / hlp1
+        km1_uptake_no3_act(ic, is) = km1_up_no3 / hlp1
+        km1_uptake_po4_act(ic, is) = km1_up_po4 / hlp1 &
           &                          / 1000._wp / (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km2_uptake_nh4_act(ic, is) = km2_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_no3_act(ic, is) = km2_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_po4_act(ic, is) = km2_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is) &
           &                          * 1000._wp * (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km_uptake_org_act(ic, is)          = km_up_org  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
-        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / (rtm_hsc(ic, is) * rmm_hsc(ic, is))
+        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / hlp1
+        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / hlp1
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3
-        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(ic, is) / bulk_dens_sl(ic, is), &
-          &                         k_fast_som_cn_min)
+        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn &
+          &                            * (nh4_solute(ic, is) + no3_solute(ic, is)) / bulk_dens_sl(ic, is), &
+          &                            k_fast_som_cn_min)
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
           &                            k_fast_som_cn_min) / apparent_fast_som_cn(ic, is)
@@ -1188,8 +1198,8 @@ CONTAINS
         p_deposition_act(ic, is)  = 0.0_wp
         ! only for the 1st soil layer
         p_deposition_act(ic,1)  = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_local_soil_profile_values
 
   !-----------------------------------------------------------------------------------------------------
@@ -1486,7 +1496,8 @@ CONTAINS
                                                                nitrification_no3, &               ! out
                                                                denitrification_n2)
 
-    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification
+    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification, &
+                                   c_limit_on_nitrification_min, c_limit_on_denitrification_min
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1521,14 +1532,14 @@ CONTAINS
       DO is = 1,INT(num_sl_above_bedrock(ic))
         ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    (1._wp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_wp
 
         ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]
         denitrification_n2(ic,is)  = vmax_denitrification * rtm_denitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_denitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    anaerobic_volume_fraction(ic,is) * no3_solute(ic,is) / &
                                    (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_wp
       ENDDO

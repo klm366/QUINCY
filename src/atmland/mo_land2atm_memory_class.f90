@@ -77,7 +77,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: land2atm
   !>
-  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -90,6 +90,7 @@ CONTAINS
     CHARACTER(len=*),          INTENT(in)            :: prefix          !< process name
     CHARACTER(len=*),          INTENT(in)            :: suffix          !< tile name
     INTEGER,                   INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,                   INTENT(in)            :: lib_id          !< id of primary lct in lctlib
     INTEGER,                   INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
@@ -211,7 +212,7 @@ CONTAINS
 
       CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
         & hgrid, surface, &
-        & t_cf('q_c_conservation_test', '[mol m-2]', 'difference in change in quincy total C and nbp'), &
+        & t_cf('q_c_conservation_test', '[mol m-2 timestep-1]', 'difference in change in quincy total C and nbp'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

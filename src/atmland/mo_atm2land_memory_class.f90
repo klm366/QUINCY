@@ -87,7 +87,7 @@ MODULE mo_a2l_memory_class
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
-      & p_deposition               !< surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
+      & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::   &
@@ -131,7 +131,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: atm2land
   !>
-  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -144,6 +144,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix          !< process name
     CHARACTER(len=*),    INTENT(in)            :: suffix          !< tile name
     INTEGER,             INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,             INTENT(in)            :: lib_id          !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
@@ -196,6 +197,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -206,6 +208,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -216,6 +219,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
+          & output_level=FULL, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
@@ -519,6 +523,7 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
+
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
@@ -563,7 +568,7 @@ CONTAINS
 
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
-        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
+        & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphorus deposition velocity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

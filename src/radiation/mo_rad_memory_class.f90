@@ -96,7 +96,7 @@ MODULE mo_rad_memory_class
                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
       & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun
       & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI
-      & snow_age,             &
+      & snow_age,             & ! Factor used to calculate snow ageing [-]
       !
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
@@ -173,7 +173,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: radiation
   !>
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -189,6 +189,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
 #ifndef __QUINCY_STANDALONE__
@@ -434,9 +435,10 @@ CONTAINS
 
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
-        & t_cf('snow_age', '', ''),                                          &
+        & t_cf('snow_age', '-', 'Factor used to calculate snow ageing'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &

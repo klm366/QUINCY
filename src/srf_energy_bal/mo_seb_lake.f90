@@ -13,6 +13,7 @@
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__
@@ -128,6 +129,7 @@ CONTAINS
     LOGICAL :: config_l_ice_on_lakes, use_tmx, jsb_standalone
 
     INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: model_scheme
     REAL(wp) :: dtime, steplen
     REAL(wp) ::         &
       & cpd_or_cvd,     &
@@ -154,6 +156,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     use_tmx = model%config%use_tmx
+    model_scheme = model%config%model_scheme
 
     IF (use_tmx) THEN
       cpd_or_cvd = cvd
@@ -276,7 +279,9 @@ CONTAINS
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
       ! INTENT in
-      & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & nc, steplen, &
+      & model_scheme, &
+      & t_air(:), press_srf(:), q_air(:), wind_air(:), &
       & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
       & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
       & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &

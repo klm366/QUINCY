@@ -37,7 +37,7 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
@@ -56,7 +56,7 @@ MODULE mo_carbon_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC ::  Register_carbon_tasks
-  PUBLIC ::  recalc_carbon_per_tile_vars, recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums,      &
+  PUBLIC ::  recalc_carbon_per_tile_vars, recalc_per_tile_vars,                                            &
     &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,   &
     &        rescale_carbon_upon_reference_area_change,                                                    &
     &        carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics,               &
@@ -161,6 +161,7 @@ CONTAINS
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
+    LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
@@ -332,7 +333,11 @@ CONTAINS
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
+
+    nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
+
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -424,8 +429,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
     ! variables needed for NLCC process
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)
+    IF (nlcc_is_enabled) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)            ! out
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
+    END IF
 
     lstart   = is_time_experiment_start(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
@@ -689,24 +696,25 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! determine annual maximum content of green pool for NLCC process
-      IF (new_year) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          max_green_bio(ic) = c_green(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE IF (new_day) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          max_green_bio(ic) = MAX(max_green_bio(ic), c_green(ic))
-        END DO
-        !$ACC END PARALLEL LOOP
+      IF (model%Is_process_enabled(NLCC_)) THEN
+        IF (new_year) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          DO ic = 1, nc
+            max_green_bio(ic) = c_green(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+        ELSE IF (new_day) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          DO ic = 1, nc
+            max_green_bio(ic) = MAX(max_green_bio(ic), c_green(ic))
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
       END IF
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
 
-      CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
       CALL recalc_per_tile_vars(tile, options,                                      &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
         & c_crop_harvest = c_crop_harvest(:),                                       &
@@ -774,14 +782,16 @@ CONTAINS
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
     ! Write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
-    lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      sla(ic) = lctlib_specificLeafArea_C
-    END DO
-    !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
+    IF (model%Is_process_enabled(NLCC_)) THEN
+      lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        sla(ic) = lctlib_specificLeafArea_C
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -904,7 +914,6 @@ CONTAINS
 
     ! ... currently not required, but could contain something like:
     ! CALL recalc_carbon_per_tile_vars(tile, options)
-    ! CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
 
   END SUBROUTINE update_ta_vars_after_lcc
 
@@ -1112,7 +1121,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -1649,90 +1657,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !$ACC END PARALLEL
 
   END SUBROUTINE calculate_current_c_ta_state_sum
-
-
-  ! ================================================================================================================================
-  !>
-  !> calculates the current sum of all bg carbon state variables (per canopy)
-  !!
-  !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !
-  SUBROUTINE calculate_current_c_ag_1_and_bg_sums(tile, options)
-
-    !USE mo_util,                ONLY: real2string
-
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)         :: options
-
-    dsl4jsb_Def_memory(CARBON_)
-
-    ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ag_1_and_bg_sums'
-    INTEGER                     :: nc, ic, ics, ice, iblk
-
-    dsl4jsb_Real2D_onChunk ::  c_bg_sum
-    dsl4jsb_Real2D_onChunk ::  c_ag_sum_1
-
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1
-
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
-    dsl4jsb_Real2D_onChunk ::  c_humus_1
-
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
-    dsl4jsb_Real2D_onChunk ::  c_humus_2
-
-    dsl4jsb_Get_memory(CARBON_)
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )             ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )           ! out
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)      ! in
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)             ! in
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      c_bg_sum(ic) = c_acid_bg1(ic) + c_water_bg1(ic) + c_ethanol_bg1(ic) + c_nonsoluble_bg1(ic) + &
-              & c_acid_bg2(ic) + c_water_bg2(ic) + c_ethanol_bg2(ic) + c_nonsoluble_bg2(ic) + &
-              & c_humus_1(ic)  + c_humus_2(ic)
-
-      c_ag_sum_1(ic) =  c_acid_ag1(ic) + c_water_ag1(ic) + c_ethanol_ag1(ic) + c_nonsoluble_ag1(ic) + c_humus_1(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
-
-  END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
-
 
   ! ====================================================================================================== !
   !

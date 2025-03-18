@@ -178,7 +178,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
@@ -307,45 +307,6 @@ CONTAINS
       target_np_fine_root(:,:) = target_np_leaf(:,:) / root2leaf_np
       ! differ between vegetation dynamics schemes
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-      ! start bareground with vegetation dynamics switched on: cohort scheme
-      CASE ("cohort")
-        background_mort_rate_tree  = 0.0_wp    ! default: 0.01_wp
-        background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp
-        dens_ind(:,:)              = 1.0_wp
-        ! pool%reserve% C N P
-        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 1.0_wp
-        veg_pool_mt_domain(ix_reserve, ixN, :, :) &
-          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
-        ! pool%reserve%carbon13
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC13, ic, iblk) = calc_fractionation(def_co2_mixing_ratio,           &
-              &                                                                  def_co2_mixing_ratio_C13, hlp1) &
-              &                                                          * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-          ENDDO
-        ENDDO
-        ! pool%reserve%carbon14
-        IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-        ENDIF
-        DO ic = 1,nproma
-          DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_reserve, ixC14, ic, iblk) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-              &                                                           def_co2_deltaC14 - hlp1 )    &
-              &                                    * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
-            ! pool%reserve%nitrogen15
-            veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
-              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-          ENDDO
-        ENDDO
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
         veg_pool_mt_domain(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
@@ -469,7 +430,8 @@ CONTAINS
     SELECT CASE(model%config%qmodel_id)
     CASE(QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
       dsl4jsb_Config(VEG_)%flag_dynamic_roots = .FALSE.
-      CALL message(TRIM(routine), ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
+      IF (iblk==1) CALL message(TRIM(routine), &
+          & ' set "flag_dynamic_roots = .FALSE." (canopy, soil only, test_canopy or test_radiation model)')
     END SELECT
 
     ! init root fraction
