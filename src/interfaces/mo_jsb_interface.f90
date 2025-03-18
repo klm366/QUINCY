@@ -37,7 +37,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, HLCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -689,6 +689,7 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
+    USE mo_hlcc_init,           ONLY : read_harvest_data
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -718,6 +719,11 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
+    ENDIF
+
+      ! For the HLCC process harvest data has to be read once a year
+    IF (is_newyear(current_datetime,dtime) .AND. model%processes(HLCC_)%p%config%active) THEN
+      CALL read_harvest_data(model_id, current_datetime)
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')

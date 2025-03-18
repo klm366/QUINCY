@@ -7,6 +7,14 @@
 ! (Why alcc is 3D...? ("Get_var3D_onChunk"))
 ! does proper harvesting need pplc? 
 !
+!
+! To do:
+! need to have a version for ACs, where AC-harvesting is not specified but done based on rules (flag: running on veg tiles, children=pfts)
+! and a non-forest age class version! (i.e. like the old jsbach3 version? (although what's the point))
+! Rename "harvest_tile" which is there just as a placeholder (for simplicity it's ac, cos it's ac)
+! Figure out if "separate" would have any value here (why would flcc even have this either?)
+! If adding daily harvest - check only that new day in the beginning, and later hand
+!
 !---------------------------------------
 !> interface to the hlcc process (lcc due to (wood) harvesting))
 !>
@@ -35,13 +43,13 @@ MODULE mo_hlcc_interface
       USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
     
       ! Use of processes in this module
-      dsl4jsb_Use_processes HLCC_, CARBON_, FAGE_ ! MR-TODO : PPLCC_? (in alcc <- also without C) - CARBON I think is needed, PLCC probs later when input data
+      dsl4jsb_Use_processes HLCC_, CARBON_, FAGE_, PPLCC_ 
     
       ! Use of process configurations
-      !dsl4jsb_Use_config(HLCC_) !MR-TODO : Not sure if needed here, will be done later too
+      !dsl4jsb_Use_config(HLCC_) !MR-TODO: Either remove cos done later, or move everything here (but I think the subroutines need these and are called individually)
       !dsl4jsb_Use_config(CARBON_)
 
-      ! Use of process memories !MR-TODO : These come later again, around line 110 - unnecessary for the whole thing and enought there in the update routine?
+      ! Use of process memories !MR-TODO: These come later again, around line 110 - unnecessary for the whole thing and enought there in the update routine?
       !dsl4jsb_Use_memory(HLCC_)
       !dsl4jsb_Use_memory(CARBON_)
 
@@ -76,7 +84,7 @@ MODULE mo_hlcc_interface
         CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "hlcc"
         ! -------------------------------------------------------------------------------------------------- !
         ALLOCATE(tsk_hlcc::return_ptr)
-        CALL return_ptr%Construct(name='hlcc', process_id=HLCC_, owner_model_id=model_id) ! MR-TODO hlcc and HLCC_ to relevant places
+        CALL return_ptr%Construct(name='hlcc', process_id=HLCC_, owner_model_id=model_id) 
     
       END FUNCTION Create_task_hlcc
     
@@ -98,13 +106,13 @@ MODULE mo_hlcc_interface
       !
       !> Implementation of "update" for task "hlcc"
       !
-      ! Harvesting of a fraction implemented here ! MR-TODO
+      ! 
       !>
       !> Task "hlcc" shifts harvested area (from youngest AC or "from tile back to the same tile") and cares for quantities conserved upon hlcc
       !
       SUBROUTINE update_hlcc(tile, options)
         !USE mo_hlcc_process,       ONLY: harvested_fract_jsbach !MR-TODO: not used (delete)
-        !USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract ! MR-TODO : not repeated here in flcc either, since already done
+        USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract 
         USE mo_jsb_time,           ONLY: is_newday, is_newyear
         USE mo_jsb_lcc_class,      ONLY: min_daily_cf_change, t_jsb_lcc_proc, &
           &                              transfer_from_active_to_passive_var_onChunk, copy_from_active_to_passive_var_onChunk
@@ -112,32 +120,32 @@ MODULE mo_hlcc_interface
         USE mo_carbon_constants,   ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day, molarMassCO2_kg
         USE mo_fage_interface,     ONLY: recalc_fract_per_age_upon_disturbance
     
-        dsl4jsb_Use_memory(HLCC_)   !MR-TODO : could also do in beginning
+        dsl4jsb_Use_memory(HLCC_)   
         dsl4jsb_Use_memory(CARBON_)
         dsl4jsb_Use_config(HLCC_)
         dsl4jsb_Use_config(CARBON_)
         
-    
+        IMPLICIT NONE ! MR-TODO: (just a reminer that this can be needed)
         ! -------------------------------------------------------------------------------------------------- !
         CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
         TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
         ! -------------------------------------------------------------------------------------------------- !
         CHARACTER(len=*), PARAMETER :: routine = modname//':update_hlcc'
-        LOGICAL, PARAMETER :: allAtOnce = .FALSE. ! MR-TODO : what's this? can't see where it would be used, but it exists in also fage and some other interface
+        LOGICAL, PARAMETER :: allAtOnce = .FALSE. ! MR-TODO: I think this comes from the "separate"?
     
-        CLASS(t_jsb_tile_abstract), POINTER :: current_tile, d_tile
+        CLASS(t_jsb_tile_abstract), POINTER :: lcc_tile, harvest_tile ! MR-TODO: Think if naming makes sense
         TYPE(t_jsb_model), POINTER          :: model
-        TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
-    
+        TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !MR-TODO: level?
+
         INTEGER  :: i, j, i_tile, iblk, ics, ice, nc
-        INTEGER  :: nr_of_tiles, nr_of_lcc_events, nr_of_combined_tiles
+        INTEGER  :: nr_of_tiles, nr_of_lcc_events!, nr_of_combined_tiles
         REAL(wp) :: dtime
         REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
     
         REAL(wp), DIMENSION(options%nc) :: current_fract
-        REAL(wp) :: fire_fract_wood_2_atmos, conversion_fact, transfer_fract ! MR-TODO : need to replace fice_frac... with something else at this stage (and possibly other fracs too)
+        REAL(wp) :: fire_fract_wood_2_atmos, conversion_fact, transfer_fract ! MR-TODO: need to replace fice_frac... with something else at this stage (and possibly other fracs too)
     
-        LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
+        LOGICAL  :: harvest_tile_is_ac, lctlib_ForestFlag       ! if the disturbed tile is an ac tile (only if running with age classes)
         INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
         CLASS(t_jsb_tile_abstract), POINTER :: first_ac ! pointer to first ac (only if running with age classes)
     
@@ -149,19 +157,19 @@ MODULE mo_hlcc_interface
              dsl4jsb_Def_config(CARBON_)
 
              
-            ! dsl4jsb_Real2D_onChunk :: dtime !MR-TODO : same name as internal variable? problem?
+            ! dsl4jsb_Real2D_onChunk :: dtime !MR-TODO: delete (old note: same name as internal variable? problem?)
             ! dsl4jsb_Real2D_onChunk :: current_datetime !MR-TODO: delete these
-             dsl4jsb_Real2D_onChunk :: harvested_fract
+             dsl4jsb_Real3D_onChunk :: harvest_fract_year
 
-             dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm !MR-TODO : declaring carbon process variables (REAL(wp), POINTER, DIMENSION(:) :: ) Needed cos technically everything still burned
+             dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm !MR-TODO : need to think about name, and C in general
              dsl4jsb_Real2D_onChunk :: cflux_dist_green_2_soil
              dsl4jsb_Real2D_onChunk :: cflux_dist_woods_2_soil
 
              ! dsl4jsb_Real2D_onChunk :: cover_fract_pot ! MR-TODO : what is this?
         ! ---------
 
-             dsl4jsb_Def_memory_tile(HLCC_, d_tile) ! MR-TODO : these retrieved later with Get_memory_tile... BUT I don't know why/if this is needed
-             dsl4jsb_Real2D_onChunk :: harvested_fract_d_tile !MR-TODO : just declaring variable (why?)
+             !dsl4jsb_Def_memory_tile(HLCC_, harvest_tile) ! MR-TODO: don't want this structure - delete
+             !dsl4jsb_Real2D_onChunk :: harvest_fract_year_harvest_tile 
         ! -------------------------------------------------------------------------------------------------- !
     
         ! Get local variables from options argument
@@ -170,76 +178,89 @@ MODULE mo_hlcc_interface
         ice     = options%ice
         nc      = options%nc
         dtime   = options%dtime
+        
     
         model => Get_model(tile%owner_model_id)
     
-        ! Get process configurations ! MR-TODO : already done?
+        ! Get process configurations
         dsl4jsb_Get_config(HLCC_)
         dsl4jsb_Get_config(CARBON_)
     
-        ! If process is not to be calculated on this tile, do nothing
-        IF (.NOT. tile%Is_process_calculated(HLCC_)) RETURN
-    
-        ! If not newday, do nothing
-        IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN !MR-TODO: what's the point of this, vs. the later check again for the actual process? OR what's the point for the latter, if already returns here...
-    
-        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
-        ! Assertion: hlcc is currently implemented to run on   !MR-TODO : Not sure about this - anyway supposed to be done on woody pft's anyway (later) so does this make a difference?
-        ! - the veg tile in the pft use case
-        ! - the pfts or pftXX_fcXX tiles (if running with age classes)
-        IF(.NOT. INDEX(tile%name, 'pft') > 0) THEN
-          IF(.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN
-            CALL finish(TRIM(routine), 'Violation of assertion: hlcc (currently) is implemented to run on ' &
-              & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the '        &
-              & //' acs (if with age classes), but tried to run for: ' // trim(tile%name) // '. Please check.')
-          END IF
-        END IF
-
-        !>
-        !> Get harvested fraction 
-        !>
+        ! If process is not to be calculated on this tile, do nothing (only on forest pfts)
+        IF (.NOT. tile%Is_process_calculated(HLCC_)) RETURN 
 
         ! Get process memories
         dsl4jsb_Get_memory(HLCC_)
         dsl4jsb_Get_memory(CARBON_)
 
-        ! Get process variables - MR-TODO : not sure if these are correct (Get?). Also same variables as elsewhere
+        ! Get process variables
 
-        !dsl4jsb_Get_var2D_onChunk(HLCC_,   dtime)         ! in !MR-TODO: just things being called from memory (is same as dtime => hlcc__mem%dtime%ptr(ics:ice,iblk)), but these two not in memory: DELETE!
-        !dsl4jsb_Get_var2D_onChunk(HLCC_,   current_datetime)    ! in
-
-        dsl4jsb_Get_var2D_onChunk(HLCC_,   harvested_fract)             ! out
+        dsl4jsb_Get_var3D_onChunk(HLCC_,   harvest_fract_year)             ! out
 
         dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
         dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
         dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
 
-        IF (is_newday(options%current_datetime, dtime)) THEN ! only once per day (check) - MR-TODO: but there is already a check fot this earlier??
-          harvested_fract(:) = 0._wp
-          IF (dsl4jsb_Lctlib_param(dynamic_PFT)) THEN ! MR-TODO: what's this
+        !>
+        !> Assert that PPLCC process is active 
+        !>
+        IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+          CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
+        END IF
+        
+        !>
+        !> Assertion: In current version harvesting only conducted once a year
+        !>
+        IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN 
     
+        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
-            ! Calculate harvested area. ("Dummy harvesting")
-            IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! MR-TODO: Woody Type only, harvested should otherwise be 0 (defined earlier)
+        !>
+        !> Assert that this is a forest pft tile
+        !>
+        lctlib_ForestFlag = dsl4jsb_Lctlib_param(ForestFlag) !MR-TODO: does this work like this
+        IF(.NOT. INDEX(tile%name, 'pft') > 0 .AND. (.NOT. lctlib_ForestFlag)) THEN ! MR-TODO: might have to check how ForestFlag works (& rename it forest_flag?)
+            CALL finish(TRIM(routine), 'Violation of assertion: hlcc is (currently) implemented to run on ' &
+              & //' forest pft tiles but tried to run for: ' // trim(tile%name) // '. Please check.')          
+        !  IF(.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN !MR-TODO: implemented later
+        !    CALL finish(TRIM(routine), 'Violation of assertion: hlcc (currently) is implemented to run on ' &
+        !      & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the '        &
+        !      & //' acs (if with age classes), but tried to run for: ' // trim(tile%name) // '. Please check.')
+        !  END IF
+        END IF
 
-             ! MR-TODO: delete this old process module based version
-             ! CALL harvested_fract_jsbach(                            &
-             !   & options%dtime,                                      & ! in
-             !   & options%current_datetime,                           & ! in
-             !   & harvested_fract(:)                                  & ! inout
-             !   & )
-
-              IF(is_newyear(options%current_datetime,dtime)) THEN !MR-TODO: clean up and combine with other ifs
-                harvested_fract = 0.2
-              END IF
-
-            ENDIF
-
-          END IF
-    
-    
-        END IF ! is_newday  
+!        !>
+!        !> Get harvested fraction !MR-TODO: not needed!
+!        !>
+!
+!
+!
+!                  ! MR-TODO: this gets replaced by the read in input harv. frc.
+!                  IF (is_newday(options%current_datetime, dtime)) THEN ! only once per day (check) - MR-TODO: but there is already a check fot this earlier??
+!                    harvest_fract_year(:) = 0._wp
+!                    IF (dsl4jsb_Lctlib_param(dynamic_PFT)) THEN ! MR-TODO: what's this
+!              
+!              
+!                      ! Calculate harvested area. ("Dummy harvesting")
+!                      IF (lctlib_ForestFlag) THEN  ! MR-TODO: FIX!, I think woody type includes schrubs too - but I didn't get any sort of error?? could have a check for trying to harvest non-forest
+!
+!                      ! MR-TODO: delete this old process module based version
+!                      ! CALL harvested_fract_jsbach(                            &
+!                      !   & options%dtime,                                      & ! in
+!                      !   & options%current_datetime,                           & ! in
+!                      !   & harvested_fract(:)                                  & ! inout
+!                      !   & )
+!
+!                        IF(is_newyear(options%current_datetime,dtime)) THEN !MR-TODO: clean up and combine with other ifs
+!                          harvest_fract_year = 0.2
+!                        END IF
+!
+!                      ENDIF
+!
+!                    END IF
+!              
+!              
+!                  END IF ! is_newday  
 
 
 
@@ -257,117 +278,118 @@ MODULE mo_hlcc_interface
         initial_area(:,:) = 0.0_wp
     
         !>
-        !> 2. Two possibilities:
+        !> 2. Two possibilities: (currently only 2b! MR-TODO: go through and see if 2a would work and add "separate" to config if needed)
         !>
-        !>     2.a make all area movements at once (in that case there is no directed movement of matter
-        !>         from one source to one sink but only a movement of matter from all shrinking to all extending tiles)
+        !>     (not implemented, need to check if works after edits -) 2.a make all area movements at once (in that case there is no directed movement of matter
+        !>         from one source to one sink but only a movement of matter from all shrinking to all extending tiles) )
         !>
         !>     2.b make an outer loop around init, start, end, dealloc and only move area from one source to one sink tile
         !>         [TR: suggested to permute the order of tiles in the loop for alcc with transitions]
         !>
-        IF (dsl4jsb_Config(HLCC_)%separate) THEN ! => 2b
-          nr_of_lcc_events = nr_of_tiles
-          nr_of_combined_tiles = 1
-        ELSE ! not in a do loop but all at once    => 2a
-          nr_of_lcc_events = 1
-          nr_of_combined_tiles = nr_of_tiles
-        ENDIF
+        !IF (dsl4jsb_Config(HLCC_)%separate) THEN ! => 2b ! MR-TODO: "separate" not there as a control, but the only option
+        nr_of_lcc_events = nr_of_tiles ! so with ACs now, this nr_of_lcc_events= num of ACs !MR-TODO: a redundant variable unless addin "all at once option"
+        !nr_of_combined_tiles = 1 !MR-TODO: not needed now since only "separate"
+        !ELSE ! not in a do loop but all at once    => 2a
+        !  nr_of_lcc_events = 1
+        !  nr_of_combined_tiles = nr_of_tiles
+        !ENDIF
     
         ! initiate pointers, logicals and indices to enable lcc, particularly if running with forest age classes
-        d_tile_is_ac = .FALSE.
+        harvest_tile_is_ac = .FALSE. 
         IF (tile%Has_children()) THEN
-          d_tile => tile%Get_first_child_tile()
-          IF (d_tile%Has_children()) THEN
+          harvest_tile => tile%Get_first_child_tile()
+          IF (harvest_tile%Has_children()) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: hlcc (currently) is not implemented to run on ' &
               & //'a hierarchy level with more descendants than direct children. Tried to run on ' &
               & // trim(tile%name) // '. Please check.')
           END IF
           IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
             ! Assert: for hlcc (currently) first age class is expected first in the list of involved tiles
-            IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(1))) THEN
+            IF (.NOT. (harvest_tile%name .EQ. lcc_relocations%tile_names(1))) THEN
               CALL finish(TRIM(routine), 'Violation of assertion: for hlcc (currently) the first age class is ' &
-                & //'expected to be listed as first involved tile, instead found: '// trim(d_tile%name))
+                & //'expected to be listed as first involved tile, instead found: '// trim(harvest_tile%name))
             END IF
-            first_ac => d_tile
+            first_ac => harvest_tile
             i_first_ac = 1
-            d_tile_is_ac = .TRUE.
+            harvest_tile_is_ac = .TRUE.
           END IF
         ELSE
-          d_tile => tile%self_tile
+          harvest_tile => tile%self_tile 
         END IF
     
-        DO i = 1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle
+        DO i = 1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle !NOW=ACs
           ! Collect initial area of all involved tiles
           CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
     
           ! init gained and lost area
-          lost_area(:,:) = 0.0_wp
+          lost_area(:,:) = 0.0_wp !MR-TODO: this is the same as harvested_frac, but for consistency/clarity with lcc, keeping it
           gained_area(:,:) = 0.0_wp
     
           ! Collect lost and gained area of involved tiles
-          DO j =1,nr_of_combined_tiles ! < inner loop collecting lcc movements within this lcc-cycle
+          !DO j =1,nr_of_combined_tiles ! < inner loop collecting lcc movements within this lcc-cycle ! MR-TODO: not needed cos always 1 (now)
     
-            IF (dsl4jsb_Config(HLCC_)%separate) THEN
-              ! in this case the area redistribution follows the counter of the outer loop, i.e. one pft a time
-              i_tile = i
-            ELSE
-              ! in this case the area redistribution follows the counter of the inner loop,
-              ! i.e. all area is aggregated in this one loop (i.e. mixed) and then distributed at once
-              i_tile = j
-            ENDIF
-    
-            IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
-              ! Assertion: if running with age classes all classes are expected to be involved with hlcc
-              IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(i_tile))) THEN
-                CALL finish(TRIM(routine), 'Violation of assertion: for hlcc (currently) all age classes are expected ' &
-                  & //'to be listed as involved, but found not involved age-class: '// trim(d_tile%name))
-              END IF
+          !IF (dsl4jsb_Config(HLCC_)%separate) THEN !MR-TODO: "separate" variabel doesn't exist right now
+            ! in this case the area redistribution follows the counter of the outer loop, i.e. one pft a time
+          i_tile = i !MR-TODO: redundant variable if no "all at once option" (i_tile is a better name though)
+          !ELSE
+            ! in this case the area redistribution follows the counter of the inner loop,
+            ! i.e. all area is aggregated in this one loop (i.e. mixed) and then distributed at once
+          !  i_tile = j
+          !ENDIF
+  
+          IF (TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+            ! Assertion: if running with age classes all classes are expected to be involved with hlcc
+            IF (.NOT. (harvest_tile%name .EQ. lcc_relocations%tile_names(i_tile))) THEN
+              CALL finish(TRIM(routine), 'Violation of assertion: for hlcc (currently) all age classes are expected ' &
+                & //'to be listed as involved, but found not involved age-class: '// trim(harvest_tile%name))
             END IF
-    
-            ! - add harvested area of current child to lost area --------------------------------------------------------------------MR-TODO!!!
-            CALL d_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-            dsl4jsb_Get_memory_tile(HLCC_, d_tile) !MR-TODO : this d_tile structure is from flcc (with DISTURB_) not sure if needs to be done this way...
-            dsl4jsb_Get_var2d_onChunk_tile_name(HLCC_, harvested_fract, d_tile) !MR-TODO : Not sure if works (basically allocating the just calculated harvested_frac to this d_tile)... (burned_frac is not "called" in flcc tho)
-            !----MR-TODO
-            ! where does harvested_fract come from? Apparently "defined" in process, and then comes through here through memory...there: harvested_fract is "TYPE(t_jsb_var_real2d)"      
-            ! TODO : make the harvesting "process" in the process module, and make memory to match... then probs no other major things to do here? 
+          END IF
+  
+          ! - add harvested area of current child to lost area --------------------------------------------------------------------MR-TODO!!!
+          CALL harvest_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
+          ! MR-TODO: these next lines shouln't be needed 
+          !dsl4jsb_Get_memory_tile(HLCC_, harvest_tile) !MR-TODO : this harvest_tile structure is from flcc (with DISTURB_) not sure if needs to be done this way...
+          !dsl4jsb_Get_var2d_onChunk_tile_name(HLCC_, harvest_fract_year(:,i_tile), harvest_tile) !MR-TODO : Not sure if works (basically allocating the just calculated harvested_frac to this harvest_tile)... (burned_frac is not "called" in flcc tho)
+          !----MR-TODO
+          ! where does harvest_fract_year come from? Apparently "defined" in process, and then comes through here through memory...there: harvest_fract_year is "TYPE(t_jsb_var_real2d)"      
+          ! TODO : make the harvesting "process" in the process module, and make memory to match... then probs no other major things to do here? 
 
-            !----MR-TODO
-            lost_area(:,i_tile) = harvested_fract_d_tile(:) * current_fract(:)
-            WHERE(lost_area(:,i_tile) < min_daily_cf_change)
-              lost_area(:,i_tile) = 0.0_wp
-            END WHERE
-    
-            IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
-              ! - care for the gained area  -> @todo change when bare land tile available
-              ! ... if forest age classes are used the area of any disturbed age class is added to the first class
-              IF (d_tile_is_ac) THEN
-                gained_area(:,i_first_ac) = gained_area(:,i_first_ac) + lost_area(:,i_tile)
-    
-                ! for all but the first age class thus the fractions need to be adapted
-                IF (.NOT. d_tile%Is_first_child()) THEN
-                  current_fract(:) = current_fract(:) -  lost_area(:,i_tile)
-                  CALL d_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-                  CALL first_ac%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-                  current_fract(:) = current_fract(:) + lost_area(:,i_tile)
-                  CALL first_ac%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-    
-                  ! Updated tracked age
-                  CALL recalc_fract_per_age_upon_disturbance(tile, options, i_tile, lost_area(:,i_tile))
-                END IF
-    
-              ELSE
-                ! else (currently) back to the tile itself
-                gained_area(:,i_tile) = harvested_fract_d_tile(:) * current_fract(:)
+          !----MR-TODO
+          lost_area(:,i_tile) = harvest_fract_year(:,i_tile) 
+          !WHERE(lost_area(:,i_tile) < min_daily_cf_change) !MR-TODO: daily harv. 
+          !  lost_area(:,i_tile) = 0.0_wp
+          !END WHERE
+  
+          IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
+            ! - care for the gained area  -> @todo change when bare land tile available !MR-TODO: was ist das?
+            ! ... if forest age classes are used the area of any disturbed age class is added to the first class
+            IF (harvest_tile_is_ac) THEN
+              gained_area(:,i_first_ac) = gained_area(:,i_first_ac) + lost_area(:,i_tile)
+  
+              ! for all but the first age class thus the fractions need to be adapted
+              IF (.NOT. harvest_tile%Is_first_child()) THEN
+                current_fract(:) = current_fract(:) -  lost_area(:,i_tile)
+                CALL harvest_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+                CALL first_ac%Get_fraction(ics, ice, iblk, fract=current_fract(:))
+                current_fract(:) = current_fract(:) + lost_area(:,i_tile)
+                CALL first_ac%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+  
+                ! Updated tracked age
+                CALL recalc_fract_per_age_upon_disturbance(tile, options, i_tile, lost_area(:,i_tile))
               END IF
+  
+            ELSE
+              ! else (currently) back to the tile itself (lost=gained)
+              gained_area(:,i_tile) = harvest_fract_year(:,i_tile)
             END IF
+          END IF
+  
+          ! - go to next tile (if associated)
+          harvest_tile => harvest_tile%Get_next_sibling_tile()
+  
+          !END DO ! inner loop collecting lcc movements within this lcc-cycle !MR: not needed cos now always 1
     
-            ! - go to next tile (if associated)
-            d_tile => d_tile%Get_next_sibling_tile()
-    
-          END DO ! inner loop collecting lcc movements within this lcc-cycle
-    
-          ! Only needs to be executed if there is area to be moved
+          ! lcc relocations only need to be executed if there is area to be moved
           IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
     
             !>
@@ -385,18 +407,18 @@ MODULE mo_hlcc_interface
             !>         process specific relocation routines can be specified
             !>
             IF (tile%Has_children()) THEN
-              current_tile => tile%Get_first_child_tile()
+              lcc_tile => tile%Get_first_child_tile() 
             ELSE
-              current_tile => tile%self_tile
+              lcc_tile => tile%self_tile
             END IF
     
             i_tile = 0
-            DO WHILE (i_tile < nr_of_tiles)
+            DO WHILE (i_tile < nr_of_tiles) 
     
               i_tile = i_tile + 1
-              IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+              IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN 
                 ! 4a -- 'special transfer'
-                IF (current_tile%Has_process_memory(CARBON_)) THEN
+                IF (lcc_tile%Has_process_memory(CARBON_)) THEN
                   conversion_fact = molarMassCO2_kg / sec_per_day
                   ! all litter pools (ag yasso pools) are harvested
                   CALL transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
@@ -447,11 +469,11 @@ MODULE mo_hlcc_interface
                 END IF
     
                 ! 4b -- general transfer of active vars (transfer the 'rest' of active vars)
-                CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
+                CALL transfer_active_to_passive_onChunk(lcc_relocations, lcc_tile, i_tile, options)
               END IF
     
               ! - go to next tile (if associated)
-              current_tile => current_tile%Get_next_sibling_tile()
+              lcc_tile => lcc_tile%Get_next_sibling_tile()
             END DO
     
             !>
