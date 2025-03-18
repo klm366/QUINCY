@@ -397,9 +397,11 @@ CONTAINS
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &

@@ -133,7 +133,7 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
     nr_of_veg_bgcm_comp = get_number_of_veg_compartments()
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (.NOT. lctlib%ForestFlag) RETURN !< only run this routine at forest tiles
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SH_)
     IF (dsl4jsb_Config(Q_SH_)%l_daily_harvest) THEN
@@ -156,13 +156,16 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(Q_SH_)
     dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_harvest)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)
+
+    IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)
+      dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)
+    END IF
 
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock)

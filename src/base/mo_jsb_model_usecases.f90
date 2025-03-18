@@ -776,8 +776,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_      /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
+      & processes      =(/A2L_,     L2A_,     RAD_     , TURB_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -898,8 +898,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     SPQ_,     RAD_      /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
+      & processes      =(/A2L_,     L2A_,     SPQ_,     RAD_,      TURB_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)

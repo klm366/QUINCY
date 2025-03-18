@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, RAD_, Q_ASSIMI_, Q_PHENO_
+    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, TURB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: rhoh2o, grav
@@ -51,9 +51,11 @@ CONTAINS
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree, k_fpc, k_sai2lai
+    USE mo_turb_constants,                  ONLY: veg_height_to_rough_momentum, veg_min_roughness
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_ASSIMI_)
+    dsl4jsb_Use_config(TURB_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
@@ -79,6 +81,7 @@ CONTAINS
     INTEGER                           :: ic, is, icanopy        !< looping indices
     CHARACTER(len=1024)               :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
     LOGICAL                           :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation - q_assimi config
+    REAL(wp) :: config_blending_height
     REAL(wp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
     REAL(wp) :: lctlib_wood_density, lctlib_phi_leaf_min, lctlib_k_latosa, lctlib_k0_fn_struc, lctlib_fn_oth_min
     REAL(wp) :: lctlib_gmin, lctlib_g0, lctlib_t_jmax_omega
@@ -89,8 +92,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
+    dsl4jsb_Def_config(TURB_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
@@ -118,7 +122,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: sai
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: fract_fpc
-    dsl4jsb_Real2D_onChunk      :: blended_height
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
@@ -127,6 +130,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: rough_veg_star
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
@@ -159,6 +163,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_ASSIMI_)
+    dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
@@ -191,7 +196,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, sai)                                  ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)                            ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, blended_height)                       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)                   ! in
@@ -200,6 +204,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, rough_veg_star)                       ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
@@ -224,6 +229,8 @@ CONTAINS
       vgrid_canopy_ubounds(icanopy) = vgrid_canopy_q_assimi%ubounds(icanopy)
     END DO
     !$ACC END PARALLEL LOOP
+
+    config_blending_height = dsl4jsb_Config(TURB_)%blending_height
 
     lctlib_sla = dsl4jsb_Lctlib_param(sla)
     lctlib_np_leaf = dsl4jsb_Lctlib_param(np_leaf)
@@ -306,14 +313,17 @@ CONTAINS
       END SELECT
     END IF
 
-    !>  1.1 calculate foliage projected cover fraction and blended_height for turbulence calculations
+    !>  1.1 calculate foliage projected cover fraction and rough_veg_star for turbulence calculations
     !>
-    ! note: the '* 1.0_wp' for calc of blended_height(:) is the minimum/default height in meter
-    ! using the VEG_ min_height parameter (= 0.1_wp) instead would change simulation results
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
       fract_fpc(ic) = 1.0_wp - EXP(-k_fpc * (lai(ic) + sai(ic)))
-      blended_height(ic) = height(ic) * fract_fpc(ic) + (1._wp - fract_fpc(ic)) * 1.0_wp
+      ! NOTE use as minimum value for all PFT veg_min_roughness, because
+      !      vegetation density and height can change and
+      !      therefore a tile occupied by a woody PFT can have a height lower than 10m, implying a rough_m less than 1;
+      !      jsbach is using the lctlib parameter MinVegRoughness instead
+      rough_veg_star(ic) = 1._wp / LOG(config_blending_height / MAX((height(ic) / veg_height_to_rough_momentum), &
+        &                  veg_min_roughness)) ** 2
     END DO
     !$ACC END PARALLEL LOOP
 

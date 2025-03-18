@@ -10,6 +10,7 @@ title: Authors
 - Erich Roeckner
 - Fabrice Lacroix
 - Freja Vamborg
+- Georgii Nerobelov
 - Jan Engel
 - Julia Nabel
 - Karolina Slominska-Durdasiak
