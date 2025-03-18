@@ -1600,9 +1600,10 @@ CONTAINS
           delta_cn = - (1._wp - EXP(-(2._wp*target_cn_leaf/(lctlib_cn_leaf_min + lctlib_cn_leaf_max))**8._wp))
         END IF
         ! Apply CN modifier calculated above to actual change in leaf CN target, given by the maximum change per timestep
-        target_cn_leaf = target_cn_leaf * (1._wp +  delta_cn  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+        target_cn_leaf = MIN(lctlib_cn_leaf_max, MAX(lctlib_cn_leaf_min, &
+          &              target_cn_leaf * (1._wp + delta_cn * f_growing_leaf * delta_n_leaf * dtime / one_day)))
       END SELECT
-    ENDIF
+    END IF
 
     !> 2.0 determine C:N of other plant tissues
     !!
@@ -1634,9 +1635,10 @@ CONTAINS
           delta_np = - (1._wp - EXP(-(2._wp*target_np_leaf/(lctlib_np_leaf_min + lctlib_np_leaf_max))**8._wp))
         END IF
         ! Apply NP modifier calculated above to actual change in leaf NP target, given by the maximum change per timestep
-           target_np_leaf = target_np_leaf * (1._wp +  delta_np  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+        target_np_leaf = MIN(lctlib_np_leaf_max, MAX(lctlib_np_leaf_min, &
+          &              target_np_leaf * (1._wp + delta_np * f_growing_leaf * delta_n_leaf * dtime / one_day)))
       END SELECT
-    ENDIF
+    END IF
 
     target_np_fine_root = target_np_leaf / root2leaf_np
     SELECT CASE(lctlib_growthform)

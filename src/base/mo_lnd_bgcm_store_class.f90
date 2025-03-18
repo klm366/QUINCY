@@ -1,4 +1,4 @@
-!> Summary: provides types and definitions for storing and providing bgc materials
+!> Provides types and definitions for storing and providing bgc materials
 !>
 !> ICON-Land
 !>
