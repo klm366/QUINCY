@@ -77,6 +77,14 @@ CONTAINS
                                'pasture2crop', 'pasture2pasture', 'pasture2natural', &
                                'natural2crop', 'natural2pasture', 'natural2natural' ]            ! TODO: here the transitions type should be print out
 
+    ! Print the values of the transitions array
+    CALL message(TRIM(routine), 'Printing transition types:')
+    DO i = 1, SIZE(transitions)
+      CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(i))) // ')')
+    END DO
+
+    
+    ! -------------------------------------------------------------------------------------------------- ! 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
          lrestart_cont,          &
@@ -102,7 +110,7 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
+    alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_0049_r2b4_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
     LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
