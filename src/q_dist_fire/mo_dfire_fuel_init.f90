@@ -130,8 +130,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, moisture_extinction)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fwd_wind_factor)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_prop_ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_prop_ck)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
