@@ -1500,7 +1500,8 @@ CONTAINS
         ! k_rtos
          DO i = 1,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
-              lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+              ! Note: sla(i) was originaly sla(4). This is done on purpose for scientic reasons.
+              lctlib(i)%k_rtos = 1.75_wp * (lctlib(i)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
               !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
               !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
            ELSE
@@ -1784,7 +1785,7 @@ CONTAINS
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
     ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_3_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif
