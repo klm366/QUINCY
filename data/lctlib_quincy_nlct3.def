@@ -39,7 +39,7 @@
                              
 #----------------------------------------------------------------------------------------                             
                              
-NLCT 14 # number of landcover types
+NLCT 3 # number of landcover types
         
 #----------------------------------------------------------------------------------------                             
 #LctNumber: Landcover type index numbers (not used in the model)                             
