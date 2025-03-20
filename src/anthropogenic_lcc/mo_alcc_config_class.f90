@@ -102,7 +102,7 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_0049_r2b4_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
+    alcc_transition_filename_prefix =   'LUH_scaled_transitions_T63_'                                        ! Mingyue Zhang: Set defaults for transition data nc file prefix 
     LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)                                        ! pft 1-8 (Natural) ! pft 9 (Pasture), pft11 (Crops) ! Mingyue Zhang:define land_cover mapping table
     nr_of_pfts           = 11
     l_daily_alcc         = .TRUE.
@@ -134,11 +134,6 @@ CONTAINS
       CALL message(TRIM(routine), 'Reading land use data from maps.')
     CASE ('trans')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
-          ! Print the values of the transitions array
-      CALL message(TRIM(routine), 'Printing transition types:')
-      DO i = 1, SIZE(transitions)
-        CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(i))) // ')')
-      END DO
       config%scheme=tolower(config%scheme)
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
