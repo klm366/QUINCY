@@ -206,6 +206,12 @@ CONTAINS
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
       WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
 
+      
+      !print *, 'varname_within_file', varname_within_file     !mingyue added
+      CALL message(TRIM(routine), 'varname_within_file: '//TRIM(varname_within_file))
+      !print *, 'current_tile%name', current_tile%name          !mingyue added
+      CALL message(TRIM(routine), 'current_tile%name: '//TRIM((current_tile%name)))
+
       current_tile => tile%Get_first_child_tile()
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
@@ -238,7 +244,8 @@ CONTAINS
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
-      WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
+      !Mingyue: below the write message is not needed, the output value of it is transition_pft01 ... transition_pft11
+      !WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
 
       ! Loop over gridcell in the chunk to read in transition matrix data

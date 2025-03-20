@@ -135,6 +135,11 @@ CONTAINS
     CASE ('trans')
       CALL message(TRIM(routine), 'Reading land use change data from transition matrix.')
       config%scheme=tolower(config%scheme)
+      ! Print the values of the transitions array
+      CALL message(TRIM(routine), 'Printing transition types:')
+      DO i = 1, SIZE(transitions)
+        CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(i))) // ')')
+      END DO
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
