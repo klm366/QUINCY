@@ -188,6 +188,8 @@ CONTAINS
        END IF
 
       CALL model%Set_mode(model%config%hsm_mode)
+      ! Disable multi-queue processing for QUINCY while it's not ready
+      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
 
       surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)

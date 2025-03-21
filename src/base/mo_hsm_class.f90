@@ -120,9 +120,11 @@ MODULE mo_hsm_class
     TYPE(t_Action),  ALLOCATABLE :: actions(:)         !< List of possible actions (events)
     INTEGER,         ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
     INTEGER                      :: mode               !< HSM_full or HSM_simple
+    LOGICAL                      :: use_multiple_queues   !< Process messages in multiple OpenACC streams
   CONTAINS
     PROCEDURE :: Init_hsm
     PROCEDURE :: Set_mode          => Set_mode_hsm
+    PROCEDURE :: Set_multi_queues  => Set_multi_queues_hsm
     PROCEDURE :: Get_current       => Get_current_hsm
     PROCEDURE :: Goto              => Goto_state_hsm
     PROCEDURE :: Goto_next         => Goto_next_state_hsm
@@ -572,6 +574,7 @@ CONTAINS
     IF (PRESENT(debug)) l_debug = debug
 
     CALL self%Set_mode('full')
+    CALL self%Set_multi_queues(.TRUE.)
 
     ALLOCATE(self%current(nthreads))
     ALLOCATE(self%next   (nthreads))
@@ -613,6 +616,15 @@ CONTAINS
    END SELECT
 
   END SUBROUTINE Set_mode_hsm
+
+  SUBROUTINE Set_multi_queues_hsm(self, use_multiple_queues)
+
+    CLASS(t_Hsm),  INTENT(inout) :: self
+    LOGICAL,       INTENT(in) :: use_multiple_queues
+
+    self%use_multiple_queues = use_multiple_queues
+
+  END SUBROUTINE Set_multi_queues_hsm
 
   FUNCTION Get_current_hsm(this) RESULT(return_ptr)
 
@@ -927,7 +939,7 @@ CONTAINS
   ! State machine engine
   !
   SUBROUTINE Process_message_hsm(this, msg, debug)
-    USE mo_jsb_control, ONLY: acc_stream, acc_async_sync
+    USE mo_jsb_control, ONLY: acc_stream
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
 !!$    CLASS(t_Message), POINTER       :: msg
@@ -964,7 +976,7 @@ CONTAINS
 #ifdef _OPENACC
       ! Prepare OpenACC streams for multi-stream processing
       original_stream = acc_stream
-      IF (acc_stream /= acc_async_sync) acc_stream = 1
+      IF (this%use_multiple_queues) acc_stream = 1
 #endif
 
       IF (msg%action%name /= "INTEGRATE") THEN
@@ -982,7 +994,7 @@ CONTAINS
 #ifdef _OPENACC
         IF (new_msg%action%name /= "INTEGRATE") THEN
           ! Join all the streams before the first non-integration task
-          IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
+          IF (this%use_multiple_queues .AND. original_stream /= -1) THEN
             DO stream = original_stream+1, acc_stream
               !$ACC WAIT(stream) ASYNC(original_stream)
             ENDDO
@@ -995,7 +1007,8 @@ CONTAINS
           ENDIF
         ELSE
           ! Use a separate stream for each INTEGRATE task
-          IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
+          ! QUINCY model doesn't support different streams just yet
+          IF (this%use_multiple_queues) acc_stream = acc_stream + 1
           !$ACC WAIT(original_stream) ASYNC(acc_stream)
         ENDIF
 #endif
@@ -1036,7 +1049,7 @@ CONTAINS
       END DO
 
 #ifdef _OPENACC
-      IF (original_stream /= -1 .AND. original_stream /= acc_async_sync) THEN
+      IF (this%use_multiple_queues .AND. original_stream /= -1) THEN
         DO stream = original_stream+1, acc_stream
           !$ACC WAIT(stream) ASYNC(original_stream)
         ENDDO

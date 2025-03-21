@@ -711,8 +711,8 @@ CONTAINS
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
@@ -724,9 +724,9 @@ CONTAINS
                      alb_vis_can(:),alb_vis_lnd(:))
     !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       swvis_srf_net(ic) = (1.0_wp - alb_vis_lnd(ic)) * swvis_srf_down(ic)
     END DO
@@ -734,7 +734,7 @@ CONTAINS
 
     !> 2.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !>
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO icanopy = 1,ncanopy
       DO ic = 1, nc
         fleaf_sunlit_cl(ic,icanopy) = fleaf_sunlit_vis_cl(ic,icanopy)
@@ -742,7 +742,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF(swvis_srf_down(ic) > eps8) THEN
         appfd(ic) = arad_vis_can(ic) * swpar_srf_down(ic) / swvis_srf_down(ic) * rad2ppfd
@@ -752,7 +752,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO icanopy=1,ncanopy
       DO ic = 1, nc
         IF (swvis_srf_down(ic) > eps8) THEN
@@ -1813,6 +1813,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       ! calculate surface albedo
+      !$ACC WAIT(acc_stream)
       CALL calc_surface_radiation_quincy(tile, options)
 #endif
     END SELECT  ! quincy / jsbach
@@ -2043,7 +2044,8 @@ CONTAINS
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       IF (growing_season(ic) > test_false_true) THEN
         l_growing_season(ic)      = .TRUE.
@@ -2051,14 +2053,14 @@ CONTAINS
         l_growing_season(ic)      = .FALSE.
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy = 1, ncanopy
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         l_growing_season_cl(ic,icanopy) = l_growing_season(ic)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 daytime averages
@@ -2067,7 +2069,7 @@ CONTAINS
 
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO icanopy = 1, ncanopy
       !$ACC LOOP GANG VECTOR
@@ -2086,7 +2088,7 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO icanopy = 1, ncanopy
       !$ACC LOOP GANG VECTOR
@@ -2119,7 +2121,7 @@ CONTAINS
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO icanopy = 1, ncanopy
       DO ic = 1, nc
         !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
@@ -2138,7 +2140,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
+    !$ACC WAIT(acc_stream)
 
     !$ACC EXIT DATA DELETE(l_growing_season_cl, l_growing_season)
     DEALLOCATE(l_growing_season_cl)

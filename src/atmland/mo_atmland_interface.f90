@@ -17,7 +17,7 @@ MODULE mo_atmland_interface
   USE mo_exception,       ONLY: finish
   USE mo_kind,            ONLY: wp
 
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream, acc_async_sync
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid,           ONLY: Get_grid
@@ -748,7 +748,7 @@ CONTAINS
     END IF
 
     original_stream = acc_stream
-    IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
     !$ACC WAIT(original_stream) ASYNC(acc_stream)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
@@ -948,7 +948,7 @@ CONTAINS
     ! Exchange fields on lake water fractions
     ! ---------------------------------------
 
-    IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
     !$ACC WAIT(original_stream) ASYNC(acc_stream)
 
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
@@ -1071,7 +1071,7 @@ CONTAINS
 
     END IF
 
-    IF (acc_stream /= acc_async_sync) acc_stream = acc_stream + 1
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
     !$ACC WAIT(original_stream) ASYNC(acc_stream)
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
@@ -1173,7 +1173,7 @@ CONTAINS
 
     END IF
 
-    IF (acc_stream /= acc_async_sync) THEN
+    IF (model%use_multiple_queues) THEN
       DO stream = original_stream + 1, acc_stream
           !$ACC WAIT(stream) ASYNC(original_stream)
       ENDDO
