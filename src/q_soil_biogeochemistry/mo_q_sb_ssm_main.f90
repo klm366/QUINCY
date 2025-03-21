@@ -452,6 +452,7 @@ CONTAINS
       & bulk_dens_sl(:,:), &
       & w_soil_sl(:,:), &
       & nh4_solute(:,:), &
+      & no3_solute(:,:), &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
       & rtm_sorption(:,:), &
@@ -1061,6 +1062,7 @@ CONTAINS
     & bulk_dens_sl, &
     & w_soil_sl, &
     & nh4_solute, &
+    & no3_solute, &
     & rtm_hsc, &
     & rmm_hsc, &
     & rtm_sorption, &
@@ -1105,6 +1107,7 @@ CONTAINS
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3]
                                                                 w_soil_sl, &                 !< water content of a layer [m]
                                                                 nh4_solute, &                !< NH4 content of a layer [mol m-3]
+                                                                no3_solute, &                !< NO3 content of a layer [mol m-3]
                                                                 rtm_hsc, &                   !< temperature response scalar for half-saturation constants
                                                                 rmm_hsc, &                   !< moisture response scalar for half-saturation constants
                                                                 rtm_sorption, &              !< temperature response scalar for po4 sorption
@@ -1183,8 +1186,9 @@ CONTAINS
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3
-        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(ic, is) / bulk_dens_sl(ic, is), &
-          &                         k_fast_som_cn_min)
+        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn &
+          &                            * (nh4_solute(ic, is) + no3_solute(ic, is)) / bulk_dens_sl(ic, is), &
+          &                            k_fast_som_cn_min)
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
           &                            k_fast_som_cn_min) / apparent_fast_som_cn(ic, is)
@@ -1194,8 +1198,8 @@ CONTAINS
         p_deposition_act(ic, is)  = 0.0_wp
         ! only for the 1st soil layer
         p_deposition_act(ic,1)  = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_local_soil_profile_values
 
   !-----------------------------------------------------------------------------------------------------

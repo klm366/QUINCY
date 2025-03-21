@@ -163,6 +163,7 @@ CONTAINS
     LOGICAL  :: l_snow_config, l_freeze_config, l_supercool_config, use_tmx
 
     INTEGER  :: iblk, ics, ice, nc, ic, iter
+    INTEGER  :: model_scheme
     REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday, jsb_standalone
@@ -183,6 +184,7 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     use_tmx = model%config%use_tmx
+    model_scheme = model%config%model_scheme
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
@@ -412,7 +414,9 @@ CONTAINS
       ! Update drag and exchange coefficients based on external forcing data
       CALL update_drag( &
           ! INTENT in
-        & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & nc, steplen, &
+        & model_scheme, &
+        & t_air(:), press_srf(:), q_air(:), wind_air(:), &
         & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
@@ -462,14 +466,16 @@ CONTAINS
       ! Update drag based on updated surface temperature and filtered richardson number
       CALL update_drag( &
           ! INTENT in
-        & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & nc, steplen, &
+        & model_scheme, &
+        & t_air(:), press_srf(:), q_air(:), wind_air(:), &
         & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
         & drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
           ! Optional variables for filtering
-        & t_srf_upd(:), richardson(:))
+        & t_srf_upd = t_srf_upd, zril_old = richardson)
 
       !$ACC END DATA
 

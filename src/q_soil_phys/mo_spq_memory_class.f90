@@ -55,12 +55,13 @@ MODULE mo_spq_memory_class
                                     s_star              !< surface dry static energy               [m2 s-2 ?]
 
     TYPE(t_jsb_var_real2d)          :: &
-      & evapotranspiration, &             !< evapotranspiration [kg m-2 s-1]
-      & z0h, &                            !< surface roughness length for heat [m]
-      & z0m                               !< surface roughness length for momentum [m]
+      & evapotranspiration                !< evapotranspiration [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d)          :: &
       &   num_sl_above_bedrock                          !< number of soil layers above bedrock, i.e., with a width larger eps8
+
+    TYPE(t_jsb_var_real2d)          :: &
+      & q_sat_srf                          !< surface saturated specific humidity  [?]
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
@@ -80,18 +81,6 @@ MODULE mo_spq_memory_class
                                     drainage,         & !< drainage                                                                 [kg m-2 s-1]
                                     gw_runoff,        & !< lateral runoff                                                           [kg m-2 s-1]
                                     drainage_fraction   !< water mass fraction lost from the soil column by drainage                [1 s-1]
-
-    TYPE(t_jsb_var_real2d)          :: &
-      & fact_q_air                      , &  !< factor representing air at actual water content [unitless]
-      & fact_qsat_srf                        !< factor representing air at saturating water content [unitless]
-
-    TYPE(t_jsb_var_real2d)          :: &
-      spq_drag_srf           , &          !< surface_drag
-      spq_t_acoef            , &          !< temperature_acoef (Richtmyer-Morton coefficient)
-      spq_t_bcoef            , &          !< temperature_bcoef (Richtmyer-Morton coefficient)
-      spq_q_acoef            , &          !< specific_humidity_acoef (Richtmyer-Morton coefficient)
-      spq_q_bcoef            , &          !< specific_humidity_bcoef (Richtmyer-Morton coefficient)
-      spq_pch
 
     ! Additional variables for spq
     TYPE(t_jsb_var_real2d)          :: &
@@ -222,6 +211,13 @@ MODULE mo_spq_memory_class
     !> HYDRO_
     !>
     TYPE(t_jsb_var_real2d) :: &
+      & fract_snow              !< Snow fraction of tile                                                []
+                                !! 'fract_snow(ic) = fract_snow_soil(ic)' in HYDRO_ interface
+
+    TYPE(t_jsb_var_real2d) :: &
+      & fract_wet               !< Wet (skin and pond reservoir) fraction of tile (soil and canopy)         []
+
+    TYPE(t_jsb_var_real2d) :: &
       & fract_pond,           & !< Fraction of tile assumed inundated at given water level              []
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
       & ice_pond                !< Frozen water content of pond reservoir                               [m water equivalent]
@@ -286,6 +282,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_spq               ! Vertical grid
     INTEGER                    :: table
+    TYPE(t_grib2)              :: grib2_desc
     REAL(wp)                   :: ini_snow_dens
     LOGICAL                    :: l_ponds
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_memory'
@@ -421,31 +418,20 @@ CONTAINS
         & lrestart=.TRUE., &
         & initval_r=0.0_wp)
 
-      CALL mem%Add_var('z0h', mem%z0h, &
-        & hgrid, surface, &
-        & t_cf('z0h', 'm', 'surface roughness length for heat'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart=.TRUE., &
-        & initval_r=1.0_wp)
-
-      CALL mem%Add_var('z0m', mem%z0m, &
-        & hgrid, surface, &
-        & t_cf('z0m', 'm', 'surface roughness length for momentum'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart=.TRUE., &
-        & initval_r=1.0_wp)
-
       CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
         & hgrid, surface, &
         & t_cf('num_sl_above_bedrock', '[unitless]', 'number of soil layers above bedrock'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart=.TRUE., &
+        & initval_r=0.0_wp)
+
+      CALL mem%Add_var('q_sat_srf', mem%q_sat_srf, &
+        & hgrid, surface, &
+        & t_cf('q_sat_srf', '[?]', 'surface saturated specific humidity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -596,28 +582,6 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('fact_q_air', mem%fact_q_air, &
-        & hgrid, surface, &
-        & t_cf('fact_q_air', unitless, 'factor representing air at actual water content'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.5_wp)
-
-      CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
-        & hgrid, surface, &
-        & t_cf('fact_qsat_srf', unitless, 'factor representing air at saturating water content'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.5_wp)
 
       CALL mem%Add_var('w_skin', mem%w_skin, &
         & hgrid, surface, &
@@ -1158,60 +1122,6 @@ CONTAINS
           &  lrestart = .TRUE., &
           &  initval_r = 0.0_wp) ! initvalue
 
-      CALL mem%Add_var('spq_drag_srf', mem%spq_drag_srf,                       &
-        & hgrid, surface,                                                      &
-        & t_cf('surface_drag', '', ''),                                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.TRUE.,                                                     &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('spq_pch', mem%spq_pch,                                 &
-        & hgrid, surface,                                                      &
-        & t_cf('pch', '', ''),                                                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('spq_t_acoef', mem%spq_t_acoef,                         &
-        & hgrid, surface,                                                      &
-        & t_cf('temperature_acoef', '', ''),                                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('spq_t_bcoef', mem%spq_t_bcoef,                         &
-        & hgrid, surface,                                                      &
-        & t_cf('temperature_acoef', '', ''),                                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('spq_q_acoef', mem%spq_q_acoef,                         &
-        & hgrid, surface,                                                      &
-        & t_cf('specific_humidity_acoef', '', ''),                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('spq_q_bcoef', mem%spq_q_bcoef,                         &
-        & hgrid, surface,                                                      &
-        & t_cf('specific_humidity_bcoef', '', ''),                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=FULL,                                                  &
-        & initval_r=0.0_wp )
-
     END IF ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
 
     !> ---------------------------------------------------------------------------------------------------- !
@@ -1436,12 +1346,37 @@ CONTAINS
     END IF    ! LAKE_TYPE
 
 
+    IF (TRIM(mem%owner_tile_name) == 'box') THEN
+      grib2_desc = t_grib2(1,0,202, grib_bits)
+    ELSE
+      grib2_desc = t_grib2(255, 255, 255, grib_bits)
+    END IF
+    CALL mem%Add_var('fract_snow', mem%fract_snow,                             &
+      & hgrid, surface,                                                        &
+      & t_cf('fract_snow', '-', 'Snow area fraction'),                         &
+      & t_grib1(table, 255, grib_bits), grib2_desc,                            &
+      & prefix, suffix,                                                        &
+      & output_level=BASIC,                                                    &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
+
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(1,0,201, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+      CALL mem%Add_var( 'fract_wet', mem%fract_wet,                              &
+        & hgrid, surface,                                                        &
+        & t_cf('fract_wet', '-', 'Wet surface fraction'),                        &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                            &
+        & prefix, suffix,                                                        &
+        & output_level=BASIC,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
         & hgrid, surface,                                                              &

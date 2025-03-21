@@ -402,9 +402,9 @@ CONTAINS
       END IF
 
       IF (model%config%qmodel_id == QLAND) THEN
-        IF(model%processes(Q_SH_)%p%config%active) THEN
+        IF (model%processes(Q_SH_)%p%config%active) THEN
           CALL model%Queue_task(Q_SH_, "simple_harvest")          ! LAND ONLY; if Q_SH active
-          CALL model%Queue_task(VEG_, "pools_on_harvest")          ! LAND ONLY; if Q_SH active
+          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SH active
           CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SH active
         END IF
       END IF
@@ -438,6 +438,10 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
       ENDIF
 
+      CALL model%Queue_task(TURB_, "humidity_scaling")            ! ALL
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "surface_roughness")         ! ALL
+      END IF
       CALL model%Queue_task(RAD_, "albedo")                       ! ALL
 
       !-- averaging variables in time
@@ -528,10 +532,11 @@ CONTAINS
         IF (tile%Is_process_active(SEB_)) THEN
           CALL seb_init(tile)
         END IF
-        IF (tile%Is_process_active(TURB_)) THEN
-          CALL turb_init(tile)
-        END IF
       END SELECT
+
+      IF (tile%Is_process_active(TURB_)) THEN
+        CALL turb_init(tile)
+      END IF
 
       ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       SELECT CASE (model%config%model_scheme)

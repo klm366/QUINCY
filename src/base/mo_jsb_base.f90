@@ -56,6 +56,7 @@ CONTAINS
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
+    USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
@@ -163,6 +164,7 @@ CONTAINS
            CALL init_q_assimi_parameters
            CALL init_veg_constants
            CALL init_spq_constants
+           CALL init_turb_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
@@ -265,7 +267,6 @@ CONTAINS
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
         model%processes(SSE_)%p%config%active = .FALSE.
         model%processes(SEB_)%p%config%active = .FALSE.
-        model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)

@@ -1,4 +1,4 @@
-!> defines routine for averaging variables
+!> Defines routine for QUINCY averaging variables
 !>
 !> ICON-Land
 !>
