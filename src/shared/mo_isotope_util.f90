@@ -13,7 +13,6 @@
 !>
 !>#### Contains functions and subroutines to calculate isotope discrimination
 !>
-
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 
