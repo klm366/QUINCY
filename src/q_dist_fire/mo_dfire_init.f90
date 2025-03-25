@@ -81,7 +81,11 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
     dsl4jsb_Real3D_onDomain      :: dead_frac_consumption
-    dsl4jsb_Real2D_onDomain      :: i_surface 
+    dsl4jsb_Real2D_onDomain      :: i_surface
+
+    dsl4jsb_Real2D_onChunk       :: e_n_ignitions
+    dsl4jsb_Real2D_onChunk       :: e_n_humans
+    dsl4jsb_Real2D_onChunk       :: e_n_lightning
 
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
@@ -107,6 +111,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, fire_duration)
 
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_humans)
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_lightning)
+
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
@@ -131,6 +139,10 @@ CONTAINS
     ros_f = 0._wp
     mean_fire_area = 0._wp
     fire_duration = 0._wp
+
+    e_n_ignitions(:) = 0._wp
+    e_n_humans(:) = 0._wp
+    e_n_lightning(:) = 0._wp
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp

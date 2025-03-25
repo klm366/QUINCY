@@ -101,6 +101,11 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: fire_duration       !< Fire duration [min]
 !    TYPE(t_jsb_var_real2d)               :: distance_travelled  !< Total distance travelled by fire [m]
 !    TYPE(t_jsb_var_real2d)               :: l2b_ratio           !< Length to breadth ratio [-]
+
+    TYPE(t_jsb_var_real2d)               :: e_n_ignitions                 !< (eq 2) Sum of independent estimates of n_l,ig and n_h,ig
+    !<        ignitions events [ha-1 ts-1]
+    TYPE(t_jsb_var_real2d)               :: e_n_humans                    !< Rate of human caused ignitions [ha-1 ts-1]
+    TYPE(t_jsb_var_real2d)               :: e_n_lightning                 !< Rate of lightning-caused ignitions [ha-1 ts-1]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -422,6 +427,39 @@ CONTAINS
     CALL mem%Add_var('fire_duration', mem%fire_duration, &
         & hgrid, vgrid_surface, &
         & t_cf('fire_duration', 'min', 'Fire duration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('e_n_ignitions', mem%e_n_ignitions, &
+        & hgrid, vgrid_surface, &
+        & t_cf('e_n_ignitions', 'ha-1 ts-1', 'Sum of independent estimates of n_l,ig and n_h,ig ignitions events'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('e_n_humans', mem%e_n_humans, &
+        & hgrid, vgrid_surface, &
+        & t_cf('e_n_humans', 'ha-1 ts-1', 'Rate of human-caused ignitions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('e_n_lightning', mem%e_n_lightning, &
+        & hgrid, vgrid_surface, &
+        & t_cf('e_n_lightning', 'ha-1 ts-1', 'Rate of lightning-caused ignitions'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

@@ -257,6 +257,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: w_soil_sl        ! soil water content [m]
     dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl     ! soil water field capacity [m]
 
+    !< Ignitions
+    dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
+    dsl4jsb_Real2D_onChunk                :: e_n_humans       ! out, Rate of human-events ignitions [ha-1 ts-1]
+    dsl4jsb_Real2D_onChunk                :: e_n_lightning    ! out, Rate of lightning-events ignitions [ha-1 ts-1]
+
     ! DFUEL_ 2D
     ! Note: t_air_max/t_air_min belongs to the previous days due to implementation constraints
     dsl4jsb_Real2D_onChunk                :: t_air_min         ! Min temperature of the day (previous day) [k]
@@ -333,6 +338,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)             ! in
+
+    !< Ignitions
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)          ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_humans)             ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_lightning)          ! out
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)              ! in [k]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)              ! in
@@ -478,6 +488,11 @@ CONTAINS
     dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
     dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_100hr_idx)
     dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
+
+    !< Ignitions into process memory
+    e_n_ignitions = sf_spitfire % e_n_ignitions
+    e_n_humans = sf_spitfire % e_n_humans
+    e_n_lightning = sf_spitfire % e_n_lightning
 
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
