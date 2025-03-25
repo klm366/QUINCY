@@ -80,6 +80,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: pm_fire
     dsl4jsb_Real2D_onDomain      :: pm_tau
     dsl4jsb_Real2D_onDomain      :: pm_ck
+    dsl4jsb_Real2D_onDomain      :: tau_l
+    dsl4jsb_Real2D_onDomain      :: tau_c
     dsl4jsb_Real2D_onDomain      :: ros_f
     dsl4jsb_Real2D_onDomain      :: ros_b
 
@@ -121,6 +123,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_ck)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_tau)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, tau_l)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, tau_c)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_f)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_b)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
@@ -160,6 +164,8 @@ CONTAINS
     pm_fire = 0._wp
     pm_ck = 0._wp
     pm_tau = 0._wp
+    tau_l(:) = 0._wp
+    tau_c(:) = 0._wp
     ros_f = 0._wp
     ros_b = 0._wp
     mean_fire_area = 0._wp

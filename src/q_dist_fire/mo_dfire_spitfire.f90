@@ -281,6 +281,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! out [-]
     dsl4jsb_Real2D_onChunk                :: pm_tau            ! out [-]
     dsl4jsb_Real2D_onChunk                :: pm_ck             ! out [-]
+    dsl4jsb_Real2D_onChunk                :: tau_l             ! out [-]
+    dsl4jsb_Real2D_onChunk                :: tau_c             ! out [-]
     dsl4jsb_Real2D_onChunk                :: mean_fire_area    ! out [?]
     dsl4jsb_Real2D_onChunk                :: fire_duration     ! out [?]
     dsl4jsb_Real2D_onChunk                :: distance_travelled ! out [?]
@@ -366,6 +368,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_ck)                  ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_tau)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, tau_l)                      ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, tau_c)                      ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mean_fire_area)         ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fire_duration)          ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, distance_travelled)     ! out
@@ -426,8 +430,6 @@ CONTAINS
     ! gather children's bgcm stores from specific flux pool
     sb_loss_stores = Get_childrens_bgcm_stores_2l_3d(SB_BGCM_LOSS_ID, ics, ice, iblk, tile)
 
-    ab_moisture_sl = 0._wp
-    ab_moisture = 0._wp
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
     dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_1hr_dfp
@@ -442,6 +444,16 @@ CONTAINS
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
+    !< Init variables
+    !< Make sure those values are set to 0, as it means there is no fire.
+    i_surface = 0._wp
+    pm_fire = 0._wp
+    pm_ck = 0._wp
+    pm_tau = 0._wp
+    tau_l = 0._wp
+    tau_c = 0._wp
+    ab_moisture_sl = 0._wp
+    ab_moisture = 0._wp
     !write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -525,6 +537,8 @@ CONTAINS
 
     pm_tau = sf_spitfire % prob_mort % pm_tau
     pm_ck = sf_spitfire % prob_mort % pm_ck
+    tau_l = sf_spitfire %  prob_mort % tau_l
+    tau_c = sf_spitfire % prob_mort % tau_c
     ros_f = sf_spitfire % ros % ros_forward
     ros_b = sf_spitfire % ros % ros_backwards
 
