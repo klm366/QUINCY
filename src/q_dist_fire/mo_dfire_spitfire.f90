@@ -473,7 +473,7 @@ CONTAINS
     area_burned_fract = sf_spitfire % area_burned_fract
     area_burned = sf_spitfire % area_burned
 
-    fdi = sf_spitfire % fdi
+    fdi = sf_spitfire % fdi ! todo: define as pointer
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
