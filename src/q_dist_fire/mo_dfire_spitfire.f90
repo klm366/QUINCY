@@ -286,6 +286,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: distance_travelled ! out [?]
     dsl4jsb_Real2D_onChunk                :: l2b_ratio         ! out [?]
 
+    dsl4jsb_Real2D_onChunk                :: reaction_intensity       ! out
+    dsl4jsb_Real2D_onChunk                :: prop_flux_ratio          ! out
+    dsl4jsb_Real2D_onChunk                :: wind_factor              ! out
+    dsl4jsb_Real2D_onChunk                :: eff_heating_number       ! out
+    dsl4jsb_Real2D_onChunk                :: preig_heat               ! out
+
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp         ! in [g DM m-2]
@@ -388,6 +394,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fuel_bulk_density)   ! in [kg m-3]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, moisture_extinction) ! in [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, fwd_wind_factor)     ! in [-]
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, reaction_intensity)     ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, prop_flux_ratio)        ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, wind_factor)            ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, eff_heating_number)     ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, preig_heat)             ! out
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! out [g DM m-2]
@@ -520,6 +532,12 @@ CONTAINS
     fire_duration = sf_spitfire % ros % fire_duration
     distance_travelled = sf_spitfire % ros % distance_travelled
     l2b_ratio = sf_spitfire % ros % l2b_ratio
+
+    reaction_intensity(:) = sf_spitfire % ros % reaction_intensity(:)
+    prop_flux_ratio(:) = sf_spitfire % ros % prop_flux_ratio(:)
+    wind_factor(:) = sf_spitfire % ros % wind_factor(:)
+    eff_heating_number(:) = sf_spitfire % ros % eff_heating_number(:)
+    preig_heat(:) = sf_spitfire % ros % pre_ign_heat(:)
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &

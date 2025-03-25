@@ -83,6 +83,14 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: precip_daily        !< Daily precipitation, it links to precip_daytime, precip_mavg or precip_qc_mavg [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daily_mmd    !< Daily precipitation, same as precip_daily but in spitfire expected units [mm day-1]
 
+    ! diagnostic for ros of spread calculation
+    TYPE(t_jsb_var_real2d)               :: reaction_intensity             !< I_R: the energy release rate per unit area of fire front [kJ m−2 min−1]
+    TYPE(t_jsb_var_real2d)               :: prop_flux_ratio                !< the proportion of IR that heats adjacent fuel particles to ignition [0 to 1]
+    TYPE(t_jsb_var_real2d)               :: wind_factor                    !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
+    TYPE(t_jsb_var_real2d)               :: eff_heating_number             !< the proportion of a fuel particle that is heated to ...
+                                                                           !< ignition temperature at the time flaming combustion starts [-]
+    TYPE(t_jsb_var_real2d)               :: preig_heat                     !< the amount of heat required to ignite a given mass of fuel [kJ kg−1]
+
     !< Diagnostics
     TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
     TYPE(t_jsb_var_real2d)               :: fdi                 !< fire danger index [%]
@@ -493,6 +501,63 @@ CONTAINS
     CALL mem%Add_var('l2b_ratio', mem%l2b_ratio, &
         & hgrid, vgrid_surface, &
         & t_cf('l2b_ratio', '-', 'Length to breath ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('reaction_intensity', mem%reaction_intensity, &
+        & hgrid, vgrid_surface, &
+        & t_cf('reaction_intensity', 'kJ m−2 min−1', 'The energy release rate per unit area of fire front'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('prop_flux_ratio', mem%prop_flux_ratio, &
+        & hgrid, vgrid_surface, &
+        & t_cf('prop_flux_ratio', '-', 'the proportion of Reaction Intensity that heats adjacent fuel ' // &
+            'particles to ignition'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('wind_factor', mem%wind_factor, &
+        & hgrid, vgrid_surface, &
+        & t_cf('wind_factor', '-', 'Multiplier that accounts for the effect of wind in increasing ' // &
+            'the effective value of prop_flux_ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('eff_heating_number', mem%eff_heating_number, &
+        & hgrid, vgrid_surface, &
+        & t_cf('eff_heating_number', '-', 'the proportion of a fuel particle that is heated to the ' // &
+            'proportion of a fuel particle that is heated to'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('preig_heat', mem%preig_heat, &
+        & hgrid, vgrid_surface, &
+        & t_cf('preig_heat', 'kJ min−1', 'The amount of heat required to ignite a given mass of fuel'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
