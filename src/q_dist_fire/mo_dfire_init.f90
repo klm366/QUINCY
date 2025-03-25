@@ -83,15 +83,18 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_frac_consumption
     dsl4jsb_Real2D_onDomain      :: i_surface
 
-    dsl4jsb_Real2D_onChunk       :: e_n_ignitions
-    dsl4jsb_Real2D_onChunk       :: e_n_humans
-    dsl4jsb_Real2D_onChunk       :: e_n_lightning
+    dsl4jsb_Real2D_onDomain      :: e_n_ignitions
+    dsl4jsb_Real2D_onDomain      :: e_n_humans
+    dsl4jsb_Real2D_onDomain      :: e_n_lightning
 
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_100hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1000hr
     dsl4jsb_Real3D_onDomain      :: live_fuel_consumption_1hr
+
+    dsl4jsb_Real2D_onDomain      :: distance_travelled
+    dsl4jsb_Real2D_onDomain      :: l2b_ratio
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -111,9 +114,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, fire_duration)
 
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_humans)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_lightning)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_ignitions)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_humans)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_lightning)
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
@@ -130,6 +133,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_100hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1000hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, distance_travelled)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -158,6 +164,9 @@ CONTAINS
     dead_fuel_consumption_100hr = 0._wp
     dead_fuel_consumption_1000hr = 0._wp
     live_fuel_consumption_1hr = 0._wp
+
+    distance_travelled = 0._wp
+    l2b_ratio = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id

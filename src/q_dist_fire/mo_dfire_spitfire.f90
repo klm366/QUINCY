@@ -282,6 +282,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_ck             ! out [-]
     dsl4jsb_Real2D_onChunk                :: mean_fire_area    ! out [?]
     dsl4jsb_Real2D_onChunk                :: fire_duration     ! out [?]
+    dsl4jsb_Real2D_onChunk                :: distance_travelled ! out [?]
+    dsl4jsb_Real2D_onChunk                :: l2b_ratio         ! out [?]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
@@ -358,6 +360,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_tau)                 ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mean_fire_area)         ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fire_duration)          ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, distance_travelled)     ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, l2b_ratio)              ! out
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
@@ -510,6 +514,8 @@ CONTAINS
     ros_f = sf_spitfire % ros % ros_forward
     mean_fire_area = sf_spitfire % ros % mean_fire_area
     fire_duration = sf_spitfire % ros % fire_duration
+    distance_travelled = sf_spitfire % ros % distance_travelled
+    l2b_ratio = sf_spitfire % ros % l2b_ratio
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
