@@ -100,6 +100,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, fdi)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_tau)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_f)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, fire_duration)
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
@@ -119,6 +125,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
+    pm_fire = 0._wp
+    pm_ck = 0._wp
+    pm_tau = 0._wp
+    ros_f = 0._wp
+    mean_fire_area = 0._wp
+    fire_duration = 0._wp
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp

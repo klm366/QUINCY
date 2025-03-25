@@ -271,6 +271,12 @@ CONTAINS
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
+    dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
+    dsl4jsb_Real2D_onChunk                :: pm_fire           ! out [-]
+    dsl4jsb_Real2D_onChunk                :: pm_tau            ! out [-]
+    dsl4jsb_Real2D_onChunk                :: pm_ck             ! out [-]
+    dsl4jsb_Real2D_onChunk                :: mean_fire_area    ! out [?]
+    dsl4jsb_Real2D_onChunk                :: fire_duration     ! out [?]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
@@ -336,6 +342,12 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_f)                  ! out [?]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_ck)                  ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_tau)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, mean_fire_area)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, fire_duration)          ! out [-]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
@@ -474,6 +486,15 @@ CONTAINS
     area_burned = sf_spitfire % area_burned
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
+    !< Impacts into process memory
+    If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) &
+        pm_fire(:) = sf_spitfire % prob_mort % pm_fire(:) * sf_spitfire % area_burned_fract
+
+    pm_tau = sf_spitfire % prob_mort % pm_tau
+    pm_ck = sf_spitfire % prob_mort % pm_ck
+    ros_f = sf_spitfire % ros % ros_forward
+    mean_fire_area = sf_spitfire % ros % mean_fire_area
+    fire_duration = sf_spitfire % ros % fire_duration
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
