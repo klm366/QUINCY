@@ -92,6 +92,12 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: e_n_humans
     dsl4jsb_Real2D_onDomain      :: e_n_lightning
 
+    dsl4jsb_Real2D_onDomain      :: reaction_intensity
+    dsl4jsb_Real2D_onDomain      :: prop_flux_ratio
+    dsl4jsb_Real2D_onDomain      :: wind_factor
+    dsl4jsb_Real2D_onDomain      :: eff_heating_number
+    dsl4jsb_Real2D_onDomain      :: preig_heat
+
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_100hr
@@ -123,6 +129,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_ignitions)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_humans)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_lightning)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, reaction_intensity)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, prop_flux_ratio)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, wind_factor)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, eff_heating_number)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, preig_heat)
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
@@ -171,6 +183,12 @@ CONTAINS
     dead_fuel_consumption_100hr = 0._wp
     dead_fuel_consumption_1000hr = 0._wp
     live_fuel_consumption_1hr = 0._wp
+
+    reaction_intensity = 0._wp
+    prop_flux_ratio = 0._wp
+    wind_factor = 0._wp
+    eff_heating_number = 0._wp
+    preig_heat = 0._wp
 
     distance_travelled = 0._wp
     l2b_ratio = 0._wp
