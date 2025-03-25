@@ -76,6 +76,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: precip_mavg
 
     dsl4jsb_Real2D_onDomain      :: nesterov_index
+    dsl4jsb_Real2D_onDomain      :: fdi
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
@@ -98,6 +99,7 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, fdi)
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
@@ -116,6 +118,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
+    fdi = 0._wp
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp
