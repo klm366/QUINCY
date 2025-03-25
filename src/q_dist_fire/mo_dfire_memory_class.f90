@@ -110,10 +110,13 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: distance_travelled  !< Total distance travelled by fire [m]
     TYPE(t_jsb_var_real2d)               :: l2b_ratio           !< Length to breadth ratio [-]
 
-    TYPE(t_jsb_var_real2d)               :: e_n_ignitions                 !< (eq 2) Sum of independent estimates of n_l,ig and n_h,ig
+    TYPE(t_jsb_var_real2d)               :: e_n_ignitions       !< (eq 2) Sum of independent estimates of n_l,ig and n_h,ig
     !<        ignitions events [ha-1 ts-1]
-    TYPE(t_jsb_var_real2d)               :: e_n_humans                    !< Rate of human caused ignitions [ha-1 ts-1]
-    TYPE(t_jsb_var_real2d)               :: e_n_lightning                 !< Rate of lightning-caused ignitions [ha-1 ts-1]
+    TYPE(t_jsb_var_real2d)               :: e_n_humans          !< Rate of human caused ignitions [ha-1 ts-1]
+    TYPE(t_jsb_var_real2d)               :: e_n_lightning       !< Rate of lightning-caused ignitions [ha-1 ts-1]
+
+    TYPE(t_jsb_var_real3d)               :: frac_consump_fcl    !< Ratio calculated in eqs. B1, B2, B3 and B4 [0 to 1]
+                                                                !< Intermediate variable used in dead fuel consumption
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -479,6 +482,17 @@ CONTAINS
     CALL mem%Add_var('e_n_lightning', mem%e_n_lightning, &
         & hgrid, vgrid_surface, &
         & t_cf('e_n_lightning', 'ha-1 ts-1', 'Rate of lightning-caused ignitions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('frac_consump_fcl', mem%frac_consump_fcl, &
+        & hgrid, vgrid_fuel_class, &
+        & t_cf('frac_consump_fcl', '-', 'Dead fuel consumption intermediate Ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

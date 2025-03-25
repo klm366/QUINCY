@@ -108,6 +108,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: distance_travelled
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
+
+    dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -158,6 +160,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, distance_travelled)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
+
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -198,6 +202,7 @@ CONTAINS
 
     distance_travelled = 0._wp
     l2b_ratio = 0._wp
+    frac_consump_fcl = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
