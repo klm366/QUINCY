@@ -327,6 +327,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! out [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
+
+    dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -415,6 +417,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, area_burned_fract)         ! out [-]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! out [kW m-1]
+
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, frac_consump_fcl)          ! out [-]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -454,6 +458,7 @@ CONTAINS
     tau_c = 0._wp
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
+    frac_consump_fcl = 0._wp
     !write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -553,6 +558,7 @@ CONTAINS
     eff_heating_number(:) = sf_spitfire % ros % eff_heating_number(:)
     preig_heat(:) = sf_spitfire % ros % pre_ign_heat(:)
 
+    frac_consump_fcl = sf_spitfire % dead_frac_consump
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
     !        t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
