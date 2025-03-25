@@ -85,6 +85,7 @@ MODULE mo_dfire_memory_class
 
     !< Diagnostics
     TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
+    TYPE(t_jsb_var_real2d)               :: fdi                 !< fire danger index [%]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -133,7 +134,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fdi', mem%fdi, &
+        & hgrid, vgrid_surface, &
+        & t_cf('fdi', '%', 'Fire danger index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

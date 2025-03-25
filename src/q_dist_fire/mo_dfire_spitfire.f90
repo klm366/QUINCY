@@ -270,6 +270,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
+    dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
@@ -334,6 +335,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
@@ -470,6 +472,8 @@ CONTAINS
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
     area_burned_fract = sf_spitfire % area_burned_fract
     area_burned = sf_spitfire % area_burned
+
+    fdi = sf_spitfire % fdi
 
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
     !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
