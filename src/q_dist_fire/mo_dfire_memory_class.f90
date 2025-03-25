@@ -96,7 +96,7 @@ MODULE mo_dfire_memory_class
 !    TYPE(t_jsb_var_real2d)               :: par1                !< Parameters for woody PFTs used in bark thickness calculation [-]
 !    TYPE(t_jsb_var_real2d)               :: par2                !< Parameters for woody PFTs used in bark thickness calculation [-]
     TYPE(t_jsb_var_real2d)               :: ros_f               !< Forward rate of spread of a surface fire [m min-1]
-!    TYPE(t_jsb_var_real2d)               :: ros_b               !< Backwards rate of spread of a surface fire [m min-1]
+    TYPE(t_jsb_var_real2d)               :: ros_b               !< Backwards rate of spread of a surface fire [m min-1]
     TYPE(t_jsb_var_real2d)               :: mean_fire_area      !< Mean fire area [ha]
     TYPE(t_jsb_var_real2d)               :: fire_duration       !< Fire duration [min]
     TYPE(t_jsb_var_real2d)               :: distance_travelled  !< Total distance travelled by fire [m]
@@ -405,6 +405,17 @@ CONTAINS
     CALL mem%Add_var('ros_f', mem%ros_f, &
         & hgrid, vgrid_surface, &
         & t_cf('ros_f', 'm min-1', 'Forward rate of spread of a surface fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ros_b', mem%ros_b, &
+        & hgrid, vgrid_surface, &
+        & t_cf('ros_b', 'm min-1', 'Backward rate of spread of a surface fire'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

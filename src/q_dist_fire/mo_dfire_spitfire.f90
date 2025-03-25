@@ -277,6 +277,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
     dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
+    dsl4jsb_Real2D_onChunk                :: ros_b             ! out [?]
     dsl4jsb_Real2D_onChunk                :: pm_fire           ! out [-]
     dsl4jsb_Real2D_onChunk                :: pm_tau            ! out [-]
     dsl4jsb_Real2D_onChunk                :: pm_ck             ! out [-]
@@ -355,6 +356,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_f)                  ! out [?]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_b)                  ! out [?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_ck)                  ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_tau)                 ! out [-]
@@ -512,6 +514,8 @@ CONTAINS
     pm_tau = sf_spitfire % prob_mort % pm_tau
     pm_ck = sf_spitfire % prob_mort % pm_ck
     ros_f = sf_spitfire % ros % ros_forward
+    ros_b = sf_spitfire % ros % ros_backwards
+
     mean_fire_area = sf_spitfire % ros % mean_fire_area
     fire_duration = sf_spitfire % ros % fire_duration
     distance_travelled = sf_spitfire % ros % distance_travelled

@@ -77,6 +77,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: nesterov_index
     dsl4jsb_Real2D_onDomain      :: fdi
+    dsl4jsb_Real2D_onDomain      :: pm_fire
+    dsl4jsb_Real2D_onDomain      :: pm_tau
+    dsl4jsb_Real2D_onDomain      :: pm_ck
+    dsl4jsb_Real2D_onDomain      :: ros_f
+    dsl4jsb_Real2D_onDomain      :: ros_b
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
@@ -111,6 +116,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_ck)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, pm_tau)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_f)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_b)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, fire_duration)
 
@@ -143,6 +149,7 @@ CONTAINS
     pm_ck = 0._wp
     pm_tau = 0._wp
     ros_f = 0._wp
+    ros_b = 0._wp
     mean_fire_area = 0._wp
     fire_duration = 0._wp
 
