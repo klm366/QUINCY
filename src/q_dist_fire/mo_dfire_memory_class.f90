@@ -82,6 +82,9 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: precip_mavg         !< Precipitation moving average (Pure implementation of moving average) [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daily        !< Daily precipitation, it links to precip_daytime, precip_mavg or precip_qc_mavg [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daily_mmd    !< Daily precipitation, same as precip_daily but in spitfire expected units [mm day-1]
+
+    !< Diagnostics
+    TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -124,7 +127,16 @@ CONTAINS
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     vgrid_fuel_classes => Get_vgrid(df_sf_vgrid_fuel_classes_name)
     ! ----------------------------------------------------------------------------------------------------- !
-
+    CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
+        & hgrid, vgrid_surface, &
+        & t_cf('nesterov_index', 'Celsius^2', 'Cumulative function of daily tmax and tdew '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
         & hgrid, vgrid_surface, &

@@ -227,7 +227,6 @@ CONTAINS
 
     ! todo: move to memory
     REAL(wp)                              :: fuel_moisture(options%nc,df_sf_omegas_nr) ! fuel moisture (#nc, #omegas) [-]
-    REAL(wp), ALLOCATABLE, SAVE           :: nesterov_index(:) !< (#nc) [C2]
 
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
@@ -270,6 +269,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
+    dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
 
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
@@ -332,6 +332,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily_mmd)       ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daily)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]
@@ -436,11 +438,6 @@ CONTAINS
         ab_moisture(ic) = sum(ab_moisture_sl(ic,:)) / size(ab_moisture_sl, dim=2) !< 2 = soil layers index
       END IF
     ENDDO
-
-    IF (.NOT. ALLOCATED(nesterov_index)) THEN
-      ALLOCATE(nesterov_index(nc))
-      nesterov_index = 0._wp
-    ENDIF
 
     !WRITE(*,*) "spitfire.f90:: me, tile_fract=", moisture_extinction, ", ", tile_fract
 
