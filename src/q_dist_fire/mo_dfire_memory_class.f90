@@ -86,6 +86,21 @@ MODULE mo_dfire_memory_class
     !< Diagnostics
     TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
     TYPE(t_jsb_var_real2d)               :: fdi                 !< fire danger index [%]
+    TYPE(t_jsb_var_real2d)               :: pm_fire             !< Probability of mortality
+    TYPE(t_jsb_var_real2d)               :: pm_ck               !< Probability of mortality due to crown damage
+    TYPE(t_jsb_var_real2d)               :: pm_tau              !< Probability of mortality due to cambial damage
+!    TYPE(t_jsb_var_real2d)               :: tau_l               !< Residence time of the fire [min]
+!    TYPE(t_jsb_var_real2d)               :: tau_c               !< Critical time for cambial damage [min]
+!    TYPE(t_jsb_var_real2d)               :: bark_thickness      !< Bark thickness [cm]
+!    TYPE(t_jsb_var_real2d)               :: DBH                 !< Diameter at breast height [cm]
+!    TYPE(t_jsb_var_real2d)               :: par1                !< Parameters for woody PFTs used in bark thickness calculation [-]
+!    TYPE(t_jsb_var_real2d)               :: par2                !< Parameters for woody PFTs used in bark thickness calculation [-]
+    TYPE(t_jsb_var_real2d)               :: ros_f               !< Forward rate of spread of a surface fire [m min-1]
+!    TYPE(t_jsb_var_real2d)               :: ros_b               !< Backwards rate of spread of a surface fire [m min-1]
+    TYPE(t_jsb_var_real2d)               :: mean_fire_area      !< Mean fire area [ha]
+    TYPE(t_jsb_var_real2d)               :: fire_duration       !< Fire duration [min]
+!    TYPE(t_jsb_var_real2d)               :: distance_travelled  !< Total distance travelled by fire [m]
+!    TYPE(t_jsb_var_real2d)               :: l2b_ratio           !< Length to breadth ratio [-]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -349,6 +364,71 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+    CALL mem%Add_var('pm_fire', mem%pm_fire, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_fire', '%', 'Probability of post-fire mortality'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_tau', mem%pm_tau, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_tau', '%', 'Probability of post-fire mortality due to cambial damage'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_ck', mem%pm_ck, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_ck', '%', 'Probability of post-fire mortality due to crown damage'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ros_f', mem%ros_f, &
+        & hgrid, vgrid_surface, &
+        & t_cf('ros_f', 'm min-1', 'Forward rate of spread of a surface fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('mean_fire_area', mem%mean_fire_area, &
+        & hgrid, vgrid_surface, &
+        & t_cf('mean_fire_area', 'ha', 'Mean fire area'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fire_duration', mem%fire_duration, &
+        & hgrid, vgrid_surface, &
+        & t_cf('fire_duration', 'min', 'Fire duration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
   END SUBROUTINE Init_dfire_memory
 
 #endif
