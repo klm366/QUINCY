@@ -100,6 +100,11 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: eff_heating_number
     dsl4jsb_Real2D_onDomain      :: preig_heat
 
+    dsl4jsb_Real2D_onDomain      :: opt_react_velo
+    dsl4jsb_Real2D_onDomain      :: net_fuel_load
+    dsl4jsb_Real2D_onDomain      :: moist_damp_coeff
+    dsl4jsb_Real2D_onDomain      :: mineral_damp_coeff
+
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_100hr
@@ -141,6 +146,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, wind_factor)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, eff_heating_number)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, preig_heat)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, opt_react_velo)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, net_fuel_load)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, moist_damp_coeff)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, mineral_damp_coeff)
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)

@@ -91,6 +91,12 @@ MODULE mo_dfire_memory_class
                                                                            !< ignition temperature at the time flaming combustion starts [-]
     TYPE(t_jsb_var_real2d)               :: preig_heat                     !< the amount of heat required to ignite a given mass of fuel [kJ kg−1]
 
+    !< diagnostics: for reaction_intensity
+    TYPE(t_jsb_var_real2d)               :: opt_react_velo                 !< Optimum reaction velocity [min-1]
+    TYPE(t_jsb_var_real2d)               :: net_fuel_load                  !< Amount of fuel after substraction of its mineral content [kg m-2]
+    TYPE(t_jsb_var_real2d)               :: moist_damp_coeff               !< Moisture-dampening coefficient [-]
+    TYPE(t_jsb_var_real2d)               :: mineral_damp_coeff             !< Mineral dampening coefficient [-]
+
     !< Diagnostics
     TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
     TYPE(t_jsb_var_real2d)               :: fdi                 !< fire danger index [%]
@@ -594,6 +600,50 @@ CONTAINS
     CALL mem%Add_var('tau_c', mem%tau_c, &
         & hgrid, vgrid_surface, &
         & t_cf('tau_c', 'min', 'Critical time for cambial damage'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('Optimum reaction velocity', mem%opt_react_velo, &
+        & hgrid, vgrid_surface, &
+        & t_cf('opt_react_velo', 'min−1', 'Optimum reaction velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('Net fuel load', mem%net_fuel_load, &
+        & hgrid, vgrid_surface, &
+        & t_cf('net_fuel_load', 'kg m-2', 'Amount of fuel after after substraction of its mineral content'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('Moisture dampening coefficient', mem%moist_damp_coeff, &
+        & hgrid, vgrid_surface, &
+        & t_cf('moist_damp_coeff', '-', 'Moisture-dampening coefficient'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('Mineral-dampening coefficient', mem%mineral_damp_coeff, &
+        & hgrid, vgrid_surface, &
+        & t_cf('mineral_damp_coeff', '-', 'Mineral-dampening coefficient'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
