@@ -116,6 +116,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: distance_travelled
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
+    dsl4jsb_Real2D_onDomain      :: ck
+    dsl4jsb_Real2D_onDomain      :: scorch_height
 
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -176,6 +178,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_, distance_travelled)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, scorch_height)
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -221,6 +225,8 @@ CONTAINS
 
     distance_travelled = 0._wp
     l2b_ratio = 0._wp
+    ck(:) = 0._wp
+    scorch_height(:) = 0._wp
     frac_consump_fcl = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
