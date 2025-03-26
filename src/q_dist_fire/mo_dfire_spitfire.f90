@@ -275,6 +275,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
+    dsl4jsb_Real2D_onChunk                :: ab_moisture_diag  ! out [-]
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
     dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
     dsl4jsb_Real2D_onChunk                :: ros_b             ! out [?]
@@ -369,6 +370,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, ab_moisture_diag)       ! out [-]
+
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_f)                  ! out [?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_b)                  ! out [?]
@@ -460,6 +463,7 @@ CONTAINS
 
     !< Init variables
     !< Make sure those values are set to 0, as it means there is no fire.
+    ab_moisture_diag = 0._wp
     i_surface = 0._wp
     pm_fire = 0._wp
     pm_ck = 0._wp
@@ -546,6 +550,9 @@ CONTAINS
     area_burned = sf_spitfire % area_burned
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
+
+    ab_moisture_diag(:) =  ab_moisture(:)
+
     !< Impacts into process memory
     If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) &
         pm_fire(:) = sf_spitfire % prob_mort % pm_fire(:) * sf_spitfire % area_burned_fract
