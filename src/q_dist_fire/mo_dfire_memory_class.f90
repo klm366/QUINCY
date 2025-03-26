@@ -35,7 +35,8 @@ MODULE mo_dfire_memory_class
 
   USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
                                       df_sf_vgrid_live_fuel_pools_name, &
-                                      df_sf_vgrid_fuel_classes_name
+                                      df_sf_vgrid_fuel_classes_name, &
+                                      df_sf_vgrid_fuel_moisture_name
 
   IMPLICIT NONE
 
@@ -49,6 +50,8 @@ MODULE mo_dfire_memory_class
   !> Type definition for dfire memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_dfire_memory
+    TYPE(t_jsb_var_real3d)               :: fuel_moisture       !< moisture in fuel [0 to 1]
+
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
 
@@ -164,6 +167,7 @@ CONTAINS
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     vgrid_fuel_classes => Get_vgrid(df_sf_vgrid_fuel_classes_name)
+    vgrid_fuel_moisture => Get_vgrid(df_sf_vgrid_fuel_moisture_name)
     ! ----------------------------------------------------------------------------------------------------- !
     CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
         & hgrid, vgrid_surface, &
@@ -648,6 +652,17 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fuel_moisture', mem%fuel_moisture, &
+        & hgrid, vgrid_fuel_moisture, &
+        & t_cf('fuel_moisture', '-', &
+            'Relative daily fuel moisture per age class (1hr, 10hr, 100hr, 1000hr) for omega_o and omega_nl'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

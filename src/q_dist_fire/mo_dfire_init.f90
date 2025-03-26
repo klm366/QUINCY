@@ -90,6 +90,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_frac_consumption
     dsl4jsb_Real2D_onDomain      :: i_surface
 
+    dsl4jsb_Real3D_onDomain      :: fuel_moisture
+
     dsl4jsb_Real2D_onDomain      :: e_n_ignitions
     dsl4jsb_Real2D_onDomain      :: e_n_humans
     dsl4jsb_Real2D_onDomain      :: e_n_lightning
@@ -160,7 +162,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned_fract)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_frac_consumption)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, i_surface) 
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, i_surface)
+
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, fuel_moisture)
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1hr)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_10hr)
@@ -203,6 +207,8 @@ CONTAINS
     dead_fuel_consumption_100hr = 0._wp
     dead_fuel_consumption_1000hr = 0._wp
     live_fuel_consumption_1hr = 0._wp
+
+    fuel_moisture = 0._wp
 
     reaction_intensity = 0._wp
     prop_flux_ratio = 0._wp
