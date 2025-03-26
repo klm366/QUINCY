@@ -38,7 +38,7 @@ MODULE mo_dfire_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
   USE mo_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
-                                  df_sf_vgrid_fuel_classes_name
+                                  df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name
 
   IMPLICIT NONE
   PRIVATE
@@ -240,10 +240,14 @@ CONTAINS
     vgrid_fuel_classes     => new_vgrid(df_sf_vgrid_fuel_classes_name, zaxis_generic, df_sf_fc_full_nr, &
                                         longname='Fuel classes', &
                                         units='-')
+    vgrid_fuel_moisture    => new_vgrid(df_sf_vgrid_fuel_moisture_name, zaxis_generic, df_sf_omegas_nr, &
+                                        longname='fuel moisture types (omega_o, omega_nl)', &
+                                        & units='0 to 1')
 
     CALL register_vgrid(vgrid_dead_fuel_pools)
     CALL register_vgrid(vgrid_live_fuel_pools)
     CALL register_vgrid(vgrid_fuel_classes)
+    CALL register_vgrid(vgrid_fuel_moisture)
   END SUBROUTINE Init_dfire_config
 
 
