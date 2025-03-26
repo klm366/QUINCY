@@ -294,6 +294,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: eff_heating_number       ! out
     dsl4jsb_Real2D_onChunk                :: preig_heat               ! out
 
+    dsl4jsb_Real2D_onChunk                :: opt_react_velo           ! out
+    dsl4jsb_Real2D_onChunk                :: net_fuel_load            ! out
+    dsl4jsb_Real2D_onChunk                :: moist_damp_coeff         ! out
+    dsl4jsb_Real2D_onChunk                :: mineral_damp_coeff       ! out
+
     ! DFIRE_FUEL_ 3D
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp          ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp         ! in [g DM m-2]
@@ -406,6 +411,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, wind_factor)            ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, eff_heating_number)     ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, preig_heat)             ! out
+
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, opt_react_velo)         ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, net_fuel_load)          ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, moist_damp_coeff)       ! out
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, mineral_damp_coeff)     ! out
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_10hr) ! out [g DM m-2]
@@ -557,6 +567,11 @@ CONTAINS
     wind_factor(:) = sf_spitfire % ros % wind_factor(:)
     eff_heating_number(:) = sf_spitfire % ros % eff_heating_number(:)
     preig_heat(:) = sf_spitfire % ros % pre_ign_heat(:)
+
+    opt_react_velo(:) = sf_spitfire % ros % opt_react_velo(:)
+    net_fuel_load(:) = sf_spitfire % ros % net_fuel_load(:)
+    moist_damp_coeff(:) = sf_spitfire % ros % moist_damp_coeff(:)
+    mineral_damp_coeff(:) = sf_spitfire % ros % mineral_damp_coeff(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
