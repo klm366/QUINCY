@@ -175,6 +175,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: par1_diag                 ! out [?]
     dsl4jsb_Real2D_onChunk                :: par2_diag                 ! out [?]
 
+    dsl4jsb_Real2D_onChunk                :: ck                        ! out [?]
+    dsl4jsb_Real2D_onChunk                :: r_ck                      ! out [?]
+    dsl4jsb_Real2D_onChunk                :: ck_p                      ! out [?]
+    dsl4jsb_Real2D_onChunk                :: scorch_height             ! out [?]
+    dsl4jsb_Real2D_onChunk                :: F_scorch_height           ! out [?]
+    dsl4jsb_Real2D_onChunk                :: crown_length              ! out [?]
+    dsl4jsb_Real2D_onChunk                :: tree_height               ! out [m]
+
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
@@ -251,6 +259,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, par1_diag)            ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, par2_diag)            ! out [-]
 
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, ck)                   ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, r_ck)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, ck_p)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, scorch_height)        ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, F_scorch_height)      ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, crown_length)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, tree_height)          ! out [m]
+
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
@@ -283,6 +299,14 @@ CONTAINS
     DBH_diag = 0._wp
     par1_diag = 0._wp
     par2_diag = 0._wp
+
+    ck = 0._wp
+    r_ck = 0._wp
+    ck_p = 0._wp
+    scorch_height = 0._wp
+    F_scorch_height = 0._wp
+    crown_length = 0._wp
+    tree_height = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -366,6 +390,16 @@ CONTAINS
       par1_diag = lctlib%q_bark_thickness_par1
       par2_diag = lctlib%q_bark_thickness_par2
       dbh_diag = dbh * dsl4jsb_Config(DFIRE_)%tree_diameter_factor
+
+      ck = prob_mort % prop_ck
+      scorch_height = prob_mort % scorch_height
+      crown_length = prob_mort % crown_length
+      !< Diagnostics
+      r_ck = lctlib%q_crown_damage_r_ck
+      ck_p = lctlib%q_crown_damage_p
+      F_scorch_height = lctlib%q_f_scorch_height
+      tree_height = height * dsl4jsb_Config(DFIRE_)%tree_height_factor
+
       If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
         pm_fire = prob_mort % pm_fire * area_burned_fract_pft

@@ -85,6 +85,14 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real2d)  :: DBH_diag                   !< Diameter at breast height [cm]
     TYPE(t_jsb_var_real2d)  :: par1_diag                  !< Parameters for woody PFTs used in bark thickness calculation [-]
     TYPE(t_jsb_var_real2d)  :: par2_diag                  !< Parameters for woody PFTs used in bark thickness calculation [-]
+
+    TYPE(t_jsb_var_real2d)  :: ck                         !< Fraction of the crown scorch [-]
+    TYPE(t_jsb_var_real2d)  :: r_ck                       !< Resistance factor against crown damage [-]
+    TYPE(t_jsb_var_real2d)  :: ck_p                       !< Parameter for woody PFTs used in Pm (CK) equation [-]
+    TYPE(t_jsb_var_real2d)  :: scorch_height              !< Scorch height [m]
+    TYPE(t_jsb_var_real2d)  :: F_scorch_height            !< PFT-parameter in crown scorch equation [-]
+    TYPE(t_jsb_var_real2d)  :: crown_length               !< Crown length of woody PFT [m]
+    TYPE(t_jsb_var_real2d)  :: tree_height                !< Tree height [m]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -447,6 +455,76 @@ CONTAINS
     CALL mem%Add_var('DBH_diag', mem%DBH_diag, &
         & hgrid, vgrid_surface, &
         & t_cf('DBH_diag', 'cm', 'Diameter at breast height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ck', mem%ck, &
+        & hgrid, vgrid_surface, &
+        & t_cf('ck', '-', 'Fraction of the crown scorch'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('r_ck', mem%r_ck, &
+        & hgrid, vgrid_surface, &
+        & t_cf('r_ck', '-', 'Resistance factor against crown damage'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ck_p', mem%ck_p, &
+        & hgrid, vgrid_surface, &
+        & t_cf('ck_p', '-', 'Parameter for woody PFTs used in Pm (CK) equation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('scorch_height', mem%scorch_height, &
+        & hgrid, vgrid_surface, &
+        & t_cf('scorch_height', '-', 'Scorch height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('F_scorch_height', mem%F_scorch_height, &
+        & hgrid, vgrid_surface, &
+        & t_cf('F_scorch_height', '-', 'PFT-parameter in crown scorch equation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('crown_length', mem%crown_length, &
+        & hgrid, vgrid_surface, &
+        & t_cf('crown_length', 'm', 'Crown length of woody PFT'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('tree_height', mem%tree_height, &
+        & hgrid, vgrid_surface, &
+        & t_cf('tree_height', 'm', 'Tree height'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
