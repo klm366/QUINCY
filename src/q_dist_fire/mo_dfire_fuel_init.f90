@@ -98,6 +98,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: pm_tau
     dsl4jsb_Real2D_onDomain      :: tau_l
     dsl4jsb_Real2D_onDomain      :: tau_c
+    dsl4jsb_Real2D_onDomain      :: par1_diag
+    dsl4jsb_Real2D_onDomain      :: par2_diag
+    dsl4jsb_Real2D_onDomain      :: bark_thickness
+    dsl4jsb_Real2D_onDomain      :: DBH_diag
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -138,6 +142,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_tau)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_l)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_c)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, par1_diag)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, par2_diag)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, bark_thickness)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, DBH_diag)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -169,6 +177,10 @@ CONTAINS
     pm_tau = 0._wp
     tau_l = 0._wp
     tau_c = 0._wp
+    par1_diag = 0._wp
+    par2_diag = 0._wp
+    bark_thickness = 0._wp
+    DBH_diag = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif
