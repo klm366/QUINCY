@@ -70,6 +70,7 @@ CONTAINS
                                       df_sf_vgrid_elements_name, &
                                       df_sf_vgrid_species_name
     USE mo_dfire_constants,    ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+    USE mo_dfire_constants,    ONLY: df_sf_elements_nr, df_sf_species_nr
 
 
     ! ----------------------------------------------------------------------------------------------------- !
