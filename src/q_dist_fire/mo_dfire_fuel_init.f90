@@ -102,6 +102,14 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: par2_diag
     dsl4jsb_Real2D_onDomain      :: bark_thickness
     dsl4jsb_Real2D_onDomain      :: DBH_diag
+
+    dsl4jsb_Real2D_onDomain      :: ck
+    dsl4jsb_Real2D_onDomain      :: r_ck
+    dsl4jsb_Real2D_onDomain      :: ck_p
+    dsl4jsb_Real2D_onDomain      :: scorch_height
+    dsl4jsb_Real2D_onDomain      :: F_scorch_height
+    dsl4jsb_Real2D_onDomain      :: crown_length
+    dsl4jsb_Real2D_onDomain      :: tree_height
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -146,6 +154,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, par2_diag)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, bark_thickness)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, DBH_diag)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, r_ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, ck_p)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, scorch_height)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, F_scorch_height)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, crown_length)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tree_height)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -181,6 +197,14 @@ CONTAINS
     par2_diag = 0._wp
     bark_thickness = 0._wp
     DBH_diag = 0._wp
+
+    ck = 0._wp
+    r_ck = 0._wp
+    ck_p = 0._wp
+    scorch_height = 0._wp
+    F_scorch_height = 0._wp
+    crown_length = 0._wp
+    tree_height = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif
