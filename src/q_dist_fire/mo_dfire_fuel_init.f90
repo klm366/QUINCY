@@ -95,6 +95,9 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: pm_fire
     dsl4jsb_Real2D_onDomain      :: pm_prop_ck
+    dsl4jsb_Real2D_onDomain      :: pm_tau
+    dsl4jsb_Real2D_onDomain      :: tau_l
+    dsl4jsb_Real2D_onDomain      :: tau_c
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -132,6 +135,9 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_fire)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_prop_ck)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_tau)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_l)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_c)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -160,6 +166,9 @@ CONTAINS
 
     pm_fire = 0._wp
     pm_prop_ck = 0._wp
+    pm_tau = 0._wp
+    tau_l = 0._wp
+    tau_c = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif

@@ -78,6 +78,9 @@ MODULE mo_dfire_fuel_memory_class
 
     TYPE(t_jsb_var_real2d)  :: pm_fire                    !< Tree probability of mortality of tree [-]
     TYPE(t_jsb_var_real2d)  :: pm_prop_ck                 !< Prob mortality: fraction of the crown scorch [-]
+    TYPE(t_jsb_var_real2d)  :: pm_tau                     !< Probability of mortality due to cambial damage [-]
+    TYPE(t_jsb_var_real2d)  :: tau_l                      !< Residence time of the fire [min]
+    TYPE(t_jsb_var_real2d)  :: tau_c                      !< Critical time for cambial damage [min]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -366,6 +369,39 @@ CONTAINS
     CALL mem%Add_var('pm_prop_ck', mem%pm_prop_ck, &
         & hgrid, vgrid_surface, &
         & t_cf('pm_prop_ck', '-', 'Proportion of the crown scorch'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_tau', mem%pm_tau, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_tau', '%', 'Probability of post-fire mortality due to cambial damage'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('tau_l', mem%tau_l, &
+        & hgrid, vgrid_surface, &
+        & t_cf('tau_l', 'min', 'Residence time of the fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('tau_c', mem%tau_c, &
+        & hgrid, vgrid_surface, &
+        & t_cf('tau_c', 'min', 'Critical time for cambial damage'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
