@@ -105,15 +105,6 @@ MODULE mo_dfire_memory_class
     !< Diagnostics
     TYPE(t_jsb_var_real2d)               :: nesterov_index      !< Cumulative function of tmax and tdew [C2]
     TYPE(t_jsb_var_real2d)               :: fdi                 !< fire danger index [%]
-    TYPE(t_jsb_var_real2d)               :: pm_fire             !< Probability of mortality
-    TYPE(t_jsb_var_real2d)               :: pm_ck               !< Probability of mortality due to crown damage
-    TYPE(t_jsb_var_real2d)               :: pm_tau              !< Probability of mortality due to cambial damage
-    TYPE(t_jsb_var_real2d)               :: tau_l               !< Residence time of the fire [min]
-    TYPE(t_jsb_var_real2d)               :: tau_c               !< Critical time for cambial damage [min]
-!    TYPE(t_jsb_var_real2d)               :: bark_thickness      !< Bark thickness [cm]
-!    TYPE(t_jsb_var_real2d)               :: DBH                 !< Diameter at breast height [cm]
-!    TYPE(t_jsb_var_real2d)               :: par1                !< Parameters for woody PFTs used in bark thickness calculation [-]
-!    TYPE(t_jsb_var_real2d)               :: par2                !< Parameters for woody PFTs used in bark thickness calculation [-]
     TYPE(t_jsb_var_real2d)               :: ros_f               !< Forward rate of spread of a surface fire [m min-1]
     TYPE(t_jsb_var_real2d)               :: ros_b               !< Backwards rate of spread of a surface fire [m min-1]
     TYPE(t_jsb_var_real2d)               :: mean_fire_area      !< Mean fire area [ha]
@@ -407,39 +398,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('pm_fire', mem%pm_fire, &
-        & hgrid, vgrid_surface, &
-        & t_cf('pm_fire', '%', 'Probability of post-fire mortality'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('pm_tau', mem%pm_tau, &
-        & hgrid, vgrid_surface, &
-        & t_cf('pm_tau', '%', 'Probability of post-fire mortality due to cambial damage'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('pm_ck', mem%pm_ck, &
-        & hgrid, vgrid_surface, &
-        & t_cf('pm_ck', '%', 'Probability of post-fire mortality due to crown damage'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
     CALL mem%Add_var('ros_f', mem%ros_f, &
         & hgrid, vgrid_surface, &
         & t_cf('ros_f', 'm min-1', 'Forward rate of spread of a surface fire'), &
@@ -599,28 +557,6 @@ CONTAINS
     CALL mem%Add_var('preig_heat', mem%preig_heat, &
         & hgrid, vgrid_surface, &
         & t_cf('preig_heat', 'kJ min−1', 'The amount of heat required to ignite a given mass of fuel'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('tau_l', mem%tau_l, &
-        & hgrid, vgrid_surface, &
-        & t_cf('tau_l', 'min', 'Residence time of the fire'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('tau_c', mem%tau_c, &
-        & hgrid, vgrid_surface, &
-        & t_cf('tau_c', 'min', 'Critical time for cambial damage'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

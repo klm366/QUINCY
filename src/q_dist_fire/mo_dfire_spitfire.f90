@@ -279,11 +279,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
     dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
     dsl4jsb_Real2D_onChunk                :: ros_b             ! out [?]
-    dsl4jsb_Real2D_onChunk                :: pm_fire           ! out [-]
-    dsl4jsb_Real2D_onChunk                :: pm_tau            ! out [-]
-    dsl4jsb_Real2D_onChunk                :: pm_ck             ! out [-]
-    dsl4jsb_Real2D_onChunk                :: tau_l             ! out [-]
-    dsl4jsb_Real2D_onChunk                :: tau_c             ! out [-]
     dsl4jsb_Real2D_onChunk                :: mean_fire_area    ! out [?]
     dsl4jsb_Real2D_onChunk                :: fire_duration     ! out [?]
     dsl4jsb_Real2D_onChunk                :: distance_travelled ! out [?]
@@ -378,11 +373,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_f)                  ! out [?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_b)                  ! out [?]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_fire)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_ck)                  ! out [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, pm_tau)                 ! out [-]
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, tau_l)                      ! out
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, tau_c)                      ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mean_fire_area)         ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fire_duration)          ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, distance_travelled)     ! out
@@ -471,11 +461,6 @@ CONTAINS
     !< Make sure those values are set to 0, as it means there is no fire.
     ab_moisture_diag = 0._wp
     i_surface = 0._wp
-    pm_fire = 0._wp
-    pm_ck = 0._wp
-    pm_tau = 0._wp
-    tau_l = 0._wp
-    tau_c = 0._wp
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
@@ -559,14 +544,6 @@ CONTAINS
 
     ab_moisture_diag(:) =  ab_moisture(:)
 
-    !< Impacts into process memory
-    !If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) &
-    !    pm_fire(:) = sf_spitfire % prob_mort % pm_fire(:) * sf_spitfire % area_burned_fract
-
-    !pm_tau = sf_spitfire % prob_mort % pm_tau
-    !pm_ck = sf_spitfire % prob_mort % pm_ck
-    !tau_l = sf_spitfire %  prob_mort % tau_l
-    !tau_c = sf_spitfire % prob_mort % tau_c
     ros_f = sf_spitfire % ros % ros_forward
     ros_b = sf_spitfire % ros % ros_backwards
 
@@ -585,9 +562,6 @@ CONTAINS
     net_fuel_load(:) = sf_spitfire % ros % net_fuel_load(:)
     moist_damp_coeff(:) = sf_spitfire % ros % moist_damp_coeff(:)
     mineral_damp_coeff(:) = sf_spitfire % ros % mineral_damp_coeff(:)
-
-    !ck(:) = sf_spitfire % prob_mort % prop_ck(:)
-    !scorch_height(:) = sf_spitfire % prob_mort % scorch_height(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
