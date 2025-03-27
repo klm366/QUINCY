@@ -39,6 +39,7 @@ MODULE mo_dfire_config_class
   USE mo_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
   USE mo_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
                                   df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name
+  USE mo_dfire_constants,   ONLY: df_sf_omegas_nr
 
   IMPLICIT NONE
   PRIVATE
@@ -131,6 +132,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_classes
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_moisture
     
     REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
