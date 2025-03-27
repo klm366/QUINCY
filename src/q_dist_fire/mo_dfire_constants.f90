@@ -58,6 +58,8 @@ MODULE mo_dfire_constants
   CHARACTER(*), PARAMETER :: df_sf_vgrid_live_fuel_pools_name="vg_lv_fl_pls" ! vgrid_live_fuel_pools
   CHARACTER(*), PARAMETER :: df_sf_vgrid_fuel_classes_name="vg_fl_cls" ! vgrid_fuel_classes
   CHARACTER(*), PARAMETER :: df_sf_vgrid_fuel_moisture_name = "vg_fuel_moist" ! vgrid_fuel_moisture
+  CHARACTER(*), PARAMETER :: df_sf_vgrid_species_name = "vg_spec"
+  CHARACTER(*), PARAMETER :: df_sf_vgrid_elements_name = "vg_elements"
 
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 

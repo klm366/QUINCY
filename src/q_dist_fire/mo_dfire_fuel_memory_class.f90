@@ -33,7 +33,8 @@ MODULE mo_dfire_fuel_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_dfire_constants,        ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name
+  USE mo_dfire_constants,        ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
+                                       df_sf_vgrid_elements_name, df_sf_vgrid_species_name
 
   IMPLICIT NONE
 
@@ -93,6 +94,12 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real2d)  :: F_scorch_height            !< PFT-parameter in crown scorch equation [-]
     TYPE(t_jsb_var_real2d)  :: crown_length               !< Crown length of woody PFT [m]
     TYPE(t_jsb_var_real2d)  :: tree_height                !< Tree height [m]
+
+    TYPE(t_jsb_var_real3d)  :: fuel_consumption_els       !< Fuel consumption per elements (#nc,#elements) [mol m-2]
+    TYPE(t_jsb_var_real3d)  :: emissions_spc              !< Fire emissions per species (nc, #species)
+    TYPE(t_jsb_var_real3d)  :: emissions_els              !< Fire emissions per elements (nc, #elements) [molX m-2]
+    TYPE(t_jsb_var_real3d)  :: residue_els                !< Fire residue (nc, #elements) [molX m-2]
+    TYPE(t_jsb_var_real3d)  :: overflow_els               !< Emissions mass imbalance (nc, #elements) [molX m-2]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -127,6 +134,8 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_elements
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_species
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_fuel_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -136,6 +145,8 @@ CONTAINS
     vgrid_surface         => Get_vgrid('surface')
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
+    vgrid_elements        => Get_vgrid(df_sf_vgrid_elements_name)
+    vgrid_species         => Get_vgrid(df_sf_vgrid_species_name)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! dead pools
@@ -525,6 +536,56 @@ CONTAINS
     CALL mem%Add_var('tree_height', mem%tree_height, &
         & hgrid, vgrid_surface, &
         & t_cf('tree_height', 'm', 'Tree height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fuel_consumption_els', mem%fuel_consumption_els, &
+        & hgrid, vgrid_elements, &
+        & t_cf('fuel_consumption_els', 'mol X m-2', 'Fuel consumption'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('emissions_spc', mem%emissions_spc, &
+        & hgrid, vgrid_species, &
+        & t_cf('emissions_spc', 'g X m-2', 'Fuel emissions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('emissions_els', mem%emissions_els, &
+        & hgrid, vgrid_elements, &
+        & t_cf('emissions_els', 'mol X m-2', 'Fuel emissions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('residue_els', mem%residue_els, &
+        & hgrid, vgrid_elements, &
+        & t_cf('residue_els', 'mol X m-2', 'Residue'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('overflow_els', mem%overflow_els, &
+        & hgrid, vgrid_elements, &
+        & t_cf('overflow_els', 'mol X m-2', 'Emissions overflow'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

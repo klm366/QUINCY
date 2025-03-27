@@ -66,7 +66,9 @@ CONTAINS
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
     USE mo_dfire_constants,    ONLY: df_sf_vgrid_dead_fuel_pools_name
-    USE mo_dfire_constants,    ONLY: df_sf_vgrid_live_fuel_pools_name
+    USE mo_dfire_constants,    ONLY: df_sf_vgrid_live_fuel_pools_name, &
+                                      df_sf_vgrid_elements_name, &
+                                      df_sf_vgrid_species_name
     USE mo_dfire_constants,    ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
 
 
@@ -81,6 +83,8 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_species
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_elements
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_fuel_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -133,8 +137,16 @@ CONTAINS
     vgrid_live_fuel_pools  => new_vgrid(df_sf_vgrid_live_fuel_pools_name, zaxis_generic, sf_fuel_live_fuel_nr, &
         longname='Total number of live fuel pools', &
         & units='g DM m-2')
+    vgrid_species  => new_vgrid(df_sf_vgrid_species_name, zaxis_generic, df_sf_species_nr, &
+        longname='Emission Species', &
+        & units='g X Kg-1 DM-1 m-2')
+    vgrid_elements  => new_vgrid(df_sf_vgrid_elements_name, zaxis_generic, df_sf_elements_nr, &
+        longname='Elements', &
+        & units='mol X m-2')
     CALL register_vgrid(vgrid_dead_fuel_pools)
     CALL register_vgrid(vgrid_live_fuel_pools)
+    CALL register_vgrid(vgrid_species)
+    CALL register_vgrid(vgrid_elements)
   END SUBROUTINE Init_dfire_fuel_config
 
 #endif

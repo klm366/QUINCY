@@ -103,6 +103,12 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: bark_thickness
     dsl4jsb_Real2D_onDomain      :: DBH_diag
 
+    dsl4jsb_Real3D_onDomain      :: fuel_consumption_els
+    dsl4jsb_Real3D_onDomain      :: emissions_spc
+    dsl4jsb_Real3D_onDomain      :: emissions_els
+    dsl4jsb_Real3D_onDomain      :: residue_els
+    dsl4jsb_Real3D_onDomain      :: overflow_els
+
     dsl4jsb_Real2D_onDomain      :: ck
     dsl4jsb_Real2D_onDomain      :: r_ck
     dsl4jsb_Real2D_onDomain      :: ck_p
@@ -162,6 +168,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, F_scorch_height)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, crown_length)
     dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tree_height)
+
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, fuel_consumption_els)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, emissions_spc)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, emissions_els)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, residue_els)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, overflow_els)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -205,6 +217,12 @@ CONTAINS
     F_scorch_height = 0._wp
     crown_length = 0._wp
     tree_height = 0._wp
+
+    fuel_consumption_els = 0._wp
+    emissions_spc = 0._wp
+    emissions_els = 0._wp
+    residue_els = 0._wp
+    overflow_els = 0._wp
   END SUBROUTINE dfire_fuel_init
 
 #endif
