@@ -188,6 +188,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! in [g DM m-2]
 
+    dsl4jsb_Real3D_onChunk                :: fuel_consumption_els     ! out [mol m-2]
+    dsl4jsb_Real3D_onChunk                :: emissions_spc            ! out
+    dsl4jsb_Real3D_onChunk                :: emissions_els            ! out
+    dsl4jsb_Real3D_onChunk                :: residue_els              ! out
+    dsl4jsb_Real3D_onChunk                :: overflow_els             ! out
 
     dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
     dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
@@ -275,6 +280,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
 
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, fuel_consumption_els) ! out
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, emissions_spc)        ! out
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, emissions_els)        ! out
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, residue_els)          ! out
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, overflow_els)         ! out
+
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -307,6 +318,12 @@ CONTAINS
     F_scorch_height = 0._wp
     crown_length = 0._wp
     tree_height = 0._wp
+
+    fuel_consumption_els = 0._wp
+    emissions_spc = 0._wp
+    emissions_els = 0._wp
+    residue_els = 0._wp
+    overflow_els = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -501,6 +518,14 @@ CONTAINS
                                 mask=is_fire_intense_enough)
 
     END IF
+
+    ! for diagnostics:
+    fuel_consumption_els = SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2) !< 2 = fuel pool index
+    emissions_spc = SUM(emissions_dead_spc, DIM=2) + SUM(emissions_live_spc, DIM=2) !< 2 = fuel pool index
+    emissions_els = SUM(emissions_dead_el, DIM=2) + SUM(emissions_live_el, DIM=2) !< 2 = fuel pool index
+    residue_els = SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2) !< 2 = fuel pool index
+    overflow_els = SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
+                        SUM(mass_imbalance_emitted_live_el, DIM=2)
 
 !    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
 
