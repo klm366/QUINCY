@@ -170,6 +170,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: pm_tau                    ! out [-]
     dsl4jsb_Real2D_onChunk                :: tau_l                     ! out [-]
     dsl4jsb_Real2D_onChunk                :: tau_c                     ! out [-]
+    dsl4jsb_Real2D_onChunk                :: bark_thickness            ! out [?]
+    dsl4jsb_Real2D_onChunk                :: DBH_diag                  ! out [?]
+    dsl4jsb_Real2D_onChunk                :: par1_diag                 ! out [?]
+    dsl4jsb_Real2D_onChunk                :: par2_diag                 ! out [?]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! in [g DM m-2]
@@ -242,6 +246,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_tau)               ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, tau_l)                ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, tau_c)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, bark_thickness)       ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, DBH_diag)             ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, par1_diag)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, par2_diag)            ! out [-]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -271,6 +279,10 @@ CONTAINS
     pm_tau = 0._wp
     tau_l = 0._wp
     tau_c = 0._wp
+    bark_thickness = 0._wp
+    DBH_diag = 0._wp
+    par1_diag = 0._wp
+    par2_diag = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -350,6 +362,10 @@ CONTAINS
       pm_tau = prob_mort % pm_tau
       tau_l = prob_mort % tau_l
       tau_c = prob_mort % tau_c
+      bark_thickness = prob_mort % bark_thickness
+      par1_diag = lctlib%q_bark_thickness_par1
+      par2_diag = lctlib%q_bark_thickness_par2
+      dbh_diag = dbh * dsl4jsb_Config(DFIRE_)%tree_diameter_factor
       If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
         pm_fire = prob_mort % pm_fire * area_burned_fract_pft

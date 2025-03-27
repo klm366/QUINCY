@@ -81,6 +81,10 @@ MODULE mo_dfire_fuel_memory_class
     TYPE(t_jsb_var_real2d)  :: pm_tau                     !< Probability of mortality due to cambial damage [-]
     TYPE(t_jsb_var_real2d)  :: tau_l                      !< Residence time of the fire [min]
     TYPE(t_jsb_var_real2d)  :: tau_c                      !< Critical time for cambial damage [min]
+    TYPE(t_jsb_var_real2d)  :: bark_thickness             !< Bark thickness [cm]
+    TYPE(t_jsb_var_real2d)  :: DBH_diag                   !< Diameter at breast height [cm]
+    TYPE(t_jsb_var_real2d)  :: par1_diag                  !< Parameters for woody PFTs used in bark thickness calculation [-]
+    TYPE(t_jsb_var_real2d)  :: par2_diag                  !< Parameters for woody PFTs used in bark thickness calculation [-]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_fuel_memory
   END TYPE t_dfire_fuel_memory
@@ -410,6 +414,45 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+    CALL mem%Add_var('par2_diag', mem%par2_diag, &
+        & hgrid, vgrid_surface, &
+        & t_cf('par2_diag', '-', 'Parameter 2 for woody PFTs used in bark thickness calculation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('par1_diag', mem%par1_diag, &
+        & hgrid, vgrid_surface, &
+        & t_cf('par1_diag', '-', 'Parameter 1 for woody PFTs used in bark thickness calculation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('bark_thickness', mem%bark_thickness, &
+        & hgrid, vgrid_surface, &
+        & t_cf('bark_thickness', 'cm', 'Bark thickness'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('DBH_diag', mem%DBH_diag, &
+        & hgrid, vgrid_surface, &
+        & t_cf('DBH_diag', 'cm', 'Diameter at breast height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
   END SUBROUTINE Init_dfire_fuel_memory
 
 #endif
