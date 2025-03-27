@@ -129,7 +129,7 @@ MODULE mo_dfire_spitfire
   END INTERFACE t_sf_spitfire
 
 
-  TYPE t_sf_bgcm_2L3D_p
+  TYPE t_sf_bgcm_2L3D_p ! todo: remove
     REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
   END TYPE t_sf_bgcm_2L3D_p
 
@@ -560,13 +560,13 @@ CONTAINS
     ab_moisture_diag(:) =  ab_moisture(:)
 
     !< Impacts into process memory
-    If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) &
-        pm_fire(:) = sf_spitfire % prob_mort % pm_fire(:) * sf_spitfire % area_burned_fract
+    !If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) &
+    !    pm_fire(:) = sf_spitfire % prob_mort % pm_fire(:) * sf_spitfire % area_burned_fract
 
-    pm_tau = sf_spitfire % prob_mort % pm_tau
-    pm_ck = sf_spitfire % prob_mort % pm_ck
-    tau_l = sf_spitfire %  prob_mort % tau_l
-    tau_c = sf_spitfire % prob_mort % tau_c
+    !pm_tau = sf_spitfire % prob_mort % pm_tau
+    !pm_ck = sf_spitfire % prob_mort % pm_ck
+    !tau_l = sf_spitfire %  prob_mort % tau_l
+    !tau_c = sf_spitfire % prob_mort % tau_c
     ros_f = sf_spitfire % ros % ros_forward
     ros_b = sf_spitfire % ros % ros_backwards
 
@@ -586,8 +586,8 @@ CONTAINS
     moist_damp_coeff(:) = sf_spitfire % ros % moist_damp_coeff(:)
     mineral_damp_coeff(:) = sf_spitfire % ros % mineral_damp_coeff(:)
 
-    ck(:) = sf_spitfire % prob_mort % prop_ck(:)
-    scorch_height(:) = sf_spitfire % prob_mort % scorch_height(:)
+    !ck(:) = sf_spitfire % prob_mort % prop_ck(:)
+    !scorch_height(:) = sf_spitfire % prob_mort % scorch_height(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
     !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
@@ -771,6 +771,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Gather children's bgcm stores from specific flux pool
+  !> Todo: remove (obsolete)
   !>
   FUNCTION Get_childrens_bgcm_stores_2l_3d(pool_id, ics, ice, iblk, tile) RESULT (bgcm_stores)
     INTEGER, INTENT(in) :: pool_id

@@ -162,6 +162,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools            !> Dead fuel pools grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools            !> Live fuel pools grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_classes               !> Fuel classes grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture 
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -517,7 +518,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('frac_consump_fcl', mem%frac_consump_fcl, &
-        & hgrid, vgrid_fuel_class, &
+        & hgrid, vgrid_fuel_classes, &
         & t_cf('frac_consump_fcl', '-', 'Dead fuel consumption intermediate Ratio'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

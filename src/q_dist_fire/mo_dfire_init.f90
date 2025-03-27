@@ -84,6 +84,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: tau_c
     dsl4jsb_Real2D_onDomain      :: ros_f
     dsl4jsb_Real2D_onDomain      :: ros_b
+    dsl4jsb_Real2D_onDomain      :: mean_fire_area
+    dsl4jsb_Real2D_onDomain      :: fire_duration 
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
@@ -188,17 +190,17 @@ CONTAINS
     pm_fire = 0._wp
     pm_ck = 0._wp
     pm_tau = 0._wp
-    tau_l(:) = 0._wp
-    tau_c(:) = 0._wp
+    tau_l = 0._wp
+    tau_c = 0._wp
     ros_f = 0._wp
     ros_b = 0._wp
     mean_fire_area = 0._wp
     fire_duration = 0._wp
 
-    e_n_ignitions(:) = 0._wp
-    e_n_humans(:) = 0._wp
-    e_n_lightning(:) = 0._wp
-    ab_moisture_diag(:) = 0._wp
+    e_n_ignitions = 0._wp
+    e_n_humans = 0._wp
+    e_n_lightning = 0._wp
+    ab_moisture_diag = 0._wp
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp
@@ -225,8 +227,8 @@ CONTAINS
 
     distance_travelled = 0._wp
     l2b_ratio = 0._wp
-    ck(:) = 0._wp
-    scorch_height(:) = 0._wp
+    ck = 0._wp
+    scorch_height = 0._wp
     frac_consump_fcl = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
