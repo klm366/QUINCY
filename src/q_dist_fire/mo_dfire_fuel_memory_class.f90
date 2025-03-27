@@ -41,7 +41,7 @@ MODULE mo_dfire_fuel_memory_class
   PRIVATE
   PUBLIC :: t_dfire_fuel_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 30
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   ! ======================================================================================================= !
   !>
