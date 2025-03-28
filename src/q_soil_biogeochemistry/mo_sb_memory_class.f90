@@ -322,6 +322,16 @@ MODULE mo_sb_memory_class
       & enzyme_frac_poly_p_mavg    !< moving average of enzyme_frac_poly_p [unitless]
 
     !------------------------------------------------------------------------------------------------------ !
+    !>2D N and P fertiliser input
+    !>
+    TYPE(t_jsb_var_real2d)  :: &
+      & fertiliser_nh4, &     !< NH4 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_nh4_n15, & !< 15NH4 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_no3, &     !< NO3 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_no3_n15, & !< 15NO3 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_po4        !< PO4 fertiliser application rate [micro mol/m2/s]
+
+    !------------------------------------------------------------------------------------------------------ !
     !>2D total fluxes for mass balance checks in soil_biogeochemistry model
     !>
     TYPE(t_jsb_var_real2d)  :: &
@@ -2897,6 +2907,56 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_nh4', mem%fertiliser_nh4, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_nh4', 'micro mol m-2 s-1', 'NH4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_nh4_n15', mem%fertiliser_nh4_n15, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_nh4_n15', 'micro mol m-2 s-1', '15NH4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_no3', mem%fertiliser_no3, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_no3', 'micro mol m-2 s-1', 'NO3 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_no3_n15', mem%fertiliser_no3_n15, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_no3_n15', 'micro mol m-2 s-1', '15NO3 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_po4', mem%fertiliser_po4, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_po4', 'micro mol m-2 s-1', 'PO4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_carbon', mem%total_flux_carbon, &

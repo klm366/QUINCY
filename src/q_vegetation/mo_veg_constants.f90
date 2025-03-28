@@ -190,6 +190,7 @@ MODULE mo_veg_constants
 
   ! parameters used for product pool decay
   REAL(wp), SAVE :: &
+      tau_pp_crop,       & !< exponential time constants for the decay of the crop harvest product pool
       tau_pp_fuelwood,   & !< exponential time constants for the decay of the fuel product pool
       tau_pp_paper,      & !< exponential time constants for the decay of the paper product pool
       tau_pp_fiberboard, & !< exponential time constants for the decay of the fiberboard product pool
@@ -217,7 +218,8 @@ MODULE mo_veg_constants
   ! need to be parameters (i.e. constant across model runtime)
   INTEGER, PARAMETER ::    &
       itree         = 1,   &
-      igrass        = 2
+      igrass        = 2,   &
+      icrop         = 3
 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_constants'
@@ -378,13 +380,14 @@ CONTAINS
       delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
 
     ! parameters used for product pool decay [years] - these need to be > 0.0_wp
-    ! following values are all taken from Nuetzel (2021, LMU master thesis)
-      tau_pp_fuelwood = 0.53
-      tau_pp_paper = 1.50
-      tau_pp_fiberboard = 13.2
-      tau_pp_oirw = 16.5
-      tau_pp_pv = 24.9
-      tau_pp_sawnwood = 49.9
+      tau_pp_crop = 1.0_wp ! made up by SZ
+      ! following values are all taken from Nuetzel (2021, LMU master thesis)
+      tau_pp_fuelwood = 0.53_wp
+      tau_pp_paper = 1.50_wp
+      tau_pp_fiberboard = 13.2_wp
+      tau_pp_oirw = 16.5_wp
+      tau_pp_pv = 24.9_wp
+      tau_pp_sawnwood = 49.9_wp
 
     ! parameters used for herbivory
     ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150

@@ -58,11 +58,11 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: fract_wood_to_pp_pv
     dsl4jsb_Real2D_onDomain :: fract_wood_to_pp_sawnwood
     ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
     IF (.NOT. tile%Is_process_calculated(Q_SH_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of sh memory (quincy) for tile '// &
       &                          TRIM(tile%name))
-    ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_SH_)
     dsl4jsb_Get_config(VEG_)

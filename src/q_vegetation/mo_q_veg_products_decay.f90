@@ -24,8 +24,8 @@ MODULE mo_q_veg_products_decay
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
-    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
+    &       VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID
 
   IMPLICIT NONE
 
@@ -45,23 +45,28 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_constants,         ONLY: tau_pp_fuelwood, tau_pp_paper, tau_pp_fiberboard, &
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SH_, Q_AGR_
+    USE mo_veg_constants,         ONLY: tau_pp_crop, tau_pp_fuelwood, tau_pp_paper, tau_pp_fiberboard, &
       &                                 tau_pp_oirw, tau_pp_pv, tau_pp_sawnwood
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                      !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store                 !< the bgcm store of this tile
-    TYPE(t_lctlib_element),   POINTER :: lctlib                     !< land-cover-type library - parameter across pft's
     INTEGER                           :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                           :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
     REAL(wp)                          :: dtime                      !< timestep length
     INTEGER                           :: iblk, ics, ice, nc         !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':update_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_AGR_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fuel_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_paper_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fiberboard_mt
@@ -79,34 +84,55 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_AGR_)
+    ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
-    IF (lctlib%ForestFlag) THEN
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
+
+    IF ((dsl4jsb_Config(Q_SH_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
+        & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
+
       dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
+
+      IF (dsl4jsb_Lctlib_param(CropFlag)) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
+      END IF
+
+      IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
+      END IF
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    IF (lctlib%ForestFlag) THEN
+    IF ((dsl4jsb_Config(Q_SH_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
+        & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
+
       prod_decay_mt(:,:) = 0._wp
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
-      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
+
+      IF (dsl4jsb_Lctlib_param(CropFlag)) THEN
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_crop, veg_pp_crop_mt, prod_decay_mt)
+      END IF
+
+      IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
+        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
+      END IF
     END IF
 
   END SUBROUTINE update_products_decay

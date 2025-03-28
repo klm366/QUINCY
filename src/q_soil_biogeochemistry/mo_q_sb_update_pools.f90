@@ -188,6 +188,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c13
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c14
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_po4
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -458,6 +463,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c13) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c14) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_n15) ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4)              ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4_n15)          ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3)              ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3_n15)          ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_po4)              ! in
     ! SB_ 3D
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
@@ -858,15 +868,17 @@ CONTAINS
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:))
 
-    !> 9.0 atmospheric deposition
+    !> 9.0 atmospheric deposition and fertiliser
     !!
-    no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_solute(:,1)      = no3_solute(:,1)     + (noy_deposition(:) + fertiliser_no3(:)) &
+      &                                          / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + (noy_n15_deposition(:) + fertiliser_no3_n15(:)) &
+      &                                          / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
     !>10.0 update of mineral NH4 & P pools
     !>
     p_deposition_sl(:,:) = 0._wp
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
+    p_deposition_sl(:,1) = (p_deposition(:) + fertiliser_po4(:)) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
     !> 10.1 init vertical variables
     !>
     k_adsorpt_po4_act(:,:)    = rtm_sorption(:,:)   * rmm_sorption(:,:)   * k_adsorpt_po4
@@ -887,7 +899,8 @@ CONTAINS
                    nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
                    volatilisation_nh4(:,:) + transport_nh4_assoc(:,:) - &
                    lateral_loss_nh4_solute_sl(:,:) ) * dtime / 1.e6_wp
-      hlp1(:,1) = hlp1(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+      hlp1(:,1) = hlp1(:,1) + (nhx_deposition(:) + fertiliser_nh4(:)) &
+        &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
 
       CALL calc_langmuir_kinetics(dtime, hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
@@ -903,7 +916,8 @@ CONTAINS
                    plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) - &
                    nitrification_no3_n15(:,:) - nitrification_noy_n15(:,:) - nitrification_n2o_n15(:,:) - &
                    volatilisation_nh4_n15(:,:) + transport_nh4_n15_assoc(:,:)) * dtime / 1.e6_wp
-      hlp2(:,1) = hlp2(:,1) + nhx_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+      hlp2(:,1) = hlp2(:,1) + (nhx_n15_deposition(:) + fertiliser_nh4_n15(:)) &
+        &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
       WHERE ((nh4_n15_solute(:,:) + nh4_n15_assoc(:,:)) < -hlp2(:,:))
         hlp2(:,:) = -(nh4_n15_solute(:,:) + nh4_n15_assoc(:,:))
@@ -1021,6 +1035,7 @@ CONTAINS
     total_flux_nitrogen(:) = SUM(veg_litterfall_mt(:,ixN,:), DIM=1)                            &
       & + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp                &
       & + (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                              &
+      & + (fertiliser_nh4(:) + fertiliser_no3(:)) * dtime / 1.e6_wp                            &
       & + veg_exudation_mt(ixN, :)                                                             &
       & - SUM(sb_mycorrhiza_export_mt(ixN,:,:) * soil_depth_sl(:,:), DIM=2)                    &
       & - SUM(lateral_loss_dom_nitrogen_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp &
@@ -1032,7 +1047,7 @@ CONTAINS
       & + SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
 
     total_flux_phosphorus(:) = SUM(veg_litterfall_mt(:,ixP,:), DIM=1) + p_deposition(:) * dtime/1.e6_wp &
-      & + veg_exudation_mt(ixP,:)                                                                       &
+      & + veg_exudation_mt(ixP,:) + fertiliser_po4(:) * dtime / 1.e6_wp                                 &
       & - SUM(sb_mycorrhiza_export_mt(ixP,:,:) * soil_depth_sl(:,:), DIM=2)                             &
       & - SUM(lateral_loss_dom_phosphorus_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp        &
       & - SUM(lateral_loss_po4_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp            &
@@ -1052,6 +1067,7 @@ CONTAINS
       & + SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp              &
       & + (nhx_deposition(:) + noy_deposition(:))                                                &
       &    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) *dtime/1.e6_wp                  &
+      & + (fertiliser_nh4_n15(:) + fertiliser_no3_n15(:)) * dtime / 1.e6_wp                      &
       & + veg_exudation_mt(ixN15, :)                                                             &
       & - SUM(sb_mycorrhiza_export_mt(ixN15,:,:) * soil_depth_sl(:,:), DIM=2)                    &
       & - SUM(lateral_loss_dom_nitrogen15_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp &
