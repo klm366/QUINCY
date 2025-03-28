@@ -194,7 +194,10 @@ CONTAINS
     !Mingyue Zhang define transition data name start
     WRITE(filename_land_transition_data,'(a,I4.4,a)') &
       & TRIM(dsl4jsb_Config(ALCC_)%alcc_transition_filename_prefix), current_year, ".nc"
-
+    
+    !print *, 'filename_land_transition_data', filename_land_transition_data     !mingyue added
+    CALL message(TRIM(routine), 'filename_land_transition_data: '//TRIM(filename_land_transition_data))
+    
     input_file_trans = jsb_netcdf_open_input(TRIM(filename_land_transition_data), model%grid_id)
     !Mingyue Zhang define transition data name end
 
