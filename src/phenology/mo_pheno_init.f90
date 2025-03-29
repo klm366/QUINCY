@@ -245,7 +245,7 @@ CONTAINS
   SUBROUTINE pheno_init_ic(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
+    USE mo_jsb_time,      ONLY: cache_time_interpolation_weights, get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -295,6 +295,7 @@ CONTAINS
     !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
 
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
+    CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks
