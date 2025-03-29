@@ -52,6 +52,7 @@ CONTAINS
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
+    USE mo_q_agr_constants,     ONLY: init_q_agr_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
@@ -162,6 +163,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
+           CALL init_q_agr_constants
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_turb_constants
@@ -366,7 +368,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

@@ -51,11 +51,12 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, SPQ_, Q_SH_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, SPQ_, Q_SH_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(Q_SH_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
@@ -82,6 +83,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_SH_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
@@ -139,6 +141,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(Q_SH_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
@@ -211,21 +214,26 @@ CONTAINS
     !>
     ! returns constant mortality_rate if veg_dynamics_scheme == none \n
     ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population
-    CALL calc_veg_mortality( &
-      & nc                                              , & ! in
-      & dtime                                           , &
-      & model%config%elements_index_map(:)              , &
-      & model%config%is_element_used(:)                 , &
-      & lctlib%growthform                               , &
-      & lctlib%k1_mort_greff                            , &
-      & TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
-      & an_boc_tvegdyn_mavg(:)                          , &
-      & net_growth_tvegdyn_mavg(:)                      , &
-      & lai_tvegdyn_mavg(:)                             , &
-      & fpc(:)                                          , &
-      & veg_pool_mt(:,:,:)                              , & ! in
-      & veg_litterfall_mt(:,:,:)                        , & ! inout
-      & mortality_rate(:)                               )   ! out
+    ! does not apply to croplands
+    IF (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active) THEN
+      mortality_rate(:) = 0.0_wp
+    ELSE
+      CALL calc_veg_mortality( &
+        & nc                                              , & ! in
+        & dtime                                           , &
+        & model%config%elements_index_map(:)              , &
+        & model%config%is_element_used(:)                 , &
+        & lctlib%growthform                               , &
+        & lctlib%k1_mort_greff                            , &
+        & TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
+        & an_boc_tvegdyn_mavg(:)                          , &
+        & net_growth_tvegdyn_mavg(:)                      , &
+        & lai_tvegdyn_mavg(:)                             , &
+        & fpc(:)                                          , &
+        & veg_pool_mt(:,:,:)                              , & ! in
+        & veg_litterfall_mt(:,:,:)                        , & ! inout
+        & mortality_rate(:)                               )   ! out
+    END IF
 
     !> 2.1 Calculate herbivory and associated respiration and litter fall
     !>
@@ -286,39 +294,41 @@ CONTAINS
       ! Determine establishment flux:
 
       ! Standard case: calculate establishment from seed pool
-      ! (Exception: if we just had a stand replacing harvest running QS)
-      IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
-        CALL calc_veg_establishment( &
-          & nc                                  , & ! in
-          & dtime                               , &
-          & model%config%elements_index_map(:)  , &
-          & model%config%is_element_used(:)     , &
-          & lctlib%tau_seed_est                 , &
-          & w_soil_root_theta(:)                , &
-          & growing_season(:)                   , &
-          & t_air_week_mavg(:)                  , &
-          & fpc(:)                              , &
-          & rfr_ratio_boc_tvegdyn_mavg(:)       , &
-          & veg_pool_mt(ix_seed_bed,:,:)        , & ! in
-          & veg_establishment_mt(:,:)           )   ! inout
-      ELSE
-        ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
-        hlp1(:) = 0.0_wp
-        ! set carbon in establishment such that the inital stand density is 1000 / ha (i.e. 0.1/m2)
-        ! which seeds the forest floor for natural regeneration
-        ! but limit to actual available seed pool to avoid generating mass
-        ! NB: This might need to be revised for particular case studies
-        DO ic = 1, nc
-          IF (veg_pool_mt(ix_seed_bed, ixC, ic) > eps8) THEN
-            hlp1(ic) = MIN(0.1_wp * lctlib%seed_size, veg_pool_mt(ix_seed_bed, ixC, ic)) / veg_pool_mt(ix_seed_bed, ixC, ic)
-          END IF
-        END DO
-        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-          IF (model%config%is_element_used(ielem)) THEN
-            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-            veg_establishment_mt(ix_elem, :) = hlp1(:) * veg_pool_mt(ix_seed_bed, ix_elem, :)
-          END IF
-        END DO
+      ! (Exceptions: no establishment on cropland or if we just had a stand replacing harvest running QS)
+      IF (.NOT. (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
+        IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
+          CALL calc_veg_establishment( &
+            & nc                                  , & ! in
+            & dtime                               , &
+            & model%config%elements_index_map(:)  , &
+            & model%config%is_element_used(:)     , &
+            & lctlib%tau_seed_est                 , &
+            & w_soil_root_theta(:)                , &
+            & growing_season(:)                   , &
+            & t_air_week_mavg(:)                  , &
+            & fpc(:)                              , &
+            & rfr_ratio_boc_tvegdyn_mavg(:)       , &
+            & veg_pool_mt(ix_seed_bed,:,:)        , & ! in
+            & veg_establishment_mt(:,:)           )   ! inout
+        ELSE
+          ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
+          hlp1(:) = 0.0_wp
+          ! set carbon in establishment such that the inital stand density is 1000 / ha (i.e. 0.1/m2)
+          ! which seeds the forest floor for natural regeneration
+          ! but limit to actual available seed pool to avoid generating mass
+          ! NB: This might need to be revised for particular case studies
+          DO ic = 1, nc
+            IF (veg_pool_mt(ix_seed_bed, ixC, ic) > eps8) THEN
+              hlp1(ic) = MIN(0.1_wp * lctlib%seed_size, veg_pool_mt(ix_seed_bed, ixC, ic)) / veg_pool_mt(ix_seed_bed, ixC, ic)
+            END IF
+          END DO
+          DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(ielem)) THEN
+              ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+              veg_establishment_mt(ix_elem, :) = hlp1(:) * veg_pool_mt(ix_seed_bed, ix_elem, :)
+            END IF
+          END DO
+        END IF
       END IF
     END SELECT
 
