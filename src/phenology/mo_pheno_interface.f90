@@ -715,12 +715,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                              ! out
     lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon (ics:ice, iblk, :) ! in
 
-    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+    !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       lai(ic) = REAL(wgt1,wp) * lai_mon(ic,nmw1) + REAL(wgt2,wp) * lai_mon(ic,nmw2)
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -842,12 +844,14 @@ CONTAINS
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
-      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+      !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
+      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
       END DO
       !$ACC END PARALLEL LOOP
+      !$ACC END DATA
     ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator

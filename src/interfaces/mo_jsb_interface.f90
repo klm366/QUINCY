@@ -37,6 +37,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, &
                                     is_time_experiment_start, is_time_restart
   USE mo_jsb_physical_constants, ONLY: cvdifts
+  USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
   dsl4jsb_Use_processes CARBON_, ALCC_, SB_
 
@@ -749,6 +750,10 @@ CONTAINS
       ! Invalidate graphs when the workflow is changing
       invalidate_cuda_graphs = .TRUE.
     END IF
+
+    ! Save time interpolation weights for further usage
+    ! This simplifies access of the weights in case of CUDA graphs
+    CALL cache_time_interpolation_weights()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

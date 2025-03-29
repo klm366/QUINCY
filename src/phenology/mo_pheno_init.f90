@@ -292,6 +292,8 @@ CONTAINS
     lai_mon       => dsl4jsb_memory(PHENO_)%lai_mon
     fract_fpc_mon => dsl4jsb_memory(PHENO_)%fract_fpc_mon
 
+    !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
+
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
@@ -342,6 +344,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
     !$ACC WAIT(1)
+    !$ACC END DATA
 
   END SUBROUTINE pheno_init_ic
 
