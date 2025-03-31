@@ -266,19 +266,21 @@ CONTAINS
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
       lai(ic)      = veg_pool_mt(ix_leaf, ixC, ic) * lctlib_sla
-      dens_ind(ic) = dens_ind(ic) + delta_dens_ind(ic)
 
-      ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
-      delta_dens_ind(ic) = 0.0_wp
+      IF (lctlib_growthform == itree) THEN
+        dens_ind(ic) = dens_ind(ic) + delta_dens_ind(ic)
+        ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
+        delta_dens_ind(ic) = 0.0_wp
 
-      IF (dens_ind(ic) > eps8 .AND. lctlib_growthform == itree) THEN
-        diameter(ic)  = calc_diameter_from_woody_biomass(lctlib_allom_k1                     , &
-          &                                              lctlib_allom_k2                     , &
-          &                                              lctlib_wood_density                 , &
-          &                                              veg_pool_mt(ix_sap_wood, ixC, ic)   , &
-          &                                              veg_pool_mt(ix_heart_wood, ixC, ic) , &
-          &                                              dens_ind(ic))
-        height(ic)    = calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter(ic))
+        IF (dens_ind(ic) > eps8) THEN
+          diameter(ic)  = calc_diameter_from_woody_biomass(lctlib_allom_k1                     , &
+            &                                              lctlib_allom_k2                     , &
+            &                                              lctlib_wood_density                 , &
+            &                                              veg_pool_mt(ix_sap_wood, ixC, ic)   , &
+            &                                              veg_pool_mt(ix_heart_wood, ixC, ic) , &
+            &                                              dens_ind(ic))
+          height(ic)    = calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter(ic))
+        END IF
       END IF
 
       IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
