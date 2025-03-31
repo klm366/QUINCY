@@ -477,7 +477,7 @@ CONTAINS
 
     CALL mem%Add_var('frac_consump_fcl', mem%frac_consump_fcl, &
         & hgrid, vgrid_fuel_classes, &
-        & t_cf('frac_consump_fcl', '-', 'Dead fuel consumption intermediate Ratio'), &
+        & t_cf('frac_consump_fcl', '-', 'Fraction of consumption (dead)'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
