@@ -168,7 +168,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
         & hgrid, vgrid_surface, &
-        & t_cf('nesterov_index', 'Celsius^2', 'Cumulative function of daily tmax and tdew '), &
+        & t_cf('nesterov_index', 'Celsius_2', 'Cumulative function of daily tmax and tdew '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
