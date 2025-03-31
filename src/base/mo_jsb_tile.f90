@@ -425,6 +425,7 @@ CONTAINS
 
     END DO
     !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_tile
 
@@ -629,6 +630,7 @@ CONTAINS
 
     END DO
 
+    !$ACC WAIT(1)
     DEALLOCATE(tmp_fract)
 
   END SUBROUTINE Init_fractions_on_tile
@@ -695,6 +697,7 @@ CONTAINS
       END DO
 
     END DO
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_vars_on_tile
 

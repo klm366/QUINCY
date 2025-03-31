@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
@@ -249,6 +249,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_old,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
@@ -269,6 +271,8 @@ CONTAINS
         dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
       END IF
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -369,8 +373,8 @@ CONTAINS
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$ACC DATA CREATE(heat_cap) ASYNC(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC DATA CREATE(heat_cap) ASYNC(acc_stream)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
 
           ! Correction for snowmelt and pond melting/freezing
@@ -399,7 +403,6 @@ CONTAINS
 
         END DO
         !$ACC END PARALLEL LOOP
-        !$ACC WAIT(1)
         !$ACC END DATA
       END IF
 
@@ -442,7 +445,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -516,11 +523,15 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
     IF (model%config%use_tmx) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -595,6 +606,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
 
@@ -606,6 +619,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

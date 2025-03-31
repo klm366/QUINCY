@@ -75,6 +75,7 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE seb_init
 
