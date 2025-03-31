@@ -263,8 +263,12 @@ CONTAINS
         IF (i .EQ. j) THEN
           cf_transition(:, idx, :) = 0.0
         ELSE
-          ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(i*j)), &
+          ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(idx)), &
           & fill_array = cf_transition(:, idx, :) )
+          
+          ! Debugging output to print the variable name and some values from ptr_2D
+          CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
+          CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
         END IF
       END DO
       
