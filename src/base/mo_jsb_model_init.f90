@@ -17,7 +17,7 @@ MODULE mo_jsb_model_init
 
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, NIX_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
     &                   Q_PHENO_, Q_SH_, Q_ASSIMI_
 
@@ -146,6 +146,7 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_nix_init,            ONLY: nix_init
     USE mo_carbon_init,         ONLY: carbon_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
@@ -286,6 +287,11 @@ CONTAINS
         CALL model%Queue_task(TURB_, "surface_roughness")
         CALL model%Queue_task(TURB_, "exchange_coefficients")
       END IF
+
+      !NIX specific processes. FIXNIX: This might not be the propper place and or only place 
+      CALL model%Queue_task(NIX_,    "nix_layering")
+
+
       ! The first call to task `snow_and_wet_fraction` currently needs to be before `surface_hydrology`,
       ! `soil_hydrology` and `update_albedo` because of pond scheme
       ! TODO: add cross-check
@@ -527,6 +533,11 @@ CONTAINS
           CALL rad_init(tile)
       END IF
 
+      ! Initiate NIX
+      IF (tile%Is_process_active(NIX_)) THEN
+          CALL nix_init(tile)
+      END IF
+ 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(SEB_)) THEN

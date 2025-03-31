@@ -26,6 +26,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
+  USE mo_nix_memory_class,     ONLY: t_nix_memory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
@@ -47,6 +48,8 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
+  USE mo_nix_interface,        ONLY: Register_nix_tasks
+  USE mo_nix_config_class,     ONLY: t_nix_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
   USE mo_turb_interface,       ONLY: Register_turb_tasks
@@ -97,9 +100,12 @@ MODULE mo_jsb_process_factory_core
 #endif
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, NIX_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
     & Q_PHENO_, Q_SH_, Q_ASSIMI_
+
+
+
 
   IMPLICIT NONE
   PRIVATE
@@ -135,6 +141,9 @@ CONTAINS
     CASE (RAD_)
       CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
+    CASE (NIX_)
+      CALL Register_nix_tasks(return_ptr, model_id)
+      ALLOCATE(t_nix_config::return_ptr%config)
     CASE (PHENO_)
       CALL Register_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_pheno_config::return_ptr%config)
@@ -235,6 +244,7 @@ CONTAINS
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
+    USE mo_nix_memory_class,     ONLY: max_no_of_nix_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
@@ -284,6 +294,9 @@ CONTAINS
     CASE (RAD_)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars
+    CASE (NIX_)
+      ALLOCATE(t_nix_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_nix_vars
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       ALLOCATE(t_hd_memory::return_ptr)

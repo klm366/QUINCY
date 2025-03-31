@@ -1,0 +1,103 @@
+!> Contains the memory class for nix.
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+MODULE mo_nix_memory_class
+#ifndef __NO_JSBACH__
+
+  USE mo_kind,             ONLY: wp
+  USE mo_util,             ONLY: One_of
+  USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_nix_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 1
+
+  TYPE, EXTENDS(t_jsb_memory) :: t_nix_memory
+
+    ! Prognostic variable
+    TYPE(t_jsb_var_real3d)  :: &
+      & t_sn                          !< weighted snow layer temperature
+
+
+  CONTAINS
+    PROCEDURE :: Init => Init_nix_memory
+  END TYPE t_nix_memory
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_nix_memory_class'
+
+CONTAINS
+
+  ! ======================================================================================================= !
+  !> initialize memory (variables) for the process: nix
+  !>
+  SUBROUTINE Init_nix_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
+
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+    USE mo_jsb_class,         ONLY: Get_model
+!   USE mo_nix_constants
+
+    CLASS(t_nix_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),    INTENT(in)            :: prefix
+    CHARACTER(len=*),    INTENT(in)            :: suffix
+    INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
+    INTEGER,             INTENT(in)            :: model_id
+
+    TYPE(t_jsb_model), POINTER  :: model                        !< model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface, canopy_layer        !< Vertical grids
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
+    INTEGER                     :: table                        !< ...
+    LOGICAL                     :: l_ponds
+    LOGICAL                     :: l_ice_on_lakes_local         !< use for jsbach & quincy, as helper variable
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nix_memory'
+
+    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
+
+    model        => Get_model(model_id)
+    table        = tables(1)
+    hgrid        => Get_grid(mem%grid_id)
+    surface      => Get_vgrid('surface')
+
+
+      ! Prognostic variables - FIXME: Number of layers (for now 10) should correspond to nlev_sn, which is set by nml paramter 
+      CALL mem%Add_var('t_sn', mem%t_sn,                                &
+        & hgrid, canopy_layer,                                                    &
+        & t_cf('Weighted snow layer temperature', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 28, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+  END SUBROUTINE Init_nix_memory
+
+
+
+
+
+
+
+#endif
+END MODULE mo_nix_memory_class
+
+
+

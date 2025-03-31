@@ -60,12 +60,13 @@ CONTAINS
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, NIX_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(NIX_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -79,6 +80,7 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(NIX_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -210,6 +212,8 @@ CONTAINS
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
+
+      dsl4jsb_Get_config(NIX_)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)

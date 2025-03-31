@@ -1,0 +1,103 @@
+!> Contains structures and methods for nix config
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+MODULE mo_nix_config_class
+
+#ifndef __NO_JSBACH__
+
+  USE mo_exception,         ONLY: message
+  USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
+  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_nix_config
+
+  ! ======================================================================================================= !
+  !> NIX_ configuration parameters
+  !>
+
+  TYPE, EXTENDS(t_jsb_config) :: t_nix_config
+
+  ! Logicals
+  LOGICAL ::    &
+    & lnix               ! TRUE:  NIX is switched on
+                         ! FALSE: NIX is switched off     
+
+  CONTAINS
+
+    PROCEDURE :: Init => Init_nix_config
+
+  END type t_nix_config
+
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_nix_config_class'
+
+
+CONTAINS
+
+  ! ======================================================================================================= !
+  !> read NIX_ namelist and init configuration parameters
+  !>
+
+  SUBROUTINE Init_nix_config(config)
+
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+
+    CLASS(t_nix_config), INTENT(inout) :: config
+
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    LOGICAL  :: lnix
+
+    NAMELIST /jsb_nix_nml/ &
+      lnix                    ! main switch for NIX, TRUE: ON; FALSE: OFF
+
+
+    INTEGER :: nml_handler, nml_unit, istat
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nix_config'
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting NIX configuration')
+    
+      ! ----------------------------------------------------------------------------------------------------- !
+      ! Set defaults
+      lnix          = .FALSE.
+
+      ! ----------------------------------------------------------------------------------------------------- !
+      ! Read namelist
+      nml_handler = open_nml(TRIM(config%namelist_filename))
+
+      nml_unit = position_nml('jsb_nix_nml', nml_handler, STATUS=istat)
+      IF (istat == POSITIONED) READ(nml_unit, jsb_nix_nml)
+
+        CALL close_nml(nml_handler)
+      
+        ! ----------------------------------------------------------------------------------------------------- !
+        ! Write namelist values into config
+        config%lnix     = lnix
+       
+  END SUBROUTINE Init_nix_config
+
+
+#endif
+
+END MODULE mo_nix_config_class
+
