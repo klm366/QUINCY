@@ -323,7 +323,7 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes)
 
     iblk  = options%iblk
@@ -744,7 +744,6 @@ CONTAINS
           &                   * sec_per_day * veg_fract_correction(ic) * fract_fpc_max(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
@@ -775,7 +774,6 @@ CONTAINS
                      * (NPP_act_yDayMean(ic)))                          ! therefore here additionaly the day mean
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! Calculate diagnostic carbon sums
     CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
@@ -791,7 +789,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2099,7 +2096,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     END DO
 
-    !$ACC WAIT(1)
+    !$ACC WAIT(acc_stream)
     !$ACC END DATA
 
     DEALLOCATE(C_flux_yday)
