@@ -76,6 +76,7 @@ CONTAINS
     INTEGER :: ispecs, ipool, ic
 
     IF (.NOT. ALLOCATED(emissions)) ALLOCATE(emissions(nc,npools,nspecs))
+    emissions = 0._wp
 
     ! Eq. A86 from Pfeiffer et al. (2013)
     DO ispecs=1, nspecs
