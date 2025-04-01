@@ -268,7 +268,7 @@ CONTAINS
           
           ! Debugging output to print the variable name and some values from ptr_2D
           CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
+          !CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
         END IF
       END DO
       
