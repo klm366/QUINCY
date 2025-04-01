@@ -75,7 +75,7 @@ CONTAINS
     CHARACTER(len=15), PARAMETER :: transitions(9) = [character(len=15) :: &
       &                        'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
                                'pasture2crop', 'pasture2pasture', 'pasture2natural', &
-                               'natural2crop', 'natural2pasture', 'natural2natural' ]            ! TODO: here the transitions type should be print out
+                               'natural2crop', 'natural2pasture', 'natural2natural' ]            
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &

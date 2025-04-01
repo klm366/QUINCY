@@ -80,7 +80,6 @@ CONTAINS
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
     USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch
     USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
-    USE mo_alcc_config_class,       ONLY: transitions, LC_type2LC_class_mapping        !Mingyue 
     
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -109,7 +108,12 @@ CONTAINS
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
     CHARACTER(len=filename_max) :: filename_land_use_data
     CHARACTER(len=filename_max) :: filename_land_transition_data       ! Mingyue Zhang
-    !CHARACTER(len=15), DIMENSION(9)  :: transitions                    ! Mingyue Zhang          
+    !CHARACTER(len=15), DIMENSION(9)  :: transitions                    ! Mingyue Zhang 
+    CHARACTER(len=15), PARAMETER :: transitions(9) = [character(len=15) :: &
+      &                        'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
+                               'pasture2crop', 'pasture2pasture', 'pasture2natural', &
+                               'natural2crop', 'natural2pasture', 'natural2natural' ]            
+         
 
     INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
