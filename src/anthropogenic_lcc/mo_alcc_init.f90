@@ -246,10 +246,16 @@ CONTAINS
       !Mingyue Zhang added for reading in transition data start 
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop
-      IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+      !IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+      CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
       !Mingyue: below the write message is not needed, the output value of it is transition_pft01 ... transition_pft11
       !WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
+      ! Debugging output to print all variable names in the transitions array
+      CALL message(TRIM(routine), 'Printing all variable names in transitions:')
+      DO debug_idx = 1, SIZE(transitions)
+        CALL message(TRIM(routine), 'Variable name [' // TRIM(ADJUSTL(STRING(debug_idx))) // ']: ' // TRIM(transitions(debug_idx)))
+      END DO
 
       ! Loop over gridcell in the chunk to read in transition matrix data
       ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
@@ -267,7 +273,7 @@ CONTAINS
           & fill_array = cf_transition(:, idx, :) )
           
           ! Debugging output to print the variable name and some values from ptr_2D
-          CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
+          !CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
           !CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
         END IF
       END DO
