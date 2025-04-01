@@ -408,7 +408,7 @@ CONTAINS
     !!
     ELSE
       ALLOCATE(temperature_surface(nc))
-      !$ACC ENTER DATA CREATE(temperature_surface)
+      !$ACC ENTER DATA CREATE(temperature_surface) ASYNC(acc_stream)
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
@@ -449,7 +449,7 @@ CONTAINS
         & lw_net    = lw_srf_net(:)     & ! out
         & )
 
-      !$ACC EXIT DATA DELETE(temperature_surface)
+      !$ACC EXIT DATA DELETE(temperature_surface) ASYNC(acc_stream)
       DEALLOCATE(temperature_surface)
 
 #ifndef __NO_QUINCY__
@@ -1284,7 +1284,7 @@ CONTAINS
 
       ALLOCATE(litter_carbon(nc))
       ALLOCATE(soil_carbon(nc))
-      !$ACC ENTER DATA CREATE(litter_carbon, soil_carbon)
+      !$ACC ENTER DATA CREATE(litter_carbon, soil_carbon) ASYNC(acc_stream)
 
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
@@ -2040,7 +2040,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
-    !$ACC ENTER DATA CREATE(l_growing_season_cl, l_growing_season)
+    !$ACC ENTER DATA CREATE(l_growing_season_cl, l_growing_season) ASYNC(acc_stream)
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
@@ -2142,7 +2142,7 @@ CONTAINS
 
     !$ACC WAIT(acc_stream)
 
-    !$ACC EXIT DATA DELETE(l_growing_season_cl, l_growing_season)
+    !$ACC EXIT DATA DELETE(l_growing_season_cl, l_growing_season) ASYNC(acc_stream)
     DEALLOCATE(l_growing_season_cl)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')

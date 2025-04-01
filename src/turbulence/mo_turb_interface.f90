@@ -1051,7 +1051,7 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       ALLOCATE(canopy_conductance(nc))
-      !$ACC ENTER DATA CREATE(canopy_conductance)
+      !$ACC ENTER DATA CREATE(canopy_conductance) ASYNC(acc_stream)
       SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
@@ -1115,7 +1115,7 @@ CONTAINS
         zfract_fpc(ic)    = fract_fpc(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC EXIT DATA DELETE(canopy_conductance)
+      !$ACC EXIT DATA DELETE(canopy_conductance) ASYNC(acc_stream)
       DEALLOCATE(canopy_conductance)
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
