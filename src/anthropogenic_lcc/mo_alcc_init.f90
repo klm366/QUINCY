@@ -253,8 +253,8 @@ CONTAINS
       
       ! Debugging output to print all variable names in the transitions array
       CALL message(TRIM(routine), 'Printing all variable names in transitions:')
-      DO debug_idx = 1, SIZE(transitions)
-        CALL message(TRIM(routine), 'Variable name [' // TRIM(ADJUSTL(STRING(debug_idx))) // ']: ' // TRIM(transitions(debug_idx)))
+      DO idx = 1, SIZE(transitions)
+        CALL message(TRIM(routine), 'Variable name:' // TRIM(transitions(idx)))
       END DO
 
       ! Loop over gridcell in the chunk to read in transition matrix data
