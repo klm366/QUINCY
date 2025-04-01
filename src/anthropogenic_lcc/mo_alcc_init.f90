@@ -109,11 +109,6 @@ CONTAINS
     CHARACTER(len=filename_max) :: filename_land_use_data
     CHARACTER(len=filename_max) :: filename_land_transition_data       ! Mingyue Zhang
     !CHARACTER(len=15), DIMENSION(9)  :: transitions                    ! Mingyue Zhang 
-    CHARACTER(len=15), PARAMETER :: transitions(9) = [character(len=15) :: &
-      &                        'crop2crop', 'crop2pasture', 'crop2natural',          &           ! Mingyue Zhang: defeine transition types end   
-                               'pasture2crop', 'pasture2pasture', 'pasture2natural', &
-                               'natural2crop', 'natural2pasture', 'natural2natural' ]            
-         
 
     INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
