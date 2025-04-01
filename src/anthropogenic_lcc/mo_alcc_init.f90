@@ -246,8 +246,8 @@ CONTAINS
       !Mingyue Zhang added for reading in transition data start 
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop
-      !IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
-      CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+      IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile%name))
+      IF (debug_on()) CALL message(TRIM(routine), '...reading annual transitions for '//TRIM(current_tile))
       !Mingyue: below the write message is not needed, the output value of it is transition_pft01 ... transition_pft11
       !WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
