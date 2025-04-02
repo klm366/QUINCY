@@ -31,7 +31,7 @@ MODULE mo_dfire_util
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
-  USE mo_jsb_math_constants,    ONLY: eps8
+  USE mo_jsb_math_constants,    ONLY: eps8, eps1
 
   IMPLICIT NONE
 
@@ -155,8 +155,6 @@ CONTAINS
     INTEGER                                 :: ic
     REAL(wp)                                :: dtime              !< timestep
     LOGICAL, ALLOCATABLE                    :: is_midnight(:)     !< is peak of the day
-    LOGICAL, ALLOCATABLE                    :: is_sun_upwards_in_curr_ts(:)
-    LOGICAL, ALLOCATABLE                    :: is_sun_downwards_in_prev_ts(:)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_daily_weather'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -168,13 +166,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! DFIRE_ 2D
     dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
     dsl4jsb_Real2D_onChunk      :: t_air_max              !<
     dsl4jsb_Real2D_onChunk      :: t_air_min              !<
-    REAL(wp), ALLOCATABLE, SAVE :: prev_one_cos_zenith_angle(:), prev_two_cos_zenith_angle(:)
     REAL(wp), ALLOCATABLE, SAVE :: precip_daytime_old(:)
     REAL(wp), ALLOCATABLE, SAVE :: t_air_max_old(:)
     REAL(wp), ALLOCATABLE, SAVE :: t_air_min_old(:)
@@ -202,8 +198,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
     dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)
@@ -230,21 +225,9 @@ CONTAINS
       ALLOCATE(t_air_min_old(nc))
       t_air_min_old = 0._wp
     ENDIF
-    IF (.NOT. ALLOCATED(prev_one_cos_zenith_angle)) THEN
-      ALLOCATE(prev_one_cos_zenith_angle(nc))
-      prev_one_cos_zenith_angle = 0._wp
-    ENDIF
-    IF (.NOT. ALLOCATED(prev_two_cos_zenith_angle)) THEN
-      ALLOCATE(prev_two_cos_zenith_angle(nc))
-      prev_two_cos_zenith_angle = 0._wp
-    ENDIF
 
     ALLOCATE(is_midnight(nc))
-    ALLOCATE(is_sun_upwards_in_curr_ts(nc))
-    ALLOCATE(is_sun_downwards_in_prev_ts(nc))
     is_midnight(:) = .FALSE.
-    is_sun_upwards_in_curr_ts(:) = .FALSE.
-    is_sun_downwards_in_prev_ts(:) = .FALSE.
 
     ! 1.1 update min/max values
     t_air_max_old(:) = max(t_air_max_old(:), t_air(:))
@@ -253,15 +236,8 @@ CONTAINS
     precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
 
     !> 2.0 at the timestep after local midnight (1st timestep of the new day) calc daytime averages
-    !!
-    !! calculate the min/max of the previous day and pass this value to the according variable \n
-    !! the timestep right after midnight is identified based on changes in cos_zenith_angle (turning from negative to positive)
-
     !> 2.1 1D variables
-    !!
-    is_sun_upwards_in_curr_ts(:) = ( (cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8)
-    is_sun_downwards_in_prev_ts(:) = ( (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8 )
-    is_midnight(:) = (is_sun_upwards_in_curr_ts(:) .AND. is_sun_downwards_in_prev_ts(:))
+    is_midnight = (ABS(local_time_day_seconds - dtime) < eps1)
 
     DO ic=1, nc
       IF (is_midnight(ic)) THEN
@@ -271,8 +247,8 @@ CONTAINS
         t_air_min(ic)            = t_air_min_old(ic)
         precip_daytime(ic)       = precip_daytime_old(ic)
         ! init variables after min/max daily value
-        t_air_max_old(ic)        = 0.0_wp     !< zero kelvin
-        t_air_min_old(ic)        = 9999.0_wp  !< above max
+        t_air_max_old(ic)        = t_air(ic)  !< current temperature
+        t_air_min_old(ic)        = t_air(ic)
         precip_daytime_old(ic)   = 0._wp      !< no precipitation
       END IF
     END DO
@@ -288,10 +264,6 @@ CONTAINS
     ENDIF
     !write(*,*) "dfire_util.f90:: (end) calculate_daily_weather, t_air_min(1), t_air_max(1) =", t_air_min(1), t_air_max(1)
 
-    !> 3.0 update cos_zenith_angle of previous time steps
-    !!
-    prev_two_cos_zenith_angle(:) = prev_one_cos_zenith_angle(:)
-    prev_one_cos_zenith_angle(:) = cos_zenith_angle(:)
   END SUBROUTINE calculate_daily_weather
 
 
