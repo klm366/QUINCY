@@ -64,7 +64,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface, canopy_layer        !< Vertical grids
+    TYPE(t_jsb_vgrid), POINTER  :: surface, snow_layer        !< Vertical grids
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        !< ...
     LOGICAL                     :: l_ponds
@@ -75,14 +75,14 @@ CONTAINS
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model        => Get_model(model_id)
-    table        = tables(1)
+    table        =  tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
+    snow_layer   => Get_vgrid('snow_depth_energy')
 
-
-      ! Prognostic variables - FIXME: Number of layers (for now 10) should correspond to nlev_sn, which is set by nml paramter 
+      ! Prognostic variables - FIXME: Number of layers should correspond to nlev_sn, which is set by nml parameter 
       CALL mem%Add_var('t_sn', mem%t_sn,                                &
-        & hgrid, canopy_layer,                                                    &
+        & hgrid, snow_layer,                                            &
         & t_cf('Weighted snow layer temperature', '', ''),              &
         & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 28, grib_bits), &
         & prefix, suffix,                                               &

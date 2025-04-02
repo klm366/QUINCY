@@ -65,10 +65,10 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
 
-    LOGICAL  :: lnix
+    LOGICAL  :: active
 
     NAMELIST /jsb_nix_nml/ &
-      lnix                    ! main switch for NIX, TRUE: ON; FALSE: OFF
+      active                    ! main switch for NIX, TRUE: ON; FALSE: OFF
 
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -79,7 +79,7 @@ CONTAINS
     
       ! ----------------------------------------------------------------------------------------------------- !
       ! Set defaults
-      lnix          = .FALSE.
+      active          = .FALSE.
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! Read namelist
@@ -92,7 +92,7 @@ CONTAINS
       
         ! ----------------------------------------------------------------------------------------------------- !
         ! Write namelist values into config
-        config%lnix     = lnix
+        config%active     = active
        
   END SUBROUTINE Init_nix_config
 
