@@ -98,7 +98,7 @@ crown_shape_factor 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 3.34 3.34 3.34 3.34 3
         
 #cn_leaf: default leaf nitrogen concentration (mgN/gDW)        
 # From Kattge et al. 2011, Table 5, converted internally from nitrogen concentration (mg/gDW) to CN mol C / mol N        
-cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11  #CHANGED from 10.11
+cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11  #CHANGED from 12.09
         
 #cn_leaf_min: Minimum leaf N for dynamic stoichiometry  (mgN/gDW)        
 # Tuned from OCN        
@@ -153,8 +153,8 @@ gmin 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 0.00006 0.0
 #           
         
 #tau_leaf: average turnover time of a leaf (months)        
-# From Kattge et al. 2011, Table 5, converted internally from month to years    NOT in this table, shrub parameter now from Zhang et al., 2013, but not consistent with the others    
-tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.96
+# From Kattge et al. 2011, Table 5, converted internally from month to years, not consistent with Zhang et al. 2013
+tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.85 36.66
         
 #tau_fine_root: average turnover time of a fine root (years), Ahrens et al. 2014, NP        
 tau_fine_root 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
@@ -260,10 +260,10 @@ k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.1
         
 #allom_k1: paramter in height diameter relationship, Thum et al. 2019,  (shrub parameter from Zhang et al., 2013, but not consistent with the others)       
-allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 10.0 # CHANGED from 55.0
+allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 10.0 # or 4 ?  CHANGED from 55.0
         
 #allom_k2: paramter in height diameter relationship, Thum et al., 2019 (~kallom3 in Zhang et al. 2013)       
-allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.65
+allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.67
         
 #phi_leaf_min: minimum leaf water potential (MPa)        
 phi_leaf_min -2.0 -2.0 -2.0 -2.0 -2.0 -2.0 -1.5 -1.5 -1.5 -1.5 -1.5 -1.5 -1.5 -1.5 -2.0
