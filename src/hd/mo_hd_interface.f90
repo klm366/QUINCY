@@ -494,7 +494,7 @@ CONTAINS
       DO blk = blks, blke
         jcs = grid%get_col_start(blk)
         jce = grid%get_col_end(blk)
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+        !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(nidx_upstream, bidx_upstream) ASYNC(acc_stream)
         !$ACC LOOP SEQ
         DO n = 1, nneigh
           !$ACC LOOP GANG VECTOR PRIVATE(jc_us, blk_us)
