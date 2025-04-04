@@ -20,7 +20,7 @@ MODULE mo_q_spq_update_physics
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
-  USE mo_exception,             ONLY: message
+  USE mo_exception,             ONLY: message, message_text
 
   IMPLICIT NONE
   PRIVATE
@@ -43,9 +43,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, Q_ASSIMI_, RAD_, SPQ_, VEG_, TURB_
-    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_jsb_process_class,     ONLY: A2L_, Q_ASSIMI_, RAD_, SPQ_, VEG_, TURB_, HYDRO_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_grid, Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SPQ_)
@@ -55,11 +55,13 @@ CONTAINS
     dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(TURB_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model          !< the model
+    TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb  !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_snow_spq !< Vertical grid snow
     INTEGER                               :: nsoil_sb       !< number of soil layers as used/defined by the SB_ process
@@ -76,6 +78,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: q_acoef_local(:)     !< variable provided by atmosphere or TURB_
     REAL(wp), ALLOCATABLE                 :: q_bcoef_local(:)     !< variable provided by atmosphere or TURB_
     LOGICAL                               :: jsb_standalone       !< model runs standalone?
+    REAL(wp), POINTER                     :: lat(:), lon(:)       !< helpers for debugging
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_spq_physics'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
@@ -86,6 +89,7 @@ CONTAINS
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk                :: t_air
@@ -142,10 +146,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: snow_srf_heat_flux
     dsl4jsb_Real2D_onChunk                :: num_sl_above_bedrock
     dsl4jsb_Real2D_onChunk                :: q_sat_srf
-    dsl4jsb_Real2D_onChunk                :: fract_wet
-    dsl4jsb_Real2D_onChunk                :: fract_snow
-    dsl4jsb_Real2D_onChunk                :: fract_snow_soil
-    dsl4jsb_Real2D_onChunk                :: fract_snow_can
     ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: soil_lay_depth_ubound_sl
@@ -184,6 +184,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: lai
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk                :: root_fraction_sl
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk                :: fract_wet
+    dsl4jsb_Real2D_onChunk                :: fract_snow
+    dsl4jsb_Real2D_onChunk                :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk                :: fract_snow_can
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -197,10 +202,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
+    grid           => Get_grid(model%grid_id)
     vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
     nsoil_sb       =  vgrid_soil_sb%n_levels
     nsnow          =  vgrid_snow_spq%n_levels
+    lat            => grid%lat(ics:ice, iblk)
+    lon            => grid%lon(ics:ice, iblk)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SPQ_)
@@ -210,6 +218,7 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
@@ -267,10 +276,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SPQ_, snow_srf_heat_flux)   ! inout
     dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock) ! in
     dsl4jsb_Get_var2D_onChunk(SPQ_, q_sat_srf)            ! out
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_wet)            ! out
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow)           ! out
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_soil)      ! out
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)       ! out
     ! SPQ_ 3D
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_ubound_sl) ! in
@@ -308,6 +313,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                    ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)       ! in
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_wet)            ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)       ! out
     ! ----------------------------------------------------------------------------------------------------- !
 
     jsb_standalone = jsbach_runs_standalone()
@@ -381,6 +391,7 @@ CONTAINS
     !$ACC   HOST(fract_wet(:), fract_snow(:), fract_snow_soil(:), fract_snow_can(:)) ASYNC(1)
     !$ACC WAIT(1)
     CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
+                                     lat, lon, &
                                      steplen, &
                                      alpha, &
                                      jsb_standalone, &
@@ -568,6 +579,7 @@ CONTAINS
   !! Calculates surface energy fluxes and deep soil temperatures
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
+                                         lat, lon, &
                                          steplen, &
                                          alpha, &
                                          jsb_standalone, &
@@ -620,6 +632,8 @@ CONTAINS
                                                                        nsoil_sb, &
                                                                        nsnow
     REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
+    REAL(wp),                                         INTENT(in)    :: lat(:)                 !< timestep length
+    REAL(wp),                                         INTENT(in)    :: lon(:)                 !< timestep length
     REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
     REAL(wp),                                         INTENT(in)    :: alpha                  !< implicitness factor
     LOGICAL,                                          INTENT(in)    :: jsb_standalone         !< standalone run?
@@ -647,7 +661,7 @@ CONTAINS
                                                                        evapotranspiration, &  !<
                                                                        ground_heat_flx_old, & !< ground heat flux from previous time step [W/m2]
                                                                        zril_old, &            !< previous timestep's Reynolds number
-                                                                       t_srf_new, &           !< current surface temperature
+                                                                       t_srf_new, &           !< current surface temperature [K]
                                                                        t_srf_old, &           !< previous timestep's surface temperature
                                                                        temp_srf_eff_4, &      !< effective surface temperature ** 4.0
                                                                        evapopot, &            !< potential evaporation rate [kg / m2 /s]
@@ -817,6 +831,23 @@ CONTAINS
     t_srf_new(:) = s_star(:) / t2s_conv(:)
     qsat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
 
+    ! debug output
+    ! write lon/lat of grid cell with surface temperature below 100 K
+    ! DO ic = 1, nc
+    !   IF (t_srf_new(ic) < 100.0_wp) THEN
+    !     WRITE (message_text,*) 't_srf_new below 100 K at ', &
+    !       & lat(ic), 'N and ', lon(ic), 'E:', NEW_LINE('a'), &
+    !       & '  surface temperature:   ', t_srf_new(ic)
+    !       CALL message (routine, message_text, all_print = .TRUE.)
+    !   END IF
+    ! END DO
+
+    ! temporary bugfix after implementing TURB_ with quincy (and using shared/mo_phy_schemes:update_drag -> calc_qsat)
+    ! limit surface temperature to [50,400] Kelvin to avoid potential segmentation fault in shared/mo_phy_schemes:calc_qsat
+    !   consistently with "seb_check_temperature_range()"
+    t_srf_new(:) = MAX(50.0_wp, t_srf_new(:))
+    t_srf_new(:) = MIN(400.0_wp, t_srf_new(:))
+
     !> 3.0 calculate water fluxes
     !>   This is from JSBACH4 hydrology/mo_hydro_interface:update_evaporation
     !>
@@ -858,8 +889,8 @@ CONTAINS
     sensible_heat_flx(:) = heat_transfer_coefficient(:) * (t_acoef(:) * s_old(:) + t_bcoef(:) - s_star(:))
 
     ! Compute latent heat flux
-    latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) + &
-                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow_soil(:) * evapopot(:)
+    latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) &
+      &                  + (LatentHeatVaporization - LatentHeatSublimation) * evaporation_snow(:)
 
     !> 5.0 update surface temperature and remember previous value
     !>

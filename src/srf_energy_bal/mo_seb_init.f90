@@ -42,9 +42,11 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
+#ifdef __QUINCY_STANDALONE__
+#else
     USE mo_jsb_time,          ONLY: timestep_in_days
     USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
-
+#endif
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER :: model
@@ -69,13 +71,15 @@ CONTAINS
     IF (tile%contains_land .OR. model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
-
+#ifdef __QUINCY_STANDALONE__
+      F_pseudo_soil_temp = EXP(- model%options%dtime / 10._wp)
+#else
       F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/pheno_param_jsbach%EG_SG%tau_pseudo_soil)
+#endif
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
 
       !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
     END IF
-
   END SUBROUTINE seb_init
 
   SUBROUTINE seb_init_bc(tile)

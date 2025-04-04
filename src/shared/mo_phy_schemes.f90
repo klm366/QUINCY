@@ -165,9 +165,13 @@ CONTAINS
     INTEGER :: it
     REAL(wp) :: tluc
 
-    it = NINT(temperature*1000._wp)
-!!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
-    tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
+    it = NINT(temperature * 1000._wp)
+    ! NOTE a segmentation fault for unplausible surface temperatures occurs (e.g. see mo_jsb4_forcing)
+    !      convection tables work within [50,400] Kelvin
+    !      unplausible surface temperatures are caught with "seb_check_temperature_range()"
+    !      and could be caught in additionally here with:
+    !      it = MIN( MAX( NINT(temperature * 1000._wp), 50000), 400000)
+    tluc = tlucua(it)
 
     IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
       qsat = tluc / (pressure - rvd1*tluc)
@@ -419,6 +423,7 @@ CONTAINS
       q_bcoef (ic) = 0._wp
       pch     (ic) = 0._wp
 
+      ! NOTE: a segmentation fault for unplausible surface temperatures (outside [50,400] Kelvin) would occur in "calc_qsat()"
       qsat_surf(ic)     = calc_qsat(t_srf_proc(ic), pressure(ic))
       IF (l_zril_filter) THEN
         qsat_surf_upd(ic) = calc_qsat(t_srf_upd(ic), pressure(ic))

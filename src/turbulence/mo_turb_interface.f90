@@ -35,32 +35,30 @@ MODULE mo_turb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TURB_, A2L_
+  dsl4jsb_Use_processes TURB_, A2L_, SEB_, HYDRO_, SSE_
+
 
   ! Use process configurations
   dsl4jsb_Use_config(TURB_)
-
-  ! Use process memories
-  dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(TURB_)
-
-#ifndef __QUINCY_STANDALONE__
-  ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_
-
-  ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SEB_)
 
   ! Use process memories
+  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
+
+#ifndef __QUINCY_STANDALONE__
+  ! Use of processes in this module
+  dsl4jsb_Use_processes PHENO_, ASSIMI_
+
+  ! Use process memories
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
 #endif
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_processes SPQ_, VEG_, Q_ASSIMI_
-  dsl4jsb_Use_config(SPQ_)
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
@@ -414,22 +412,16 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(TURB_)
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(SEB_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
-#endif
 
     ! Declare process memories
     dsl4jsb_Def_memory(TURB_)
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(SEB_)
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Def_memory(PHENO_)
 #endif
 #ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
 #endif
 
@@ -457,7 +449,6 @@ CONTAINS
       & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
     LOGICAL :: lctlib_ForestFlag
     REAL(wp), ALLOCATABLE           :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
-    LOGICAL                         :: l_ice_on_lakes_local      !< use for jsbach & quincy, as helper variable
     LOGICAL                         :: l_veg_bare_glac_tile      !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -476,16 +467,7 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     dsl4jsb_Get_config(TURB_)
-    SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
-#endif
-    END SELECT
+    dsl4jsb_Get_config(SEB_)
 
     ALLOCATE(fract_fol_proj_cov(nc))
 
@@ -500,14 +482,10 @@ CONTAINS
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
     SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_memory(HYDRO_)
-#endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(SPQ_)
       dsl4jsb_Get_memory(VEG_)
 #endif
     END SELECT
@@ -545,14 +523,10 @@ CONTAINS
     ! all vegetated, bare and glacier tiles
     IF (l_veg_bare_glac_tile) THEN
 
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
       SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
-#endif
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_,   fract_snow_soil)         ! in
         dsl4jsb_Get_var2D_onChunk(VEG_,   rough_veg_star)          ! in
 #endif
       END SELECT
@@ -697,21 +671,10 @@ CONTAINS
 
     ELSE IF (tile%contains_lake) THEN
 
-      SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        l_ice_on_lakes_local = dsl4jsb_Config(SEB_)%l_ice_on_lakes
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_memory(SEB_)
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        l_ice_on_lakes_local = dsl4jsb_Config(SPQ_)%l_ice_on_lakes
-        dsl4jsb_Get_var2D_onChunk(SPQ_, fract_lice) ! IN
-#endif
-      END SELECT
 
-      IF (l_ice_on_lakes_local) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           rough_m_star(ic) =            fract_lice(ic)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
@@ -841,20 +804,14 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
-#endif
-
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(A2L_)
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
 #endif
@@ -937,16 +894,7 @@ CONTAINS
     model_scheme = model%config%model_scheme
     jsb_standalone = jsbach_runs_standalone()
 
-    SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
-#endif
-    END SELECT
+    dsl4jsb_Get_config(HYDRO_)
 
     !$ACC DATA &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
@@ -955,11 +903,11 @@ CONTAINS
     ! Get pointers to process configs and memory
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
     SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
-      dsl4jsb_Get_memory(SEB_)
-      dsl4jsb_Get_memory(HYDRO_)
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(PHENO_)
         IF (tile%Is_process_calculated(ASSIMI_)) THEN
@@ -1012,26 +960,17 @@ CONTAINS
     END IF
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)               ! in
-
-    SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)        ! in
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow)          ! in
-#endif
-    END SELECT
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)          ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
+
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)                ! in
       SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
@@ -1042,7 +981,6 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(SPQ_,  qsat_star)                ! in
-        dsl4jsb_Get_var2D_onChunk(SPQ_,  fract_wet)                ! in
         dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_sl)                ! in
         dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_fc_sl)             ! in
         dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_pwp_sl)            ! in

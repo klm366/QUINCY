@@ -533,12 +533,9 @@ CONTAINS
           CALL rad_init(tile)
       END IF
 
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SEB_)) THEN
-          CALL seb_init(tile)
-        END IF
-      END SELECT
+      IF (tile%Is_process_active(SEB_)) THEN
+        CALL seb_init(tile)
+      END IF
 
       IF (tile%Is_process_active(TURB_)) THEN
         CALL turb_init(tile)
@@ -560,14 +557,14 @@ CONTAINS
 
       ! HYDRO_ & SSE_
       ! SPQ_, SB_
+      IF (tile%Is_process_active(SSE_)) THEN
+        CALL sse_init(tile)
+      END IF
+      IF (tile%Is_process_active(HYDRO_)) THEN
+        CALL hydro_init(tile)
+      END IF
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SSE_)) THEN
-          CALL sse_init(tile)
-        END IF
-        IF (tile%Is_process_active(HYDRO_)) THEN
-          CALL hydro_init(tile)
-        END IF
       ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)

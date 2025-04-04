@@ -25,7 +25,7 @@ MODULE mo_veg_memory_class
   USE mo_jsb_process_class,      ONLY: VEG_, Q_SH_, Q_AGR_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
-  USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,                               &
+  USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID,                                                      &
     &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                                            &
     &                                  VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID,                 &
     &                                  VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID, &
@@ -392,7 +392,6 @@ MODULE mo_veg_memory_class
   TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_main
     !! pools
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbtotal_biomass
     ! ... and if with product pools
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_crop
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_fuel
@@ -546,10 +545,6 @@ CONTAINS
       !> create the bgc_material elements structures
       !>
       ! also here "shortname" is used for model output names
-      ! veg_total_biomass
-      mem%veg_bgcm_main%vegbtotal_biomass => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,    &
-        & name = 'vegetation_bgcm_total_biomass', shortname = 'veg_bgcm_total_biomass',               &
-        & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_TOTAL_BIO_ID)
       ! veg_exudation
       mem%veg_bgcm_main%vegbexudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_exudation', shortname = 'veg_bgcm_exudation',                       &
@@ -645,14 +640,6 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegbfrac_alloc, &
-        & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-        & prefix, suffix,                                                                              &
-        & output_level = FULL,                                                                       &
-        & loutput = .TRUE.,                                                                            &
-        & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbtotal_biomass, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &

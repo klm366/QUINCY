@@ -242,14 +242,18 @@ CONTAINS
     ! tsl is at 0.07 m
     ! thickness of layers 0.065, 0.254, 0.913, 2.902, 5.700 m (s. soiltemp)
     !
+#ifdef __QUINCY_STANDALONE__
+#else
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
+#endif
     USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
-
+#ifdef __QUINCY_STANDALONE__
+#else
     INTEGER                   :: nsoil, ndim
     REAL(wp)                  :: zkap, zsqrt
     REAL(wp), ALLOCATABLE     :: zrange(:), zdmax(:)
@@ -308,7 +312,7 @@ CONTAINS
     END DO
 
     DEALLOCATE(zrange, jmax, zdmax)
-
+#endif
   END SUBROUTINE init_soil_temperature
 
   ! --------------------------------------------------------------------------------------------------------- !

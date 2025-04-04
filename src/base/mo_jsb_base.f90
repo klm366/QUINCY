@@ -212,11 +212,11 @@ CONTAINS
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(SSE_)
+      dsl4jsb_Get_config(HYDRO_)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_config(SSE_)
-        dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -267,8 +267,6 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
-        model%processes(SSE_)%p%config%active = .FALSE.
-        model%processes(SEB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)

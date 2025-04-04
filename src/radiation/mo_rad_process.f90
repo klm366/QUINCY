@@ -1340,12 +1340,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, HYDRO_, VEG_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
 
-    USE mo_spq_constants,         ONLY: w_snow_min
     USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,           ONLY: debug_on
     USE mo_exception,             ONLY: message
@@ -1353,7 +1352,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -1372,7 +1371,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
@@ -1402,10 +1401,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: fract_snow_can
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onChunk :: w_snow_snl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: sai
@@ -1437,7 +1434,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
@@ -1468,11 +1465,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)           ! in
-
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)         ! in
     ! ---------------------------
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in

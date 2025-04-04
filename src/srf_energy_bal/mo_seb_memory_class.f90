@@ -113,7 +113,6 @@ MODULE mo_seb_memory_class
     TYPE(t_jsb_var_real1d) ::        &
       t_gmean                   !< Global land mean surface temperature (box tile)                 [K]
 
-
   CONTAINS
     PROCEDURE :: Init => Init_seb_memory
   END TYPE t_seb_memory
