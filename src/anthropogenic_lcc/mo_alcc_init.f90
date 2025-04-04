@@ -256,7 +256,7 @@ CONTAINS
       !Mingyue: below the write message is not needed, the output value of it is transition_pft01 ... transition_pft11
       !WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
-      ! Debugging output to print all variable names in the transitions array
+      ! ! Debugging output to print all variable names in the transitions array
       CALL message(TRIM(routine), 'Printing all variable names in transitions:')
       DO idx = 1, SIZE(transitions)
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(idx))) // ')')
