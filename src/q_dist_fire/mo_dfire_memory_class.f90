@@ -208,7 +208,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 9999.0_wp)
 
     CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
         & hgrid, vgrid_surface, &
