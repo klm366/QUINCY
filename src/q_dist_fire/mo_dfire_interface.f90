@@ -43,7 +43,6 @@ MODULE mo_dfire_interface
   PUBLIC :: Register_dfire_tasks
   PUBLIC :: update_time_average_dist_fire, update_dfire_spitfire
 
-
   ! ======================================================================================================= !
   !>
   !> Type definition: dfire_sf_fuel task
@@ -219,7 +218,47 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_)
 
     ! DFIRE_ 2D
-!    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_qc_mavg                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, fuel_moisture , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, ab_moisture_diag, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, t_air_max, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, t_air_min, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, dead_fuel_consumption_1hr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, dead_fuel_consumption_10hr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, dead_fuel_consumption_100hr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, dead_fuel_consumption_1000hr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, live_fuel_consumption_1hr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, dead_frac_consumption, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, area_burned_fract, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, area_burned, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, i_surface, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_qc_mavg, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daytime, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_mavg, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daily, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daily_mmd, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, reaction_intensity, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, prop_flux_ratio, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, wind_factor, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, eff_heating_number, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, preig_heat, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, opt_react_velo, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, net_fuel_load, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, moist_damp_coeff, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, mineral_damp_coeff, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, nesterov_index, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, fdi, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, ros_f, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, ros_b, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, mean_fire_area, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, fire_duration, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, distance_travelled, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, l2b_ratio, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, ck, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, scorch_height, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_ignitions, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_humans, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_lightning, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DFIRE_, frac_consump_fcl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
