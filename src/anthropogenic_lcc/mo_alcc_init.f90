@@ -256,7 +256,7 @@ CONTAINS
       !Mingyue: below the write message is not needed, the output value of it is transition_pft01 ... transition_pft11
       !WRITE(varname_within_file,'(a,a)') "transition_", TRIM(current_tile%name)
       
-      ! ! Debugging output to print all variable names in the transitions array
+      ! !  Debugging output to print all variable names in the transitions array
       CALL message(TRIM(routine), 'Printing all variable names in transitions:')
       DO idx = 1, SIZE(transitions)
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(idx))) // ')')
@@ -277,12 +277,15 @@ CONTAINS
           ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(idx)), &
           & fill_array = cf_transition(:, idx, :) )
           
-          ! Debugging output to print the variable name and some values from ptr_2D
-          !CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          !CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
+          !print out the variable name and some values from ptr_2D
+          CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
+          CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
+          
         END IF
       END DO
       
+      
+
       ! Loop over all pairs of PFTs and extend the transition matrix for PFTs
       DO idx = 1, npft * npft
         ! Calculate the row (`i`) and column (`j`) indices in the `npft x npft` matrix
