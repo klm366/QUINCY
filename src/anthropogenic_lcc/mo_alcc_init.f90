@@ -116,6 +116,7 @@ CONTAINS
 
 
     INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
+    CHARACTER(len=15) :: temporary_string_trans_value                  ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -278,11 +279,13 @@ CONTAINS
           & fill_array = cf_transition(:, idx, :) )
           
           !print out the variable name and some values from ptr_2D
-          CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          ! Directly convert the value to a string and include it in the message
+          !CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
+          
+          !Convert the numerical value to a string
+          WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(:, idx, :)  ! Example: printing the first element for simplicity
+          ! Use the formatted string in the message
           CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
-            & 'value = '//TRIM(WRITE((/ cf_transition(:, idx, :) /), '(F10.5)')))
-          !CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(ADJUSTL(cf_transition(:, idx, :))))
+            & 'value = '//TRIM(temporary_string_trans_value))
           
           
         END IF
