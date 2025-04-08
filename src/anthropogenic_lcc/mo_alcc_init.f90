@@ -283,7 +283,7 @@ CONTAINS
           !CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
           
           !Convert the numerical value to a string
-          WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(:, idx, :)  ! Example: printing the first element for simplicity
+          WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(1, idx, 1)  ! Example: printing the first element for simplicity
           ! Use the formatted string in the message
           CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
             & 'value = '//TRIM(temporary_string_trans_value))
