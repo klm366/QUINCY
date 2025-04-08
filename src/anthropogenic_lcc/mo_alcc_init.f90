@@ -102,7 +102,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
     REAL(wp), ALLOCATABLE   :: transition_prob(:,:)  ! Mingyue add for transition probability to extend transition matrix
 
-    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks    !, ics, ice
+    INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks  !, ics, ice
     INTEGER :: idx, i, j, row, col, trans_idx, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
@@ -351,6 +351,19 @@ CONTAINS
         
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+
+      ! Loop through all elements of cf_current_year(:, i_tile, :)
+      DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
+        DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
+          IF (cf_current_year(i, i_tile, j) /= 0.0_wp) THEN
+            ! Convert the non-zero value to a string
+            WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
+            ! Use the formatted string in the message
+            CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (blk='// &
+              & TRIM(ADJUSTL(STRING(blk)))//', col='//TRIM(ADJUSTL(STRING(col)))//'): '//TRIM(temporary_string_cf_trans_value))
+          END IF
+        END DO
       END DO
       
       
