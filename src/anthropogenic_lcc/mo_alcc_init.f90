@@ -344,9 +344,6 @@ CONTAINS
    
         cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :))
         !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
-        
-        ! Debugging output
-        CALL message(TRIM(routine), 'Updated cf_current_year for i_tile = '//TRIM(ADJUSTL(STRING(i_tile))))
 
         ! Convert the first element of cf_current_year(:, i_tile, :) to a string for simplicity
         WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 200)
