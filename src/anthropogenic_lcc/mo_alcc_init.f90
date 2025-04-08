@@ -342,7 +342,10 @@ CONTAINS
    
         cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :))
         !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
-     
+        
+        !print out cf_current_year values
+        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' '//TRIM(ADJUSTL(REAL(cf_current_year(:, i_tile, :), wp))))
+
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
