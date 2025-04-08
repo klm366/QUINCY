@@ -118,6 +118,7 @@ CONTAINS
     INTEGER, DIMENSION(11), PARAMETER :: LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)   ! Mingyue Zhang
     !INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
     CHARACTER(len=256) :: temporary_string_trans_value                  ! Mingyue Zhang
+    CHARACTER(len=256) :: temporary_string_cf_trans_value               ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -343,9 +344,11 @@ CONTAINS
         cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :))
         !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
         
-        !print out cf_current_year values
-        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' '//TRIM(ADJUSTL(REAL(cf_current_year(:, i_tile, :), wp))))
-
+        ! Convert the first element of cf_current_year(:, i_tile, :) to a string for simplicity
+        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
+        ! Use the formatted string in the message
+        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' '//TRIM(temporary_string_cf_trans_value))
+        
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
