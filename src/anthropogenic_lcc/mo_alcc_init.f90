@@ -119,7 +119,8 @@ CONTAINS
     !INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
     CHARACTER(len=256) :: temporary_string_trans_value                  ! Mingyue Zhang
     CHARACTER(len=256) :: temporary_string_cf_trans_value               ! Mingyue Zhang
-    CHARACTER(len=10) :: temp_string_i, temp_string_j             ! Mingyue Zhang
+    CHARACTER(len=256) :: temporary_string_trans_pft_value            ! Mingyue Zhang
+    CHARACTER(len=10) :: temp_string_i, temp_string_j,temp_string_k             ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -313,6 +314,45 @@ CONTAINS
         cf_transition_pfts(:, idx, :) = cf_current_year(:, i, :) * transition_prob * cf_current_year(:, j, :)
       END DO
       
+
+      ! Print out the value of cf_transition_pfts
+      DO i = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
+        DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
+          DO j = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
+            !IF (cf_transition_pfts(i, idx, j) > 0.0_wp) THEN
+              ! Convert the value to a string
+              WRITE(temporary_string_trans_pft_value, '(F10.5)') cf_transition_pfts(i, idx, j)
+              ! Convert indices to strings
+              WRITE(temp_string_i, '(I0)') i
+              WRITE(temp_string_j, '(I0)') idx
+              WRITE(temp_string_k, '(I0)') j
+              ! Use the formatted string in the message
+              CALL message(TRIM(routine), 'cf_transition_pfts (non-zero): (i='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
+                & TRIM(ADJUSTL(temp_string_j))//', j='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
+            !END IF
+          END DO
+        END DO
+      END DO
+
+      !print out the value of cf_transition_pfts
+      DO blk = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
+        DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
+          DO col = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
+            IF (cf_transition_pfts(blk, idx, col) > 0.0_wp) THEN
+              ! Convert the value to a string
+              WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_transition_pfts(blk, idx, col)
+              ! Convert indices to strings
+              WRITE(temp_string_i, '(I0)') blk
+              WRITE(temp_string_j, '(I0)') idx
+              WRITE(temp_string_k, '(I0)') col
+              ! Use the formatted string in the message
+              CALL message(TRIM(routine), 'cf_transition_pfts (non-zero): (blk='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
+                & TRIM(ADJUSTL(temp_string_j))//', col='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_cf_trans_value))
+            END IF
+          END DO
+        END DO
+      END DO
+
       ! Mingyue Zhang added for reading in transition data end
       
       ! Initialize transition gain and loss
@@ -357,7 +397,7 @@ CONTAINS
 
       current_tile => tile%Get_first_child_tile()
       i_tile = 0
-      
+
       DO WHILE (ASSOCIATED(current_tile))   
         i_tile = i_tile + 1
 
@@ -375,6 +415,9 @@ CONTAINS
             !END IF
           END DO
         END DO
+        
+        ! Get the next sibling tile
+        current_tile => current_tile%Get_next_sibling_tile()
 
       END DO 
    
