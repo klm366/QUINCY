@@ -333,26 +333,6 @@ CONTAINS
           END DO
         END DO
       END DO
-
-      !print out the value of cf_transition_pfts
-      DO blk = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
-        DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
-          DO col = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
-            IF (cf_transition_pfts(blk, idx, col) > 0.0_wp) THEN
-              ! Convert the value to a string
-              WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_transition_pfts(blk, idx, col)
-              ! Convert indices to strings
-              WRITE(temp_string_i, '(I0)') blk
-              WRITE(temp_string_j, '(I0)') idx
-              WRITE(temp_string_k, '(I0)') col
-              ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_transition_pfts (non-zero): (blk='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
-                & TRIM(ADJUSTL(temp_string_j))//', col='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_cf_trans_value))
-            END IF
-          END DO
-        END DO
-      END DO
-
       ! Mingyue Zhang added for reading in transition data end
       
       ! Initialize transition gain and loss
