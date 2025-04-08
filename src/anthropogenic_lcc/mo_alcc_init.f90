@@ -360,8 +360,8 @@ CONTAINS
             ! Convert the non-zero value to a string
             WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
             ! Use the formatted string in the message
-            CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (blk='// &
-              & TRIM(ADJUSTL(STRING(blk)))//', col='//TRIM(ADJUSTL(STRING(col)))//'): '//TRIM(temporary_string_cf_trans_value))
+            CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (iblk='// &
+              & TRIM(ADJUSTL(STRING(i)))//', col='//TRIM(ADJUSTL(STRING(j)))//'): '//TRIM(temporary_string_cf_trans_value))
           END IF
         END DO
       END DO
