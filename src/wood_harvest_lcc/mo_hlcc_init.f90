@@ -44,7 +44,7 @@ MODULE mo_hlcc_init
   USE mo_jsb_time,          ONLY: get_year
   USE mo_jsb_control,       ONLY: debug_on
 
-  dsl4jsb_Use_processes HLCC_
+  dsl4jsb_Use_processes HLCC_, FAGE_
   dsl4jsb_Use_memory(HLCC_)
   dsl4jsb_Use_config(HLCC_)
   dsl4jsb_Use_config(FAGE_)

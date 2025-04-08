@@ -25,7 +25,9 @@ MODULE mo_hlcc_config_class
     USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
     !USE mo_kind,               ONLY: wp
     USE mo_jsb_config_class,  ONLY: t_jsb_config
+    USE mo_jsb_model_class,    ONLY: t_jsb_model !MR: for reading the FAGE variable (->model) can be removed, if just having one fage 'scheme' as default (end checking elsewhere)!
 
+    dsl4jsb_Use_processes FAGE_ !MR-TODO: not sure if this is good - "using other processes" in config
     dsl4jsb_Use_config(FAGE_)
 
   
@@ -66,12 +68,14 @@ MODULE mo_hlcc_config_class
       ! -------------------------------------------------------------------------------------------------- !
       LOGICAL                       :: active, lrestart_cont
       CHARACTER(len=filename_max)   :: ic_filename, bc_filename
-      !LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
+      !LOGICAL                      :: separate !< whether burned tiles should be treated separately or at once
       CHARACTER(len=filename_max-7) :: hlcc_filename_prefix
       CHARACTER(len=SHORT_NAME_LEN) :: scheme
       LOGICAL                       :: l_daily_hlcc
-      !TYPE(t_jsb_vgrid), POINTER    :: ac_layer
-      !INTEGER                       :: i, nacs - already dsl4jsb_Config(FAGE_)%nacs
+      !TYPE(t_jsb_vgrid), POINTER   :: ac_layer
+      !INTEGER                      :: i, nacs - already dsl4jsb_Config(FAGE_)%nacs
+      TYPE(t_jsb_model), POINTER    :: model ! MR: Get_config for FAGE_ uses the pointer "model" 
+
 
       dsl4jsb_Def_config(FAGE_)
 
@@ -104,7 +108,8 @@ MODULE mo_hlcc_config_class
       scheme               = 'maps'  !MR-TODO: could this just be read from some other config, since I assume the scheme should be the same between processes..?
       l_daily_hlcc         = .FALSE. ! FALSE: annual instead as a default
 
-      ! Age class spacing should match that of FAGE !MR-TODO: does it work? could also define in namelist though, and just have a check (in input) that they match
+      ! Age class spacing should match that of FAGE !MR: could also define in namelist though (wouldn't need FAGE_ here), and just have a check (in input) that they match
+
       dsl4jsb_Get_config(FAGE_)
       IF (dsl4jsb_Config(FAGE_)%age_class_scheme .EQ. "shorterYoung") THEN
         hlcc_filename_prefix = 'harv_frac_acs_IAS11_' ! Increasing age-spacing scheme (Nabel et al., 2020)
