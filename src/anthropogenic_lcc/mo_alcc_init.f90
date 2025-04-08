@@ -279,7 +279,10 @@ CONTAINS
           
           !print out the variable name and some values from ptr_2D
           CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(ADJUSTL(cf_transition(:, idx, :))))
+          ! Directly convert the value to a string and include it in the message
+          CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
+            & 'value = '//TRIM(WRITE((/ cf_transition(:, idx, :) /), '(F10.5)')))
+          !CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(ADJUSTL(cf_transition(:, idx, :))))
           
           
         END IF
