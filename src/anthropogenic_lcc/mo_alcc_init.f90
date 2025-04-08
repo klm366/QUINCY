@@ -115,8 +115,9 @@ CONTAINS
                                'natural2crop', 'natural2pasture', 'natural2natural' ]            
 
 
-    INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
-    CHARACTER(len=15) :: temporary_string_trans_value                  ! Mingyue Zhang
+    INTEGER, DIMENSION(11), PARAMETER :: LC_type2LC_class_mapping = (/ 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 /)   ! Mingyue Zhang
+    !INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
+    CHARACTER(len=256) :: temporary_string_trans_value                  ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
