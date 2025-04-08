@@ -119,6 +119,7 @@ CONTAINS
     !INTEGER,           DIMENSION(11) :: LC_type2LC_class_mapping       ! Mingyue Zhang
     CHARACTER(len=256) :: temporary_string_trans_value                  ! Mingyue Zhang
     CHARACTER(len=256) :: temporary_string_cf_trans_value               ! Mingyue Zhang
+    CHARACTER(len=10) :: temp_string_i, temp_string_j             ! Mingyue Zhang
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -352,20 +353,22 @@ CONTAINS
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
-
-      ! Loop through all elements of cf_current_year(:, i_tile, :)
+      
+      
       DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
         DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
           IF (cf_current_year(i, i_tile, j) /= 0.0_wp) THEN
             ! Convert the non-zero value to a string
             WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
+            ! Convert indices to strings
+            WRITE(temp_string_i, '(I0)') i
+            WRITE(temp_string_j, '(I0)') j
             ! Use the formatted string in the message
             CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (iblk='// &
-              & TRIM(ADJUSTL(STRING(i)))//', col='//TRIM(ADJUSTL(STRING(j)))//'): '//TRIM(temporary_string_cf_trans_value))
+              & TRIM(ADJUSTL(temp_string_i))//', col='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
           END IF
         END DO
       END DO
-      
       
     CASE DEFAULT 
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
