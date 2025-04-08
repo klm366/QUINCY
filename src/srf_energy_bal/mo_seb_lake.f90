@@ -117,7 +117,8 @@ CONTAINS
       & hcap_wtr,           &
       & zero,               &
       & hflx_tmp,           &
-      & pch_wtr
+      & pch_wtr,            &
+      & ddrag_wtr
 
     REAL(wp), ALLOCATABLE :: &
       hcap_ice(:)
@@ -274,7 +275,7 @@ CONTAINS
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
       !$ACC DATA &
-      !$ACC   CREATE(pch_wtr)
+      !$ACC   CREATE(ddrag_wtr, pch_wtr)
 
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
@@ -286,7 +287,7 @@ CONTAINS
       & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
       & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
       ! INTENT out
-      & drag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
+      & drag_wtr(:), ddrag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
 
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot

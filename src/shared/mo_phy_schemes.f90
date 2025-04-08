@@ -346,7 +346,7 @@ CONTAINS
       & temp_air, pressure, qair, wind, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & height_wind, height_humidity, coef_ril_tm1, coef_ril_t, coef_ril_tp1, &
-      & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, &
+      & drag_srf, ddrag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, &
       & height, t_srf_upd, zril_old)
 
     USE mo_jsb_model_class,        ONLY: MODEL_QUINCY, MODEL_JSBACH
@@ -371,6 +371,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: coef_ril_tp1              !<   the drag coef. at time t, but helps to maintain stability.
 
     REAL(wp), INTENT(OUT) :: drag_srf(:)               !< Surface drag
+    REAL(wp), INTENT(OUT) :: ddrag_srf(:)              !< d(Surface drag)/d(t_srf_proc)
     REAL(wp), INTENT(OUT) :: t_acoef (:)
     REAL(wp), INTENT(OUT) :: t_bcoef (:)
     REAL(wp), INTENT(OUT) :: q_acoef (:)
@@ -386,10 +387,12 @@ CONTAINS
     INTEGER  :: ic
     LOGICAL  :: l_zril_filter
     REAL(wp) :: zcons9, zcons11, zcons12, zsigma
-    REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf(nc), qsat_surf_upd(nc)
+    REAL(wp) :: air_pressure, zdu2, ztvd, ztvir, qsat_surf, qsat_surf_upd, r_exner_surf, qsurf_eff
     REAL(wp) :: ztvs_act, ztvs_upd, zg, zgh, zril, zril_act, zril_upd
-    REAL(wp) :: zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
+    REAL(wp) :: zcons, zchnl, zcfnchl, zcfhl, sfact, zscfl, ufact, zucfhl
     !REAL(wp) :: zcons8, zcdnl, zucfl, zcfncl, zcfml   ! quincy specific
+
+    REAL(wp) :: dqsat_surf, dqsurf_eff, dztvs_act, dzril, dzscfl, dzucfhl, dzcfhl
 
     REAL(wp), PARAMETER :: cb = 5._wp
     REAL(wp), PARAMETER :: cc = 5._wp
@@ -402,8 +405,6 @@ CONTAINS
     zcons12 = time_step_len * grav / rd
     zsigma  = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
 
-    !$ACC DATA CREATE(qsat_surf, qsat_surf_upd)
-
     IF (PRESENT(t_srf_upd) .AND. PRESENT(zril_old)) THEN
       l_zril_filter = .TRUE.
     ELSE
@@ -411,22 +412,16 @@ CONTAINS
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(zdu2, air_pressure, ztvd, ztvir, ztvs_act, ztvs_upd, zg, zgh, zril) &
-    !$ACC   PRIVATE(zril_act, zril_upd, zchnl, zscfl, zucfhl, zcons, zcfnchl, zcfhl)
-    ! !$ACC   PRIVATE(zcdnl, zucfl, zcfncl, zcfml)  ! quincy specific
+    !$ACC   PRIVATE(qsat_surf, dqsat_surf, qsat_surf_upd, zdu2, air_pressure, ztvd, ztvir)       &
+    !$ACC   PRIVATE(r_exner_surf, qsurf_eff, dqsurf_eff, ztvs_act, dztvs_act, ztvs_upd, zg, zgh) &
+    !$ACC   PRIVATE(zril, dzril, zril_act, zril_upd, zchnl, sfact, zscfl, dzscfl, ufact, zucfhl) &
+    !$ACC   PRIVATE(dzucfhl, zcons, zcfnchl, zcfhl, dzcfhl)
     DO ic = 1, nc
-      ! Initializations
-      drag_srf(ic) = 0._wp
-      t_acoef (ic) = 0._wp
-      t_bcoef (ic) = 0._wp
-      q_acoef (ic) = 0._wp
-      q_bcoef (ic) = 0._wp
-      pch     (ic) = 0._wp
-
       ! NOTE: a segmentation fault for unplausible surface temperatures (outside [50,400] Kelvin) would occur in "calc_qsat()"
-      qsat_surf(ic)     = calc_qsat(t_srf_proc(ic), pressure(ic))
+      qsat_surf = calc_qsat(t_srf_proc(ic), pressure(ic))
+      dqsat_surf = 1e3_wp * (calc_qsat(t_srf_proc(ic) + 1e-3_wp, pressure(ic)) - qsat_surf)
       IF (l_zril_filter) THEN
-        qsat_surf_upd(ic) = calc_qsat(t_srf_upd(ic), pressure(ic))
+        qsat_surf_upd = calc_qsat(t_srf_upd(ic), pressure(ic))
       END IF
 
       !------------------------------------------------------------------------------------
@@ -444,13 +439,16 @@ CONTAINS
       ztvd = ( temp_air(ic) * ( 100000._wp / air_pressure)**rd_o_cpd ) * ( 1._wp + rvd1 * qair(ic))
       ztvir = temp_air(ic) * ( 1._wp + rvd1 * qair(ic) )
 
+      r_exner_surf = ( 100000._wp / pressure(ic))**rd_o_cpd
+      qsurf_eff = fact_qsat_srf_proc(ic) * qsat_surf + ( 1._wp - fact_q_air_proc(ic) ) * qair(ic)
+      dqsurf_eff = fact_qsat_srf_proc(ic) * dqsat_surf
+
       ! virtual potential surface temperature for actual and updated states
-      ztvs_act = t_srf_proc(ic) * ( 100000._wp / pressure(ic))**rd_o_cpd * &
-        & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic) * qsat_surf(ic) + ( 1._wp - fact_q_air_proc(ic) ) &
-        & * qair(ic)))
+      ztvs_act = t_srf_proc(ic) * r_exner_surf * (1._wp + rvd1 * qsurf_eff)
+      dztvs_act = r_exner_surf * (1._wp + rvd1 * (qsurf_eff + t_srf_proc(ic) * dqsurf_eff))
       IF (l_zril_filter) THEN
         ztvs_upd = t_srf_upd(ic) * ( 100000._wp / pressure(ic))**rd_o_cpd * &
-          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic) * qsat_surf_upd(ic) + ( 1._wp - fact_q_air_proc(ic) ) &
+          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic) * qsat_surf_upd + ( 1._wp - fact_q_air_proc(ic) ) &
           & * qair(ic)))
       END IF
 
@@ -483,6 +481,7 @@ CONTAINS
           &  + coef_ril_t   * zril_act     &
           &  + coef_ril_tp1 * zril_upd
         zril_old(ic) = zril
+        dzril = -4._wp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act * coef_ril_t
       ELSE
         SELECT CASE (config_model_scheme)
         CASE (MODEL_JSBACH)
@@ -492,6 +491,7 @@ CONTAINS
           zril = MIN(zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp ), 0.5_wp)
 #endif
         END SELECT
+      dzril = -4._wp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act
       END IF
 
       ! Neutral drag coefficient for
@@ -502,31 +502,30 @@ CONTAINS
                 * LOG( ( grav * rough_m_srf_proc(ic) + zgh ) / (grav * rough_h_srf_proc(ic) )))
 
       ! account for stable/unstable case: helper variables
-      zscfl = SQRT ( 1._wp + 5._wp * ABS(zril))
-      ! momentum
-      ! zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp + zg  / (grav * rough_m_srf_proc(ic)))))
-      ! heat
-      zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp + zgh / (grav * rough_h_srf_proc(ic)))))
+      ! The stability factors are multiplied by Ri to cancel a singularity in the derivative of zucfhl.
+      sfact = SQRT(1._wp + 5._wp * ABS(zril))
+      zscfl = zril * sfact
+      dzscfl = dzril * (sfact + 2.5_wp * zril / sfact)
+
+      ufact = zcons11 * zchnl * SQRT(ABS(zril) * (1._wp + zgh / (grav * rough_h_srf_proc(ic))))
+      zucfhl = - zril / (1._wp + ufact)
+      dzucfhl = - dzril * (1._wp + 0.5_wp * ufact) / (1._wp + ufact)**2
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
-      zcons = zcons12 * pressure(ic) / ( temp_air(ic) * (1._wp + rvd1 * qair(ic)))
-      ! momentum
-      ! zcfncl   = zcons * SQRT(zdu2) * zcdnl
-      ! heat
+      zcons = zcons12 * pressure(ic) / ztvir
       zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
       ! Stable / Unstable case
       IF ( zril > 0._wp ) THEN
-        ! momentum
-        ! zcfml = zcfncl  / (1._wp + zcons8 * zril / zscfl)
-        ! heat
-        zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
+        zcfhl = zcfnchl / (1._wp + zcons9 * zscfl)
+        dzcfhl = - zcfnchl * zcons9 * dzscfl / (1._wp + zcons9 * zscfl)**2
       ELSE
-        ! zcfml = zcfncl  * (1._wp - zcons8 * zril * zucfl)
-        zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
+        zcfhl = zcfnchl * (1._wp + zcons9 * zucfhl)
+        dzcfhl = zcfnchl * zcons9 * dzucfhl
       END IF
 
       drag_srf(ic) = zcfhl
+      ddrag_srf(ic) = dzcfhl
       pch(ic) = zcfhl / zcfnchl * zchnl
 
       !---------------------------------------------------------------------------------------------------------------
@@ -540,7 +539,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC END DATA
 
   END SUBROUTINE update_drag
 

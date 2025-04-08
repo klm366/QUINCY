@@ -58,6 +58,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model                 !< the model
     REAL(wp), DIMENSION(options%nc)       :: wind_air
     REAL(wp), DIMENSION(options%nc)       :: hlp1
+    REAL(wp), DIMENSION(options%nc)       :: ddrag_srf ! Change of drag with time, not used by Quincy
     INTEGER                               :: iblk, ics, ice, nc, ic!< dimensions
     INTEGER                               :: model_scheme
     LOGICAL                               :: jsb_standalone
@@ -133,7 +134,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 
-    !$ACC DATA CREATE(wind_air(:), hlp1(:))
+    !$ACC DATA CREATE(wind_air(:), ddrag_srf(:), hlp1(:))
 
     !> 0.9 init local variable
     !>
@@ -178,7 +179,7 @@ CONTAINS
         & 0.25_wp, &          ! jsbach default value dsl4jsb_Config(SEB_)%coef_ril_t
         & 0.25_wp, &          ! jsbach default value dsl4jsb_Config(SEB_)%coef_ril_tp1
         ! INTENT out
-        & drag_srf_stdalone(:), t_acoef_stdalone(:), t_bcoef_stdalone(:), &
+        & drag_srf_stdalone(:), ddrag_srf(:), t_acoef_stdalone(:), t_bcoef_stdalone(:), &
         & q_acoef_stdalone(:), q_bcoef_stdalone(:), pch_stdalone(:), &
         ! optional (INTENT(IN)) argument
         & height = height) ! vegetation height (quincy specific)

@@ -61,12 +61,14 @@ MODULE mo_seb_memory_class
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &
-      & s_star,                 & !< Surface dry static energy (s^star, see manual)                  [m2 s-2]
+      & s_star,                 & !< Skin dry static energy (s^star, see manual)                     [m2 s-2]
                                   !! This is the s that is used in the vertical diffusion
                                   !! scheme in the atmosphere
-      & t_unfilt_old,           & !< Surface temperature at previous timestep, unfiltered            [K]
+      & t_unfilt_old,           & !< Skin temperature at previous timestep, unfiltered               [K]
                                   !! (before Asselin)
-      & t_filt,                 & !< Surface temperature, filtered (after Asselin)                   [K]
+      & t_filt,                 & !< Skin temperature, filtered (after Asselin)                      [K]
+      & t_srf,                  & !< Surface temperature, top soil or snow layer, unfiltered         [K]
+      & dt_sk_dt_srf,           & !< Derivative of skin temperature w.r.t. surface temperature       [K/K]
       & latent_hflx_lnd,        & !< Latent heat flux                                                [W m-2]
       & sensible_hflx_lnd,      & !< Sensible heat flux                                              [W m-2]
       & previous_day_temp_mean, & ! mean day air-temperature [Celsius] of previous day,
@@ -86,7 +88,8 @@ MODULE mo_seb_memory_class
       & day_temp_max,           & ! maximum of air temperatures since midnight (needed to compute growing
                                   ! degree days GDD) [Celsius * 1] (stream)
       & N_pseudo_soil_temp,     & ! Normalization for computing the pseudo soil temperature
-      & F_pseudo_soil_temp        ! exponential factor used for updating the pseudo soil temperature
+      & F_pseudo_soil_temp,     & ! exponential factor used for updating the pseudo soil temperature
+      & skin_conductivity         !< Skin conductivity [W/(m^2 K)].
     !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -124,7 +127,7 @@ CONTAINS
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -279,6 +282,22 @@ CONTAINS
         & lrestart=.FALSE.,                                                                  &
         & initval_r=280.0_wp )
 
+      CALL mem%Add_var( 't_srf', mem%t_srf,                                                  &
+        & hgrid, surface,                                                                    &
+        & t_cf('sfc_temp', 'K', 'soil or snow surface temperature'),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & lrestart=.TRUE.,                                                                  &
+        & initval_r=280.0_wp )
+
+      CALL mem%Add_var( 'dt_sk_dt_srf', mem%dt_sk_dt_srf,                                    &
+        & hgrid, surface,                                                                    &
+        & t_cf('dt_sk_dt_srf', 'K', 'derivative of skin w.r.t. surface temperature'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & lrestart=.FALSE.,                                                                  &
+        & initval_r=1._wp )
+
       CALL mem%Add_var( 'latent_hflx_lnd', mem%latent_hflx_lnd,                              &
         & hgrid, surface,                                                                    &
         & t_cf('latent_hflx_lnd', 'W m-2', 'latent heat flux density at surface (lnd)'),     &
@@ -357,6 +376,16 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      IF (dsl4jsb_Config(SEB_)%l_skin_temp) THEN
+        CALL mem%Add_var( 'skin_conductivity', mem%skin_conductivity,              &
+          & hgrid, surface,                                                        &
+          & t_cf('skin_conductivity', 'W m-2 K-1', 'skin conductivity'),           &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & prefix, suffix,                                                        &
+          & lrestart=.FALSE., isteptype=TSTEP_CONSTANT,                            &
+          & initval_r=0._wp )
+      END IF
 
     END IF
 

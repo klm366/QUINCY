@@ -705,7 +705,7 @@ CONTAINS
     & nc, nsnow,                            &
     & lstart,                               &
     & itop_old, itop,                       &
-    & t_unfilt, t_soil_acoef, t_soil_bcoef, &
+    & t_srf, t_soil_acoef, t_soil_bcoef,    &
     & t_snow, t_snow_acoef, t_snow_bcoef,   &
     & t_soil_top)
 
@@ -718,7 +718,7 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
     LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
     INTEGER,  INTENT(in)    :: itop(:), itop_old(:)       !! Top snow layer for previous and new time step
-    REAL(wp), INTENT(in)    :: t_unfilt(:)                !! Surface temperature at top of snow [K]
+    REAL(wp), INTENT(in)    :: t_srf(:)                   !! Surface temperature at top of snow [K]
     REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! Top layer soil A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! Top layer soil B coefficient of Richtmyer and Morton scheme
 
@@ -737,7 +737,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ic=1,nc
       DO is=1,nsnow
-        t_snow(ic,is) = t_unfilt(ic)
+        t_snow(ic,is) = t_srf(ic)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -784,7 +784,7 @@ CONTAINS
         IF (MAX(itop(ic), itop_old(ic)) <= nsnow) THEN
           t_soil_top(ic) = t_snow_acoef(ic,nsnow) + t_snow_bcoef(ic,nsnow) * t_snow(ic,nsnow)
         ELSE
-          t_soil_top(ic) = t_unfilt(ic)
+          t_soil_top(ic) = t_srf(ic)
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -792,7 +792,7 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        t_soil_top(ic) = t_unfilt(ic)
+        t_soil_top(ic) = t_srf(ic)
       END DO
       !$ACC END PARALLEL LOOP
 
