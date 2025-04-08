@@ -279,7 +279,7 @@ CONTAINS
           
           !print out the variable name and some values from ptr_2D
           CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(ptr_2D(i, j), wp)))
+          CALL message(TRIM(routine), 'First element of ptr_2D: '//TRIM(REAL(cf_transition(:, idx, :), wp)))
           
         END IF
       END DO
