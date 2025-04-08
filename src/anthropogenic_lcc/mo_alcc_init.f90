@@ -357,7 +357,7 @@ CONTAINS
       
       DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
         DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
-          IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
+          !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
             ! Convert the non-zero value to a string
             WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
             ! Convert indices to strings
@@ -366,7 +366,7 @@ CONTAINS
             ! Use the formatted string in the message
             CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (iblk='// &
               & TRIM(ADJUSTL(temp_string_i))//', col='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
-          END IF
+          !END IF
         END DO
       END DO
       
