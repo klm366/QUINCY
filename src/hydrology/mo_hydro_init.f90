@@ -18,7 +18,7 @@ MODULE mo_hydro_init
   USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -28,10 +28,14 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
-  dsl4jsb_Use_processes HYDRO_, PHENO_
+  dsl4jsb_Use_processes HYDRO_
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(HYDRO_)
+#ifdef __QUINCY_STANDALONE__
+#else
+  dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_memory(PHENO_)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -136,6 +140,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
 
+#ifdef __QUINCY_STANDALONE__
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL hydro_read_init_vars(tile)
     END IF
@@ -146,7 +152,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE hydro_init
 
   SUBROUTINE hydro_finalize_init_vars
@@ -181,6 +187,8 @@ CONTAINS
 
   END SUBROUTINE hydro_finalize_init_vars
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE hydro_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -645,7 +653,10 @@ CONTAINS
     END IF
 
   END SUBROUTINE hydro_read_init_vars
+#endif
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE hydro_init_bc(tile)
 
     USE mo_util,                  ONLY: soil_depth_to_layers_2d
@@ -834,8 +845,10 @@ CONTAINS
     END IF
 
   END SUBROUTINE hydro_init_bc
+#endif
 
-
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE hydro_init_ic(tile)
 
     !-----------------------------------------------------------------------
@@ -866,6 +879,10 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
     model  => Get_model(tile%owner_model_id)
+
+    ! TODO for use with QUIINCY replace PHENO_ variables with something avaialble in QUINCY
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
 
     soil_w => Get_vgrid('soil_depth_water')
 
@@ -1067,9 +1084,9 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
 
     END IF ! Tile with vegetation
-
+    END SELECT ! MODEL_JSBACH
   END SUBROUTINE hydro_init_ic
-
+#endif
 
   SUBROUTINE init_soil_properties(tile)
     ! This routine is needed because soil snow and energy (SSE) processes are calculated before

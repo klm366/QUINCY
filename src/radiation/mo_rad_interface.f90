@@ -35,32 +35,32 @@ MODULE mo_rad_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, RAD_
+  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_
 
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
-
-  ! Use of process memories
-  dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(RAD_)
-#ifndef __QUINCY_STANDALONE__
-  ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, PHENO_, HYDRO_, ASSIMI_, CARBON_
-
-  ! Use process configurations
-  dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
+  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
-  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(HYDRO_)
+#ifdef __QUINCY_STANDALONE__
+#else
+  ! Use of processes in this module
+  dsl4jsb_Use_processes PHENO_, ASSIMI_, CARBON_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(ASSIMI_)
+
+  ! Use of process memories
+  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
 #endif
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_processes SPQ_, SB_, VEG_
-  dsl4jsb_Use_config(SPQ_)
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(VEG_)
@@ -226,12 +226,9 @@ CONTAINS
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
-#endif
 #ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(SPQ_)
 #endif
 
@@ -269,7 +266,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     REAL(wp), ALLOCATABLE      :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
-    LOGICAL                    :: l_ice_on_lakes_local      ! use for jsbach & quincy, as helper variable
     INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
@@ -287,21 +283,16 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-      dsl4jsb_Get_memory(SEB_)
-#endif
+    dsl4jsb_Get_memory(SEB_)
 #ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
       dsl4jsb_Get_memory(SPQ_)
-#endif
     END SELECT
+#endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down) ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down) ! in
@@ -319,17 +310,7 @@ CONTAINS
     IF (tile%is_lake) THEN
 
       ! Water
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)       ! in
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_, t_lwtr)       ! in
-#endif
-      END SELECT
-
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
@@ -348,27 +329,9 @@ CONTAINS
         & )
 
       ! Ice on lake
-      l_ice_on_lakes_local = .FALSE.
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-          dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
-          dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN
-          dsl4jsb_Get_var2D_onChunk(SPQ_, t_lice)       ! in
-          dsl4jsb_Get_var2D_onChunk(SPQ_, fract_lice)   ! in
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-      END SELECT
-
-      IF (l_ice_on_lakes_local) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
@@ -484,12 +447,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(SEB_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
-#endif
     dsl4jsb_Def_memory(RAD_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -506,16 +464,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
-#endif
-    END SELECT
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -526,20 +475,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, lw_srf_net,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
-      END IF
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN
-        dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
-      END IF
-#endif
-    END SELECT
+
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -581,7 +520,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, VEG_, HYDRO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
@@ -594,7 +533,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -612,7 +551,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -641,7 +580,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -667,7 +606,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
@@ -697,8 +636,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)              ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)           ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)           ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 1.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
@@ -1081,23 +1020,21 @@ CONTAINS
     REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
     REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
-    LOGICAL                         :: l_ice_on_lakes_local      !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
-#ifndef __QUINCY_STANDALONE__
-    dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SEB_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
 #endif
 #ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SPQ_)
 #endif
@@ -1232,22 +1169,24 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(RAD_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
-    SELECT CASE (model%config%model_scheme)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SEB_)
 #ifndef __QUINCY_STANDALONE__
+    SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-      dsl4jsb_Get_config(HYDRO_)
-      dsl4jsb_Get_memory(SEB_)
-      dsl4jsb_Get_memory(HYDRO_)
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(PHENO_)
       END IF
+    END SELECT
 #endif
+
+    SELECT CASE (model%config%model_scheme)
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
       dsl4jsb_Get_memory(SPQ_)
 #endif
     END SELECT
@@ -1261,16 +1200,7 @@ CONTAINS
     albedo_age_weight         = dsl4jsb_Config(RAD_) %albedo_age_weight
     AlbedoCanopySnow          = dsl4jsb_Config(RAD_) %AlbedoCanopySnow
 
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      l_ponds_param             = dsl4jsb_Config(HYDRO_)%l_ponds
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      l_ponds_param             = dsl4jsb_Config(SPQ_)%l_ponds
-#endif
-    END SELECT
+    l_ponds_param             = dsl4jsb_Config(HYDRO_)%l_ponds
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
        use_alb_soil_organic_int = 1
@@ -1423,24 +1353,10 @@ CONTAINS
     !! Note, for vegetation tiles this snow albedos are used only for snow on soil
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
 
-      ! TODO: correct indentation >>>
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_soil)    ! in
-      dsl4jsb_Get_var2D_onChunk(SPQ_, fract_pond)         ! in
-      dsl4jsb_Get_var2D_onChunk(SPQ_, wtr_pond)           ! in
-      dsl4jsb_Get_var2D_onChunk(SPQ_, ice_pond)           ! in
-#endif
-    END SELECT
-      ! <<< TODO: correct indentation
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
       ! Update (non-dimensional) snow age
@@ -1489,16 +1405,7 @@ CONTAINS
     !!
     !!
     IF (tile%is_lake) THEN
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_,   t_lice)       ! in
-#endif
-      END SELECT
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1511,27 +1418,9 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! Ice on lake
-      l_ice_on_lakes_local = .FALSE.
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-          dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
-          dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN
-          dsl4jsb_Get_var2D_onChunk(SPQ_,   fract_lice)     ! in
-          dsl4jsb_Get_var2D_onChunk(SPQ_, weq_snow_lice)    ! in
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-      END SELECT
-
-      IF (l_ice_on_lakes_local) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
         dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -1650,15 +1539,10 @@ CONTAINS
       IF (use_alb_veg_simple) THEN
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_forest)          ! in
       ENDIF
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var2D_onChunk(SPQ_,    fract_snow_can)        ! in
-      dsl4jsb_Get_var2D_onChunk(SPQ_,    fract_snow_soil)       ! in
 #endif
     END SELECT
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! in
