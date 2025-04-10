@@ -52,10 +52,12 @@ CONTAINS
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
+    USE mo_q_agr_constants,     ONLY: init_q_agr_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
+    USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
@@ -161,8 +163,10 @@ CONTAINS
 #ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
+           CALL init_q_agr_constants
            CALL init_veg_constants
            CALL init_spq_constants
+           CALL init_turb_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
@@ -208,11 +212,11 @@ CONTAINS
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(SSE_)
+      dsl4jsb_Get_config(HYDRO_)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_config(SSE_)
-        dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -263,9 +267,6 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
-        model%processes(SSE_)%p%config%active = .FALSE.
-        model%processes(SEB_)%p%config%active = .FALSE.
-        model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
       CASE (MODEL_JSBACH)
@@ -363,7 +364,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

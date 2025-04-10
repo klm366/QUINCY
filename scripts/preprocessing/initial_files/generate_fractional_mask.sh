@@ -36,7 +36,7 @@ if ! mkdir -p $wrkdir ; then
 fi
 cd $wrkdir
 
-cdo="cdo -s -f nc4 -b F64"
+cdo="$cdo -f nc4 -b F64"
 
 echo '------------------------------------------------------------------'
 echo "$0: Working directory: $(pwd)"

@@ -217,12 +217,7 @@ CONTAINS
     !>
     !> Default values are defined for all namelist parameters.
     !
-    SELECT CASE (config%model_config%model_scheme)
-    CASE (MODEL_QUINCY)
-      active                 = .FALSE.
-    CASE (MODEL_JSBACH)
-      active                 = .TRUE.
-    END SELECT
+    active                 = .TRUE.
     lrestart_cont          = .FALSE.   ! TRUE: Continue although HYDRO variables are missing in restart file
     bc_filename            = 'bc_land_hydro.nc'
     ic_filename            = 'ic_land_hydro.nc'
@@ -288,7 +283,7 @@ CONTAINS
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
 
-    config%ret_macro_blg       = ret_macro_ble
+    config%ret_macro_blg       = ret_macro_blg
     config%ret_macro_srf       = ret_macro_srf
 
     config%scheme_stom_cond       = scheme_stom_cond
@@ -412,6 +407,7 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+#ifndef __QUINCY_STANDALONE__
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
@@ -429,6 +425,19 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+#else
+    ! jsbach:
+    ! soillev = 0.065, 0.319, 1.232, 4.134, 9.834
+    ! quincy:
+    ! src/q_soil_phys/mo_spq_config_class.f90
+    ! dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    nsoil = 5
+    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(mids(nsoil))
+    depths(1) = 0._wp
+    depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+#endif
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

@@ -50,7 +50,7 @@ CONTAINS
   !! @param [in]     l_latflow_to_streamflow  T: Outflow of intermediary storage goes to streamflow
   !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
   !! @param [in]     flowlag               lag factor determening the outflow of intermediary storage [1/s]
-  !! @param [in]     t_unfilt              Surface tempemperature [K] (unfiltered)
+  !! @param [in]     t_srf                 Surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
@@ -85,7 +85,7 @@ CONTAINS
     & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
     & l_infil_subzero, l_latflow_to_streamflow,                     &
     & snow_depth_max, steepness, flowlag, t_soil_sl1,               &
-    & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
+    & t_srf, wind_10m, t_air, skinres_canopy_max, skinres_max,      &
     & weq_pond_max, fract_snow, fract_skin, fract_pond, fract_pond_max, &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & wpi_rootzone, wpi_rootzone_max, wtr_soil, hyd_cond_sat_sl1,   &
@@ -110,7 +110,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                     &
       & steepness(:), flowlag(:),                                               &
-      & t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),                      &
+      & t_soil_sl1(:), t_srf(:), wind_10m(:), t_air(:),                         &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:),  &
       & fract_skin(:), fract_pond(:), fract_pond_max(:), hcap_grnd(:),          &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
@@ -254,8 +254,8 @@ CONTAINS
       !  Snow melt
       !------------------------
       IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-        IF (t_unfilt(ic) > tmelt .AND. weq_snow_soil(ic) > 0._wp) THEN
-          snowmelt_pot_in_m = hcap_grnd(ic) * (t_unfilt(ic)-tmelt)/(alf*rhoh2o)      ! potential snow and ice melt [m]
+        IF (t_srf(ic) > tmelt .AND. weq_snow_soil(ic) > 0._wp) THEN
+          snowmelt_pot_in_m = hcap_grnd(ic) * (t_srf(ic)-tmelt)/(alf*rhoh2o)         ! potential snow and ice melt [m]
           snowmelt_soil(ic) = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil(ic)), 0._wp)  ! snow melt limited by actual snow depth
           weq_snow_soil(ic) = weq_snow_soil(ic) - snowmelt_soil(ic)                  ! reduce snow depth according to melting
           ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
@@ -281,7 +281,7 @@ CONTAINS
       !      and move to sse routine. Also use ice density for ice fluxes
       !------------------------
       ! 1.) Potential melting:
-      t_pond = t_unfilt(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
+      t_pond = t_srf(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
       IF (t_pond > tmelt .AND. ice_pond(ic) > 0._wp) THEN
         pond_change_pot      = hcap_grnd(ic) * (t_pond-tmelt)/(alf*rhoh2o)
         pond_melt(ic)        = MAX(MIN(pond_change_pot, ice_pond(ic)), 0._wp)

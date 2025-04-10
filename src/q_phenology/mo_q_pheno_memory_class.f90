@@ -57,7 +57,7 @@ CONTAINS
   !> initialize memory (variables) for the process: q_phenology
   !>
   !>
-  SUBROUTINE Init_q_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_q_pheno_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
@@ -69,6 +69,7 @@ CONTAINS
     CHARACTER(len=*),        INTENT(in)            :: prefix
     CHARACTER(len=*),        INTENT(in)            :: suffix
     INTEGER,                 INTENT(in)            :: lct_ids(:)
+    INTEGER,                 INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,                 INTENT(in)            :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
