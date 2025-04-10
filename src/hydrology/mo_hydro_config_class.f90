@@ -115,6 +115,9 @@ CONTAINS
   !> In this subroutine we configure the hydrolology process based on the [[jsb_hydro_nml]]
   !> parameter settings.
   !>
+  !> _Note_: For a more extensive documentation of the namelist parameters please check the
+  !> configuration data type [[t_hydro_config]].
+  !>
   SUBROUTINE Init_hydro_config(config)
 
     USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
@@ -130,9 +133,6 @@ CONTAINS
 
     !--------------------------------------------------------------------------------------------------------
     ! Namelist parameters
-    !
-    !> For a more extensive documentation of the namelist parameters please check the configuration
-    !> data type [[t_jsb_hydro_config]].
     !
     LOGICAL :: &
       & active,               & !< True: the HYDRO process is activated
