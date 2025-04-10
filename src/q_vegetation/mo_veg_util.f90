@@ -1109,7 +1109,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     REAL(wp)                          :: dtime                  !< timestep length
-    REAL(wp), DIMENSION(options%nc)   :: new_total_c            !< helper variable
+    REAL(wp), DIMENSION(options%nc)   :: q_total_c_new          !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1152,14 +1152,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
     dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)
     ! ----------------------------------------------------------------------------------------------------- !
-    new_total_c(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+
+    ! vegetation and soil carbon
+    q_total_c_new(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+
     IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
-      new_total_c(:) = new_total_c(:) + veg_products_total_c(:)
+      q_total_c_new(:) = q_total_c_new(:) + veg_products_total_c(:)
     END IF
 
-    q_c_conservation_test(:) = new_total_c - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
-    q_total_c(:) = new_total_c(:)
+    q_c_conservation_test(:) = q_total_c_new - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
+    q_total_c(:) = q_total_c_new(:)
 
   END SUBROUTINE test_carbon_conservation
 

@@ -23,7 +23,7 @@ MODULE mo_q_veg_update_pools
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
     &                                   VEG_BGCM_RESERVE_USE_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
@@ -91,7 +91,6 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
-    dsl4jsb_Def_mt1L2D :: veg_total_biomass_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
 
     dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
@@ -226,7 +225,6 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_TOTAL_BIO_ID, veg_total_biomass_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
 
     IF (config_l_use_product_pools) THEN
@@ -551,28 +549,7 @@ CONTAINS
 
     END SELECT
 
-    !> 2.0 analysis of mass conservation: sum compartments of veg_pool into veg_total_biomass
-    !>
-    DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
-      IF (model%config%is_element_used(id_elem)) THEN
-        ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          veg_total_biomass_mt(ix_elem,ic) = 0.0_wp
-        END DO
-        !$ACC END PARALLEL
-
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO ix_comp = 1, nr_of_veg_bgcm_comp
-          DO ic = 1, nc
-            veg_total_biomass_mt(ix_elem,ic) = veg_total_biomass_mt(ix_elem,ic) + veg_pool_mt(ix_comp, ix_elem, ic)
-          END DO
-        END DO
-        !$ACC END PARALLEL
-      END IF
-    END DO
-
-    !> 3.0 bgc_material diagnostics
+    !> 2.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element
     !>     or simply add value (of one/two/few pool variables) to a memory variable for aggregation and output
     !>
@@ -683,7 +660,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !> 4.0 biosphere-level diagnostics across multiple processes
+    !> 3.0 biosphere-level diagnostics across multiple processes
     !>
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc

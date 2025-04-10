@@ -226,14 +226,23 @@ EOF
                           C3C4_crop_${res_atm}.nc
     fi
   fi
+
+  if [[ ${year_cf} -gt 2015 ]]; then
+    # Use LUH scenario data
+    LUH_scen=_${scenario}
+  else
+    # All oceans version (i.e. less missing values) currently not available for scenarios
+    LUH_scen=_all-oceans
+  fi
+
   if [[ ${read_pasture} = LUH2v2h ]]; then
     if [[ ${dynveg} = true ]]; then
-      LUH_states=LUH2v2h_states_${res_atm}_dynveg.nc
+      LUH_states=LUH2v2h_states_${res_atm}${LUH_scen}_dynveg.nc
     else
-      LUH_states=LUH2v2h_states_${res_atm}_all-oceans_no-dynveg.nc
+      LUH_states=LUH2v2h_states_${res_atm}${LUH_scen}_no-dynveg.nc
     fi
   elif [[ ${read_pasture} = LUH ]]; then
-    LUH_states=LUH_states_${res_atm}.nc
+    LUH_states=LUH_states_${res_atm}${LUH_scen}.nc
   fi
   if [[ ${read_pasture} != false ]]; then
     if [[ -f ${pool_land}/${LUH_states} ]]; then

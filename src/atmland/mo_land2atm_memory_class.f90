@@ -56,7 +56,7 @@ MODULE mo_l2a_memory_class
     ! C in Quincy
     TYPE(t_jsb_var_real2d) :: &
       & q_total_c,            & !< total C, sum of all quincy carbon pools
-      & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
+      & q_c_conservation_test   !< difference in quincy "total C of last timestep" & "nbp and total C of this timestep" [mol m-2 timestep-1]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &

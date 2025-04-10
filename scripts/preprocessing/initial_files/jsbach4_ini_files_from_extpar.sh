@@ -49,7 +49,7 @@ prog=$(basename $0)
 clean_up=true  # Remove intermediate files
 
 # Tools and commands
-cdo="cdo -s -f nc4 -b F64"
+cdo="$cdo -f nc4 -b F64"
 ncatted="ncatted"
 rm=/usr/bin/rm
 cp=/usr/bin/cp

@@ -277,7 +277,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !> Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! Task "snowmelt_correction" applies a correction for t_srf due to snow and ice melting,
   !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -301,6 +301,8 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: t_srf
+    dsl4jsb_Real2D_onChunk :: dt_sk_dt_srf
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: pond_freeze
     dsl4jsb_Real2D_onChunk :: pond_melt
@@ -312,7 +314,7 @@ CONTAINS
 
 
     INTEGER  :: iblk , ics, ice, nc, ic
-    REAL(wp) :: dtime, dz1
+    REAL(wp) :: dtime, dz1, delta_temp
 
     LOGICAL :: &
       & l_freeze_config, &
@@ -355,6 +357,8 @@ CONTAINS
     ELSE IF (tile%contains_soil .OR. tile%is_glacier) THEN
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t_srf)            ! inout
+      dsl4jsb_Get_var2D_onChunk(SEB_,      dt_sk_dt_srf)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -370,33 +374,35 @@ CONTAINS
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$ACC DATA CREATE(heat_cap) ASYNC(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
         DO ic=1,nc
 
           ! Correction for snowmelt and pond melting/freezing
-          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
           IF (.NOT. tile%is_glacier) THEN
-            t_unfilt(ic) = t_unfilt(ic) - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-            t_unfilt(ic) = t_unfilt(ic) + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
             IF (l_freeze_config) THEN
               heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
               IF (l_snow_config) THEN
                 IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
                   ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
                 END IF
               ELSE   ! No snow layers present
                 IF (heat_cap(ic) > 0._wp) THEN
                   ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
                 END IF
               END IF
             END IF
           END IF
 
+          t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
+          t_srf(ic) = t_srf(ic) + delta_temp
         END DO
         !$ACC END PARALLEL LOOP
         !$ACC WAIT(1)
@@ -442,7 +448,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_srf, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

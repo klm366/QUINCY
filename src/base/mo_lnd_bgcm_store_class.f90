@@ -29,7 +29,7 @@ MODULE mo_lnd_bgcm_store_class
   PUBLIC :: t_lnd_bgcm_store_abstract
   PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &       SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
-  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,                               &
+  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID,                                                      &
     &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                                            &
     &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID,                 &
     &       VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID, &
@@ -48,7 +48,6 @@ MODULE mo_lnd_bgcm_store_class
       & SB_BGCM_TRANSPORT_ID,        &   !< soil biogeochemistry bgcm transport
       & SB_BGCM_MYCO_EXPORT_ID,      &   !< soil biogeochemistry bgcm mycorrhiza export
       & VEG_BGCM_POOL_ID,            &   !< vegetation bgcm pool
-      & VEG_BGCM_TOTAL_BIO_ID,       &   !< vegetation bgcm total biomass
       & VEG_BGCM_GROWTH_ID,          &   !< vegetation bgcm growth
       & VEG_BGCM_LITTERFALL_ID,      &   !< vegetation bgcm litterfall
       & VEG_BGCM_FRAC_ALLOC_ID,      &   !< vegetation bgcm frac_alloc
