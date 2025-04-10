@@ -920,7 +920,7 @@ CONTAINS
       !>       calculated from volumetric porosity and soil layer thicknesses
       !   Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
-        dsl4jsb:w_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 

@@ -103,7 +103,6 @@ CONTAINS
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     ! TODO: Separate variables on individual lines and document with FORD standard
-    LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero, &
       &                     l_latflow_to_streamflow
     INTEGER,  INTENT(in) :: hydro_scale
