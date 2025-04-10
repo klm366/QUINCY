@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -57,6 +57,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: fmaint_rate_base
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(A2L_)
@@ -99,6 +100,7 @@ CONTAINS
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_ASSIMI_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(A2L_)
@@ -221,6 +223,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: leaf2sapwood_mass_ratio
     dsl4jsb_Real2D_onChunk      :: leaf2root_mass_ratio
+    dsl4jsb_Real2D_onChunk      :: falloc_fruit_crop
     dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
     dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
@@ -241,6 +244,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: f_p_demand
+    dsl4jsb_Real2D_onChunk      :: active_n_fixation
     dsl4jsb_Real2D_onChunk      :: n_fixation
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
@@ -285,6 +289,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_ASSIMI_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(A2L_)
@@ -415,8 +420,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)                   ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)            !   out
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)               !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)            ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)               ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, falloc_fruit_crop)                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)          ! in
@@ -437,6 +443,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, active_n_fixation)                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)             ! in
@@ -550,6 +557,7 @@ CONTAINS
       & nh4_solute(:,:), &
       & no3_solute(:,:), &
       & soil_depth_sl(:,:), &
+      & active_n_fixation(:), &
       & growth_req_n_tlabile_mavg(:), &
       & demand_uptake_n_tuptake_mavg(:), &
       & demand_uptake_p_tuptake_mavg(:), &
@@ -739,7 +747,8 @@ CONTAINS
     !>      (range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1)
     !>
     CALL calc_allometry( &
-      & lctlib%growthform                                 , & ! in
+      & dsl4jsb_Config(Q_AGR_)%active                     , & ! in
+      & lctlib%growthform                                 , &
       & lctlib%allom_k1                                   , &
       & lctlib%allom_k2                                   , &
       & lctlib%sla                                        , &
@@ -775,12 +784,14 @@ CONTAINS
       & dphi_talloc_mavg(:)                               , &
       & kstar_labile(:)                                   , &
       & w_root_lim_talloc_mavg(:)                         , & ! in
-      & dheight(:)                                        , & ! out
-      & leaf2sapwood_mass_ratio(:)                        , &
+      & leaf2sapwood_mass_ratio(:)                        , & ! inout
       & leaf2root_mass_ratio(:)                           , &
+      & dheight(:)                                        , & ! out
       & k1_opt(:)                                         , &
       & k2_opt(:)                                         , &
       & root_limitation_state(:)                            ) ! out
+
+
 
     !>4.0 calculate reserve & labile pool dynamics
     !>
@@ -860,6 +871,7 @@ CONTAINS
     CALL calc_allocation_fraction( &
       & nc                                                , & ! in
       & dtime                                             , &
+      & dsl4jsb_Config(Q_AGR_)%active                     , &
       & lctlib%growthform                                 , &
       & lctlib%k2_fruit_alloc                             , &
       & lctlib%k_crtos                                    , &
@@ -874,6 +886,7 @@ CONTAINS
       & height(:)                                         , &
       & leaf2sapwood_mass_ratio(:)                        , &
       & leaf2root_mass_ratio(:)                           , &
+      & falloc_fruit_crop(:)                              , &
       & k1_opt(:)                                         , &
       & k2_opt(:)                                         , &
       & target_cn_leaf(:)                                 , &
@@ -890,6 +903,7 @@ CONTAINS
       & veg_frac_alloc_mt(:,:,:)                          , & ! inout
       & growth_req_n(:)                                   , & ! out
       & growth_req_p(:)                                   )   ! out
+
 
     !>6.0 partition labile carbon into growth, growth_respiration, and maintenance
     !>
@@ -1104,6 +1118,7 @@ CONTAINS
                                               nh4_solute, &
                                               no3_solute, &
                                               soil_depth_sl, &
+                                              active_n_fixation, &
                                               growth_req_n_tlabile_mavg, &
                                               demand_uptake_n_tuptake_mavg, &
                                               demand_uptake_p_tuptake_mavg, &
@@ -1176,6 +1191,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(in)    :: nh4_solute         , &       !< soil solution ammonium (mol N /m3)
                                                            no3_solute         , &       !< soil solution nitrate (mol N /m3)
                                                            soil_depth_sl                !< depth of soil layers (m)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: active_n_fixation            !< whether N fixation is permitted to occur here (0-1)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: growth_req_n_tlabile_mavg    !< time-averaged growth requirement for N
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
@@ -1344,7 +1360,7 @@ CONTAINS
       !>
       CASE ("fixed")
         ! N fixation in micro-mol N / m2 / s
-        n_fixation(:) = demand_uptake_n_tuptake_mavg(:) * lctlib_bnf_base
+        n_fixation(:) = active_n_fixation(:) * demand_uptake_n_tuptake_mavg(:) * lctlib_bnf_base
 
       !>3.2 Case 2: symbiotic N fixation as a dynamic trade-off of carbon and nitrogen opportunity costs
       !>  based on Rastaetter et al. 2001, Meyerholt et al. 2016, Kern, 2021
@@ -1352,6 +1368,7 @@ CONTAINS
       CASE ("dynamic")
         WHERE(cost_n_uptake_root(:) > (k_cost_symb_bnf + eps8))
           n_fixation(:) = fine_root_carbon(:) * vmax_symb_bnf * &
+            &             active_n_fixation(:) * &
             &             calc_peaked_arrhenius_function(t_soil_root, &
             &                                            ea_symb_bnf, &
             &                                            ed_symb_bnf, &
@@ -1612,7 +1629,7 @@ CONTAINS
     CASE (itree) ! trees
       target_cn_coarse_root  = lctlib_cn_leaf / wood2leaf_cn
       target_cn_sap_wood     = lctlib_cn_leaf / wood2leaf_cn
-    CASE (igrass) ! grasses
+    CASE (igrass, icrop) ! grasses, and crops
       target_cn_coarse_root  = lctlib_cn_leaf / root2leaf_cn
       target_cn_sap_wood     = lctlib_cn_leaf / root2leaf_cn
     END SELECT
@@ -1645,7 +1662,7 @@ CONTAINS
     CASE (itree) ! trees
       target_np_coarse_root  = lctlib_np_leaf / wood2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / wood2leaf_np
-    CASE (igrass) ! grasses
+    CASE (igrass, icrop) ! grasses, and crops
       target_np_coarse_root  = lctlib_np_leaf / root2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
     END SELECT
@@ -1671,7 +1688,8 @@ CONTAINS
   !>    range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1
   !>
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry( lctlib_growthform             , &
+  PURE ELEMENTAL SUBROUTINE calc_allometry( is_active_Q_AGR               , &
+                                            lctlib_growthform             , &
                                             lctlib_allom_k1               , &
                                             lctlib_allom_k2               , &
                                             lctlib_sla                    , &
@@ -1707,22 +1725,23 @@ CONTAINS
                                             dphi                          , &
                                             kstar_labile                  , &
                                             w_root_lim                    , &
-                                            dheight                       , &
                                             leaf2sapwood_mass_ratio       , &
                                             leaf2root_mass_ratio          , &
+                                            dheight                       , &
                                             k1_opt                        , &
                                             k2_opt                        , &
                                             root_limitation_state           )
 
     USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps4, eps8
     USE mo_jsb_physical_constants,  ONLY: rhoh2o
-    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, &
+    USE mo_veg_constants,           ONLY: min_height, itree, igrass, icrop, sm2lm_grass, w_root_lim_max, &
       &                                   leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+    LOGICAL,               INTENT(in)  :: is_active_Q_AGR              !< if agriculture process is active
     INTEGER,               INTENT(in)  :: lctlib_growthform            !< land-cover-type library parameter
     REAL(wp),              INTENT(in)  :: lctlib_allom_k1        , &   !< land-cover-type library parameter
                                           lctlib_allom_k2        , &   !< land-cover-type library parameter
@@ -1759,9 +1778,9 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa)
     REAL(wp),              INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
     REAL(wp),              INTENT(in)  :: w_root_lim                   !< ..
+    REAL(wp),              INTENT(inout) :: leaf2sapwood_mass_ratio    !< leaf to sapwood mass ratio
+    REAL(wp),              INTENT(inout) :: leaf2root_mass_ratio       !< leaf to root mass ratio
     REAL(wp),              INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
-    REAL(wp),              INTENT(out) :: leaf2sapwood_mass_ratio      !< leaf to sapwood mass ratio
-    REAL(wp),              INTENT(out) :: leaf2root_mass_ratio         !< leaf to root mass ratio
     REAL(wp),              INTENT(out) :: k1_opt                       !< coefficient in optimized leaf:root ratio
     REAL(wp),              INTENT(out) :: k2_opt                       !< coefficient in optimized leaf:root ratio
     REAL(wp),              INTENT(out) :: root_limitation_state        !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1)
@@ -1788,8 +1807,6 @@ CONTAINS
     !>0.9 init out and local variables
     !>
     dheight                 = 0.0_wp
-    leaf2sapwood_mass_ratio = 0.0_wp
-    leaf2root_mass_ratio    = 0.0_wp
     k1_opt                  = 0.0_wp
     k2_opt                  = 0.0_wp
     root_limitation_state   = 0.0_wp
@@ -1974,7 +1991,26 @@ CONTAINS
       CASE("fixed")
         leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
       END SELECT ! biomass_alloc_scheme
-    ENDSELECT ! SELECT CASE (growthform)
+    CASE (icrop)
+      IF (.NOT. is_active_Q_AGR) THEN !< if not already calculated by AGR module
+        ! leaf to stem mass ratio
+        leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
+        ! leaf:root ratio
+        ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+        p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        w_l2r_scal = w_root_lim / w_root_lim_max
+        ! actual ratio is given by the minimum of the three factors
+        leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
+      ELSE
+        ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        n_l2r_scal = 1.0_wp !growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+        p_l2r_scal = 1.0_wp !growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        w_l2r_scal = w_root_lim / w_root_lim_max
+      END IF
+      leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+        &                    leaf2root_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+    END SELECT ! SELECT CASE (growthform)
 
     !>2.0 calculate root limitation state from root2leaf scaling factors
     !>  calculate leaf to root scaling factors for N, P, Water
@@ -2016,7 +2052,7 @@ CONTAINS
                                      lai_tvegdyn_mavg         , &
                                      veg_pool_sap_wood_carbon)    RESULT (target_lai)
 
-    USE mo_veg_constants,           ONLY: min_lai, igrass, itree
+    USE mo_veg_constants,           ONLY: min_lai, igrass, itree, icrop
     USE mo_jsb_math_constants,      ONLY: eps8
 
     IMPLICIT NONE
@@ -2042,8 +2078,8 @@ CONTAINS
         ELSE
           target_lai = min_lai
         END IF
-      CASE (igrass)
-        ! for grasses: long-term average LAI (since root biomass maybe very low at the beginning of the growing season)
+      CASE (igrass, icrop)
+        ! for grasses and crops long-term average LAI (since root biomass maybe very low at the beginning of the growing season)
         target_lai = MAX(lai_tvegdyn_mavg, min_lai)
     END SELECT
 
@@ -2093,8 +2129,8 @@ CONTAINS
 
 
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
-    USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, itree, &
-                                        fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
+    USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, &
+      &                                 fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2220,7 +2256,7 @@ CONTAINS
       &                                 lambda_phimaint_nut, k_phimaint_nut, &
       &                                 lambda_phistore, k_phistore, &
       &                                 k_phi_interact, &
-      &                                 min_lai, target_lai_max, igrass, itree
+      &                                 min_lai, target_lai_max, igrass, itree, icrop
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,      INTENT(in)    :: nc                                !< dimensions
     REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
@@ -2263,7 +2299,7 @@ CONTAINS
     SELECT CASE(lctlib_growthform)
     CASE (itree)
       k_labphen = k_labphen_tree
-    CASE(igrass)
+    CASE (igrass, icrop)
       k_labphen = k_labphen_grass
     CASE DEFAULT
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
@@ -2528,11 +2564,10 @@ CONTAINS
   !!         (1) Allocation coefficients for the distribution of biomass for growth;\n
   !!         (2) total N and P required to sustain a unit of growth (in mol); \n
   !!
-  !! @todo: calc_allocation_fraction: check calculation of b_inc. Currently a fixed value for stability,
-  !!        Needs to be adjusted to better match prescriebed allometry and to account for falloc_fruit
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_allocation_fraction(nc                          , &
                                       dtime                       , &
+                                      is_active_Q_AGR             , &
                                       lctlib_growthform           , &
                                       lctlib_k2_fruit_alloc       , &
                                       lctlib_k_crtos              , &
@@ -2547,6 +2582,7 @@ CONTAINS
                                       height                      , &
                                       leaf2sapwood_mass_ratio     , &
                                       leaf2root_mass_ratio        , &
+                                      falloc_fruit_crop           , &
                                       k1_opt                      , &
                                       k2_opt                      , &
                                       target_cn_leaf              , &
@@ -2565,11 +2601,12 @@ CONTAINS
                                       growth_req_p )
     !------------------------------------------------------------------------------------------------------ !
     USE mo_jsb_math_constants,      ONLY: one_day, eps8
-    USE mo_veg_constants,           ONLY: itree, igrass, &
-                                          lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
+    USE mo_veg_constants,           ONLY: itree, igrass, icrop, &
+      &                                   lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,                  INTENT(in)    :: nc                         !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                      !< timestep length
+    LOGICAL,                  INTENT(in)    :: is_active_Q_AGR            !< if Q_AGR process is used
     INTEGER,                  INTENT(in)    :: lctlib_growthform          !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_k2_fruit_alloc      !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_k_crtos             !< lctlib parameter
@@ -2584,6 +2621,7 @@ CONTAINS
                                                height                  ,& !< plant height
                                                leaf2sapwood_mass_ratio ,& !< leaf to shoot mass ratio
                                                leaf2root_mass_ratio    ,& !< leaf to root mass ratio
+                                               falloc_fruit_crop       ,& !< fraction of allocation going to fruits in crops
                                                k1_opt                  ,& !< coefficient for optimal leaf:root ratio
                                                k2_opt                  ,& !< coefficient for optimal leaf:root ratio
                                                target_cn_leaf          ,& !< target C:N ratio for tissue type
@@ -2637,9 +2675,14 @@ CONTAINS
     !> 1.1 Calculate allocation fraction to reproduction
     !!  Fruit allocation depends on whether or not the plant is able to build reserves
     !!  as soon as the carbon balance exceeds a PFT specific offset, the maximal fruit growth rate is achieved
-    hlp1(:)                             = MAX(0.0_wp, veg_reserve_use_carbon(:) / dtime * 1000000.0_wp + k3_fruit_alloc)
-    veg_frac_alloc_mt(ix_fruit, ixC, :) = k1_fruit_alloc + ( lctlib_k2_fruit_alloc - k1_fruit_alloc ) &
-      &                                   * EXP(-(lambda_fruit_alloc * hlp1(:)) ** k4_fruit_alloc)
+    !!  Fruit allocation in crops is determined by heat sum index
+    IF (lctlib_growthform == icrop .AND. is_active_Q_AGR) THEN
+      veg_frac_alloc_mt(ix_fruit, ixC, :) = falloc_fruit_crop(:)
+    ELSE
+      hlp1(:)                             = MAX(0.0_wp, veg_reserve_use_carbon(:) / dtime * 1000000.0_wp + k3_fruit_alloc)
+      veg_frac_alloc_mt(ix_fruit, ixC, :) = k1_fruit_alloc + ( lctlib_k2_fruit_alloc - k1_fruit_alloc ) &
+        &                                   * EXP(-(lambda_fruit_alloc * hlp1(:)) ** k4_fruit_alloc)
+    END IF
 
     !> 1.2 Calculate allocation fractions to functional organs
     !!
@@ -2744,7 +2787,20 @@ CONTAINS
         sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
         coarse_root_carbon_inc(:) = 0.0_wp
       END SELECT ! biomass_alloc_scheme
-    !> 1.2.3 default - write and exit
+    !> 1.2.3 crops
+    !!
+    CASE (icrop) ! no optimality for crops
+      leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) &
+        &                              + sap_wood_carbon(:) + root_carbon(:)) &
+        &                              / (1.0_wp + 1._wp / leaf2sapwood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:)), &
+        &                              0.0_wp)
+      root_carbon_inc(:)        = MAX(MIN(b_inc(:), ( leaf_carbon(:) + leaf_carbon_inc(:)) &
+        &                                 / leaf2root_mass_ratio(:) - root_carbon(:)), &
+        &                             0.0_wp)
+      sap_wood_carbon_inc(:)    = MAX(( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:), &
+                                      0.0_wp)
+      coarse_root_carbon_inc(:) = 0.0_wp
+    !> 1.2.4 default - write and exit
     !!
     CASE DEFAULT
       !! Write statement

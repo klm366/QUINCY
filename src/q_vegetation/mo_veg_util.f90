@@ -29,7 +29,8 @@ MODULE mo_veg_util
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
-    &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
+    &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID, &
+    &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -49,11 +50,12 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SH_, Q_AGR_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< model options
@@ -67,6 +69,7 @@ CONTAINS
     INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
     INTEGER                           :: ic, id_elem, i_soil
     INTEGER                           :: ix_comp, ix_elem       !< loop index
+    LOGICAL                           :: config_l_use_pp
 
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: maint_respiration
@@ -121,8 +124,11 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
+    dsl4jsb_Def_mt2L2D :: veg_litter_flux_harvest_mt
+    dsl4jsb_Def_mt1L2D :: veg_pp_flux_harvest_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -139,6 +145,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_config(VEG_)
+    config_l_use_pp     = dsl4jsb_Config(VEG_)%l_use_product_pools
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
@@ -146,6 +154,15 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
+
+    IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+      dsl4jsb_Get_mt2L2D(VEG_BGCM_HARVEST_LITTER_ID, veg_litter_flux_harvest_mt)
+
+      IF (config_l_use_pp) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt)
+      END IF
+
+    END IF
     nr_of_veg_compartments = SIZE(veg_litterfall_mt,1)
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -160,6 +177,9 @@ CONTAINS
           DO ic = 1, nc
             veg_growth_mt(ix_comp,ix_elem,ic)      = zero
             veg_litterfall_mt(ix_comp,ix_elem,ic)  = zero
+            IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+              veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic)      = zero
+            END IF
           END DO
         END DO
         !$ACC END PARALLEL
@@ -168,6 +188,12 @@ CONTAINS
           veg_establishment_mt(ix_elem,ic) = zero
           veg_exudation_mt(ix_elem,ic)     = zero
           veg_reserve_use_mt(ix_elem,ic)   = zero
+
+          IF (config_l_use_pp) THEN
+            IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+              veg_pp_flux_harvest_mt(ix_elem,ic)      = zero
+            END IF
+          END IF
         END DO
         !$ACC END PARALLEL
       END IF

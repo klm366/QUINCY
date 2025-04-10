@@ -364,7 +364,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling','quincy_12_pfts')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_12_pfts', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
