@@ -47,7 +47,7 @@
 # 12: TrC:  C4 crop
 # 13: BSO:  bare soil
 # 14: UAR:  urban area
-# 15: CSH:  cold shrubs                             
+# 15: CSH:  evergreen (needleleaf) cool low shrubs                             
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 15 # number of landcover types
@@ -162,11 +162,11 @@ tau_fine_root 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
 #tau_coarse_root: average turnover time of a coarse root (years), Ahrens et al. 2014, NP        
 tau_coarse_root 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0
         
-#tau_branch: turnover time of the fraction of sapwood that is in branches (years)        
-tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0
+#tau_branch: turnover time of the fraction of sapwood that is in branches (years), for shrub based on higher sapwood fraction        
+tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 50.00
         
-#tau_sap_wood: turnover time of the sapwood pool (years)        
-tau_sap_wood 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0
+#tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species: 10-20 yr )         
+tau_sap_wood 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 100.0
         
 #tau_fruit: turnover time of the fruit pool (years)        
 tau_fruit 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
@@ -222,11 +222,11 @@ beta_soil_flush 0.0 0.0 0.85 0.0 0.0 0.0 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75
 #beta_soil_senescence: soil moisture limitation factor on stomatal conductance inducing leaf senescence        
 beta_soil_senescence 0.0 0.0 0.3 0.0 0.0 0.0 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.0
         
-#gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
-gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0 20.0 40.0 20.0 40.0 40.0 40.0 0.0
+#gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling, for cool shrub: parameter h of Fu et al. 2014 is used        
+gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0 20.0 40.0 20.0 40.0 40.0 40.0 400.0
         
-#k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
-k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0
+#k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1), for cool shrub: parameter w of Fu et al. 2014 is used        
+k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.1
         
 #t_air_senescence: weekly air temperature threshold inducing senescence of leaves ( degC)        
 # converted internally to K        
@@ -239,8 +239,8 @@ min_leaf_age 10 10 10 50 10 10 10 10 10 10 10 10 10 10 10
 # Allocation paramters        
 #        
         
-#frac_sapwood_branch: fraction of sapwood that is in branches         
-frac_sapwood_branch 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.05
+#frac_sapwood_branch: fraction of sapwood that is in branches, sapwood that is turned to litter        
+frac_sapwood_branch 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.5
         
 #wood_density: wood density (g C / cm3)        
 # converted internally from g/cm3 to mol C m-3        
@@ -259,8 +259,8 @@ k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #k2_fruit_alloc: maximum fraction of biomass growth going to fruits         
 k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.1
         
-#allom_k1: paramter in height diameter relationship, Thum et al. 2019,  (shrub parameter from Zhang et al., 2013, but not consistent with the others)       
-allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 10.0 # or 4 ?  CHANGED from 55.0
+#allom_k1: paramter in height diameter relationship, Thum et al. 2019,  (=allom_k2 from Zhang et al., 2013?, but not consistent with the others)       
+allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 4.0 # ?  CHANGED from 55.0
         
 #allom_k2: paramter in height diameter relationship, Thum et al., 2019 (~kallom3 in Zhang et al. 2013)       
 allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.67
@@ -319,3 +319,12 @@ AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 
 
 #AlbedoLitterNIR: Albedo of litter in the near infrared range                     
 AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.20
+
+#VegRoughness: Vegetation roughness length [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero, for shrubs Li et al. (2017)
+VegRoughness 2.0 1.0 1.0 1.0 1.4 1.4 0.5 0.5 0.5 0.5 0.5 0.5 0.005 1.0 0.2
+
+#MinVegRoughness: Vegetation roughness length at LAI=1 [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
+MinVegRoughness 2.0 1.0 1.0 1.0 1.0 1.0 0.005 0.005 0.005 0.005 0.005 0.005 0.005 1.0 0.05
+
+#MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
+MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.5
