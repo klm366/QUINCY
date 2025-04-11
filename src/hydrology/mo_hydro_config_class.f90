@@ -77,20 +77,23 @@ MODULE mo_hydro_config_class
       & l_ponds                 !< Representation of local depressions that might hold additional surface water
     INTEGER               ::  &
       & soilhydmodel,         & !< Soil hydrological model to calculate soil hydraulic properties:</br>
-                                !< 1: 'VanGenuchten' - van Genuchten (default)</br>
-                                !< 2: 'BrooksCorey' - Brooks and Corey</br>
-                                !< 3: 'Campbell' - Campbell
-      & interpol_mean,        & !< Interpolation scheme for diffusivity and conductivity at layer interfaces:</br>
-                                !< 1: 'Upstream' - upstream (default)</br>
-                                !< 2: 'Arithmetic' - arithmetic mean
-      & pond_dynamics,        & !< Pond dynamics scheme (i.e. depth-area scaling):</br>
+                                !< 1: 'VanGenuchten' - van Genuchten (1980) (default)</br>
+                                !< 2: 'BrooksCorey' - Brooks and Corey (1964)</br>
+                                !< 3: 'Campbell' - Campbell (ref???)
+      & interpol_mean,        & !< Interpolation scheme for hydraulic conductivity (K) and conductivity (C)
+                                !< at layer interfaces:</br>
+                                !< 1: 'Upstream' - for K use value of the upper layer and for D the higher
+                                !< value of the two layers (default)</br>
+                                !< 2: 'Arithmetic' - for K and D calculate arithmetic means of upper and
+                                !< lower layer values
+      & pond_dynamics,        & !< Pond dynamics scheme (i.e. scaling between of pond area and pond depth):</br>
                                 !< 1: 'Quadratic' - quadratic scaling </br>
                                 !< 2: 'Tanh' - scaling with tangent hyperbolicus (default)
       & hydro_scale,          & !< Assumed effective scale of the process calculations</br>
                                 !< 1: 'semi_distributed': usage of the ARNO scheme assuming sub-grid scale topographic
                                 !<    variations (default)</br>
-                                !< 2: 'uniform': assume uniform soil moisture distribution for the tile
-                                !<   (e.g. for applications like HydroTiles, HighRes or sitelevel)
+                                !< 2: 'uniform': assume uniform soil moisture distribution for the tile,
+                                !<   e.g. for applications like HydroTiles, HighRes or sitelevel
       & enforce_water_budget    !< Logging level in case of water balance violations in the HYDRO process - rules out
                                 !< [[t_jsb_model_config:enforce_water_budget]] set in namelist 'jsb_model_nml' handling
                                 !< water balance issues of all ICON-Land processes.</br>
