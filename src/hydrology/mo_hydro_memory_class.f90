@@ -11,6 +11,23 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Memory definition of the hydrology process
+!>
+!> The module defines the data structure [[t_hydro_memory]] that contains the hydrology
+!> memory. Each tile of the HYDRO process has its own copy of this memory.
+!> All hydrology variables that are needed in restart files or might be potential
+!> output variables have to be defined here. Variables added to the structure
+!> are easily accessible in the process routines of the HYDRO and other processes, as
+!> e.g. with 'dsl4jsb_Get_var2D_onChunk(HYDRO_, water_stress)' for using variable
+!> 'water_stress'.
+!>
+!> Note: The machinery behind the memory allocation takes care, that variables are
+!> available for different MPI processes.
+!>
+!> Subroutine [[Init_hydro_memory]] is a type-bound procedure of [[t_hydro_memory]]. It is
+!> is called within the initilaization phase from [[mo_jsb_init:jsbach_init]] for all
+!> tiles of the HYDRO process (compare 'CALL tile%Init(...)').
+!>
 MODULE mo_hydro_memory_class
 #ifndef __NO_JSBACH__
 
