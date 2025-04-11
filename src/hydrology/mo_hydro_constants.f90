@@ -27,7 +27,7 @@
 !>
 !> Parametrization of runoff/drainage
 !>
-!> - Todini, E., The ARNO rainfall—runoff model, Journal of Hydrology 175 (1996) 339-382
+!> - Todini, E., The ARNO rainfall-runoff model, Journal of Hydrology 175 (1996) 339-382
 !>   [DOI](https://doi.org/10.1016/S0022-1694(96)80016-30)
 !> - Duemenil, L., & Todini, E. (1992). A rainfall-runoff scheme for use in the Hamburg climate model.
 !>   In J. P. O'Kane (Ed.), Advances in Theoretical Hydrology: A tribute to James Dooge (pp. 129-157).
@@ -41,7 +41,7 @@
 !> Parametrization of organic soil components
 !>
 !> - Letts, M.G. et al. (2000): Parametrization of peatland hydraulic properties for the Canadian
-!>   land surface scheme. Atmosphere-Ocean, 38(1), 141–160. [DOI](https://doi.org/10.1080/07055900.2000.9649643)
+!>   land surface scheme. Atmosphere-Ocean, 38(1), 141-160. [DOI](https://doi.org/10.1080/07055900.2000.9649643)
 !> - Chadburn, S.E., et al. (2022): A new approach to simulate peat accumulation, degradation and
 !>   stability in a global land surface scheme (JULES vn5. 8_accumulate_soil) for northern and temperate
 !>   peatlands, Geoscientific Model Development 15.4, 1633-1657.
@@ -49,10 +49,10 @@
 !> Hydaulic conductivity
 !>
 !> - Clapp, R.B. and Hornberger, G.M. (1978): Empirical equations for some soil hydraulic properties.
-!>   Water Resour. Res. 14(4): 601–604Clapp and Hornberger
+!>   Water Resour. Res. 14(4): 601-604 [DOI](https://doi.org/10.1029/WR014i004p00601)
 !> - Freeze, R.A. and Cherry, J.A. (1979): Groundwater, ISBN: 0-13-365312-9
 !> - Van Genuchten, M. T. (1980): A closed-form equation for predicting the hydraulic conductivity of
-!>   unsaturated soils. Soil Sci. Soc. Am. J. 44: 892–898.
+!>   unsaturated soils. Soil Sci. Soc. Am. J. 44: 892-898.
 !> - Brooks, R.H. and Corey, A.T. (1964): Hydraulic properties of porous media. Hydrology Paper No.3,
 !>   Civil Engineering Department, Colorado State University, Fort Collins, CO.
 !> - Olsen, K.W. et al. (2013): Technical Description of version 4.5 of the Community Land Model (CLM),
