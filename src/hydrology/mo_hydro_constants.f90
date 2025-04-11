@@ -28,8 +28,8 @@
 !> Parametrization of runoff/drainage
 !>
 !> - Todini, E., The ARNO rainfall—runoff model, Journal of Hydrology 175 (1996) 339-382
-!>   [link](https://doi.org/10.1016/S0022-1694(96)80016-30)
-!> - Dümenil, L., & Todini, E. (1992). A rainfall-runoff scheme for use in the Hamburg climate model.
+!>   [DOI](https://doi.org/10.1016/S0022-1694(96)80016-30)
+!> - Duemenil, L., & Todini, E. (1992). A rainfall-runoff scheme for use in the Hamburg climate model.
 !>   In J. P. O'Kane (Ed.), Advances in Theoretical Hydrology: A tribute to James Dooge (pp. 129-157).
 !>   Amsterdam: Elsevier Science Publishers B.V.
 !>
@@ -41,7 +41,7 @@
 !> Parametrization of organic soil components
 !>
 !> - Letts, M.G. et al. (2000): Parametrization of peatland hydraulic properties for the Canadian
-!>   land surface scheme. Atmosphere-Ocean, 38(1), 141–160. [link](https://doi.org/10.1080/07055900.2000.9649643)
+!>   land surface scheme. Atmosphere-Ocean, 38(1), 141–160. [DOI](https://doi.org/10.1080/07055900.2000.9649643)
 !> - Chadburn, S.E., et al. (2022): A new approach to simulate peat accumulation, degradation and
 !>   stability in a global land surface scheme (JULES vn5. 8_accumulate_soil) for northern and temperate
 !>   peatlands, Geoscientific Model Development 15.4, 1633-1657.
@@ -56,7 +56,7 @@
 !> - Brooks, R.H. and Corey, A.T. (1964): Hydraulic properties of porous media. Hydrology Paper No.3,
 !>   Civil Engineering Department, Colorado State University, Fort Collins, CO.
 !> - Olsen, K.W. et al. (2013): Technical Description of version 4.5 of the Community Land Model (CLM),
-!>   [link](https://doi.org/10.5065/D6RR1W7M)
+!>   [DOI](https://doi.org/10.5065/D6RR1W7M)
 !>
 MODULE mo_hydro_constants
 #ifndef __NO_JSBACH__
