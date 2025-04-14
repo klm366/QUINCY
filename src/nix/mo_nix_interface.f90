@@ -42,7 +42,7 @@ MODULE mo_nix_interface
   dsl4jsb_Use_config(NIX_)
 
   ! Use of process memories
-
+  dsl4jsb_Use_memory(NIX_)
 
 
   ! -------------------------------------------------------------------------------------------------------
@@ -122,22 +122,39 @@ CONTAINS
 
 
     ! Declare pointers to process configs and memory
+    dsl4jsb_Def_memory(NIX_)
+
+   ! Declare pointers for variables in memory - 3D
+    dsl4jsb_Real3D_onChunk :: &
+      & t_sn
+
 
 
     ! Declare local variables
-    INTEGER :: iblk
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nix_layering'
 
     ! Get local variables from options argument
     iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
 
+    model => Get_model(tile%owner_model_id)
 
-
+    ! Get fields from memory
+    dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)  !< inout
     ! ---------------------------
     ! Go
 
-    CALL calc_nix_layering()
+
+
+    CALL calc_nix_layering( &
+      & nc,                 &
+      & t_sn(:,:)           &
+      & )
 
     ! Clean up and finish
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')

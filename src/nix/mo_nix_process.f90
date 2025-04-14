@@ -26,14 +26,30 @@ CONTAINS
   ! Compute snow cover layering - NIX
   !--------------------------------------------------------------------  
 
-  SUBROUTINE calc_nix_layering()
+  SUBROUTINE calc_nix_layering(  &
+    & nc,        &
+    & t_sn       &           !< snow layer temperature - element     
+    & )    
+
+    INTEGER, INTENT(in)  :: nc                      !< dimensions
+
+    REAL(wp), INTENT(INOUT), DIMENSION(:,:) :: &
+      & t_sn
+
+    ! Local
+    INTEGER  :: ic                              ! iteration over grid points
+
 
     ! ---------------------------
     ! Go
+    CALL message (TRIM(modname), ' Running NIX layering!')
 
-    CALL message (TRIM(modname), '  Hello NIX!')
 
-!    WRITE(message_text, *) 'Hello NIX!'
+    DO ic = 1,nc
+
+      WRITE(*,*), 'NIX CALC LAYERING',  t_sn(ic,1:3)
+
+    END DO
 
 
   END SUBROUTINE calc_nix_layering        

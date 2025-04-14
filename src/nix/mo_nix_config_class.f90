@@ -33,10 +33,15 @@ MODULE mo_nix_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_nix_config
 
-  ! Logicals
-  LOGICAL ::    &
-    & lnix               ! TRUE:  NIX is switched on
-                         ! FALSE: NIX is switched off     
+!  ! Logicals
+!  LOGICAL ::    &
+!    active                    !< TRUE:  NIX is switched on 
+                               !< FALSE: NIX is switched off     
+
+  INTEGER ::    &
+    nlev_sn                     !< Maximum number of snow layers
+
+
 
   CONTAINS
 
@@ -65,13 +70,19 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
 
-    LOGICAL  :: active
+    LOGICAL :: active
+
+    INTEGER :: nlev_sn
 
     NAMELIST /jsb_nix_nml/ &
-      active                    ! main switch for NIX, TRUE: ON; FALSE: OFF
+      & active,                &
+      & nlev_sn                 
 
 
     INTEGER :: nml_handler, nml_unit, istat
+
+    TYPE(t_jsb_vgrid), POINTER :: snow_vgrid
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nix_config'
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -80,6 +91,8 @@ CONTAINS
       ! ----------------------------------------------------------------------------------------------------- !
       ! Set defaults
       active          = .FALSE.
+      nlev_sn         = 10
+
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! Read namelist
@@ -88,11 +101,21 @@ CONTAINS
       nml_unit = position_nml('jsb_nix_nml', nml_handler, STATUS=istat)
       IF (istat == POSITIONED) READ(nml_unit, jsb_nix_nml)
 
-        CALL close_nml(nml_handler)
+      CALL close_nml(nml_handler)
       
-        ! ----------------------------------------------------------------------------------------------------- !
-        ! Write namelist values into config
+      ! ----------------------------------------------------------------------------------------------------- !
+      ! Write namelist values into config FIXME: This would also be the place for call's to finish incase settings don't work
+      !                                          compare sse_config
         config%active     = active
+        config%nlev_sn    = nlev_sn 
+
+      ! ----------------------------------------------------------------------------------------------------- !
+      ! Add NIX specific vertical grid
+
+      snow_vgrid  => new_vgrid('nix_vgrid', ZAXIS_GENERIC, nlev_sn, units='m')
+      
+      CALL register_vgrid(snow_vgrid)
+
        
   END SUBROUTINE Init_nix_config
 

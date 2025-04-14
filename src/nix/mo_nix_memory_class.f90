@@ -20,6 +20,12 @@ MODULE mo_nix_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
+  ! Use of prcesses in this module
+  dsl4jsb_Use_processes NIX_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(NIX_)
+
   IMPLICIT NONE
   PRIVATE
 
@@ -62,13 +68,12 @@ CONTAINS
     INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
+    dsl4jsb_Def_config(NIX_)
+
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface, snow_layer        !< Vertical grids
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
+    TYPE(t_jsb_vgrid), POINTER  :: surface, snow_layer          !< Vertical grids
     INTEGER                     :: table                        !< ...
-    LOGICAL                     :: l_ponds
-    LOGICAL                     :: l_ice_on_lakes_local         !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nix_memory'
 
@@ -78,7 +83,7 @@ CONTAINS
     table        =  tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    snow_layer   => Get_vgrid('snow_depth_energy')
+    snow_layer   => Get_vgrid('nix_vgrid')
 
       ! Prognostic variables - FIXME: Number of layers should correspond to nlev_sn, which is set by nml parameter 
       CALL mem%Add_var('t_sn', mem%t_sn,                                &
