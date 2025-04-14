@@ -47,7 +47,7 @@ CONTAINS
 
     DO ic = 1,nc
 
-      WRITE(*,*), 'NIX CALC LAYERING',  t_sn(ic,1:3)
+      WRITE(*,*) 'NIX CALC LAYERING',  t_sn(ic,1:3)
 
     END DO
 

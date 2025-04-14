@@ -144,6 +144,9 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    ! Get memory
+    dsl4jsb_Get_memory(NIX_)
+
     ! Get fields from memory
     dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)  !< inout
     ! ---------------------------
