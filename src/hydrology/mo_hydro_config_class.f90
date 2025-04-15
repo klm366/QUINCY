@@ -38,6 +38,10 @@ MODULE mo_hydro_config_class
   !> The data structure contains all configurable parameters of the HYDRO process. It extends
   !> [[mo_jsb_config_class:t_jsb_config]], a data structure containing basic parameters defined
   !> for all ICON-Land processes.
+  !>
+  !> _Note for the ford documentation_: The table lists the general parameters of
+  !> [[mo_jsb_config_class:t_jsb_config]] as well as the parameters specific to the hydrology
+  !> actually defined in [[t_hydro_config]].
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename   !< Name of input file with orographic maps
     CHARACTER(len=filename_max) :: ic_moist_filename !TODO: remove
@@ -100,7 +104,7 @@ MODULE mo_hydro_config_class
                                 !< default: 'unset': use setting from namelist 'jsb_model_nml'</br>
                                 !< 0: 'ignore':  short, one-line warning,</br>
                                 !< 1: 'logging': detailed debugging output,</br>
-                                !< 2: 'error':   detailed debugging output and model stop
+                                !< 2: 'error':   debugging output and model stop
 
 
   CONTAINS
@@ -117,7 +121,8 @@ CONTAINS
   !>
   !> In this subroutine we configure the hydrolology process based on the [[jsb_hydro_nml]]
   !> parameter settings. Init_hydro_config is a type-bound procedure of [[t_hydro_config]].
-  ! TODO: Where/when is it called?
+  !> It is called during initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
+  !> ('CALL this%processes(iproc)%p%Configure()').
   !>
   !> _Note_: For a more extensive documentation of the namelist parameters please check the
   !> configuration data type [[t_hydro_config]].

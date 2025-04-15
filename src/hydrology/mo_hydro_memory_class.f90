@@ -14,19 +14,20 @@
 !>#### Memory definition of the hydrology process
 !>
 !> The module defines the data structure [[t_hydro_memory]] that contains the hydrology
-!> memory. Each tile of the HYDRO process has its own copy of this memory.
-!> All hydrology variables that are needed in restart files or might be potential
-!> output variables have to be defined here. Variables added to the structure
-!> are easily accessible in the process routines of the HYDRO and other processes, as
-!> e.g. with 'dsl4jsb_Get_var2D_onChunk(HYDRO_, water_stress)' for using variable
-!> 'water_stress'.
+!> memory. Each tile of the HYDRO process has its own version of this memory.
+!> Variables added to the structure are easily accessible in the process routines of the
+!> HYDRO and other processes, e.g. with 'dsl4jsb_Get_var2D_onChunk(HYDRO_, water_stress)'
+!> for using variable 'water_stress'.
 !>
-!> Note: The machinery behind the memory allocation takes care, that variables are
-!> available for different MPI processes.
+!> With the [[t_jsb_memory:Add_var]] calls, memory is allocated for
+!> the global variable arrays on CPUs. It is also ensured that the correct variable
+!> patches are available on different MPI processes, and the variable is made available
+!> on GPUs, in case the model is compiled to be run on GPUs.
+!> Besides, calling [[t_jsb_memory:Add_var]] enables writing selected variables to output
+!> files and adds the necessary variables to the list of restart file variables.
 !>
 !> Subroutine [[Init_hydro_memory]] is a type-bound procedure of [[t_hydro_memory]]. It is
-!> is called within the initilaization phase from [[mo_jsb_init:jsbach_init]] for all
-!> tiles of the HYDRO process (compare 'CALL tile%Init(...)').
+!> is called within the initialization phase for all tiles of the HYDRO process.
 !>
 MODULE mo_hydro_memory_class
 #ifndef __NO_JSBACH__
@@ -61,162 +62,174 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 111
+  INTEGER, PARAMETER :: max_no_of_vars = 111   !< Maximum number of 'Add_var' calls in this module
 
-  !> Type definition for memory
+  !> Memory of the HYDRO process:
+  !> _Note for the ford documentation_: The table lists the general jsbach memory variables
+  !>   ([[t_jsb_memory]]) as well as its extension by the HYDRO process variables.
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow,           & !< Snow fraction of tile                                                []
-      & weq_snow,             & !< Water content of snow reservoir                                      [m water equivalent]
-      & evapo_snow,           & !< Evaporation from snow                                                [kg m-2 s-1]
-      & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
-      & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
-      & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
-                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
-      & fract_pond,           & !< Fraction of tile assumed inundated at given water level              []
-      & fract_pond_max,       & !< Maximum fraction of tile assumed inundated at maximum water level    []
-      & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
-      & weq_pond_max,         & !< Maximum water content of pond reservoir                              [m water equivalent]
-      & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
-      & pond_melt,            & !< Melting of ice in pond reservoir                                     [kg m-2 s-1]
-      & pond_freeze,          & !< Freezing of liquid water in pond reservoir                           [kg m-2 s-1]
-      & wtr_pond_net_flx,     & !< Net water flux into pond storage                                     [kg m-2 s-1]
-      & ice_pond,             & !< Frozen water content of pond reservoir                               [m water equivalent]
-      & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
-      & weq_land,             & !< Total amount of land water and ice                                   [m3]
-      & weq_balance_err,      & !< Land water balance error within a time step                          [m3/(time step)]
-      & weq_balance_err_count   !< Amount of time steps with water balance error                        [-]
+      & fract_snow,           & !< Snow area fraction (not including snow on canopy)     []
+      & weq_snow,             & !< Snow amount (including snow on canopy)                [m water equivalent]
+      & evapo_snow,           & !< Evaporation from snow                                 [kg m-2 s-1]
+      & snowmelt,             & !< Snow melt                                             [kg m-2 s-1]
+      & evapopot,             & !< Potential evaporation                                 [kg m-2 s-1]
+      & evapotrans,           & !< Evapotranspiration                                    [kg m-2 s-1]
+      & fract_pond,           & !< Inudated area fraction (area of temporary ponds)      []
+      & fract_pond_max,       & !< Maximum possible inudated tile fraction               []
+      & weq_pond,             & !< Water content of pond reservoir                       [m water equivalent]
+      & weq_pond_max,         & !< Maximum water content of pond reservoir               [m water equivalent]
+      & wtr_pond,             & !< Liquid water content of pond reservoir                [m water equivalent]
+      & pond_melt,            & !< Melting of ice in pond reservoir                      [kg m-2 s-1]
+      & pond_freeze,          & !< Freezing of liquid water in pond reservoir            [kg m-2 s-1]
+      & wtr_pond_net_flx,     & !< Net water flux into pond reservoir                    [kg m-2 s-1]
+      & ice_pond,             & !< Frozen water content of pond reservoir                [m water equivalent]
+      & weq_fluxes,           & !< Sum of all land water fluxes; needed to test water conservation   [m3/s]
+      & weq_land,             & !< Total amount of land water and ice                    [m3]
+      & weq_balance_err,      & !< Land water balance error within a time step           [m3/(time step)]
+      & weq_balance_err_count   !< Number of time steps with water balance error         []
 
     TYPE(t_jsb_var_real2d) :: &
-      & infilt,               & !< Infiltration
-      & runoff,               & !< Surface runoff
-      & runoff_horton,        & !< Horton component of surface runoff (infiltration excess)
-      & runoff_dunne,         & !< Dunne component of surface runoff (saturation excess)
-      & drainage,             & !< Total subsurface drainage
-      & discharge,            & !< Discharge (local)
-      & discharge_ocean,      & !< Discharge to the ocean
-      & internal_drain          !< Internal drain
+      & infilt,               & !< Infiltration                                          [kg m-2 s-1]
+      & runoff,               & !< Surface runoff                                        [kg m-2 s-1]
+      & runoff_horton,        & !< Horton component of surface runoff (infiltration excess)   [kg m-2 s-1] TODO: Reference?
+      & runoff_dunne,         & !< Dunne component of surface runoff (saturation excess)      [kg m-2 s-1] TODO: Reference?
+      & drainage,             & !< Total (subsurface) drainage                           [kg m-2 s-1]
+      & discharge,            & !< Discharge (local)                                     [m3 s-1]
+      & discharge_ocean,      & !< Discharge to the ocean                                [m3 s-1]
+      & internal_drain          !< Internal drainage                                     [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
-      & elevation,            & !< Elevation
-      & oro_stddev,           & !< Standard deviation of orography
-      & steepness               !< Parameter defining the subgrid slope distribution [/]
+      & elevation,            & !< Topographic height                                    [m]
+      & oro_stddev,           & !< Standard deviation of the orography                   [m]
+      & steepness               !< Parameter defining sub-grid scale slope               []
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_soil,      & !< Snow fraction on soil                                               []
-      & weq_snow_soil,        & !< Water content of snow reservoir of soil                             [m water equivalent]
-      & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
-      & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
-      & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
+      & fract_snow_soil,      & !< Snow fraction on soil or glacier                      []
+      & weq_snow_soil,        & !< Amount of snow on soil                                [m water equivalent]
+      & snow_soil_dens,       & !< Density of snow on soil                               [kg m-3]
+      & evapotrans_lnd,       & !< Evapotranspiration of vegetation and bare soil        [kg m-2 s-1]
+      & q_snocpymlt             !< Heating needed for melting snow on canopy ????        [W m-2]
 
     ! Additional variables for soil
-
-    ! Parameters
     TYPE(t_jsb_var_real3d) :: &
-      & soil_depth_sl,        & !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
-      & fract_org_sl            !< Fractions of organic material in soil layers                        []
+      & soil_depth_sl,        & !< Depth of each soil layer until bedrock                [m]
+      & fract_org_sl            !< Fractions of organic material in soil layers          []
     TYPE(t_jsb_var_real2d) :: &
-      & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
-      & wpi_rootzone_max ,    & !< Maximum amount of water or ice in the root zone                     [m]
-      & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
-      & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
-      & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
-      & vol_wres,             & !< Volumetric residual water content                                   [m/m]
-      & pore_size_index,      & !< Soil pore size distribution index                                   []
-      & bclapp,               & !< Exponent B in Clapp and Hornberger
-      & matric_pot,           & !< Soil matric potential [m]
-      & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
+      & soil_depth,           & !< Soil depth until bedrock                              [m]
+      & wpi_rootzone_max ,    & !< Maximum amount of water or ice in the root zone       [m]
+      & vol_field_cap,        & !< Volumetric soil field capacity                        [m/m]
+      & vol_p_wilt,           & !< Volumetric permanent wilting point                    [m/m]
+      & vol_porosity,         & !< Volumetric porosity of mineral soil                   [m/m]
+      & vol_wres,             & !< Volumetric residual water content                     [m/m]
+      & pore_size_index,      & !< Soil pore size distribution index                     []
+      & bclapp,               & !< Exponent B in Clapp and Hornberger                    []
+      & matric_pot,           & !< Soil matric potential                                 [m]
+      & hyd_cond_sat            !< Saturated hydraulic conductivity                      [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_wet,            & !< Wet (skin and pond reservoir) fraction of tile (soil and canopy)         []
-      & fract_skin,           & !< Wet skin reservoir fraction of tile (soil and canopy)                    []
-      & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)                        [m]
-      & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
-      & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
-      !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
-      & evapo_pond,           & !< Evaporation from pond reservoir w/o snow and skin evaporation            [kg m-2 s-1]
-      & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
-      & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
-      & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
-      & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme                         [m]
-      & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
-      & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
-      & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
-      & wtr_latflow_res_srf,  & !< Water content of latflow res. srf.                                       [m]
-      & wtr_latflow_srf         !< Outflow from latflow res. srf                                            [kg m-2 s-1]
+      & fract_wet,            & !< Wet tile fraction (skin and ponds; soil and canopy)   []
+      & fract_skin,           & !< Wet skin fraction (w/o ponds; soil and canopy)        []
+      & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)     [m]
+      & snow_accum,           & !< Change in snow amount on non-glacier/non-lake land
+                                !< tiles                                   [m water equivalent / (time step)]
+      & evapotrans_soil,      & !< Evapotranspiration from soil (w/o snow, skin or pond
+                                !< evaporation)                                          [kg m-2 s-1]
+      & evapo_pond,           & !< Evaporation from pond reservoir                       [kg m-2 s-1]
+      & evapo_skin,           & !< Evaporation from skin reservoir                       [kg m-2 s-1]
+      & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent
+                                !< treatment of snow evaporation           [m water equivalent / (time step)]
+      & water_to_soil,        & !< Water available for infiltration into the soil        [m water equivalent]
+      & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme      [m]
+      & tpe_overflow,         & !< Water content of terraplanet reservoir for soil water
+                                !< overflow                                              [m]
+      & wtr_rootzone,         & !< Liquid water content in the root zone                 [m]
+      & wtr_rootzone_rel,     & !< Water content of the root zone relative to the maximum
+                                !< possible water content                                []
+      & wtr_latflow_res_srf,  & !< Water content of intermediary reservoir representing
+                                !< lateral flow of surface runoff (only with
+                                !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
+      & wtr_latflow_srf         !< Outflow from the intermediary reservoir representing
+                                !< lateral flow of surface runoff                        [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
-      & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
-      & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
-      & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
-      & vol_wres_sl,          & !< Volumetric residual water content                                        [m/m]
-      & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
-      & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
-      & matric_pot_sl,        & !< Soil matric potential                                                    [m]
-      & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
-      & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
-      & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
-      & vol_weq_soil_sl,      & !< Volumetric water equivalent (liquid+ice) in soil layers                  [m3 m-3]
-                                !  Based on fixed soil layer thickness, ignoring bedrock depth
-      & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
-      & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
-      & drainage_sl,          & !< Subsurface drainage from soil layers                                     [kg m-2 s-1]
-      & wtr_transp_down,      & !< Lateral water transport into next-deeper soil layer                      [kg m-2 s-1]
-      & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
-      & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
-      & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice) [m]
-      & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice)            [m]
-      & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
-      & wtr_latflow_res_sl,   & !< Water content of latflow res. on soil layers                             [m]
-      & wtr_latflow_sl          !< Outflow from latflow res. on soil layers                                 [kg m-2 s-1]
+      & vol_field_cap_sl,     & !< Volumetric soil field capacity                        [m/m]
+      & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                    [m/m]
+      & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                   [m/m]
+      & vol_wres_sl,          & !< Volumetric residual water content                     [m/m]
+      & pore_size_index_sl,   & !< Soil pore size distribution index                     []
+      & bclapp_sl,            & !< Exponent B in Clapp and Hornberger                    []
+      & matric_pot_sl,        & !< Soil matric potential                                 [m]
+      & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                      [m/s]
+      & wtr_soil_sl,          & !< Water content in soil layers                          [m]
+      & ice_soil_sl,          & !< Ice content in soil layers                            [m]
+      & vol_weq_soil_sl,      & !< Volumetric water content (liquid+ice) in soil
+                                !< layers (Water content below bedrock depth is zero.)   [m3/m3]
+    !TODO: check unit: s-1 or per time step?? (compare frozen/melt in water balance test of mo_sse_precess.f90)
+      & wtr_freeze_sl,        & !< Freezing water in soil layers                         [kg m-2 s-1]
+      & ice_melt_sl,          & !< Melting ice in soil layers                            [kg m-2 s-1]
+      & drainage_sl,          & !< Subsurface drainage from soil layers                  [kg m-2 s-1]
+      & wtr_transp_down,      & !< Lateral water transport into the below soil layer     [kg m-2 s-1]
+      & wtr_soil_sat_sl,      & !< Soil water content at saturation (calculated from
+                                !< soil porosity, reduced by ice)                        [m]
+      & wtr_soil_fc_sl,       & !< Water content at field capacity (reduced by ice)      [m]
+      & wtr_soil_pwp_sl,      & !< Water content at perm. wilting point (reduced by ice) [m]
+      & wtr_soil_res_sl,      & !< Residual soil water content (reduced by ice)          [m]
+      & wtr_soil_pot_scool_sl,& !< Potential amount of supercooled water                 [m]
+      & wtr_latflow_res_sl,   & !< Water content of intermediary reservoir representing
+                                !< lateral flow of subsurface runoff (only with
+                                !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
+      & wtr_latflow_sl          !< Outflow from the intermediary reservoir representing
+                                !< lateral flow of subsurface runoff                     [kg m-2 s-1]
+
     ! Additional variables for PFT lct_type
-
-    ! Parameters
     TYPE(t_jsb_var_real3d) ::   &
-      & root_depth_sl             !< Rooted depth per soil layer (until rooting depth) [m]
+      & root_depth_sl             !< Rooted depth per soil layer (until rooting depth)   [m]
     TYPE(t_jsb_var_real2d) ::   &
-      & root_depth,             & !< Rooting depth [m]
-      & fract_snow_can,         & !< Snow fraction on canopy                                                  []
-      & weq_snow_can,           & !< Snow amount on canopy                                                    [m water equivalent]
-      & ice_rootzone,           & !< Ice content of the root zone (not water equivalent!)                     [m]
-      & wtr_rootzone_scool_pot, & !< Potential amount of suppercooled water in the root zone                  [m]
-      & wtr_rootzone_scool_act, & !< Suppercooled water content in root zone                                  [m]
-      & wtr_rootzone_avail,     & !< Plant available water content in root zone                               [m]
-      & wtr_rootzone_avail_max, & !< Maximum plant available water content in the root zone                   [m]
-      & water_stress,           & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
-      & canopy_cond_unlimited,  & !< Canopy conductance without water limit  [m/s] (mean value)
-      & canopy_cond_limited,    & !< Canopy conductance with water limit [m/s] (mean value)
-      & transpiration             !< Transpiration
+      & root_depth,             & !< Rooting depth                                       [m]
+      & fract_snow_can,         & !< Snow fraction on canopy                             []
+      & weq_snow_can,           & !< Snow amount on canopy                               [m water equivalent]
+      & ice_rootzone,           & !< Ice content of the root zone (not water equivalent) [m]
+      & wtr_rootzone_scool_pot, & !< Potential amount of supercooled water in the root   [m]
+                                  !< zone
+      & wtr_rootzone_scool_act, & !< Supercooled water content in root zone              [m]
+      & wtr_rootzone_avail,     & !< Plant available water content in root zone          [m]
+      & wtr_rootzone_avail_max, & !< Maximum plant available water content in root zone  [m]
+      & water_stress,           & !< Water stress factor used in assimilation and
+                                  !< canopy conductance (1: no, 0: infinite stress)      []
+      & canopy_cond_unlimited,  & !< Canopy conductance without water limitation         [m/s]
+      & canopy_cond_limited,    & !< Canopy conductance accounting for water stress      [m/s]
+      & transpiration             !< Transpiration                                       [kg m-2 s-1]
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
-      & weq_glac,             & !< Glacier depth including snow on glacier                                  [m water equivalent]
-      & runoff_glac             !< Runoff from glacier (rain+melt, no calving)                              [m water equivalent]
+      & fract_snow_glac,      & !< Snow fraction on glacier                              []
+      & weq_glac,             & !< Glacier depth (snow is considered as glacier)         [m water equivalent]
+      & runoff_glac             !< Runoff from glacier (rain + ice melt, no calving)     [m water equivalent]
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_glac          !< Glacier fraction of tile                                                 []
+      & fract_glac              !< Glacier fraction                                      []
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & evapo_wtr,            & !< Evaporation over lake water
-      & evapo_ice,            & !< Evaporation over lake ice
-      & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
-      & weq_snow_lice           !< Water content of snow on lake ice                                        [m water equivalent]
+      & evapo_wtr,            & !< Evaporation from lake water                           [kg m-2 s-1]
+      & evapo_ice,            & !< Evaporation from lake ice                             [kg m-2 s-1]
+      & fract_snow_lice,      & !< Snow fraction on lake ice                             []
+      & weq_snow_lice           !< Water content of snow on lake ice                     [m water equivalent]
 
-    ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
+    ! Diagnostic global land means/sums e.g. for monitoring
     TYPE(t_jsb_var_real1d) :: &
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       weq_land_gsum,          & !< Global land water and ice content        [km3]
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
-      wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
+      wtr_rootzone_rel_gmean, & !< Global mean relative root zone moisture  []
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
-      weq_balance_err_gsum      !< Global water balance error sum           [m3/timestep]
+      weq_balance_err_gsum      !< Global sum of water balance error        [m3/(time step)]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -226,6 +239,15 @@ MODULE mo_hydro_memory_class
 
 CONTAINS
 
+  ! ============================================================================================== !
+  !>
+  !>#### Initialization of the hydrology process memory
+  !>
+  !> In this subroutine we initialize the memory of the hydrology process.
+  !> The subroutine is a type-bound procedure of [[t_hydro_memory]]. It is called within the
+  !> initialization phase for all tiles needed by the hydrology process ([[mo_jsb_tile:init_tile]]:
+  !> 'CALL this%mem(iproc)%p%Init(TRIM(process_name), ...)').
+  !>
   SUBROUTINE Init_hydro_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -239,30 +261,33 @@ CONTAINS
 
     USE mo_hydro_constants,        ONLY: Semi_Distributed_, Uniform_
 
-    CLASS(t_hydro_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),      INTENT(in)    :: prefix
-    CHARACTER(len=*),      INTENT(in)    :: suffix
-    INTEGER,               INTENT(in)    :: lct_ids(:)
-    INTEGER,               INTENT(in)    :: lib_id     !< id of primary lct in lctlib
-    INTEGER,               INTENT(in)    :: model_id
+    CLASS(t_hydro_memory), INTENT(inout), TARGET :: mem   !< Memory of the hydrology process
+    CHARACTER(len=*),      INTENT(in)    :: prefix        !< Prefix for variable names in output/restart files,
+                                                          !< i.e. process name
+    CHARACTER(len=*),      INTENT(in)    :: suffix        !< Suffix for variable names in output/restart files,
+                                                          !< i.e. corresponding tile name
+    INTEGER,               INTENT(in)    :: lct_ids(:)    !< Land cover type IDs
+    INTEGER,               INTENT(in)    :: lib_id        !< ID of the tile's primary land cover type (e.g. LAND_TYPE)
+    INTEGER,               INTENT(in)    :: model_id      !< ID of the current model instance
 
-    dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_config(HYDRO_)              !< Configurable settings of the hydrology process
+    dsl4jsb_Def_config(SSE_)                !< Configurable settings of the soil and snow energy process
+    dsl4jsb_Def_config(SEB_)                !< Configurable settings of surface energy balance process
 #ifndef __QUINCY_STANDALONE__
-    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(ASSIMI_)             !< Configurable settings of the assimilation process
 #endif
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
+    TYPE(t_jsb_model), POINTER :: model         !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: hgrid         !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, &    !< Vertical grid for surface variables (vertical dimension = 1)
+      &                           soil_w        !< Vertical grid for soil hydrology
 
-    INTEGER :: table
-    TYPE(t_grib2) :: grib2_desc
+    INTEGER :: table                            !< Grib code table ID
+    TYPE(t_grib2) :: grib2_desc                 !< Grib2 related metadata
 
-    REAL(wp) :: ini_snow_dens
-    LOGICAL  :: l_ponds
-    LOGICAL  :: l_uniform     !< Restart switch for variables used in the uniform-scale soil hydrology parametrization
+    REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
+    LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
+    LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
 
@@ -281,23 +306,31 @@ CONTAINS
     dsl4jsb_Get_config(ASSIMI_)
 #endif
 
+    ! Initial snow density depends on whether or not snow density is to be calculated dynamically
     IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
       ini_snow_dens = dens_snow_min
     ELSE
       ini_snow_dens = dens_snow
     END IF
 
-    ! Set restart switch for variables used in the uniform-scale soil hydrology parametrization
+    ! Define logicals to be used below to exclude some variables from restart file
     IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
       l_uniform = .TRUE.
     ELSE
       l_uniform = .FALSE.
     END IF
-
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
 
-    ! Common variables
 
+    ! Variables defined on all tiles
+    ! -------------------------------
+
+    !> Only a few selected variables are available in grib format. For these variables officiel WMO grib codes
+    !> are defined. However code triplet '255, 255, 255' used for most jsbach output variables is rather
+    !> a placeholder.
+
+    ! Define grib codes for snow fraction if we are on the box tile, i.e. the name of the tile "owning" this
+    ! memory is 'box'.
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,202, grib_bits)
     ELSE
@@ -323,7 +356,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! Total evapotranspiration, including sublimation
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                      &
       & hgrid, surface,                                                                  &
       & t_cf('evapotrans', 'kg m-2 s-1', 'Evapotranspiration, including sublimation'),   &
@@ -333,7 +365,6 @@ CONTAINS
       & output_level=BASIC,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! Potential evapotranspiration/sublimation
     CALL mem%Add_var( 'evapopot', mem%evapopot,                                          &
       & hgrid, surface,                                                                  &
       & t_cf('evapopot', 'kg m-2 s-1', 'Potential evaporation (including sublimation)'), &
@@ -502,7 +533,8 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
-    ! Additional variables for land type
+    ! Additional variables if the tile contains land, i.e. the tile or sub-tiles are land tiles
+    ! ------------------------------------------------
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
@@ -530,7 +562,6 @@ CONTAINS
         & prefix, suffix,                                                            &
         & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
-      ! Total evapotranspiration, including sublimation
       CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
         & hgrid, surface,                                                                                         &
         & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
@@ -573,7 +604,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for soil
+    ! Additional variables if the tile contains soil (i.e. non-glacier land)
+    ! ------------------------------------------------
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
@@ -764,14 +796,6 @@ CONTAINS
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    ! END IF
-
-    ! IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-    !   &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
-    !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-    !   &  )                                       &
-    !   &  .AND. .NOT. ASSOCIATED(mem%fract_wet%ptr) ) THEN
-
       CALL mem%Add_var( 'evapotrans_soil', mem%evapotrans_soil,                &
         & hgrid, surface,                                                      &
         & t_cf('evapotrans_soil', 'kg m-2 s-1',                                &
@@ -933,7 +957,6 @@ CONTAINS
         & prefix, suffix,                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-
       CALL mem%Add_var( 'wtr_latflow_res_sl', mem%wtr_latflow_res_sl,                         &
         & hgrid, soil_w,                                                                      &
         & t_cf('wtr_latflow_res_sl', 'm', 'Water content of latflow res. on soil layers'),    &
@@ -1055,7 +1078,8 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
-    ! Additional variables for vegetation
+    ! Additional variables if the tile contains vegetation
+    ! --------------------------
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -1165,7 +1189,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for GLACIER lct
+    ! Additional variables for tiles containing GLACIER lct
+    ! --------------------------
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -1195,7 +1220,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for LAKE lct
+    ! Additional variables for tiles containing LAKE lct
+    ! --------------------------
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL mem%Add_var( 'evapo_wtr', mem%evapo_wtr,                                &
@@ -1215,7 +1241,6 @@ CONTAINS
           & lrestart=.FALSE.,                                                      &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-        !Fraction of snow on lake ice, rel. to ice fraction
         CALL mem%Add_var( 'fract_snow_lice', mem%fract_snow_lice,                  &
           & hgrid, surface,                                                        &
           & t_cf('fract_snow_lice', '-',                                           &
@@ -1236,8 +1261,8 @@ CONTAINS
 
     END IF
 
-    ! Diagnostic 1d global land variables for experiment monitoring
-    !
+    ! Diagnostic 0 dim. global land variables for experiment monitoring
+    ! ------------------------------------------------------------------
     IF ( TRIM(suffix) == 'box' ) THEN
       CALL mem%Add_var('trans_gmean', mem%trans_gmean,                                   &
         & hgrid, surface,                                                                &
@@ -1283,7 +1308,7 @@ CONTAINS
         & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('weq_balance_err_gsum', mem%weq_balance_err_gsum,                 &
         & hgrid, surface,                                                                &
-        & t_cf('weq_balance_err_gsum', 'm3/timestep', 'Global land water balance error'),&
+        & t_cf('weq_balance_err_gsum', 'm3/(time step)', 'Global land water balance error'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )

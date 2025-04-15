@@ -57,6 +57,8 @@
 !>   Civil Engineering Department, Colorado State University, Fort Collins, CO.
 !> - Olsen, K.W. et al. (2013): Technical Description of version 4.5 of the Community Land Model (CLM),
 !>   [DOI](https://doi.org/10.5065/D6RR1W7M)
+!> - Niu, G. and Yang, Z. (2006): Effects of Frozen Soil on Snowmelt Runoff and Soil Water Storage at a
+!>   Continental Scale. J. Hydrometeor., 7, 937–952, [DOI] https://doi.org/10.1175/JHM538.1.
 !>
 MODULE mo_hydro_constants
 #ifndef __NO_JSBACH__
