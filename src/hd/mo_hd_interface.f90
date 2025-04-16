@@ -420,7 +420,7 @@ CONTAINS
 
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma,nblks), ztemp(nproma,nblks))
-    !$ACC DATA CREATE(in_domain, ztemp)
+    !$ACC DATA CREATE(in_domain, ztemp) ASYNC(acc_stream)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
@@ -494,7 +494,7 @@ CONTAINS
       DO blk = blks, blke
         jcs = grid%get_col_start(blk)
         jce = grid%get_col_end(blk)
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+        !$ACC PARALLEL DEFAULT(PRESENT) NO_CREATE(nidx_upstream, bidx_upstream) ASYNC(acc_stream)
         !$ACC LOOP SEQ
         DO n = 1, nneigh
           !$ACC LOOP GANG VECTOR PRIVATE(jc_us, blk_us)
