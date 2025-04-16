@@ -551,7 +551,7 @@ CONTAINS
         le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
         le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
 
-        IF (phase_change_trgt(ic) <= 0._wp) THEN ! Energy available for melting
+        IF (phase_change_trgt(ic) <= 0._wp) THEN ! Energy required for melting
           IF (ABS(phase_change_trgt(ic)) <= le_melt_pot(ic)) THEN
             le_phase_change(ic) = -phase_change_trgt(ic)
             s_star(ic) = s_trgt(ic)
@@ -561,7 +561,7 @@ CONTAINS
             l_recalc_seb(ic) = .TRUE.
             forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
           END IF
-        ELSE                                     ! Energy required from freezing
+        ELSE                                     ! Energy available from freezing
           IF (phase_change_trgt(ic) <= le_freeze_pot(ic)) THEN
             le_phase_change(ic) = -phase_change_trgt(ic)
             s_star(ic) = s_trgt(ic)
@@ -599,6 +599,11 @@ CONTAINS
           & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
           & fract_snow(ic), heat_cap(ic),                       & ! in
           & s_star(ic))                                           ! out
+      END IF
+
+      ! Fix needed for numerical reasons on grid cells without real land fraction
+      IF (tile_fract_zero(ic)) THEN
+        s_star(ic) = 280._wp * t2s_conv(ic)
       END IF
 
     END DO

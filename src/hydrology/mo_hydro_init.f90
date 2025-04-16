@@ -409,7 +409,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d(                  &
         & variable_name='char_h_srf_ct'//str_conti, &
         & fill_array=hydro_init_vars%char_h_srf(:,:))
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) <= 0._wp)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) /= 0._wp)
       ELSE
         CALL message(routine, 'Running lateral exchange without char_h_srf_ct'//str_conti// &
         & '. Setting value to 0')

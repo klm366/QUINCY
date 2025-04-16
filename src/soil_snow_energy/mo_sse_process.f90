@@ -406,8 +406,7 @@ CONTAINS
     !  local Variables
 
     INTEGER  :: ic, is
-    REAL(wp) :: le_res
-    REAL(wp) :: le_phase(nc), phase_change(nc)
+    REAL(wp) :: le_phase(nc)
     REAL(wp) :: z1(nc,nsoil)
     REAL(wp) :: zd1(nsoil-1)
     REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil), zbot(nsoil)
@@ -485,6 +484,15 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
+      ! Adding top layer energy from phase change (from SEB). 
+      ! Actual freezing and melting is calculated below.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic=1,nc
+        t_soil_sl(ic,1) = t_soil_sl(ic,1) &
+                      & + le_phase(ic) / heat_cap(ic,1) * delta_time
+      END DO
+      !$ACC END PARALLEL LOOP 
+
       ! Adding lateral heat fluxes
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
@@ -523,28 +531,7 @@ CONTAINS
             END DO
           END DO
           !$ACC END PARALLEL LOOP
-        END IF
-
-        ! Apply phase changes with energy calculated in SEB (only top soil layer)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic=1,nc
-          phase_change(ic) = 0._wp
-          IF (le_phase(ic) > 0._wp .AND. ice(ic,1) > 0._wp) THEN
-            phase_change(ic)   = MIN(le_phase(ic) * delta_time / (rhoh2o * alf), ice(ic,1))
-            le_res     = le_phase(ic) - phase_change(ic) * rhoh2o * alf / delta_time 
-            ws(ic,1)   = ws(ic,1)     + phase_change(ic)
-            ice(ic,1)  = ice(ic,1)    - phase_change(ic)
-            t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_res * delta_time / heat_cap(ic,1)
-          ELSE IF  (le_phase(ic) < 0._wp .AND. ws(ic,1) > liquid_max(ic,1)) THEN
-            phase_change(ic) = -MIN(ABS(le_phase(ic)) * delta_time / (rhoh2o * alf), &
-              &                         ws(ic,1) - liquid_max(ic,1))
-            le_res     = le_phase(ic) - phase_change(ic) * rhoh2o * alf / delta_time
-            ws(ic,1)   = ws(ic,1)     + phase_change(ic)
-            ice(ic,1)  = ice(ic,1)    - phase_change(ic)
-            t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_res * delta_time / heat_cap(ic,1)
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP        
+        END IF 
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ic=1,nc
@@ -575,17 +562,6 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
-
-        ! Adding top layer melt and freeze fluxes to (at this point) diagnostic output
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic=1,nc
-          IF (phase_change(ic) > 0._wp) THEN
-            melt(ic,1)   = melt(ic,1)   + phase_change(ic) * rhoh2o / delta_time
-          ELSE IF  (phase_change(ic) < 0._wp) THEN
-            frozen(ic,1) = frozen(ic,1) - phase_change(ic) * rhoh2o / delta_time
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP 
 
       END IF
 
