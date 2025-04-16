@@ -46,35 +46,39 @@ CONTAINS
   !!
 
   ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
-                                          snow_depth, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+                                          seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
                                           min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                                          max_snow_year, max_snow_prev_year,                              &
+                                          snow_depth, max_snow_year, max_snow_prev_year,                              &
+                                          thaw_depth, max_thaw_year, max_thaw_prev_year,                              &
                                           gdd_sum_year, gdd_prev_year)
 
-    LOGICAL, INTENT(in) :: lstart ! first time step in a simulation
-    LOGICAL, INTENT(in) :: init_running_means ! initialize the min/max temperature climatology
-    LOGICAL, INTENT(in) :: new_day ! first time step in a day
-    LOGICAL, INTENT(in) :: new_month ! firest time step in a month
-    LOGICAL, INTENT(in) :: new_year ! first time step in a year
-    REAL(wp), INTENT(in) :: delta_time ! time step length [s]
-    REAL(wp), INTENT(in) :: seconds_day ! lenght of a day [s]
-    REAL(wp), INTENT(in) :: seconds_month ! length of the previous month [s]
-    REAL(wp), INTENT(in) :: t_air ! air temperature of lowest atmosphere level [K]
-    REAL(wp), INTENT(in) :: snow_depth  ! snow depth [m]
+    LOGICAL, INTENT(in) :: lstart                 ! first time step in a simulation
+    LOGICAL, INTENT(in) :: init_running_means     ! initialize the min/max temperature climatology
+    LOGICAL, INTENT(in) :: new_day                ! first time step in a day
+    LOGICAL, INTENT(in) :: new_month              ! firest time step in a month
+    LOGICAL, INTENT(in) :: new_year               ! first time step in a year
+    REAL(wp), INTENT(in) :: delta_time            ! time step length [s]
+    REAL(wp), INTENT(in) :: seconds_day           ! lenght of a day [s]
+    REAL(wp), INTENT(in) :: seconds_month         ! length of the previous month [s]
+    REAL(wp), INTENT(in) :: t_air                 ! air temperature of lowest atmosphere level [K]
+    REAL(wp), INTENT(in) :: snow_depth            ! snow depth [m]
+    REAL(wp), INTENT(in) :: thaw_depth            ! thaw depth [m]
     REAL(wp), INTENT(inout) :: temp_sum_day
     REAL(wp), INTENT(inout) :: temp_sum_month
-    REAL(wp), INTENT(inout) :: min_mmtemp_of_yr ! temperature of coldest month of previous year [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp_of_yr ! temperature of warmest month of previous year [K]
-    REAL(wp), INTENT(inout) :: min_mmtemp20 ! temperature of coldest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp20 ! temperature of warmest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_snow_year ! maximum snow depth in current year [m]
+    REAL(wp), INTENT(inout) :: min_mmtemp_of_yr   ! temperature of coldest month of previous year [K]
+    REAL(wp), INTENT(inout) :: max_mmtemp_of_yr   ! temperature of warmest month of previous year [K]
+    REAL(wp), INTENT(inout) :: min_mmtemp20       ! temperature of coldest month climatology [K]
+    REAL(wp), INTENT(inout) :: max_mmtemp20       ! temperature of warmest month climatology [K]
+    REAL(wp), INTENT(inout) :: max_snow_year      ! maximum snow depth in current year [m]
     REAL(wp), INTENT(inout) :: max_snow_prev_year ! maximum snow depth in previous year [m]
-    REAL(wp), INTENT(inout) :: gdd_sum_year ! growing degree days of current year [C]
-    REAL(wp), INTENT(inout) :: gdd_prev_year ! growing degree days of previous year [C]
+    REAL(wp), INTENT(inout) :: max_thaw_year      ! maximum thaw depth in current year [m]
+    REAL(wp), INTENT(inout) :: max_thaw_prev_year ! maximum thaw depth in previous year [m]
+    REAL(wp), INTENT(inout) :: gdd_sum_year       ! growing degree days of current year [C]
+    REAL(wp), INTENT(inout) :: gdd_prev_year      ! growing degree days of previous year [C]
 
 !   local variables
-    REAL(wp) :: prev_day_mean_temp   ! air temperature of previous day [K]
-    REAL(wp) :: prev_month_mean_temp ! air temperature of previous month [K]
+    REAL(wp) :: prev_day_mean_temp                ! air temperature of previous day [K]
+    REAL(wp) :: prev_month_mean_temp              ! air temperature of previous month [K]
 
 
     ! GDD
@@ -93,10 +97,20 @@ CONTAINS
 
     ! snow depth
     IF (.NOT. new_year .OR. lstart) THEN
+       max_snow_year = MAX(max_snow_year, snow_depth)
     ELSE
        max_snow_prev_year = max_snow_year
        max_snow_year = 0._wp
        max_snow_year = MAX(max_snow_year, snow_depth)
+    ENDIF
+
+    ! thaw depth
+    IF (.NOT. new_year .OR. lstart) THEN
+       max_thaw_year = MAX(max_thaw_year, thaw_depth)
+    ELSE
+       max_thaw_prev_year = max_thaw_year
+       max_thaw_year = 0._wp
+       max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ENDIF
 
     IF (.NOT. new_month .OR. lstart) THEN
@@ -615,7 +629,7 @@ CONTAINS
     REAL(wp)    :: total_act_fpc(nidx)
     REAL(wp)    :: grass_sum(nidx)
     REAL(wp)    :: non_woody_fpc(nidx)
-    REAL(wp)    :: woody_estab_fpc(nidx)
+!     REAL(wp)    :: woody_estab_fpc(nidx)
     REAL(wp)    :: theta, veg_inc, tau_pft
     REAL(wp), PARAMETER  ::  min_dist_woody = 0.002_wp / 365._wp !! mortality of woody plants (not caused by fire/windthrow,
                                                                  !! but by other unresolved processes)

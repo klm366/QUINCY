@@ -43,6 +43,9 @@ MODULE mo_jsb_process_factory_core
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
 #endif
+  USE mo_top_memory_class,     ONLY: t_top_memory
+  USE mo_ch4_memory_class,     ONLY: t_ch4_memory
+  USE mo_megan_memory_class,   ONLY: t_megan_memory
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
@@ -92,10 +95,16 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_spq_interface,       ONLY: Register_spq_tasks_quincy
   USE mo_spq_config_class,      ONLY: t_spq_config
 #endif
+  USE mo_top_interface,         ONLY: Register_top_tasks
+  USE mo_top_config_class,      ONLY: t_top_config
+  USE mo_methane_interface,     ONLY: Register_methane_tasks
+  USE mo_ch4_config_class,      ONLY: t_ch4_config
+  USE mo_megan_interface,       ONLY: Register_megan_tasks
+  USE mo_megan_config_class,    ONLY: t_megan_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_, CH4_, MEGAN_, &
     & Q_PHENO_, Q_ASSIMI_
 
   IMPLICIT NONE
@@ -206,6 +215,15 @@ CONTAINS
       CALL Register_spq_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_spq_config::return_ptr%config)
 #endif
+    CASE (TOP_)
+      CALL Register_top_tasks(return_ptr, model_id)
+      ALLOCATE(t_top_config::return_ptr%config)
+    CASE (CH4_)
+      CALL Register_methane_tasks(return_ptr, model_id)
+      ALLOCATE(t_ch4_config::return_ptr%config)
+    CASE (MEGAN_)
+      CALL Register_megan_tasks(return_ptr, model_id)
+      ALLOCATE(t_megan_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -246,6 +264,10 @@ CONTAINS
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
     USE mo_spq_memory_class,     ONLY: max_no_of_spq_vars => max_no_of_vars
 #endif
+    USE mo_top_memory_class,     ONLY: max_no_of_top_vars => max_no_of_vars
+    USE mo_ch4_memory_class,     ONLY: max_no_of_ch4_vars => max_no_of_vars
+    USE mo_megan_memory_class,   ONLY: max_no_of_megan_vars => max_no_of_vars
+
     INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
 
@@ -320,6 +342,15 @@ CONTAINS
       ALLOCATE(t_spq_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_spq_vars
 #endif
+    CASE (TOP_)
+      ALLOCATE(t_top_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_top_vars
+    CASE (CH4_)
+      ALLOCATE(t_ch4_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_ch4_vars
+    CASE (MEGAN_)
+      ALLOCATE(t_megan_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_megan_vars
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))

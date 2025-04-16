@@ -15,7 +15,7 @@ MODULE mo_nlcc_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
-  USE mo_util, ONLY: One_of
+!   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -53,6 +53,8 @@ MODULE mo_nlcc_memory_class
       & gdd_prev_year, &
       & max_snow_year, &
       & max_snow_prev_year, &
+      & max_thaw_year, &
+      & max_thaw_prev_year, &
       & bare_fpc, &
       & sum_green_bio_memory, &
       & desert_fpc
@@ -99,7 +101,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
+    dsl4jsb_Def_config(NLCC_)
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(NLCC_)
 
     table = tables(1)
 
@@ -109,7 +115,7 @@ CONTAINS
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
       & hgrid, surface,                                                       &
-      & t_cf('temp_sum_day', 'sum of air temperature in day', 'temperature sum day'),  &
+      & t_cf('temp_sum_day', 'K', 'sum of air temperature in day'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -117,7 +123,7 @@ CONTAINS
 
     CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                    &
       & hgrid, surface,                                                       &
-      & t_cf('temp_sum_month', 'sum of air temperature in month', 'temperature sum month'), &
+      & t_cf('temp_sum_month', 'K', 'sum of air temperature in month'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -125,7 +131,7 @@ CONTAINS
 
     CALL mem%Add_var('min_mmtemp_of_yr', mem%min_mmtemp_of_yr,                &
       & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp_of_yr', 'min temperature of year', 'temperature min'), &
+      & t_cf('min_mmtemp_of_yr', 'K', 'min monthly temperature of year'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -133,7 +139,7 @@ CONTAINS
 
     CALL mem%Add_var('max_mmtemp_of_yr', mem%max_mmtemp_of_yr,                &
       & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp_of_yr', 'max temperature of year', 'temperature max'), &
+      & t_cf('max_mmtemp_of_yr', 'K', 'max temperature of year'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -141,7 +147,7 @@ CONTAINS
 
     CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                        &
       & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp20', 'min temperature climatology', 'temp min climate'), &
+      & t_cf('min_mmtemp20', 'K', 'min monthly temperature climatology'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                   &
@@ -149,7 +155,7 @@ CONTAINS
 
     CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                        &
       & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp20', 'max temperature climatology', 'temp max climate'), &
+      & t_cf('max_mmtemp20', 'K', 'max temperature climatology'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                   &
@@ -157,7 +163,7 @@ CONTAINS
 
     CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                        &
       & hgrid, surface,                                                       &
-      & t_cf('gdd_sum_year', 'gdd current year', 'gdd sum year'),             &
+      & t_cf('gdd_sum_year', '°C days', 'gdd current year'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -165,7 +171,7 @@ CONTAINS
 
     CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
       & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', 'gdd previous year', 'gdd prev year'),          &
+      & t_cf('gdd_prev_year', '°C days', 'gdd previous year'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                    &
@@ -173,7 +179,7 @@ CONTAINS
 
     CALL mem%Add_var('max_snow_year', mem%max_snow_year,                      &
       & hgrid, surface,                                                       &
-      & t_cf('max_snow_year', 'max snow current year', 'max snow year'),             &
+      & t_cf('max_snow_year', 'm', 'max snow depth current year'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -181,15 +187,34 @@ CONTAINS
 
     CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,            &
       & hgrid, surface,                                                       &
-      & t_cf('max_snow_prev_year', 'max snow previous year', 'max snow prev year'),          &
+      & t_cf('max_snow_prev_year', 'm', 'max snow depth previous year'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                    &
       & initval_r=0.0_wp )
 
+    CALL mem%Add_var('max_thaw_year', mem%max_thaw_year,                &
+      & hgrid, surface,                                                       &
+      & t_cf('max_thaw_year', 'm', 'max thaw depth current year'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=NONE,                                                    &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,            &
+      & hgrid, surface,                                                       &
+      & t_cf('max_thaw_prev_year', 'm', 'max thaw depth previous year'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL,                                                    &
+      & initval_r=99.9_wp )
+
+    IF (dsl4jsb_config(NLCC_)%climbuf_only .OR. &
+       .NOT. dsl4jsb_config(NLCC_)%active) RETURN
+
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
-      & t_cf('act_fpc', 'actual foliage projective cover', 'act fpc'),        &
+      & t_cf('act_fpc', '-', 'actual foliage projective cover'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
@@ -197,7 +222,7 @@ CONTAINS
 
     CALL mem%Add_var('bare_fpc', mem%bare_fpc,                                &
       & hgrid, surface,                                                       &
-      & t_cf('bare_fpc', 'bare foliage projective cover', 'bare fpc'),        &
+      & t_cf('bare_fpc', '-', 'bare foliage projective cover'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
@@ -205,7 +230,7 @@ CONTAINS
 
     CALL mem%Add_var('pot_fpc', mem%pot_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
-      & t_cf('pot_fpc', 'potential foliage projective cover', 'pot fpc'),     &
+      & t_cf('pot_fpc', '-', 'potential foliage projective cover'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                  &
@@ -213,7 +238,7 @@ CONTAINS
 
     CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,                  &
       & hgrid, pft_vgrid,                                                     &
-      & t_cf('cover_fract_pot', 'potential cover fractions', 'cover fract pot'), &
+      & t_cf('cover_fract_pot', '-', 'potential cover fractions'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
@@ -221,7 +246,7 @@ CONTAINS
 
     CALL mem%Add_var('bio_exist', mem%bio_exist,                              &
       & hgrid, pft_vgrid,                                                     &
-      & t_cf('bio_exist', 'bio-climatic limits', 'bio exist'),                &
+      & t_cf('bio_exist', '-', 'bio-climatic limits'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
@@ -229,7 +254,7 @@ CONTAINS
 
     CALL mem%Add_var('sum_green_bio_memory', mem%sum_green_bio_memory,        &
       & hgrid, surface,                                                       &
-      & t_cf('sum_green_bio_memory', 'desert memory', 'sum_green_bio_memory'),&
+      & t_cf('sum_green_bio_memory', '-', 'sum_green_bio_memory'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                   &
@@ -237,7 +262,7 @@ CONTAINS
 
     CALL mem%Add_var('desert_fpc', mem%desert_fpc,                            &
       & hgrid, surface,                                                       &
-      & t_cf('desert_fpc', 'desert foliage projective cover', 'desert fpc'),  &
+      & t_cf('desert_fpc', '-', 'desert foliage projective cover'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
@@ -246,7 +271,7 @@ CONTAINS
     ! diagnostic output variables
     CALL mem%Add_var('cover_fract', mem%cover_fract,                          &
       & hgrid, pft_vgrid,                                                     &
-      & t_cf('cover_fract', 'PFT cover fractions', 'cover fract'),            &
+      & t_cf('cover_fract', '-', 'PFT cover fractions'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &

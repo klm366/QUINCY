@@ -33,7 +33,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -54,13 +54,18 @@ MODULE mo_sse_memory_class
       & snow_depth_sl,        & !< Depth of snow layers [m]
       & t_snow,               & !< Temperature of snow layers [K]
       & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
-      & t_snow_bcoef            !< Snow B coefficient of Richtmeyer and Morton scheme
+      & t_snow_bcoef,         & !< Snow B coefficient of Richtmeyer and Morton scheme
+      & t_soil_sl_max,        & !< soil temperature daily maximum
+      & t_soil_sl_min           !< Snow temperature daily minimum
+
     TYPE(t_jsb_var_real2d) :: &
       & hcap_grnd,            & !< Heat capacity of the ground (uppermost layer)        [J m-2 K-1]
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
-      & thaw_depth              !< Thawing depth [m]
+      & thaw_depth,           & !< Thawing depth [m]
+      & thaw_cycle,           & !< Freeze-thaw cycle number this year
+      & thaw_cycle_prev         !< Freeze-thaw cycle number prev year
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
@@ -72,7 +77,7 @@ CONTAINS
 
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -265,6 +270,38 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_cycle', mem%thaw_cycle,                          &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_cycle', '', 'Number of freeze-thaw cycles'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                                                     &
+      & output_level=FULL)
+
+    CALL mem%Add_var( 'thaw_cycle_prev', mem%thaw_cycle_prev,                &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_cycle_prev', '', 'Number of freeze-thaw cycles prev year'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.true., lrestart_cont=.TRUE.,                                                     &
+      & output_level=FULL)
+
+    CALL mem%Add_var( 't_soil_sl_max', mem%t_soil_sl_max,                    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_max', 'K', 'soil temperature daily maximum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=NONE,                                                      &
+      & lrestart=.FALSE.)
+
+    CALL mem%Add_var( 't_soil_sl_min', mem%t_soil_sl_min,                    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_min', 'K', 'soil temperature daily minimum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=NONE,                                                      &
+      & lrestart=.FALSE.)
 
   END SUBROUTINE Init_sse_memory
 

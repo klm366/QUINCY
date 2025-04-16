@@ -1557,11 +1557,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wpi_rootzone_max       !< Maximum possible amount of water and/or ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl        !< Relative water content in soil column
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w)
     REAL(wp) :: wpi_fcap_soil_sl(options%nc, options%nsoil_w)
+    REAL(wp) :: wtr_max_sl, wtr_avail_sl
+    REAL(wp) :: weq_fcap_soil_sl(options%nc, options%nsoil_w)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1599,6 +1602,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_rel_sl)         ! out
 
     ! Get water stress
 
@@ -1717,6 +1721,30 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
+    ! determine relative soil moisture on all layers
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is) - ice_soil_sl(ic,is) - wtr_soil_pot_scool_sl(ic,is), 0._wp)
+        ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
+          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)
+        ELSE
+          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is), 0._wp)
+        END IF
+        IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+          wtr_avail_sl = MAX(wtr_soil_sl(ic,is) - MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is)), 0._wp)
+        ELSE
+          wtr_avail_sl = wtr_soil_sl(ic,is)
+        END IF
+        IF (wtr_max_sl > 0._wp) THEN
+          wtr_soil_rel_sl(ic,is) =  MIN(wtr_avail_sl / wtr_max_sl, 1._wp)
+        ELSE
+          ! weq_rootzone_max is zero for glacier tiles
+          wtr_soil_rel_sl(ic,is) = 0._wp
+        END IF
+      END DO
+    END DO
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_water_stress
@@ -1762,6 +1790,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_rel_sl,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

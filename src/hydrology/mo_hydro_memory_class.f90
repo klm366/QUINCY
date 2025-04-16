@@ -133,6 +133,7 @@ MODULE mo_hydro_memory_class
       & matric_pot_sl,        & !< Soil matric potential                                                    [m]
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                                             [m]
+      & wtr_soil_rel_sl,      & !< Water content in soil layers, relative to maximum                        [1]
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
       & vol_weq_soil_sl,      & !< Volumetric water equivalent (liquid+ice) in soil layers                  [m3 m-3]
                                 !  Based on fixed soil layer thickness, ignoring bedrock depth
@@ -143,7 +144,7 @@ MODULE mo_hydro_memory_class
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice) [m]
-      & wtr_soil_res_sl,      & !< Absolue residual ater content of soil layers (reduced by ice)            [m]
+      & wtr_soil_res_sl,      & !< Absolue residual water content of soil layers (reduced by ice)            [m]
       & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
 
     ! Additional variables for PFT lct_type
@@ -808,6 +809,14 @@ CONTAINS
       CALL mem%Add_var( 'wtr_soil_sl', mem%wtr_soil_sl,                        &
         & hgrid, soil_w,                                                       &
         & t_cf('wtr_soil_sl', 'm', 'Water content of soil layers'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_soil_rel_sl', mem%wtr_soil_rel_sl,                &
+        & hgrid, soil_w,                                                       &
+        & t_cf('wtr_soil_rel_sl', '1', 'Water content of soil layers, relative to maximum'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &

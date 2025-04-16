@@ -119,9 +119,10 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old, check_freezethaw
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
+    USE mo_jsb_time,               ONLY: is_newyear, is_newday
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -168,6 +169,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk :: thaw_cycle
+    dsl4jsb_Real2D_onChunk :: thaw_cycle_prev
+    dsl4jsb_Real3D_onChunk :: t_soil_sl_max
+    dsl4jsb_Real3D_onChunk :: t_soil_sl_min
 
     ! Locally allocated vectors
     !
@@ -187,6 +192,7 @@ CONTAINS
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
+    LOGICAL  :: new_year, new_day
     LOGICAL  :: lstart, l_uniform_snow
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
@@ -262,8 +268,16 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_cycle)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_cycle_prev) ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_max)      ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_min) ! out
+
     lstart = is_time_experiment_start(options%current_datetime)
     l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
+
+    new_year  = is_newyear (options%current_datetime, options%dtime)
+    new_day   = is_newday  (options%current_datetime, options%dtime)
 
     !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
@@ -588,7 +602,14 @@ CONTAINS
       !$ACC EXIT DATA DELETE(ws_max_sl)
       DEALLOCATE(ws_max_sl)
 
-      CALL calc_snow_abcoeff( &
+      CALL check_freezethaw(                  &
+        & nc, nsoil, lstart,                  &
+        & new_year, new_day,                  &
+        & t_soil_sl,                          &
+        & t_soil_sl_max, t_soil_sl_min,       &
+        & thaw_cycle, thaw_cycle_prev)
+
+      CALL calc_snow_abcoeff(     &
         ! in
         & nc,                     &
         & nsnow,                  &

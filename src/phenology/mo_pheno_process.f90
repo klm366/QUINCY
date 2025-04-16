@@ -21,7 +21,8 @@ MODULE mo_pheno_process
 
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool
+             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, &
+             calc_gdd
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
@@ -779,6 +780,32 @@ MODULE mo_pheno_process
 
    END SUBROUTINE calc_grass_phenology
 
+   !!
+   !
+   ! @brief Calculcate growing degree days regardless of vegetation type
+   !
+   !!
+   PURE ELEMENTAL SUBROUTINE calc_GDD(is_newyear, is_newday,  & ! <- in
+                                    & GDD_base_temp,          & ! <- in Temperature above which growth take place (5 degC)
+                                    & previous_day_temp_mean, & ! <- in
+                                    & GDD_prev_year, GDD_sum)   ! <- inout
+                       
+     LOGICAL,  INTENT(in)    :: is_newyear, is_newday
+     REAL(wp), INTENT(in)    :: GDD_base_temp
+     REAL(wp), INTENT(in)    :: previous_day_temp_mean
+     REAL(wp), INTENT(inout) :: GDD_prev_year
+     REAL(wp), INTENT(inout) :: GDD_sum
+
+     IF (is_newyear) THEN
+       GDD_prev_year = GDD_sum
+       GDD_sum = 0._wp
+     ENDIF
+
+     IF (is_newday) THEN
+       GDD_sum = GDD_sum + MAX(0._wp, previous_day_temp_mean - GDD_base_temp)
+     ENDIF
+
+   END SUBROUTINE calc_GDD
 
   ! --- derive_maxLai_according_to_allometric_relationships() ---------------------------------------------------------------------
   !

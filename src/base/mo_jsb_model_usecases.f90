@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
-    &                               Q_PHENO_, Q_ASSIMI_
+    &                               Q_PHENO_, Q_ASSIMI_, TOP_, CH4_, MEGAN_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -361,11 +361,37 @@ CONTAINS
         IF (model%processes(DISTURB_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
         END IF
+        ! All "normal" vegetation PFTs are processed the same way by TOP_ and CH_ processes,
+        ! thus much time can be saved by calculating only once. However, a specific peatland tile
+        ! requires special treatment and thus each PFT must be calculcated by itself
+        IF (model%processes(CH4_)%p%config%run_case == 1) THEN
+          IF (model%processes(TOP_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(TOP_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(CH4_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CH4_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(MEGAN_)%p%config%active) THEN
+            CALL pft_tile%Set_process_action(MEGAN_, ON_TILE_, AGGREGATE_)
+          END IF
+        ENDIF
 
           DO i=1,npft
             pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
             !$ACC ENTER DATA COPYIN(pft_tile)
+            ! See comment above regarding placement of TOP_ and CH4_ processes
+            IF (model%processes(CH4_)%p%config%run_case == 2) THEN
+              IF (model%processes(TOP_)%p%config%active) THEN
+                CALL pft_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
+              END IF
+              IF (model%processes(CH4_)%p%config%active) THEN
+                CALL pft_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
+              END IF
+            ENDIF
+            IF (model%processes(MEGAN_)%p%config%active) THEN
+              CALL pft_tile%Set_process_action(MEGAN_, ON_LEAFS_, AGGREGATE_)
+            END IF
             NULLIFY(pft_tile)
           END DO
 

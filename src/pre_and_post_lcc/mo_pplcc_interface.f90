@@ -33,7 +33,7 @@ MODULE mo_pplcc_interface
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -159,6 +159,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, cqt_id, i_cqt, i_cq_var
     REAL(wp) :: dtime
+    INTEGER  :: is, nsoil, sz(3)
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
     CHARACTER(len=:), ALLOCATABLE :: this_unit, expected_string_in_unit
@@ -245,12 +246,31 @@ CONTAINS
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
 
-          !JN-TODO: make a function in a new process module? -> DSL?!
-          tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-            & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-            &   * conversion_factor(:)
+          IF (ASSOCIATED(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d) ) THEN
+!             sz(1) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=1)
+            nsoil = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=2)
+!             sz(3) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=3)
+!             WRITE(message_text,*) sz(1),sz(2),sz(3)
+!             CALL message(TRIM(routine), '3D pointer for '// &
+!             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name)) ! // ' ' // message_text)
+            DO is = 1,nsoil
+              tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+                & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+                &   * conversion_factor(:)
+            END DO
+          ELSE
+!             sz(1) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d,DIM=1)
+!             sz(2) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d,DIM=2)
+!             WRITE(message_text,*) sz(1),sz(2)
+!             CALL message(TRIM(routine), '2D pointer for '// &
+!             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name) // ' ' // message_text)
+            !JN-TODO: make a function in a new process module? -> DSL?!
+            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+              & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+              &   * conversion_factor(:)
 
-          ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
+            ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
+          END IF
         END DO
       END DO
     END IF
@@ -281,6 +301,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, i_cqt, i_cq_var, cqt_id
     REAL(wp) :: dtime
+    INTEGER  :: is, nsoil
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
     ! Declare pointers for process configuration and memory
@@ -360,15 +381,53 @@ CONTAINS
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
 
-          !JN-TODO: make a function in new process module?
-          ! only do the conversion where the conversion factor is not zero
-          WHERE(conversion_factor(:) > 0.0)
-            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-              & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-              &   / conversion_factor(:)
-          ELSEWHERE
-            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0
-          END WHERE
+          IF (ASSOCIATED(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d) ) THEN
+            nsoil = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=2)
+            DO is = 1,nsoil
+              WHERE(conversion_factor(:) > 0.0)
+                tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+                  & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+                  &   / conversion_factor(:)
+              ELSEWHERE
+                tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) = 0._wp
+              END WHERE
+            END DO
+          ELSE
+            !JN-TODO: make a function in new process module?
+            ! only do the conversion where the conversion factor is not zero
+            WHERE(conversion_factor(:) > 0.0)
+              tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+                & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+                &   / conversion_factor(:)
+            ELSEWHERE
+              tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0
+            END WHERE
+          END IF
+!           IF (ASSOCIATED(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d) ) THEN
+! !             sz(1) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=1)
+! !             sz(2) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=2)
+! !             sz(3) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d,DIM=3)
+! !             WRITE(message_text,*) sz(1),sz(2),sz(3)
+! !             CALL message(TRIM(routine), '3D pointer for '// &
+! !             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name)) ! // ' ' // message_text)
+!             DO is = 1,nsoil
+!               tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+!                 & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr3d(ics:ice,is,iblk) &
+!                 &   * conversion_factor(:)
+!             END DO
+!           ELSE
+! !             sz(1) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d,DIM=1)
+! !             sz(2) = SIZE(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d,DIM=2)
+! !             WRITE(message_text,*) sz(1),sz(2)
+! !             CALL message(TRIM(routine), '2D pointer for '// &
+! !             & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name) // ' ' // message_text)
+!             !JN-TODO: make a function in a new process module? -> DSL?!
+!             tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+!               & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+!               &   * conversion_factor(:)
+!
+!             ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
+!           END IF
 
         END DO
       END DO

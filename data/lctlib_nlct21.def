@@ -1,5 +1,8 @@
 #----------------------------------------------------------------------------------------                     
 # LANDCOVER LIBRARY                     
+#                     
+# $HeadURL$                     
+# $Revision$                     
 #----------------------------------------------------------------------------------------                     
 #                     
 # Contains additional specifications for each landcover type                     
@@ -54,10 +57,10 @@ NitrogenScalingFlag 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
 #C4flag: Photosynthetic pathway (C3: 0; C4: 1)                      
 C4flag 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 1
                      
-#CarboxRate: Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2 leafarea/s] (s. Kattge et al. 2009, V_max^25 mean)
+#CarboxRate: Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2/s] (s. Kattge et al. 2009)                     
 CarboxRate 0.0 39.0 31.0 44.0 66.0 61.4 57.7 62.5 39.1 61.7 54.0 78.2 8.0 78.2 78.2 8.0 21.6 40.6 100.7 100.7 39.0
                      
-#ETransport: Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2 leafarea/s] (Jmax=1.9*V_max^25 for C3 plants)                     
+#ETransport: Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s] (Jmax=1.9*Vmax for C3 plants)                     
 ETransport 0.0 74.1 58.9 83.6 125.4 116.7 109.7 118.8 74.3 117.2 102.6 148.6 140.0 148.6 148.6 140.0 41.0 77.1 191.3 191.3 700.0
                      
 #VegHeight: Vegetation height [m]; for non-vegetation value is arbitrary                     
@@ -107,14 +110,14 @@ Max_C_content_woods 0.0 2997.25 2997.25 2397.8 1798.3 2397.8 1798.3 2397.8 1798.
 #reserveC2leafC: Factor by which the maximum carbon content of the reserve pool is larger than MAXLAI /SLA                     
 reserveC2leafC 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 4.0 4.0 4.0 4.0 4.0 2.0 2.0 4.0 4.0 4.0
                      
-#fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
-fract_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+#fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                      
+fract_wood_2_onsite 1.0 0.60 0.06 0.60 0.60 0.60 0.60 0.60 0.60 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
 #fract_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
-fract_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+fract_wood_2_paper 0.0 0.40 0.40 0.30 0.30 0.30 0.30 0.30 0.30 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #fract_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
-fract_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+fract_wood_2_construction 0.0 0.0 0.0 0.1000 0.1000 0.1000 0.1000 0.1000 0.1000 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #MaxLAI: Maximum LAI used in the LogoP scheme [m2/m2]                     
 MaxLAI 0.0 7.0 7.0 5.0 5.0 6.0 5.0 5.0 5.0 2.0 2.0 3.0 3.0 3.0 3.0 3.0 1.5 3.0 4.0 4.0 4.0
@@ -124,19 +127,19 @@ StemArea 0.0 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #specificLeafArea_C: Carbon content per leaf area in [m2(leaf)/mol(Carbon)]                     
 specificLeafArea_C 0.0 0.264 0.376 0.110 0.304 0.152 0.307 0.110 0.301 0.184 0.307 0.451 0.451 0.451 0.451 0.451 0.307 0.307 0.451 0.451 0.451
-
-#alpha_nr_ind: Parameter for self-thinning                     
-alpha_nr_ind 0.0 15. 16. 15. 16. 0.0 0.0 0.0 0.0 15. 16. 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-
-#beta_nr_ind: Parameter for self-thinning                     
-beta_nr_ind 0.0 -0.58 -0.75 -0.46 -0.70 0.0 0.0 0.0 0.0 -0.52 -0.65 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-
+                     
+#alpha_nr_ind: Parameter for self-thinning                       
+alpha_nr_ind 0.0 15.000 16.000 15.000 16.000 0.000 0.000 0.000 0.000 15.000 16.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+                     
+#beta_nr_ind: Parameter for self-thinning                       
+beta_nr_ind 0.0 -0.580 -0.750 -0.460 -0.700 0.000 0.000 0.000 0.000 -0.520 -0.650 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+                     
 #alpha_leaf: Parameter for relationship between total biomass per ind and leaf biomass                     
-alpha_leaf 0.0 -2.1 -3.0 -1.72 -3.0 0.0 0.0 0.0 0.0 -2.1 -3.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-
+alpha_leaf 0.0 -2.100 -3.000 -1.720 -3.000 0.000 0.000 0.000 0.000 -2.100 -3.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+                     
 #beta_leaf: Parameter for relationship between total biomass per ind and leaf biomass                     
-beta_leaf 0.0 0.76 0.83 0.76 0.85 0.0 0.0 0.0 0.0 0.78 0.83 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-
+beta_leaf 0.0 0.760 0.830 0.760 0.850 0.000 0.000 0.000 0.000 0.780 0.830 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+                     
 #ClumpinessFactor: Factor to calculate vegetation clumpiness: veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor)); arbitrary for non-vegetation but needs to be >0 to avoid division by zero                     
 ClumpinessFactor 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 3.0 3.0 3.0
                      
@@ -169,7 +172,7 @@ AlbedoSnowMin 0.75 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0
 AlbedoSnowMax 0.85 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8
                      
 #                     
-# ALCC_ Parameters                     
+# NLCC_ Parameters                     
 #                     
                      
 #DYNAMIC_PFT: Flag to indicate those PFTs that are subject to dynamics                     
@@ -195,6 +198,9 @@ BCLIMIT_MIN_TEMPRANGE -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1
                      
 #BCLIMIT_MIN_GDD: PFT-specific minimum growing degree days (at or above 5 deg C)                     
 BCLIMIT_MIN_GDD 0.0 0.0 0.0 400.0 400.0 0.0 0.0 0.0 0.0 900.0 350.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+                     
+#BCLIMIT_MIN_SNOW: PFT-specific minimum snow height                     
+BCLIMIT_MIN_SNOW 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #GDD_BASE: PFT-specific GDD base                     
 GDD_BASE 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
