@@ -575,10 +575,25 @@ CONTAINS
         fact_lag_srf_ct(:,lex_ids,:) = fact_lag_micro_srf(:,:) + fact_lag_macro_srf(:,:)
         fact_lag_blg_ct(:,lex_ids,:) = fact_lag_micro_blg(:,:) + fact_lag_macro_blg(:,:)
 
+        ! Switching of individual flow components
+        IF (.NOT. dsl4jsb_Config(LEX_)%l_macrtrns) THEN
+          fact_lag_srf_ct(:,lex_ids,:) = fact_lag_srf_ct(:,lex_ids,:) - fact_lag_macro_srf(:,:)
+          fact_lag_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) - fact_lag_macro_blg(:,:)
+          fact_lag_srf_ct(:,lex_ids,:) = MAX(0._wp, fact_lag_srf_ct(:,lex_ids,:))
+          fact_lag_blg_ct(:,lex_ids,:) = MAX(0._wp, fact_lag_blg_ct(:,lex_ids,:))
+        END IF
+        IF (.NOT. dsl4jsb_Config(LEX_)%l_micrtrns) THEN
+          fact_lag_srf_ct(:,lex_ids,:) = fact_lag_srf_ct(:,lex_ids,:) - fact_lag_micro_srf(:,:)
+          fact_lag_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) - fact_lag_micro_blg(:,:)
+          fact_lag_srf_ct(:,lex_ids,:) = MAX(0._wp, fact_lag_srf_ct(:,lex_ids,:))
+          fact_lag_blg_ct(:,lex_ids,:) = MAX(0._wp, fact_lag_blg_ct(:,lex_ids,:))
+        END IF
+
 
         ! Determine effective lag factor as the sum of all (weighted) flow lag factors for all siblings
         fact_lag_srf(:,:) = fact_lag_srf(:,:) + fact_lag_srf_ct(:,lex_ids,:)
         fact_lag_blg(:,:) = fact_lag_blg(:,:) + fact_lag_blg_ct(:,lex_ids,:)
+
 
         ! Determine effective slope based on macro slope and weighted sum of micro slopes
         WHERE (micro_slope_ct(:,lex_ids,:) > 0.0_wp)
@@ -614,18 +629,19 @@ CONTAINS
           fract_latflow_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) / fact_lag_blg(:,:)
         END WHERE
 
-        ! If a tile is not fully connected to downstream tiles (cmx_micro_hfp + cmx_macro_hfp > 1.0)
+        ! If a tile only partially connected to downstream tiles (cmx_micro_hfp + cmx_macro_hfp < 1.0)
         ! A fraction of the generated outflow is given to streamflow this is done by scaling 
-        ! the fractions lateral flow directed to downstream a downstream tile        
-        WHERE   (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2) < 1._wp)
-          fract_latflow_srf_ct(:,lex_ids,:) = fract_latflow_srf_ct(:,lex_ids,:)  &
-            & * (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2))
-        END WHERE
-        WHERE   (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2) < 1._wp)
-          fract_latflow_blg_ct(:,lex_ids,:) =  fract_latflow_blg_ct(:,lex_ids,:) &
-            & * (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2))
-        END WHERE
-       
+        ! the fractions lateral flow directed to downstream a downstream tile
+        IF (dsl4jsb_Config(LEX_)%l_prtlcon) THEN
+          WHERE   (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2) < 1._wp)
+            fract_latflow_srf_ct(:,lex_ids,:) = fract_latflow_srf_ct(:,lex_ids,:)  &
+              & * (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2))
+          END WHERE
+          WHERE   (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2) < 1._wp)
+            fract_latflow_blg_ct(:,lex_ids,:) =  fract_latflow_blg_ct(:,lex_ids,:) &
+              & * (SUM(microcon_hfp_blg_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_blg_ct(:,:,:), DIM=2))
+          END WHERE
+        END IF
       END DO
 
       !$ACC UPDATE DEVICE(fract_latflow_srf_ct, fract_latflow_blg_ct) ASYNC(1)

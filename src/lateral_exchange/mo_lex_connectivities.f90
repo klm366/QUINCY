@@ -113,14 +113,14 @@ MODULE mo_lex_connectivities
 
   REAL(wp), PARAMETER, DIMENSION(9) ::  &
     cmx_micro_hfp_srf_3tilelex =        &
-      & (/ 0.0, 1.0, 0.0,               &
-      &    0.0, 0.0, 1.0,               &
+      & (/ 0.0, 0.0, 0.0,               &
+      &    0.5, 0.0, 0.5,               &
       &    0.0, 0.0, 0.0 /)
 
   REAL(wp), PARAMETER, DIMENSION(9) ::  &
     cmx_micro_hfp_blg_3tilelex =        &
-      & (/ 0.0, 1.0, 0.0,               &
-      &    0.0, 0.0, 1.0,               &
+      & (/ 0.0, 0.0, 0.0,               &
+      &    0.5, 0.0, 0.5,               &
       &    0.0, 0.0, 0.0 /)
 
   REAL(wp), PARAMETER, DIMENSION(9) ::  &
