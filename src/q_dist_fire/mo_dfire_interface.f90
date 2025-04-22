@@ -252,8 +252,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_, fire_duration, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, distance_travelled, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, l2b_ratio, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_, ck, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_, scorch_height, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_ignitions, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_humans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, e_n_lightning, weighted_by_fract)
