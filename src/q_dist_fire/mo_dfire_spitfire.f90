@@ -225,9 +225,6 @@ CONTAINS
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
 
-    ! todo: move to memory
-    REAL(wp)                              :: fuel_moisture(options%nc,df_sf_omegas_nr) ! fuel moisture (#nc, #omegas) [-]
-
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
@@ -276,6 +273,7 @@ CONTAINS
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
     dsl4jsb_Real2D_onChunk                :: ab_moisture_diag  ! out [-]
+    dsl4jsb_Real3D_onChunk                :: fuel_moisture     ! out [-]
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
     dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
     dsl4jsb_Real2D_onChunk                :: ros_b             ! out [?]
@@ -366,6 +364,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, nesterov_index)         ! inout [Celsius 2]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ab_moisture_diag)       ! out [-]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, fuel_moisture)          ! out [-]
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fdi)                    ! out [%]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ros_f)                  ! out [?]
@@ -454,6 +453,7 @@ CONTAINS
     !< Init variables
     !< Make sure those values are set to 0, as it means there is no fire.
     ab_moisture_diag = 0._wp
+    fuel_moisture = 0._wp
     i_surface = 0._wp
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
