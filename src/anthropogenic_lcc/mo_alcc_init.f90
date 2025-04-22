@@ -327,7 +327,7 @@ CONTAINS
               WRITE(temp_string_j, '(I0)') idx
               WRITE(temp_string_k, '(I0)') j
               ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_transition_pfts (non-zero): (i='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
+              CALL message(TRIM(routine), 'cf_transition_pfts: (i='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
                 & TRIM(ADJUSTL(temp_string_j))//', j='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
             !END IF
           END DO
@@ -390,7 +390,7 @@ CONTAINS
               WRITE(temp_string_i, '(I0)') i
               WRITE(temp_string_j, '(I0)') j
               ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_current_year (non-zero): '//TRIM(current_tile%name)//' (iblk='// &
+              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (iblk='// &
                 & TRIM(ADJUSTL(temp_string_i))//', col='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
             !END IF
           END DO
