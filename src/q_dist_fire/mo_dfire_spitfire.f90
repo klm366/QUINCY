@@ -284,9 +284,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: distance_travelled ! out [?]
     dsl4jsb_Real2D_onChunk                :: l2b_ratio         ! out [?]
 
-    dsl4jsb_Real2D_onChunk                :: ck                       ! out
-    dsl4jsb_Real2D_onChunk                :: scorch_height            ! out
-
     dsl4jsb_Real2D_onChunk                :: reaction_intensity       ! out
     dsl4jsb_Real2D_onChunk                :: prop_flux_ratio          ! out
     dsl4jsb_Real2D_onChunk                :: wind_factor              ! out
@@ -377,9 +374,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, fire_duration)          ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, distance_travelled)     ! out
     dsl4jsb_Get_var2D_onChunk(DFIRE_, l2b_ratio)              ! out
-
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, ck)                     ! out
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, scorch_height)          ! out
 
     dsl4jsb_Get_var2D_onChunk(DFIRE_, pot_burn_area)          ! out [m2?]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, mask_is_fire_intense_enough) ! out [-]

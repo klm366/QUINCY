@@ -112,9 +112,6 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: distance_travelled  !< Total distance travelled by fire [m]
     TYPE(t_jsb_var_real2d)               :: l2b_ratio           !< Length to breadth ratio [-]
 
-    TYPE(t_jsb_var_real2d)               :: ck                  !< Fraction of the crown scorch [-]
-    TYPE(t_jsb_var_real2d)               :: scorch_height       !< Scorch height [m]
-
     TYPE(t_jsb_var_real2d)               :: e_n_ignitions       !< (eq 2) Sum of independent estimates of n_l,ig and n_h,ig
     !<        ignitions events [ha-1 ts-1]
     TYPE(t_jsb_var_real2d)               :: e_n_humans          !< Rate of human caused ignitions [ha-1 ts-1]
@@ -621,27 +618,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('ck', mem%ck, &
-        & hgrid, vgrid_surface, &
-        & t_cf('ck', '-', 'Fraction of the crown scorch'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('scorch_height', mem%scorch_height, &
-        & hgrid, vgrid_surface, &
-        & t_cf('scorch_height', '-', 'Scorch height'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
   END SUBROUTINE Init_dfire_memory
 
 #endif
