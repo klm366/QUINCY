@@ -234,7 +234,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_, precip_qc_mavg, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daytime, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, precip_mavg, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daily, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, precip_daily_mmd, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, reaction_intensity, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_, prop_flux_ratio, weighted_by_fract)
