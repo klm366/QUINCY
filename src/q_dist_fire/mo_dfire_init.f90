@@ -75,6 +75,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
     dsl4jsb_Real2D_onDomain      :: precip_mavg
 
+    dsl4jsb_Real2D_onDomain      :: t_air_min 
+    dsl4jsb_Real2D_onDomain      :: t_air_max
+
     dsl4jsb_Real2D_onDomain      :: nesterov_index
     dsl4jsb_Real2D_onDomain      :: fdi
     dsl4jsb_Real2D_onDomain      :: ros_f
@@ -155,6 +158,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_mavg)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daytime)
+
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, t_air_min)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, t_air_max)
+
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned_fract)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_frac_consumption)
@@ -192,6 +199,10 @@ CONTAINS
     precip_qc_mavg = 0._wp
     precip_daily_mmd = 0._wp
     precip_mavg = 0._wp
+
+    t_air_min = 0._wp
+    t_air_max = 0._wp
+
     area_burned = 0._wp
     area_burned_fract = 0._wp
     dead_frac_consumption = 0._wp
