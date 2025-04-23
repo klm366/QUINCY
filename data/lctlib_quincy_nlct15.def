@@ -47,14 +47,14 @@
 # 12: TrC:  C4 crop
 # 13: BSO:  bare soil
 # 14: UAR:  urban area
-# 15: CSH:  evergreen (needleleaf) cool low shrubs                             
+# 16: CSH:  evergreen (needleleaf) cool low shrubs                             
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 15 # number of landcover types
         
 #----------------------------------------------------------------------------------------                             
 #LctNumber: Landcover type index numbers (not used in the model)                             
-LctNumber 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+LctNumber 1 2 3 4 5 6 7 8 9 10 11 12 13 14 16
                              
 #LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                             
 LandcoverClass 3 3 3 3 3 3 4 4 7 7 6 6 0 0 5
@@ -98,27 +98,27 @@ crown_shape_factor 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 3.34 3.34 3.34 3.34 3
         
 #cn_leaf: default leaf nitrogen concentration (mgN/gDW)        
 # From Kattge et al. 2011, Table 5, converted internally from nitrogen concentration (mg/gDW) to CN mol C / mol N        
-cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11  #CHANGED from 12.09
+cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 14.31  #CHANGED from 12.09, according to 3 TRY measurements
         
 #cn_leaf_min: Minimum leaf N for dynamic stoichiometry  (mgN/gDW)        
-# Tuned from OCN        
-cn_leaf_min 35.0 35.0 35.0 35.0 20.0 30.0 35.0 28.0 35.0 28.0 35.0 28.0 28.0 28.0 20.0
+# Tuned from OCN, for shrubs adapted to changed default        
+cn_leaf_min 35.0 35.0 35.0 35.0 20.0 30.0 35.0 28.0 35.0 28.0 35.0 28.0 28.0 28.0 23.0
         
 #cn_leaf_max: Maximum leaf N for dynamic stoichiometry  (mgN/gDW)        
-# Tuned from OCN        
-cn_leaf_max 12.4 12.4 12.4 12.4 7.4 15.5 12.0 10.0 12.0 10.0 12.0 10.0 10.0 10.0 7.4
+# Tuned from OCN, for shrubs adapted to changed default        
+cn_leaf_max 12.4 12.4 12.4 12.4 7.4 15.5 12.0 10.0 12.0 10.0 12.0 10.0 10.0 10.0 8.8
         
 #np_leaf: default leaf phosphorus concentration (mgP/gDW)          
-# From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
+# From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to changed default        
 np_leaf 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36 1.43 1.36 1.43 1.36 1.36 1.36 0.74 # CHANGED from 1.23
         
 #np_leaf_min: minimum leaf phosphorus concentration (mgP/gDW)        
-# Set to 0.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
-np_leaf_min 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04 2.15 2.04 2.15 2.04 2.04 2.04 1.85
+# Set to 0.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to defaut leaf P        
+np_leaf_min 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04 2.15 2.04 2.15 2.04 2.04 2.04 1.22
         
 #np_leaf_max: maximum leaf phosphorus concentration (mgP/gDW)        
-# Set to 1.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
-np_leaf_max 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68 0.72 0.68 0.72 0.68 0.68 0.68 0.62
+# Set to 1.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to defaut leaf P        
+np_leaf_max 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68 0.72 0.68 0.72 0.68 0.68 0.68 0.37
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
 # temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5  # shrub/needleleaf number does not match      
@@ -153,8 +153,8 @@ gmin 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 0.00006 0.0
 #           
         
 #tau_leaf: average turnover time of a leaf (months)        
-# From Kattge et al. 2011, Table 5, converted internally from month to years, not consistent with Zhang et al. 2013
-tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.85 36.66
+# From Kattge et al. 2011, Table 5, converted internally from month to years
+tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.85 39.7
         
 #tau_fine_root: average turnover time of a fine root (years), Ahrens et al. 2014, NP        
 tau_fine_root 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
@@ -163,7 +163,7 @@ tau_fine_root 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
 tau_coarse_root 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0
         
 #tau_branch: turnover time of the fraction of sapwood that is in branches (years), for shrub based on higher sapwood fraction        
-tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 50.00
+tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 50.0
         
 #tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species: 10-20 yr )         
 tau_sap_wood 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 100.0

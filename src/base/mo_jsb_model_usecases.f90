@@ -748,7 +748,7 @@ CONTAINS
       &                              'TrH:  C4 grass',                              &
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
-      &                              'BSO:  bare soil']
+      &                              'BSO:  bare soil' ]            
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13 /)
@@ -847,7 +847,15 @@ CONTAINS
   END SUBROUTINE init_usecase_quincy_11_pfts
   
   ! include shrubs
-  SUBROUTINE init_usecase_quincy_11pS_pfts(model)
+  !> init routine for usecase quincy_11_pfts
+  !>
+  !>   works only in combination with 'model%config%model_scheme = MODEL_QUINCY',
+  !>   code for other options not available in this usecase
+  !>
+  !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
+  !>
+  
+ SUBROUTINE init_usecase_quincy_11pS_pfts(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
 
@@ -860,14 +868,14 @@ CONTAINS
     CHARACTER(len=5), PARAMETER   :: pft_shortnames(npft) = [character(len=5) :: &
       &                              'pft01', 'pft02', 'pft03', 'pft04', &
       &                              'pft05', 'pft06', 'pft07', 'pft08', &
-      &                              'pft09', 'pft10', 'pft11', 'pft15'  ]
+      &                              'pft09', 'pft10', 'pft11','pft12'  ]
     ! pft long names
     CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &
       &                              'BEM:  moist broadleaved evergreen',           &
       &                              'BED:  dry broadleaved evergreen',             &
       &                              'BDR:  rain green broadleaved deciduous',      &
       &                              'BDS:  summer green broadleaved deciduous',    &
-      &                              'NE :  needle-leaved evergreen (trees)',       &
+      &                              'NE :  needle-leaved evergreen',               &
       &                              'NS :  summer green needle-leaved',            &
       &                              'TeH:  C3 grass',                              &
       &                              'TrH:  C4 grass',                              &
@@ -885,7 +893,7 @@ CONTAINS
     !  box
     !   |
     !   |
-    !   |
+    !   | 
     !  land
     !   |
     !   |
@@ -909,11 +917,17 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_      /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_ /), &
+      & processes      =(/A2L_,     L2A_,     RAD_     , TURB_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
+
+    ! IF PPLCC is active, then PPLCC should run for Quincy
+    ! ... for now it will only be used to provide tree area to the Q_SH_ process ...
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
 
     !------------------------------------------------------------------------------------------------------ !
     ! land tile w/o process
@@ -925,14 +939,13 @@ CONTAINS
       & fract_varname='equal')   ! Fraction of land tile = 1
                                  ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
     !$ACC ENTER DATA COPYIN(land_tile)
-
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_      /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
@@ -944,6 +957,18 @@ CONTAINS
         &                    TRIM(pft_longnames(i)), &
         &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
         &                    parent = veg_tile)
+
+      IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
+        IF (model%processes(Q_SH_)%p%config%active) THEN
+          CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+        END IF
+      END IF
+
+      IF (model%lctlib(pft_ids(i))%CropFlag) THEN
+        IF (model%processes(Q_AGR_)%p%config%active) THEN
+          CALL pft_tile%Set_process_action(Q_AGR_, ON_TILE_, AGGREGATE_)
+        END IF
+      END IF
       !$ACC ENTER DATA COPYIN(pft_tile)
     END DO
 
