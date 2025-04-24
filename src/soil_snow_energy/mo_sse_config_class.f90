@@ -81,7 +81,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: active, lrestart_cont
+    LOGICAL  :: l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture, l_uniform_snow
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
@@ -90,6 +91,7 @@ CONTAINS
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
+      & lrestart_cont,                          &
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
@@ -110,7 +112,8 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 
     ! Set defaults
-    active          = .TRUE.
+    active           = .TRUE.
+    lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
@@ -136,6 +139,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active        = active
+    config%lrestart_cont = lrestart_cont
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
@@ -190,6 +194,7 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+#ifndef __QUINCY_STANDALONE__
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
@@ -203,6 +208,19 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+#else
+    ! jsbach:
+    ! soillev = 0.065, 0.319, 1.232, 4.134, 9.834
+    ! quincy:
+    ! src/q_soil_phys/mo_spq_config_class.f90
+    ! dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    nsoil = 5
+    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(mids(nsoil))
+    depths(1) = 0._wp
+    depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+#endif
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &

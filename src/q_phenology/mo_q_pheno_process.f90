@@ -48,8 +48,9 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, Q_ASSIMI_, VEG_
+    USE mo_jsb_process_class,       ONLY: A2L_, Q_PHENO_, Q_AGR_, Q_ASSIMI_, VEG_
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
@@ -60,10 +61,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
-    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
     REAL(wp)                          :: dtime                  !< timestep length
+
+    INTEGER  :: lctlib_phenology_type
+    REAL(wp) :: lctlib_beta_soil_flush, lctlib_cn_leaf, lctlib_np_leaf, lctlib_gdd_req_max, lctlib_k_gdd_dormance, &
+      &         lctlib_beta_soil_senescence, lctlib_t_air_senescence, lctlib_min_leaf_age
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_q_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Declare pointers for process configuration and memory
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -104,10 +112,14 @@ CONTAINS
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active) RETURN !< do not run this routine for crops if
+                                                                    !< the crop process is active
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
@@ -130,34 +142,49 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)        ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 
+    lctlib_phenology_type = dsl4jsb_Lctlib_param(phenology_type)
+    lctlib_beta_soil_flush = dsl4jsb_Lctlib_param(beta_soil_flush)
+    lctlib_cn_leaf = dsl4jsb_Lctlib_param(cn_leaf)
+    lctlib_np_leaf = dsl4jsb_Lctlib_param(np_leaf)
+    lctlib_gdd_req_max = dsl4jsb_Lctlib_param(gdd_req_max)
+    lctlib_k_gdd_dormance = dsl4jsb_Lctlib_param(k_gdd_dormance)
+    lctlib_beta_soil_senescence = dsl4jsb_Lctlib_param(beta_soil_senescence)
+    lctlib_t_air_senescence = dsl4jsb_Lctlib_param(t_air_senescence)
+    lctlib_min_leaf_age = dsl4jsb_Lctlib_param(min_leaf_age)
+
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !>
-    CALL calc_phenology(                     &
-      & dtime                              , &
-      & lctlib%phenology_type              , &  ! lctlib
-      & lctlib%beta_soil_flush             , &
-      & lctlib%cn_leaf                     , &
-      & lctlib%np_leaf                     , &
-      & lctlib%gdd_req_max                 , &
-      & lctlib%k_gdd_dormance              , &
-      & lctlib%beta_soil_senescence        , &
-      & lctlib%t_air_senescence            , &
-      & lctlib%min_leaf_age                , &  ! lctlib
-      & t_air(:)                           , &  ! in
-      & beta_soil_gs_tphen_mavg(:)         , &
-      & t_air_tphen_mavg(:)                , &
-      & t_soil_srf_tphen_mavg(:)           , &
-      & t_air_week_mavg(:)                 , &
-      & t_air_month_mavg(:)                , &
-      & mean_leaf_age(:)                   , &
-      & gpp_tlabile_mavg(:)                , &
-      & maint_respiration_tlabile_mavg(:)  , &  ! in
-      & growing_season(:)                  , &  ! inout
-      & growth_req_n_tlabile_mavg(:)       , &
-      & growth_req_p_tlabile_mavg(:)       , &
-      & nd_dormance(:)                     , &
-      & gdd(:)                             , &
-      & root_phenology_type(:)             )    ! inout
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      CALL calc_phenology(                      &
+        & dtime                               , &
+        & lctlib_phenology_type               , &  ! lctlib
+        & lctlib_beta_soil_flush              , &
+        & lctlib_cn_leaf                      , &
+        & lctlib_np_leaf                      , &
+        & lctlib_gdd_req_max                  , &
+        & lctlib_k_gdd_dormance               , &
+        & lctlib_beta_soil_senescence         , &
+        & lctlib_t_air_senescence             , &
+        & lctlib_min_leaf_age                 , &  ! lctlib
+        & t_air(ic)                           , &  ! in
+        & beta_soil_gs_tphen_mavg(ic)         , &
+        & t_air_tphen_mavg(ic)                , &
+        & t_soil_srf_tphen_mavg(ic)           , &
+        & t_air_week_mavg(ic)                 , &
+        & t_air_month_mavg(ic)                , &
+        & mean_leaf_age(ic)                   , &
+        & gpp_tlabile_mavg(ic)                , &
+        & maint_respiration_tlabile_mavg(ic)  , &  ! in
+        & growing_season(ic)                  , &  ! inout
+        & growth_req_n_tlabile_mavg(ic)       , &
+        & growth_req_p_tlabile_mavg(ic)       , &
+        & nd_dormance(ic)                     , &
+        & gdd(ic)                             , &
+        & root_phenology_type(ic)               )  ! inout
+    END DO
+    !$ACC END PARALLEL LOOP
+
   END SUBROUTINE update_q_phenology
 
   ! ======================================================================================================= !
@@ -189,11 +216,14 @@ CONTAINS
     & nd_dormance                     , &
     & gdd                             , &
     & root_phenology_type)
+
+    !$ACC ROUTINE SEQ
+
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop,   &
       &                                   ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, &
       &                                   ipheno_type_cbalance_deciduous
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
@@ -251,7 +281,7 @@ CONTAINS
            growth_req_n_tlabile_mavg = 1._wp / cn_leaf
            growth_req_p_tlabile_mavg = 1._wp / np_leaf
         ENDIF
-      CASE (iperennial)
+      CASE (iperennial,icrop)
         ! if temperature and soil moisture are not limiting growth
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
@@ -277,7 +307,7 @@ CONTAINS
           & mean_leaf_age > min_leaf_age) THEN
           growing_season = false
         ENDIF
-      CASE (iperennial)
+      CASE (iperennial,icrop)
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
         IF ((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &

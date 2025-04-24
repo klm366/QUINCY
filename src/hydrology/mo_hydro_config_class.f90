@@ -39,8 +39,12 @@ MODULE mo_hydro_config_class
                                 !  i.e. at which water stress starts to be above zero
       & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
                                 !  i.e. when no transpiration occurs anymore
-      & snow_depth_max          !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                                 !  infinitely growing snow depth; -1. for no limitation
+      & ret_macro_blg,        & !< Assumed retention time for below ground runoff [s],
+                                !< i.e. avg. time before water reaches tributary
+      & ret_macro_srf           !< Assumed retention time for surface runoff [s],
+                                !< i.e. avg. time before water reaches tributary
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -89,10 +93,11 @@ CONTAINS
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
+    REAL(wp)                    :: ret_macro_blg, ret_macro_srf
     CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
     CHARACTER(len=10)           :: enforce_water_budget
     LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
@@ -100,6 +105,7 @@ CONTAINS
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
+      & lrestart_cont,              &
       & ic_filename,                &
       & bc_filename,                &
       & bc_sso_filename,            &
@@ -108,6 +114,8 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
+      & ret_macro_blg,              &
+      & ret_macro_srf,              &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -136,12 +144,8 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
-    SELECT CASE (config%model_config%model_scheme)
-    CASE (MODEL_QUINCY)
-      active                 = .FALSE.
-    CASE (MODEL_JSBACH)
-      active                 = .TRUE.
-    END SELECT
+    active                 = .TRUE.
+    lrestart_cont          = .FALSE.   ! TRUE: Continue although HYDRO variables are missing in restart file
     bc_filename            = 'bc_land_hydro.nc'
     ic_filename            = 'ic_land_hydro.nc'
     bc_sso_filename        = 'bc_land_sso.nc'
@@ -150,6 +154,8 @@ CONTAINS
     w_soil_crit_fract      = 0.75_wp
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
+    ret_macro_blg          = 432000._wp          ! [s]
+    ret_macro_srf          = 36000._wp           ! [s]
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -171,6 +177,7 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
 
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%bc_sso_filename     = bc_sso_filename
@@ -191,6 +198,9 @@ CONTAINS
     IF (snow_depth_max >= 0._wp) THEN
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
+
+    config%ret_macro_blg       = ret_macro_blg
+    config%ret_macro_srf       = ret_macro_srf
 
     config%scheme_stom_cond       = scheme_stom_cond
 
@@ -303,6 +313,8 @@ CONTAINS
     CASE("uniform")
       config%hydro_scale = Uniform_
       CALL message(TRIM(routine), 'Using uniform scale process implementation for hydrological fluxes (still experimental)')
+      CALL message(TRIM(routine), 'Runoff retention times [s]:'//TRIM(real2string(ret_macro_blg))// &
+        &                         ' (below ground) and '//TRIM(real2string(ret_macro_srf))//' (surface)')
     CASE default
       CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT
@@ -311,6 +323,7 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+#ifndef __QUINCY_STANDALONE__
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
@@ -327,6 +340,19 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+#else
+    ! jsbach:
+    ! soillev = 0.065, 0.319, 1.232, 4.134, 9.834
+    ! quincy:
+    ! src/q_soil_phys/mo_spq_config_class.f90
+    ! dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    nsoil = 5
+    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(mids(nsoil))
+    depths(1) = 0._wp
+    depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+#endif
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

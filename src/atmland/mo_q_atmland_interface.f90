@@ -28,11 +28,12 @@ MODULE mo_q_atmland_interface
   !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes A2L_, Q_RAD_, SPQ_, VEG_
+  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, VEG_, TURB_
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(Q_RAD_)
+  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(TURB_)
 
 
   IMPLICIT NONE
@@ -78,6 +79,8 @@ CONTAINS
     & nhx_n15_deposition,     &
     & noy_n15_deposition,     &
     & p_deposition,           &
+    & CO2_mixing_ratio_C13,   &
+    & CO2_mixing_ratio_C14,   &
     ! For lakes:
     & DEBUG_VAR,              &
     & drag_wtr,               &
@@ -124,6 +127,8 @@ CONTAINS
       & pch, &
       & cos_zenith_angle, &
       & CO2_air, &
+      & CO2_mixing_ratio_C13, &
+      & CO2_mixing_ratio_C14, &
       & nhx_deposition, &
       & noy_deposition, &
       & nhx_n15_deposition, &
@@ -142,7 +147,7 @@ CONTAINS
       & q_bcoef_ice
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(TURB_)
 
     INTEGER  :: iblk, ics, ice, nc, i
     INTEGER  :: global_seconds_day, current_year
@@ -187,6 +192,8 @@ CONTAINS
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
       & CO2_mixing_ratio_ptr,  &
+      & CO2_mixing_ratio_C13_ptr, &
+      & CO2_mixing_ratio_C14_ptr, &
       & nhx_deposition_ptr,    &
       & noy_deposition_ptr,    &
       & nhx_n15_deposition_ptr,&
@@ -222,7 +229,7 @@ CONTAINS
     grid  => get_grid(model%grid_id)
     lon   => grid%lon(ics:ice, iblk)
     mtime_current => time_config%tc_current_date
-    global_seconds_day = get_secs_of_day(mtime_current)
+    global_seconds_day = NINT(get_secs_of_day(mtime_current))  ! TODO time steps w/ fractional seconds not supported by quincy, yet!
     current_year = get_year(mtime_current)
 
     model_scheme = model%config%model_scheme
@@ -238,7 +245,7 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(TURB_)
     IF (PRESENT(DEBUG_VAR)) THEN
       DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
     END IF
@@ -288,23 +295,23 @@ CONTAINS
     IF (PRESENT(rho_srf)) THEN
       rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
     END IF
-    IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, spq_drag_srf)
+    IF (PRESENT(drag_srf)) THEN
+      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
     END IF
     IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_acoef)
+      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
     END IF
     IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_bcoef)
+      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
     END IF
     IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_acoef)
+      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_bcoef)
+      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
     END IF
     IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(SPQ_, spq_pch)
+      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
@@ -313,6 +320,12 @@ CONTAINS
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
       CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
+    END IF
+    IF (PRESENT(CO2_mixing_ratio_C13)) THEN
+      CO2_mixing_ratio_C13_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C13)
+    END IF
+    IF (PRESENT(CO2_mixing_ratio_C14)) THEN
+      CO2_mixing_ratio_C14_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C14)
     END IF
     IF (PRESENT(nhx_deposition)) THEN
       nhx_deposition_ptr      => dsl4jsb_var2D_onChunk(A2L_, nhx_deposition)
@@ -517,6 +530,18 @@ CONTAINS
         CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
       END DO
     END IF
+    IF (PRESENT(CO2_mixing_ratio_C13)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        CO2_mixing_ratio_c13_ptr(i) = CO2_mixing_ratio_C13(i)
+      END DO
+    END IF
+    IF (PRESENT(CO2_mixing_ratio_C14)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        CO2_mixing_ratio_c14_ptr(i) = CO2_mixing_ratio_C14(i)
+      END DO
+    END IF
     IF (PRESENT(nhx_deposition)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
@@ -666,6 +691,8 @@ CONTAINS
     & kh_neutral, &
     & km_neutral, &
     & CO2_flux, &
+    & CO2_flux_C13, &
+    & CO2_flux_C14, &
     & t_lwtr, &
     & t_lice, &
     & qsat_lwtr, &
@@ -716,6 +743,8 @@ CONTAINS
       & kh_neutral(:), &
       & km_neutral(:), &
       & CO2_flux(:), &
+      & CO2_flux_C13(:), &
+      & CO2_flux_C14(:), &
       & t_lwtr(:), &
       & t_lice(:), &
       & qsat_lwtr(:), &
@@ -736,9 +765,10 @@ CONTAINS
       & albedo_lwtr(:), &
       & albedo_lice(:)
 
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(TURB_)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -773,7 +803,9 @@ CONTAINS
       ! & km_ptr, &
       ! & kh_neutral_ptr, &
       ! & km_neutral_ptr, &
-      & net_biosphere_production_ptr !, & ! the JSBACH interface uses the CO2_flux here (different unit&sign)
+      & net_biosphere_production_ptr, & !, & ! the JSBACH interface uses the CO2_flux here (different unit&sign)
+      & net_biosphere_production_c13_ptr, &
+      & net_biosphere_production_c14_ptr
       ! & t_lwtr_ptr, &
       ! & t_lice_ptr, &
       ! & qsat_lwtr_ptr, &
@@ -812,9 +844,10 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     ! use_tmx =  model%config%use_tmx
 
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(TURB_)
 
     ! set all output var to zero
     !   because at the moment QUINCY does not provide all output var, but only the ones needed without tmx and without lakes
@@ -844,6 +877,8 @@ CONTAINS
     IF (PRESENT(kh_neutral)) kh_neutral(:)             = 0.0_wp
     IF (PRESENT(km_neutral)) km_neutral(:)             = 0.0_wp
     IF (PRESENT(CO2_flux)) CO2_flux(:)               = 0.0_wp
+    IF (PRESENT(CO2_flux_C13)) CO2_flux_C13(:)       = 0.0_wp
+    IF (PRESENT(CO2_flux_C14)) CO2_flux_C14(:)       = 0.0_wp
     IF (PRESENT(t_lwtr)) t_lwtr(:)                 = 0.0_wp
     IF (PRESENT(t_lice)) t_lice(:)                 = 0.0_wp
     IF (PRESENT(qsat_lwtr)) qsat_lwtr(:)              = 0.0_wp
@@ -872,24 +907,25 @@ CONTAINS
     t_eff_srf_ptr      => dsl4jsb_var2D_onChunk(SPQ_, temp_srf_eff_4)
     qsat_srf_ptr       => dsl4jsb_var2D_onChunk(SPQ_, qsat_star)
     s_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, s_star)
-    fact_q_air_ptr     => dsl4jsb_var2D_onChunk(SPQ_, fact_q_air)
-    fact_qsat_srf_ptr  => dsl4jsb_var2D_onChunk(SPQ_, fact_qsat_srf)
+    fact_q_air_ptr     => dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+    fact_qsat_srf_ptr  => dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
     evapopot_ptr       => dsl4jsb_var2D_onChunk(SPQ_, evapopot)
     evapotrans_ptr     => dsl4jsb_var2D_onChunk(SPQ_, evapotranspiration)
     latent_hflx_ptr    => dsl4jsb_var2D_onChunk(SPQ_, latent_heat_flx)
     sensible_hflx_ptr  => dsl4jsb_var2D_onChunk(SPQ_, sensible_heat_flx)
     grnd_hflx_ptr      => dsl4jsb_var2D_onChunk(SPQ_, ground_heat_flx)
     grnd_hcap_ptr      => dsl4jsb_var3D_onChunk(SPQ_, heat_capa_sl)           ! 3D var, use first soil layer
-    rough_h_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0h)
-    rough_m_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0m)
+    rough_h_srf_ptr    => dsl4jsb_var2D_onChunk(TURB_, rough_h)
+    rough_m_srf_ptr    => dsl4jsb_var2D_onChunk(TURB_, rough_m)
     !q_snocpymlt_ptr    => dsl4jsb_var2D_onChunk(SPQ_, ) ! just set to zero, no variable available
-    alb_vis_dir_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_vis)
-    alb_nir_dir_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_nir)
-    alb_vis_dif_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_vis)
-    alb_nir_dif_ptr    => dsl4jsb_var2D_onChunk(Q_RAD_, alb_nir)
+    alb_vis_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_vis)
+    alb_nir_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
+    alb_vis_dif_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_vis)
+    alb_nir_dif_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
     ! the JSBACH interface uses the CO2_flux here (different unit and different sign)
     net_biosphere_production_ptr => dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production)
-
+    net_biosphere_production_c13_ptr => dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production_c13)
+    net_biosphere_production_c14_ptr => dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production_c14)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
     IF (PRESENT(t_srf)) THEN
@@ -1033,6 +1069,20 @@ CONTAINS
         !   ... differs to the convention for fluxes in ICON which would be "fluxes point downwards"
         !   ... note: in jsbach the negation of the fluxes is already done in the carbon interface
         CO2_flux(i) = net_biosphere_production_ptr(i) * molarMassCO2 * 0.001_wp * 0.000001_wp * (-1.0_wp)
+      END DO
+    END IF
+
+    IF (PRESENT(CO2_flux_C13)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        CO2_flux_C13(i) = net_biosphere_production_c13_ptr(i) * molarMassCO2 * 0.001_wp * 0.000001_wp * (-1.0_wp)
+      END DO
+    END IF
+
+    IF (PRESENT(CO2_flux_C14)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        CO2_flux_C14(i) = net_biosphere_production_c14_ptr(i) * molarMassCO2 * 0.001_wp * 0.000001_wp * (-1.0_wp)
       END DO
     END IF
 

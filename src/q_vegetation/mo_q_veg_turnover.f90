@@ -344,7 +344,7 @@ CONTAINS
     & veg_litterfall_mt           , &
     & net_growth                  )
 
-    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
+    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, icrop, ITREE
     USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
       &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
@@ -452,7 +452,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
-    CASE (igrass)
+    CASE (igrass, icrop)
       DO ic = 1,nc
         ! during growing season, constant turnover
         IF (growing_season(ic) > test_false_true) THEN
@@ -500,7 +500,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
-    CASE (igrass) ! for grases follows leaf phenology
+    CASE (igrass, icrop) ! for grasses and crops follow leaf phenology
       fturn(:) = fturn_leaf(:)
     ENDSELECT
     ! loop over bgcm elements
@@ -554,17 +554,21 @@ CONTAINS
     END DO
     net_growth(:) = net_growth(:) - veg_pool_mt(ix_fruit, ixC, :) * fturn(:)
 
-    !>6.0 seed-bed turnover to litter
+    !>6.0 seed-bed turnover to litter (for natural vegetation types, for croptype the
+    !     seed-bed is not subject to natural decay)
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
-    ! loop over bgcm elements
-    DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-      IF (is_element_used(ielem)) THEN
-        ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-        veg_litterfall_mt(ix_seed_bed, ix_elem, :) = veg_litterfall_mt(ix_seed_bed, ix_elem, :) &
-          &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
-      END IF
-    END DO
+    SELECT CASE (lctlib_growthform)
+    CASE (itree, igrass)
+      fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+      ! loop over bgcm elements
+      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (is_element_used(ielem)) THEN
+          ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+          veg_litterfall_mt(ix_seed_bed, ix_elem, :) = veg_litterfall_mt(ix_seed_bed, ix_elem, :) &
+            &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
+        END IF
+      END DO
+    END SELECT
   END SUBROUTINE calc_turnover
 
   ! ======================================================================================================= !

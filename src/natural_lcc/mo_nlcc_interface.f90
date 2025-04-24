@@ -21,7 +21,7 @@ MODULE mo_nlcc_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -32,10 +32,11 @@ MODULE mo_nlcc_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, NLCC_, DISTURB_
+  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, NLCC_, DISTURB_, FAGE_
 
   ! Use of process configurations
   dsl4jsb_Use_config(NLCC_)
+  dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories
 !! TR$  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
@@ -115,7 +116,7 @@ CONTAINS
 
     USE mo_nlcc_process,   ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
-    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday
+    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday, get_day_length, get_previous_month_length
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
@@ -131,6 +132,8 @@ CONTAINS
     LOGICAL  :: lstart, init_running_means, init_mmtemp20
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
+    REAL(wp) :: seconds_day   ! number of seconds per day
+    REAL(wp) :: seconds_month ! number of seconds in previous month
     REAL(wp) :: dtime
     REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
@@ -158,6 +161,7 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(NLCC_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
@@ -166,8 +170,6 @@ CONTAINS
     dsl4jsb_Def_memory(DISTURB_)
 
     ! Declare pointers to variables in nlcc memory
-    dsl4jsb_Real2D_onChunk :: seconds_day
-    dsl4jsb_Real2D_onChunk :: seconds_month
     dsl4jsb_Real2D_onChunk :: temp_sum_day
     dsl4jsb_Real2D_onChunk :: temp_sum_month
     dsl4jsb_Real2D_onChunk :: min_mmtemp_of_yr
@@ -199,14 +201,20 @@ CONTAINS
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
-    ! If process is not to be calculated on this tile, do nothing
-    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(NLCC_)
+    dsl4jsb_Get_config(FAGE_)
+
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
+
+    ! Consistency check
+    IF (model%Is_process_enabled(FAGE_)) THEN
+      CALL finish(routine, 'Setup ERROR: NLCC is not possible with forest age (FAGE) enabled.')
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process memories
     dsl4jsb_Get_memory(NLCC_)
@@ -264,8 +272,6 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
@@ -293,6 +299,9 @@ CONTAINS
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
+
+    seconds_day   = get_day_length()
+    seconds_month = get_previous_month_length(options%current_datetime)
 
     ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))

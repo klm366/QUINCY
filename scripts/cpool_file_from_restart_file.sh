@@ -11,21 +11,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # ---------------------------------------
 
-set +ex
-
-#module load  nco
-
+set -e
 ##############################################################################################
 ### This program collects a list of variables e.g. for carbon pools from an ICON restartfile
 ### and packs them into a new file ###
 ###
-### Note: Tested with nco version 4.6.7 ... older versions might not work.
-###       As of March 2018, it doesn't work on MPI workstations because nco is too old.
-###       It does work on mistral.
+### Note: Tested with nco version 5.0.1 and cdo version 2.4.2
+###
+# Todo: Include further variables needed in simulations with natural LCC and/or disturbances
 ##############################################################################################
+which ncatted || {
+. ${MODULESHOME}/init/bash
+  module load nco
+}
 
 ### User Interface
-INFILE="JS045_restart_atm_19870201T000000Z.nc"
+INFILE="restart_jsbach_DOM01.nc"
 OUTFILE="ic_land_carbon.nc"
 
 PROCESS="carbon"
@@ -51,33 +52,27 @@ if [ -f  ${OUTFILE} ];then
    fi
 fi
 
-### collect vars from restart file
+### Generate variable list
+varlist=""
 for VARNAME in ${VARNAME_LIST} ; do
-   echo -e "\033[01;31;40m"
-   echo "=== ${VARNAME} ==="
-   tput sgr0
-
    for TILE in ${TILE_LIST} ; do
-      STREAM_NAME="${PROCESS}_${VARNAME}_${TILE}"
-      echo "${STREAM_NAME}"
-
-      cdo selvar,${STREAM_NAME}                      ${INFILE}    ZWERG1
-      ncks -A                                        ZWERG1       ZWERG2
+      varlist="${varlist},${PROCESS}_${VARNAME}_${TILE}"
    done
 done
 
-ncks -C -x -v time            ZWERG2       ZWERG3      # Delete variable time
-ncwa -O -a time               ZWERG3       ${OUTFILE}  # Delete dimension time
-ncrename -d ncells_2,ncells ${OUTFILE}                 # This needs a recent nco version!
+### Extract the variables from restart file
+cdo selvar${varlist}    ${INFILE}   ${OUTFILE}.tmp1
+
+ncks -C -x -v time  ${OUTFILE}.tmp1 ${OUTFILE}.tmp2  # Delete variable time
+ncwa -O -a time     ${OUTFILE}.tmp2 ${OUTFILE}.tmp3  # Delete dimension time
+ncrename -d cells,cell ${OUTFILE}.tmp3 ${OUTFILE}    # Rename dim. cells to cell
 
 ### Clean up
-rm ZWERG1  ZWERG2  ZWERG3
+rm -f ${OUTFILE}.tmp?
 
 ### Finish
-echo -e "\033[00;31;48m"
 echo ""
-echo "Script reached the end without interruption !"
+echo "$0: Generation of ${OUTFILE} done"
 echo ""
-tput sgr0
-exit
+exit 0
 

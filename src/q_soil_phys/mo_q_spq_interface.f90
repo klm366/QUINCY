@@ -25,7 +25,7 @@ MODULE mo_q_spq_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, A2L_, SPQ_, Q_RAD_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process, SPQ_, TURB_
 
   ! "Integrate" routines
   USE mo_spq_util,                    ONLY: reset_spq_fluxes_real => reset_spq_fluxes
@@ -33,8 +33,7 @@ MODULE mo_q_spq_interface
   USE mo_q_spq_update_physics,        ONLY: update_spq_physics_real => update_spq_physics
 
   dsl4jsb_Use_memory(SPQ_)
-  dsl4jsb_Use_memory(Q_RAD_)
-  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(TURB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -227,8 +226,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
-    ! dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(TURB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -243,17 +241,14 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
-    ! dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(TURB_)
 
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_drag_srf         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_pch              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_t_acoef          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_t_bcoef          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_q_acoef          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_q_bcoef          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, z0h                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, z0m                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, drag_srf_stdalone         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, pch_stdalone              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, t_acoef_stdalone          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, t_bcoef_stdalone          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, q_acoef_stdalone          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, q_bcoef_stdalone          , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -270,8 +265,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SPQ_)
-    ! dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(Q_RAD_)
+    dsl4jsb_Def_memory(TURB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -287,19 +281,19 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SPQ_)
-    ! dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(Q_RAD_)
+    dsl4jsb_Get_memory(TURB_)
 
-    ! aggregate does not work here for A2L_ variables
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_pch                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, spq_drag_srf                , weighted_by_fract)
+    ! TURB_
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_q_air             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_srf          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, drag_srf_stdalone      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, pch_stdalone           , weighted_by_fract)
+
     ! ---------------------------
     ! 2D
-    dsl4jsb_Aggregate_onChunk(SPQ_, fact_q_air              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, qsat_star               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, s_star                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evapotranspiration      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, fact_qsat_srf           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, t_srf_new               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, t_srf_old               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, temp_srf_eff_4          , weighted_by_fract)
