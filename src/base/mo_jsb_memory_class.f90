@@ -23,8 +23,8 @@ MODULE mo_jsb_memory_class
     &                             Get_var_group_name, VARNAME_LEN
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
-  USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
-    &                             REAL1D, REAL2D, REAL3D
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_int2d, &
+    &                             t_jsb_var_real3d, REAL1D, REAL2D, REAL3D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
     &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
@@ -73,17 +73,22 @@ MODULE mo_jsb_memory_class
     PROCEDURE         :: Get_var
     PROCEDURE         :: t_jsb_memory_add_var_r1d
     PROCEDURE         :: t_jsb_memory_add_var_r2d
+    PROCEDURE         :: t_jsb_memory_add_var_i2d
     PROCEDURE         :: t_jsb_memory_add_var_r3d
     PROCEDURE         :: t_jsb_memory_add_pool         !< Add a (hierarchical) pool structure to memory (sub-pools and elements)
     PROCEDURE         :: t_jsb_memory_add_pool_var_r2d !< Add a 2d variable to pool (non-elements)
+    PROCEDURE         :: t_jsb_memory_add_pool_var_i2d !< Add a 2d integer variable to pool (non-elements)  
     GENERIC           :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
-      &                             t_jsb_memory_add_var_r3d, &
+      &                             t_jsb_memory_add_var_i2d, t_jsb_memory_add_var_r3d, &
       &                             t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
     PROCEDURE         :: Get_var_position
     PROCEDURE, PUBLIC :: Collect_var_real2d            !< Collect 2d var from its child tiles
+    PROCEDURE, PUBLIC :: Collect_var_int2d             !< Collect 2d int var from its child tiles
     PROCEDURE, PUBLIC :: Collect_var_real3d            !< Collect 3d var from its child tiles
     PROCEDURE, PUBLIC :: HandDown_var_real2d           !< Hand back 2d var to child tiles
+    PROCEDURE, PUBLIC :: HandDown_var_int2d            !< Hand back 2d int var to child tiles
     PROCEDURE         :: Average_over_children_real2d  !< Average 2d var over the child tiles
+    PROCEDURE         :: Average_over_children_int2d   !< Average 2d int var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p

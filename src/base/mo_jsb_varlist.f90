@@ -17,13 +17,15 @@ MODULE mo_jsb_varlist
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
+   &                              t_jsb_var_int2d, REAL2D, REAL3D
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
                                   add_var_list_element_r1d,         &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
-                                  is_variable_in_output, &
+                                  add_var_list_element_i2d,                           & 
+                                  is_variable_in_output,                              &
                                   VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
@@ -41,12 +43,18 @@ MODULE mo_jsb_varlist
   PUBLIC :: t_jsb_varlist
   PUBLIC :: add_var_list_element_r1d
   PUBLIC :: add_var_list_element_r2d, add_var_list_element_r3d
+  PUBLIC :: add_var_list_element_i2d
   PUBLIC :: jsb_add_var, Get_varlist, Get_var_group_name
   PUBLIC :: VARNAME_LEN
   PUBLIC :: BASIC, MEDIUM, FULL, NONE
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d
+  END INTERFACE jsb_add_var
+
+
+  INTERFACE jsb_add_var
+    MODULE PROCEDURE jsb_add_var_list_element_i2d
   END INTERFACE jsb_add_var
 
   ENUM, BIND(C)
@@ -157,6 +165,90 @@ CONTAINS
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
+
+  SUBROUTINE jsb_add_var_list_element_i2d(varlist_name, name, ptr, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
+    loutput, lcontainer,                                        &
+    lrestart, lrestart_cont, initval_i, isteptype,              &
+    resetval_i, lmiss, missval_i,                               &
+    groups, verbose                                             &
+    )
+
+    CHARACTER(len=*),     INTENT(in)           :: varlist_name
+    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
+    INTEGER,              POINTER              :: ptr(:,:)            ! reference to field
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
+    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: initval_i           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
+    INTEGER,              INTENT(in), OPTIONAL :: resetval_i          ! reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
+    INTEGER,              INTENT(in), OPTIONAL :: missval_i           ! missing value
+    CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+
+!!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+    TYPE(t_jsb_varlist), POINTER :: this_list           ! list
+    CHARACTER(len=50) :: name_loc
+    TYPE(t_cf_var)    :: cf_loc
+    TYPE(t_grib2_var) :: grib2_loc
+    LOGICAL           :: lmiss_loc
+    INTEGER           :: missval_i_loc
+    INTEGER           :: ldims(2), gdims(2)
+    INTEGER           :: n_groups
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     ! groups to which this variable belongs to
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_i2d'
+
+    name_loc = TRIM(name)
+    IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+
+    lmiss_loc = .TRUE.
+    IF (PRESENT(lmiss)) lmiss_loc = lmiss
+    missval_i_loc = missval_i
+    IF (PRESENT(missval_i)) missval_i_loc = missval_i
+
+    cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
+
+    ldims(1) = hgrid%nproma
+    ldims(2) = hgrid%nblks
+    gdims(1:2) = hgrid%dims_g(1:2)
+
+    this_list => Get_varlist(TRIM(varlist_name), hgrid%host_patch_id)
+
+    IF (PRESENT(groups)) THEN
+      n_groups = SIZE(groups) + 2
+    ELSE
+      n_groups = 2
+    END IF
+    ALLOCATE(groups_loc(n_groups))
+    groups_loc(1) = 'ALL'
+    groups_loc(2) = 'jsb_all'
+    IF (PRESENT(groups)) THEN
+      groups_loc(3:n_groups) = groups(:)
+    END IF
+
+    ! calls the generic routine on the host model
+    CALL add_var_list_element_i2d( &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
+      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      initval_i=initval_i, isteptype=isteptype, resetval_i=resetval_i, &
+      lmiss=lmiss_loc, missval_i=missval_i_loc, in_groups=groups_loc, verbose=verbose)
+
+  END SUBROUTINE jsb_add_var_list_element_i2d
 
   FUNCTION Get_var_group_name(id) RESULT(group_name)
 

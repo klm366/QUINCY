@@ -31,13 +31,18 @@ MODULE mo_nix_memory_class
 
   PUBLIC :: t_nix_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 1
+  INTEGER, PARAMETER :: max_no_of_vars = 6
 
   TYPE, EXTENDS(t_jsb_memory) :: t_nix_memory
 
-    ! Prognostic variable
+ ! Main prognostic variables describing the state of the snow cover - Note: These are also input/output therefore  mandatory
     TYPE(t_jsb_var_real3d)  :: &
-      & t_sn                          !< weighted snow layer temperature
+      &  t_sn                , & ! snow element temperature             [ K ]
+      &  t_sn_n              , & ! snow nodal temperature               [ K ]
+      &  theta_i_sn          , & ! volumetric ice content               [ - ]
+      &  theta_w_sn          , & ! volumetric water content             [ - ]
+      &  theta_a_sn          , & ! volumetric air content               [ - ]
+      &  dzm_sn                  ! snow layer thickness                 [ m ]
 
 
   CONTAINS
@@ -85,13 +90,69 @@ CONTAINS
     surface      => Get_vgrid('surface')
     snow_layer   => Get_vgrid('nix_vgrid')
 
-      ! Prognostic variables - FIXME: Number of layers should correspond to nlev_sn, which is set by nml parameter 
+      ! Prognostic variables  
       CALL mem%Add_var('t_sn', mem%t_sn,                                &
         & hgrid, snow_layer,                                            &
-        & t_cf('Weighted snow layer temperature', '', ''),              &
+        & t_cf('weighted snow layer (element) temperature', '', ''),              &
         & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 28, grib_bits), &
         & prefix, suffix,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+      CALL mem%Add_var('t_sn_n', mem%t_sn_n,                                &
+        & hgrid, snow_layer,                                            &
+        & t_cf('weighted snow layer (nodal) temperature', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 208, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+      CALL mem%Add_var('theta_i_sn', mem%theta_i_sn,                                &
+        & hgrid, snow_layer,                                            &
+        & t_cf('weighted volumetric ice content', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 209, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+      CALL mem%Add_var('theta_w_sn', mem%theta_w_sn,                                &
+        & hgrid, snow_layer,                                            &
+        & t_cf('weighted volumetric water content', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 210, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+      CALL mem%Add_var('theta_a_sn', mem%theta_a_sn,                                &
+        & hgrid, snow_layer,                                            &
+        & t_cf('weighted volumetric air content', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 211, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+      CALL mem%Add_var('dzm_sn', mem%dzm_sn,                                &
+        & hgrid, snow_layer,                                            &
+        & t_cf('weighted snow layer thickness', '', ''),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(0, 1, 11, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   END SUBROUTINE Init_nix_memory
 

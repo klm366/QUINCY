@@ -112,6 +112,10 @@ macros = {
         re.compile(r"dsl4jsb_Real2D_onChunk", re.IGNORECASE),
         r"REAL(wp), POINTER, DIMENSION(:)",
     ],
+    "int2d_onchunk": [
+        re.compile(r"dsl4jsb_Int2D_onChunk", re.IGNORECASE),
+        r"REAL(wp), POINTER, DIMENSION(:)",
+    ],
     "real3d_onchunk": [
         re.compile(r"dsl4jsb_Real3D_onChunk", re.IGNORECASE),
         r"REAL(wp), POINTER, DIMENSION(:,:)",
@@ -155,6 +159,10 @@ macros = {
     ],
     "real2d_ondomain": [
         re.compile(r"dsl4jsb_Real2D_onDomain", re.IGNORECASE),
+        r"REAL(wp), POINTER, DIMENSION(:,:)",
+    ],
+    "int2d_ondomain": [
+        re.compile(r"dsl4jsb_Int2D_onDomain", re.IGNORECASE),
         r"REAL(wp), POINTER, DIMENSION(:,:)",
     ],
     "real3d_ondomain": [
