@@ -378,7 +378,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
         DO ic=1,nc
 
-          IF (tile%is_glacier .OR. .NOT. jsbach_runs_standalone()) THEN
+          IF (tile%is_glacier .AND. .NOT. jsbach_runs_standalone()) THEN
             ! Correction for snowmelt on glaciers or in coupled setup
             delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
           ELSE

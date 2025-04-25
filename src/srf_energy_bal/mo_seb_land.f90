@@ -442,6 +442,7 @@ CONTAINS
       hlp3 = rhoh2o * alf / (alpha * steplen)
 
       IF (.NOT. tile%is_glacier) THEN
+        ! Compute the amount of water/ice that is available for freezing/melting
         IF (l_freeze_config) THEN
           IF (l_supercool_config) THEN
             hlp1 = MAX(wtr_soil_sl(ic,1) - wtr_soil_pot_scool_sl(ic,1), 0._wp)
@@ -450,12 +451,13 @@ CONTAINS
           END IF
           hlp2 = ice_soil_sl(ic,1)
         END IF
-
         le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
         le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
       ELSE
+        ! Glaciers are currently considered to provide unlimited ice for melting
+        ! Setting available snow to 1 m weq should be more than sufficient for one time step
         le_freeze_pot(ic) = 0._wp
-        le_melt_pot(ic)   = weq_snow(ic) * hlp3
+        le_melt_pot(ic)   = 1.0_wp * hlp3
       END IF
 
     END DO
@@ -503,11 +505,6 @@ CONTAINS
           t_srf(ic) = tpfac2 * s_srf(ic) / t2s_conv(ic) + tpfac3 * t_srf_old(ic)
         END IF
         t_star(ic) = s_star(ic) / t2s_conv(ic)
-        ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
-        IF (is_glacier(ic)) THEN
-          ! Snow melt where glacier or snow layer
-          t_star(ic) = MIN(t_star(ic), tmelt)
-        END IF
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -946,7 +943,7 @@ CONTAINS
         le_phase_change(ic) = 0._wp
         l_recalc_seb(ic)    = .TRUE.
 
-        IF ((.NOT. lstart) .AND. (.NOT. tile%is_glacier)) THEN
+        IF (.NOT. lstart) THEN
           ! Get dry static energy at melting/freezing point
           s_ref  = t2s_conv(ic) * t(ic)
           s_trgt = surface_dry_static_energy( tmelt, &

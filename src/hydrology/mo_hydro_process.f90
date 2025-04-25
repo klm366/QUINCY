@@ -50,14 +50,12 @@ CONTAINS
   !! @param [in]     l_latflow_to_streamflow  T: Outflow of intermediary storage goes to streamflow
   !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
   !! @param [in]     flowlag               lag factor determening the outflow of intermediary storage [1/s]
-  !! @param [in]     t_srf                 Surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
   !! @param [in]     skinres_max           Total capacity of the skin reservoirs, i.e. soil and canopy [m]
   !! @param [in]     fract_snow            surface snow fraction []
   !! @param [in]     fract_skin            skin reservoir fraction []
-  !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation (if there was enough water/ice) [kg m-2 s-1]
   !! @param [in]     transpiration         transpiration [kg m-2 s-1]
@@ -85,9 +83,9 @@ CONTAINS
     & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
     & l_infil_subzero, l_latflow_to_streamflow,                     &
     & snow_depth_max, steepness, flowlag, t_soil_sl1,               &
-    & t_srf, wind_10m, t_air, skinres_canopy_max, skinres_max,      &
+    & wind_10m, t_air, skinres_canopy_max, skinres_max,             &
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
-    & fract_pond_max, hcap_grnd, evapotrans, evapopot,              &
+    & fract_pond_max, evapotrans, evapopot,                         &
     & transpiration, rain, snow, wpi_rootzone, wpi_rootzone_max,    &
     & wtr_soil, hyd_cond_sat_sl1, ice_impedance, le_phase,          &
     & wtr_skin, weq_snow_soil, weq_snow_can,                        &
@@ -109,9 +107,9 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                     &
       & steepness(:), flowlag(:),                                               &
-      & t_soil_sl1(:), t_srf(:), wind_10m(:), t_air(:),                         &
+      & t_soil_sl1(:), wind_10m(:), t_air(:),                                   &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:),  &
-      & fract_skin(:), fract_pond(:), fract_pond_max(:), hcap_grnd(:),          &
+      & fract_skin(:), fract_pond(:), fract_pond_max(:),                        &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
       & wpi_rootzone(:), wpi_rootzone_max(:), wtr_soil(:),                      &
       & hyd_cond_sat_sl1(:), ice_impedance(:), le_phase(:)
@@ -138,7 +136,6 @@ CONTAINS
       & transpiration_in_m,   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
       & snowmelt_can,         & !< snow melt from canopy [m]
-      & snowmelt_pot_in_m,    & !< potential amount of snow melt [m]
       & new_snow_can,         & !< amount of snowfall on canopy within time step [m]
       & new_snow_soil,        & !< amount of snowfall to soil within time step [m]
       & exp_t, exp_w,         & !< exponents needed for unloading of snow due to temperature / wind
@@ -150,12 +147,10 @@ CONTAINS
       & evapo_pond_pot_in_m,  & !< potential evaporation from pond reservoir
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain,    & !< amount of water in the skin reservoir prior to the update [m]
-      & t_pond,               & !< surface pond water temperature [K]
       & wtr_pond_inflow,      & !< pond inflow [m]
       & fract_pond_infil,     & !< approximation of pond fraction for infiltration (with inflow included) [/]
       & wtr_pond_infilt,      & !< pond water infiltration into the soil [m]
-      & wtr_pond_overflow,    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
-      & pond_change_pot         !< amount of water that could potentially be frozen or thawed [m]
+      & wtr_pond_overflow       !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
 
     INTEGER :: ic, nc
     !
@@ -172,12 +167,12 @@ CONTAINS
     !$ACC LOOP GANG VECTOR &
     !$ACC   PRIVATE(rain_in_m, new_snow, weq_snow_soil_old)                                  &
     !$ACC   PRIVATE(evapotrans_in_m, evapotrans_soil_in_m, evapo_soil_in_m, evapo_skin_in_m) &
-    !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m)    &
+    !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can)                       &
     !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow)  &
     !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)            &
     !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
 
-    DO ic = 1, nc  
+    DO ic = 1, nc
       le_phase_blg(ic)      = le_phase(ic)
       snow_accum(ic)        = 0._wp
       weq_snow_soil_old     = weq_snow_soil(ic)
@@ -271,8 +266,6 @@ CONTAINS
       END IF
 
       !  Freezing and melting of surface pond reservoir
-      ! @todo add t_pond as persistent variable, provide specific heat capacity
-      !       and move to sse routine. Also use ice density for ice fluxes
       !------------------------
       ! 1.) Potential melting:
       IF (le_phase_blg(ic) > 0._wp .AND. ice_pond(ic) > 0._wp) THEN
@@ -520,9 +513,7 @@ CONTAINS
   !!
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
-  !! @param [in]     t_unfilt              surface tempemperature [K] (unfiltered)
   !! @param [in]     fract_snow            surface snow fraction []
-  !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
@@ -538,8 +529,8 @@ CONTAINS
 #endif
   SUBROUTINE calc_surface_hydrology_glacier ( &
     & lstart, dtime,                                         &
-    & t_unfilt,                                              &
-    & fract_snow, hcap_grnd,                                 &
+    & le_phase_change,                                       &
+    & fract_snow,                                            &
     & evapotrans, evapopot, rain, snow,                      &
     & weq_glac, q_snocpymlt,                                 &
     & snowmelt, runoff_glac,                                 &
@@ -547,13 +538,13 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, alf
 
     LOGICAL,  INTENT(in) :: lstart
     REAL(wp), INTENT(IN) :: dtime
     REAL(wp), INTENT(in) ::       &
-      & t_unfilt,                 &
-      & fract_snow, hcap_grnd, evapotrans, evapopot, rain, snow
+      & le_phase_change,          &
+      & fract_snow, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
       & weq_glac
     REAL(wp), INTENT(out)   :: &
@@ -566,7 +557,6 @@ CONTAINS
       & rain_in_m,           & !< amount of rainfall within time step [m]
       & new_snow,            & !< amount of snowfall within time step [m]
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
-      & snowmelt_pot_in_m,   & !< potential amount of snow melt [m]
       & evapo_snow_pot_in_m, & !< potential snow evaporation
       & pme_glacier_in_m,    & !< P-E in m
       & runoff_glac_in_m,    & !< Runoff in m
@@ -595,12 +585,10 @@ CONTAINS
 
     snowmelt_in_m = 0._wp
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-      IF (t_unfilt > tmelt) THEN
-        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
-        snowmelt_in_m     = snowmelt_pot_in_m                       ! there is an unlimited amount of snow
-        weq_glac          = weq_glac - snowmelt_in_m                ! reduce glacier depth according to melting
-        runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m        ! add melt water to the runoff
-        ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
+      IF (le_phase_change > 0._wp) THEN
+        snowmelt_in_m     = le_phase_change * dtime / (rhoh2o * alf) ! there is an unlimited amount of snow
+        weq_glac          = weq_glac - snowmelt_in_m                 ! reduce glacier depth according to melting
+        runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m         ! add melt water to the runoff
       END IF
     END IF
 

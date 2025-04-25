@@ -400,8 +400,6 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: le_phase_change
     dsl4jsb_Real2D_onChunk :: q_snocpymlt
     dsl4jsb_Real2D_onChunk :: t_air
@@ -433,7 +431,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapo_deficit
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
@@ -581,7 +578,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   rain)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! in
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
@@ -599,12 +596,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
     IF (tile%is_glacier) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_unfilt)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
     ELSE
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_srf)            ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_,     le_phase_change)! in
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
@@ -665,9 +659,8 @@ CONTAINS
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & ! in
           & dtime,                           & ! in
-          & t_unfilt(ic),                    & ! in
+          & le_phase_change(ic),             & ! in
           & fract_snow(ic),                  & ! in
-          & hcap_grnd(ic),                   & ! in
           & evapotrans(ic),                  & ! in
           & evapopot(ic),                    & ! in
           & rain(ic),                        & ! in
@@ -792,7 +785,6 @@ CONTAINS
         & slope_used(:),                  & ! effective slope on tile or steepness for standard scheme    []
         & flowlag_used(:),                & ! lag factor to account for retention in surface runoff luxes    []
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
-        & t_srf(:),                       & ! Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
         & t_air(:),                       & ! lowest layer atmosphere temperature [K]
         & skinres_canopy_max(:),          & ! Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
@@ -802,7 +794,6 @@ CONTAINS
         & fract_skin(:),                  & ! skin reservoir fraction []
         & fract_pond(:),                  & ! Actual pond fraction []
         & fract_pond_max(:),              & ! Maximum pond fraction []
-        & hcap_grnd(:),                   & ! heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & ! evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & ! potential evaporation (if there was enough water/ice) [kg m-2 s-1]
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
