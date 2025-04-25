@@ -58,6 +58,7 @@ MODULE mo_seb_memory_class
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
       & le_phase_change,        & !< Heat flux due to phase changes at land surface                  [W m-2]
+      & energy_balance_res,     & !< Residual of all land surface energy balance fluxes              [W m-2]
       & richardson                !< Richardson number (standalone model)                            []
     !
     ! Additional variables for LAND lct_type
@@ -228,12 +229,22 @@ CONTAINS
 
     CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
+      & t_cf('forc_hflx', 'W m-2', 'additional heat flux at surface'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'energy_balance_res', mem%energy_balance_res,                  &
+      & hgrid, surface,                                                              &
+      & t_cf('energy_balance_res', 'W m-2',                                          &
+      &      'Residual of energy balance fluxes'),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp)
 
     IF (jsbach_runs_standalone()) THEN
       CALL mem%Add_var( 'richardson', mem%richardson,                                &
