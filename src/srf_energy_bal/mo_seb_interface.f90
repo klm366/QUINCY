@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
@@ -378,32 +378,36 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
         DO ic=1,nc
 
-          IF (tile%is_glacier) THEN
-            ! Correction for snowmelt and pond melting/freezing
+          IF (tile%is_glacier .OR. .NOT. jsbach_runs_standalone()) THEN
+            ! Correction for snowmelt on glaciers or in coupled setup
             delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
-            ! IF (.NOT. tile%is_glacier) THEN
-            !   delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-            !   delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
-
-            !   IF (l_freeze_config) THEN
-            !     heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
-            !     IF (l_snow_config) THEN
-            !       IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-            !         ! Correction for melting of ice in soil layers
-            !         delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-            !         delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-            !       END IF
-            !     ELSE   ! No snow layers present
-            !       IF (heat_cap(ic) > 0._wp) THEN
-            !         ! Correction for melting of ice in soil layers
-            !         delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-            !         delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-            !       END IF
-            !     END IF
-            !   END IF
-            ! END IF
           ELSE
             delta_temp = 0._wp
+          END IF
+
+          IF (.NOT. jsbach_runs_standalone() .AND. .NOT. tile%is_glacier) THEN
+            ! Correction pond melting/freezing in coupled mode
+            ! @TODO this correction can be removed as soon as the phase change feature runs
+            ! in a coupled setup
+            delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
+
+            IF (l_freeze_config) THEN
+              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+              IF (l_snow_config) THEN
+                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
+                  ! Correction for melting of ice in soil layers
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              ELSE   ! No snow layers present
+                IF (heat_cap(ic) > 0._wp) THEN
+                  ! Correction for melting of ice in soil layers
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              END IF
+            END IF
           END IF
 
           t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp

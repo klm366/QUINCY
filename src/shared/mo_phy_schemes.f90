@@ -28,7 +28,7 @@ MODULE mo_phy_schemes
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
-    & sfc_exchange_coefficients
+    & sfc_exchange_coefficients, phase_change_pot
 #ifndef __NO_QUINCY__
   PUBLIC :: calc_peaked_arrhenius_function
 #endif
@@ -541,6 +541,65 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE update_drag
+
+  ! ======================================================================================================= !
+  !>
+  !> diagnose water/ice phase change energy potential
+  !>
+  SUBROUTINE phase_change_pot(alpha, steplen, pcp,             &
+    &            pescoe, pfscoe, peqcoe, pfqcoe,               &
+    &            ps_zero, psold,                               &
+    &            pqsold, pdqsold,                              &
+    &            pnetrad, pgrdfl,                              &
+    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,         &
+    &            phase_change_zero                             &
+    &            )
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_physical_constants, ONLY: &
+      & zemiss_def, &
+      & stbo, &
+      & alv,  &
+      & als
+
+    REAL(wp), INTENT(in)    :: alpha
+    REAL(wp), INTENT(in)    :: steplen
+    REAL(wp), INTENT(in)    :: pcp, pfscoe, pescoe, pfqcoe, peqcoe
+    REAL(wp), INTENT(in)    :: ps_zero, psold, pqsold, pdqsold
+    REAL(wp), INTENT(in)    :: pnetrad, pgrdfl
+    REAL(wp), INTENT(in)    :: pcfh, pcair, pcsat, pfracsu
+    REAL(wp), INTENT(in)    :: pgrdcap
+
+    REAL(wp), INTENT(out)   :: phase_change_zero
+        !
+    REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
+    REAL(wp) :: pdt
+
+      pdt     = alpha * steplen
+
+      zicp = 1._wp / pcp
+      !
+      zca = als * pfracsu +  alv * (pcair - pfracsu)
+      zcs = als * pfracsu +  alv * (pcsat - pfracsu)
+
+     zcolin = pgrdcap*zicp +                                                      &
+        &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -   &
+        &      pcfh * (zca * peqcoe - zcs) *                                      &
+        &      zicp * pdqsold)
+      !
+      zcohfl = -pdt * pcfh * (pescoe - 1._wp)
+
+      ! Energy released / required by / for phase changes to reach the freezing point
+      phase_change_zero =                                            &
+        &    + ps_zero * (zcolin + zcohfl) / pdt                     &
+        &    - zcolin * psold / pdt                                  &
+        &    - pnetrad                                               &
+        &    - pcfh * pfscoe                                         &
+        &    - pcfh * ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) &
+        &    - pgrdfl
+
+  END SUBROUTINE phase_change_pot
 
 #endif
 END MODULE mo_phy_schemes
