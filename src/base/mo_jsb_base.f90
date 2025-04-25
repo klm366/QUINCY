@@ -53,6 +53,7 @@ CONTAINS
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
     USE mo_q_agr_constants,     ONLY: init_q_agr_constants
+    USE mo_q_syl_constants,     ONLY: init_q_syl_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
@@ -62,7 +63,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -74,6 +75,9 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Use_config(Q_SYL_)
+#endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -87,6 +91,9 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(Q_SYL_)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
@@ -164,6 +171,7 @@ CONTAINS
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
            CALL init_q_agr_constants
+           CALL init_q_syl_constants
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_turb_constants
@@ -214,6 +222,7 @@ CONTAINS
       dsl4jsb_Get_config(RAD_)
       dsl4jsb_Get_config(SSE_)
       dsl4jsb_Get_config(HYDRO_)
+      dsl4jsb_Get_config(PPLCC_)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
@@ -223,7 +232,6 @@ CONTAINS
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
-        dsl4jsb_Get_config(PPLCC_)
 
         ! Make number of vertical layers available from the options type
         IF (model%Is_process_enabled(HYDRO_)) THEN
@@ -269,6 +277,18 @@ CONTAINS
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
+
+#ifndef __NO_QUINCY__
+        ! The Q_SYL_ process requires the PPLCC process to be active
+        dsl4jsb_Get_config(Q_SYL_)
+        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+            CALL message(TRIM(routine), 'Activating PPLCC_ process because it is required by the active Q_SYL_ process')
+          END IF
+          dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+#endif
+
       CASE (MODEL_JSBACH)
 
         IF (model%Do_fractions_change()) THEN

@@ -22,7 +22,7 @@ MODULE mo_veg_memory_class
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
 
-  USE mo_jsb_process_class,      ONLY: VEG_, Q_SH_, Q_AGR_
+  USE mo_jsb_process_class,      ONLY: VEG_, Q_SYL_, Q_AGR_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID,                                                      &
@@ -409,9 +409,9 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
     ! ... and if with product pools
     TYPE(t_veg_bgcm_with_elements),    POINTER :: prod_decay
-    ! ... and if with simple harvest
+    ! ... and if with sylviculture
     TYPE(t_veg_bgcm_with_components),  POINTER :: harvest_litter
-    ! ... and if with simple harvest and with product pools
+    ! ... and if with sylviculture or agriculture and with product pools
     TYPE(t_veg_bgcm_with_elements),    POINTER :: harvest_to_prod
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_main_get_element_name_by_id
@@ -437,7 +437,7 @@ CONTAINS
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_quincy_output_class, ONLY: unitless
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_memory),  INTENT(inout), TARGET :: mem             !< veg memory
@@ -460,7 +460,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER               :: routine = TRIM(modname)//':Init_veg_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
@@ -471,7 +471,7 @@ CONTAINS
     vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -531,11 +531,11 @@ CONTAINS
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
       IF(lib_id > 0) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SH_)%active)        &
+        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)        &
             & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
           ! flux represented as bgcm with compartments: fluxes due to harvest
           mem%veg_bgcm_main%harvest_litter => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,  &
-            & VEG_BGCM_HARVEST_LITTER_ID, name = 'vegetation_bgcm_flux_harvest_litter',             &
+            & VEG_BGCM_HARVEST_LITTER_ID, name = 'vegetation_bgcm_flux_harvest_litter',                &
             & shortname = 'veg_bgcm_harvest_litter',                                                   &
             & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
         END IF
@@ -559,7 +559,7 @@ CONTAINS
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools .AND. lib_id > 0) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SH_)%active)             &
+        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)             &
             & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
 
           ! product pools and decay represented as bgcms with elements
@@ -674,7 +674,7 @@ CONTAINS
 
       ! Product pools and decay
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools .AND. lib_id > 0) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SH_)%active)             &
+        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)             &
             & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
 
           CALL mem%Add_var(mem%veg_bgcm_main%prod_decay, &
@@ -754,7 +754,7 @@ CONTAINS
 
       ! Flux to litter due to harvest
       IF(lib_id > 0) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SH_)%active)        &
+        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)        &
             & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
 
           CALL mem%Add_var(mem%veg_bgcm_main%harvest_litter,                                               &
@@ -777,7 +777,7 @@ CONTAINS
               & initval_r = 0.0_wp)
           END IF
         END IF
-      END IF ! IF (dsl4jsb_Config(Q_SH_)%active) .OR. dsl4jsb_Config(Q_AGR_)%active
+      END IF ! IF (dsl4jsb_Config(Q_SYL_)%active) .OR. dsl4jsb_Config(Q_AGR_)%active
       ! --------------------------------------------------------------------------------------------------- !
       !> 2.0 bgc_material diagnostics variables - used for model output with IQ
       !>

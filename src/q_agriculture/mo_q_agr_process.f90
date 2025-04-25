@@ -474,11 +474,9 @@ MODULE mo_q_agr_process
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_fertiliser_application( &
       & nc, &
-      & lctlib_ps_pathway, &
       & nd_crop_season, &
       & nd_crop_season_mavg, &
-      & n_fertiliser_c3, &
-      & n_fertiliser_c4, &
+      & n_fertiliser, &
       & fertiliser_nh4, &
       & fertiliser_nh4_n15, &
       & fertiliser_no3, &
@@ -489,15 +487,12 @@ MODULE mo_q_agr_process
     USE mo_jsb_impl_constants,     ONLY: test_false_true
     USE mo_q_agr_constants,        ONLY: fcs_fertappl_day1, fcs_fertappl_day2, fcs_fertappl_day3, &
                                          fcs_fertappl_day4, frac_fertil_nh4, frac_fertil_po4, eta_fertiliser
-    USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                         !< dimensions
-    INTEGER,  INTENT(in)    :: lctlib_ps_pathway          !< photosynthesis type (ic3phot|ic4phot)
-    REAL(wp), INTENT(in)    :: nd_crop_season(:)       !< number of days this growing season has lasted
-    REAL(wp), INTENT(in)    :: nd_crop_season_mavg(:)  !< number of days this growing season has lasted
-    REAL(wp), INTENT(in)    :: n_fertiliser_c3(:)         !< annual N fertiliser rate for C3 crops (mol/m2/yr)
-    REAL(wp), INTENT(in)    :: n_fertiliser_c4(:)         !< annual N fertiliser rate for C4 crops (mol/m2/yr)
+    REAL(wp), INTENT(in)    :: nd_crop_season(:)          !< number of days this growing season has lasted
+    REAL(wp), INTENT(in)    :: nd_crop_season_mavg(:)     !< number of days this growing season has lasted
+    REAL(wp), INTENT(in)    :: n_fertiliser(:)            !< annual N fertiliser rate (mol/m2/yr)
     REAL(wp), INTENT(inout) :: fertiliser_nh4(:),       & !< NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_nh4_n15(:),   & !< 15NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_no3(:),       & !< NO3 fertiliser application [micro mol / m2 / s]
@@ -526,11 +521,8 @@ MODULE mo_q_agr_process
       !> 2.0 Mineral fertiliser application for croplands
       !>
       IF (is_fertiliser_day) THEN
-        IF (lctlib_ps_pathway == ic3phot) THEN
-          hlp1 = n_fertiliser_c3(ic) / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
-        ELSE
-          hlp1 = n_fertiliser_c4(ic) / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
-        END IF
+        hlp1 = n_fertiliser(ic) / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
+
         fertiliser_nh4(ic) = hlp1 * frac_fertil_nh4
         fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser))
         fertiliser_no3(ic) = hlp1 * (1._wp - frac_fertil_nh4)

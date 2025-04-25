@@ -211,7 +211,7 @@ CONTAINS
 
     ! Set defaults
     active                      = .TRUE.
-    lrestart_cont               = .FALSE.    ! TRUE: Continue although SB variables are missing in restart file
+    lrestart_cont               = .FALSE.           ! TRUE: Continue even if SB variables are missing in restart file
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'

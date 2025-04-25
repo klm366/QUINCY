@@ -51,13 +51,13 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, SPQ_, Q_SH_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, SPQ_, Q_SYL_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_AGR_)
-    dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SPQ_)
@@ -84,7 +84,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_AGR_)
-    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(SPQ_)
@@ -142,7 +142,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_AGR_)
-    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(SPQ_)
@@ -296,7 +296,7 @@ CONTAINS
       ! Standard case: calculate establishment from seed pool
       ! (Exceptions: no establishment on cropland or if we just had a stand replacing harvest running QS)
       IF (.NOT. (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
-        IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
+        IF (.NOT. dsl4jsb_Config(Q_SYL_)%flag_stand_harvest_event) THEN
           CALL calc_veg_establishment( &
             & nc                                  , & ! in
             & dtime                               , &
