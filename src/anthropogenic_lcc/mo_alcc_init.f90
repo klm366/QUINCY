@@ -315,7 +315,7 @@ CONTAINS
       END DO
       
 
-      ! Print out the value of cf_transition_pfts
+      ! Print out the value of cf_transition_pfts (here shows 121 elements) 
       DO i = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
         DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
           DO j = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
@@ -327,8 +327,8 @@ CONTAINS
               WRITE(temp_string_j, '(I0)') idx
               WRITE(temp_string_k, '(I0)') j
               ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_transition_pfts: (i='//TRIM(ADJUSTL(temp_string_i))//', idx='// &
-                & TRIM(ADJUSTL(temp_string_j))//', j='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
+              CALL message(TRIM(routine), 'cf_transition_pfts: (nproma='//TRIM(ADJUSTL(temp_string_i))//', transition_idx='// &
+                & TRIM(ADJUSTL(temp_string_j))//', iblk='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
             !END IF
           END DO
         END DO
@@ -390,8 +390,8 @@ CONTAINS
               WRITE(temp_string_i, '(I0)') i
               WRITE(temp_string_j, '(I0)') j
               ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (iblk='// &
-                & TRIM(ADJUSTL(temp_string_i))//', col='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
+              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
+                & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
             !END IF
           END DO
         END DO
