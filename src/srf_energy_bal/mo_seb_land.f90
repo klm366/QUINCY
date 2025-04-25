@@ -450,9 +450,13 @@ CONTAINS
             hlp1 = wtr_soil_sl(ic,1)
           END IF
           hlp2 = ice_soil_sl(ic,1)
+          le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
+          le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
+        ELSE
+          ! Without freezing, the only phase change is snowmelt
+          le_freeze_pot(ic) = 0._wp
+          le_melt_pot(ic)   = weq_snow(ic) * hlp3
         END IF
-        le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
-        le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
       ELSE
         ! Glaciers are currently considered to provide unlimited ice for melting
         ! Setting available snow to 1 m weq should be more than sufficient for one time step

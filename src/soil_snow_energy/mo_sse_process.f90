@@ -469,14 +469,14 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-      ! Adding top layer energy from phase change (from SEB). 
+      ! Adding top layer energy from phase change (from SEB).
       ! Actual freezing and melting is calculated below.
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         t_soil_sl(ic,1) = t_soil_sl(ic,1) &
                       & + le_phase(ic) / heat_cap(ic,1) * delta_time
       END DO
-      !$ACC END PARALLEL LOOP 
+      !$ACC END PARALLEL LOOP
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN
@@ -502,7 +502,7 @@ CONTAINS
             END DO
           END DO
           !$ACC END PARALLEL LOOP
-        END IF 
+        END IF
 
         ! Compute mass of feezing water or melting ice using the available energy
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -555,12 +555,12 @@ CONTAINS
           DO ie = 1, n_errors
             ic = error_idx(ie)
             WRITE (message_text_long,*) 'negative soil water or ice content due to phasechange', &
-              & ' at index ', ic,'.:',                       NEW_LINE('a'), &
-              & 'Water content old [m]: ', wtr_old(ic,:),    NEW_LINE('a'), &
-              & 'Ice content old [m]:   ', ice_old(ic,:),    NEW_LINE('a'), &
-              & 'Frozen water [m]:      ', frozen(ic,:),     NEW_LINE('a'), &
-              & 'Melted ice [m]:        ', melt(ic,:),       NEW_LINE('a'), &
-              & 'Water content new [m]: ', wtr(ic,:),        NEW_LINE('a'), &
+              & ' at index ', ic,'.:',                                 NEW_LINE('a'), &
+              & 'Water content old [m]: ', wtr_old(ic,:),              NEW_LINE('a'), &
+              & 'Ice content old [m]:   ', ice_old(ic,:),              NEW_LINE('a'), &
+              & 'Frozen water [m]:      ', freeze_mass(ic,:) / rhoh2o, NEW_LINE('a'), &
+              & 'Melted ice [m]:        ', melt_mass(ic,:)   / rhoi,   NEW_LINE('a'), &
+              & 'Water content new [m]: ', wtr(ic,:),                  NEW_LINE('a'), &
               & 'Ice content new [m]:   ', ice(ic,:)
             IF (enforce_water_budget == WB_ERROR) THEN
               CALL finish ('calc_soil_temperature', message_text_long)
