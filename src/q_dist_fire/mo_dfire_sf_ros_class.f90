@@ -146,7 +146,7 @@ CONTAINS
 
         sigma(inc) = calc_sigma(df_sf_sigma_nr, nfuels, df_sigmas, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
         !< (Table A1, 3rd from Thonicke et al. (2010))
-        beta =  ros%fbd(inc) / df_sf_oven_dry_part_dens !< [-]
+        beta(inc) =  ros%fbd(inc) / df_sf_oven_dry_part_dens !< [-]
         !< Calculate beta_op (Eq. A6 from Thonicke et al. (2010))
         beta_op(inc) = 0.200395_wp * (sigma(inc) ** (-0.8189_wp)) !< [-]
 
