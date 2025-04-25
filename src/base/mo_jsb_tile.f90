@@ -31,7 +31,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
   USE mo_hsm_class,           ONLY: t_State, t_Message
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
@@ -241,11 +241,14 @@ CONTAINS
         ! Get the ID of the current process i from input argument `processes`
         iproc = processes(j)
         ! TODO hard coded checks of process dependencies - should not be handled here
-        IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
-          IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
-            CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+        SELECT CASE (model%config%model_scheme)
+        CASE (MODEL_JSBACH)
+          IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
+            IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
+              CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+            END IF
           END IF
-        END IF
+        END SELECT
         IF (PRESENT(process_actions)) THEN
           ! Use the given `process_actions(j)` for this tile and process `iproc` ...
           CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
@@ -397,9 +400,11 @@ CONTAINS
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &

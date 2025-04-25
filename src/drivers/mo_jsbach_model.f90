@@ -37,8 +37,6 @@ MODULE mo_jsbach_model
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_class,       ONLY: get_model
 
-  USE mo_mpi,       ONLY: i_am_accel_node
-
   IMPLICIT NONE
 
   PRIVATE
@@ -87,7 +85,7 @@ CONTAINS
 
     USE mo_memory_log,              ONLY: memory_log_add
 
-    USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_work, my_process_is_stdio, &
+    USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
       &                                   num_io_procs, pio_type,                     &
@@ -460,20 +458,16 @@ CONTAINS
     !>
     ! ----------------------------------------------------------------------------------------------------- !
 
-#if defined( _OPENACC )
-    i_am_accel_node = my_process_is_work()
-#endif
-
     ! ----------------------------------------------------------------------------------------------------- !
     !> 14.0 get and write out some of the initial values
     !>
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
       ! ..
-      CALL update_statistics(lacc=i_am_accel_node)
+      CALL update_statistics(lacc=.TRUE.)
       ! --
       IF (output_mode%l_nml) THEN
-          CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
+          CALL write_name_list_output(jstep=0, lacc=.TRUE.)
       END IF
 
     END IF ! not isRestart()
@@ -626,10 +620,10 @@ CONTAINS
       END DO
 
       ! update accumulated values
-      CALL update_statistics(lacc=i_am_accel_node)
+      CALL update_statistics(lacc=.TRUE.)
 
       IF (l_nml_output) THEN
-        CALL write_name_list_output(jstep, lacc=i_am_accel_node)
+        CALL write_name_list_output(jstep, lacc=.TRUE.)
       ENDIF
 
       ! re-initialize MAX/MIN fields with 'resetval'
@@ -684,10 +678,6 @@ CONTAINS
       ! step_in_forcing_file = step_in_forcing_file + 1
       sim_time = getElapsedSimTimeInSeconds(mtime_current)
     END DO TIME_LOOP
-
-#if defined( _OPENACC )
-    i_am_accel_node = .FALSE.
-#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 18.0  ... @TODO describe
@@ -779,7 +769,6 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_fortran_tools,             ONLY: assert_acc_host_only
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
@@ -846,8 +835,6 @@ CONTAINS
 
     INTEGER :: nc, ics, ice, ic
     INTEGER :: global_seconds_day, current_year
-
-    LOGICAL :: save_i_am_accel_node
 
     ! IQ spin-up accelerator model configurations
     INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
@@ -993,11 +980,6 @@ CONTAINS
       !>   see: 'mo_jsb_interface:interface_full'
       !>
 
-      ! We need to turn off i_am_accel_node for the forcing module to do host-based file reading
-      ! This does not affect the OpenACC clauses themselves in the forcing module!
-      save_i_am_accel_node = i_am_accel_node
-      i_am_accel_node = .FALSE.
-
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         CALL get_standalone_driver( &
@@ -1053,19 +1035,11 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_deposition),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, nhx_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, noy_n15_deposition),                          &
-          & dsl4jsb_var2D_onDomain(A2L_, p_deposition),                                &
           & co2_air_dc13,                                                              &
           & co2_air_Dc14                                                               &
           & )
 #endif
       END SELECT
-
-      ! Turn it on again for the rest of the time step
-      i_am_accel_node = save_i_am_accel_node
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
@@ -1092,10 +1066,10 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
 
-        IF (model%config%qmodel_id /= QCANOPY) THEN
-          CALL assert_acc_host_only( &
-            & 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model, lacc=i_am_accel_node)
-        ENDIF
+#ifdef _OPENACC
+        IF (model%config%qmodel_id /= QCANOPY) &
+          & CALL finish(routine, 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model)
+#endif
 
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)

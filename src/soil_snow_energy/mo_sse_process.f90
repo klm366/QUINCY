@@ -242,14 +242,18 @@ CONTAINS
     ! tsl is at 0.07 m
     ! thickness of layers 0.065, 0.254, 0.913, 2.902, 5.700 m (s. soiltemp)
     !
+#ifdef __QUINCY_STANDALONE__
+#else
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
+#endif
     USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
-
+#ifdef __QUINCY_STANDALONE__
+#else
     INTEGER                   :: nsoil, ndim
     REAL(wp)                  :: zkap, zsqrt
     REAL(wp), ALLOCATABLE     :: zrange(:), zdmax(:)
@@ -308,7 +312,7 @@ CONTAINS
     END DO
 
     DEALLOCATE(zrange, jmax, zdmax)
-
+#endif
   END SUBROUTINE init_soil_temperature
 
   ! --------------------------------------------------------------------------------------------------------- !
@@ -701,7 +705,7 @@ CONTAINS
     & nc, nsnow,                            &
     & lstart,                               &
     & itop_old, itop,                       &
-    & t_unfilt, t_soil_acoef, t_soil_bcoef, &
+    & t_srf, t_soil_acoef, t_soil_bcoef,    &
     & t_snow, t_snow_acoef, t_snow_bcoef,   &
     & t_soil_top)
 
@@ -714,7 +718,7 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
     LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
     INTEGER,  INTENT(in)    :: itop(:), itop_old(:)       !! Top snow layer for previous and new time step
-    REAL(wp), INTENT(in)    :: t_unfilt(:)                !! Surface temperature at top of snow [K]
+    REAL(wp), INTENT(in)    :: t_srf(:)                   !! Surface temperature at top of snow [K]
     REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! Top layer soil A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! Top layer soil B coefficient of Richtmyer and Morton scheme
 
@@ -733,7 +737,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ic=1,nc
       DO is=1,nsnow
-        t_snow(ic,is) = t_unfilt(ic)
+        t_snow(ic,is) = t_srf(ic)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -780,7 +784,7 @@ CONTAINS
         IF (MAX(itop(ic), itop_old(ic)) <= nsnow) THEN
           t_soil_top(ic) = t_snow_acoef(ic,nsnow) + t_snow_bcoef(ic,nsnow) * t_snow(ic,nsnow)
         ELSE
-          t_soil_top(ic) = t_unfilt(ic)
+          t_soil_top(ic) = t_srf(ic)
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -788,7 +792,7 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        t_soil_top(ic) = t_unfilt(ic)
+        t_soil_top(ic) = t_srf(ic)
       END DO
       !$ACC END PARALLEL LOOP
 

@@ -438,6 +438,9 @@ CONTAINS
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
+    LOGICAL            :: exists_VegRoughness = .FALSE.
+    LOGICAL            :: exists_MinVegRoughness = .FALSE.
+    LOGICAL            :: exists_MaxVegRoughness = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1006,6 +1009,18 @@ CONTAINS
           CASE ('albedolitternir')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
             exists_AlbedoLitterNIR = .TRUE.
+          ! jsbach parameter
+          CASE ('vegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%VegRoughness
+            exists_VegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('minvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MinVegRoughness
+            exists_MinVegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('maxvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MaxVegRoughness
+            exists_MaxVegRoughness = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1309,10 +1324,16 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterVIS) &
-          CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterNIR) &
-          CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterVIS) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterNIR) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_VegRoughness) &
+          & CALL finish('init_lctlib','No data for VegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MinVegRoughness) &
+          & CALL finish('init_lctlib','No data for MinVegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MaxVegRoughness) &
+          & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1648,6 +1669,9 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
       END IF
 #endif
     END IF

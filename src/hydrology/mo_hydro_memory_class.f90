@@ -25,14 +25,19 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
-  ! Use of prcesses in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
+  ! Use of processes in this module
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
+#ifndef __QUINCY_STANDALONE__
+  dsl4jsb_Use_processes ASSIMI_
+#endif
 
   ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(SEB_)
+#ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_config(ASSIMI_)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -204,7 +209,7 @@ MODULE mo_hydro_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_hydro_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_hydro_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     & TSTEP_CONSTANT, tables
@@ -221,12 +226,15 @@ CONTAINS
     CHARACTER(len=*),      INTENT(in)    :: prefix
     CHARACTER(len=*),      INTENT(in)    :: suffix
     INTEGER,               INTENT(in)    :: lct_ids(:)
+    INTEGER,               INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,               INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(SEB_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(ASSIMI_)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
@@ -252,7 +260,9 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SEB_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Get_config(ASSIMI_)
+#endif
 
     IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
       ini_snow_dens = dens_snow_min
@@ -1107,6 +1117,7 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
+#ifndef __QUINCY_STANDALONE__
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,            &
           & hgrid, surface,                                                              &
@@ -1124,6 +1135,7 @@ CONTAINS
           & prefix, suffix,                                                              &
           & loutput=.TRUE., initval_r=0.0_wp )
       END IF
+#endif
 
       CALL mem%Add_var( 'transpiration', mem%transpiration,                              &
         & hgrid, surface,                                                                &
