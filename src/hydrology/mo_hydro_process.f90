@@ -324,13 +324,22 @@ CONTAINS
       END IF
       evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m
 
-      ! Add dew to liquid pond storage or evaporate pond water
-      IF (evapo_pond_in_m > 0._wp .OR. -evapo_pond_in_m <= wtr_pond(ic)) THEN
+      ! Add dew to liquid pond storage, sublimate pond ice or evaporate pond water
+      !   Note that pond ice sublimation has priority over pond water evaporation because
+      !   pond ice is expected to form as a top layer and would inhibit evaporation of
+      !   the water below.
+      IF (evapo_pond_in_m > 0._wp) THEN
+        ! Adding dew to pond water storage
         wtr_pond(ic) = wtr_pond(ic) + evapo_pond_in_m
+      ELSE IF (-evapo_pond_in_m <= ice_pond(ic)) THEN
+        ! Sublimating pond ice (if existing)
+        ice_pond(ic) = ice_pond(ic) + evapo_pond_in_m
       ELSE IF (-evapo_pond_in_m < wtr_pond(ic) + ice_pond(ic)) THEN
-        ice_pond(ic) = ice_pond(ic) + (evapo_pond_in_m + wtr_pond(ic))
-        wtr_pond(ic) = 0._wp
+        ! Sublimating pond ice (if existing) and/or evaporating pond water
+        wtr_pond(ic) = wtr_pond(ic) + (evapo_pond_in_m + ice_pond(ic))
+        ice_pond(ic) = 0._wp
       ELSE
+        ! Evapotranspiration cannot be satisfied with pond content, remainder goes into deficit
         evapo_deficit(ic) = evapo_deficit(ic) + (evapo_pond_in_m + wtr_pond(ic) + ice_pond(ic))
         wtr_pond(ic) = 0._wp
         ice_pond(ic) = 0._wp
