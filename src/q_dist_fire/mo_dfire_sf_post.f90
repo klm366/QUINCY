@@ -548,7 +548,7 @@ CONTAINS
 
     IF (residue < 0._wp) THEN
       mass_overflow = ABS(residue)
-      residue = fuel_consumption ! set to max value
+      residue = 0._wp 
     END IF
     ! Use for debugging
     !DO ic=1, SIZE(residue, DIM=1) ! 1= nc dimension index
