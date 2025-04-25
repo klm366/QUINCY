@@ -659,8 +659,7 @@ CONTAINS
   !>
   !> Implementation of "update" for task "energy balance"
   !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
+  !! This diagnostic computes the residual in the energy balance over the land surface.
   !!
   SUBROUTINE update_energy_balance(tile, options)
 
@@ -668,8 +667,8 @@ CONTAINS
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_grid_class,         ONLY: t_jsb_grid
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     ! Local variables
     !
@@ -694,8 +693,8 @@ CONTAINS
       & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
       & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & le_phase_change,    &               !< Latent energy required/released due to phase change [W m-2]
       & heat_cap,           &               !< Surface heat capacity                           [J m-2 K-1]
-      & snowmelt,           &               !< Snow melt flux                                 [kg m-2 s-1]
       & t,                  &               !< Current time steps temperature                          [K]
       & t_old,              &               !< Previous time steps temperature                         [K]
       & energy_balance_res                  !< Energy balance residual                             [W m-2]
@@ -710,7 +709,6 @@ CONTAINS
       & lw_srf_up,       &
       & sw_srf_up,       &
       & sw_srf_down,     &
-      & snowmelt_energy, &
       & delta_t_srf,     &
       & t_energy
 
@@ -759,28 +757,25 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)                ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)              ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      forc_hflx)                  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      le_phase_change)            ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      heat_cap)                   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)                          ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)                      ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)                   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      energy_balance_res)         ! out
 
     n_errors = 0   ! initialize error counter
 
-    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy, delta_t_srf, t_energy)
+    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf, t_energy)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
     !$ACC LOOP GANG(STATIC: 1) &
-    !$ACC & VECTOR PRIVATE(lw_srf_up, sw_srf_up, sw_srf_down, snowmelt_energy, delta_t_srf, t_energy)
+    !$ACC & VECTOR PRIVATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf, t_energy)
     DO ic=1,nc
       ! Compute upwards fluxes for error message output
       lw_srf_up(ic)   = lw_srf_net(ic) - lw_srf_down(ic)
       sw_srf_down(ic) = swvis_srf_down(ic) + swnir_srf_down(ic) + swpar_srf_down(ic)
       sw_srf_up(ic)   = sw_srf_net(ic) - sw_srf_down(ic)
-
-      ! Convert snow melt water flux to the energy equivalent
-      snowmelt_energy(ic) = -snowmelt(ic) * alf
 
       ! Compute temperature change
       delta_t_srf(ic) = t(ic) - t_old(ic)
@@ -789,7 +784,7 @@ CONTAINS
       IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
         ! Compute energy flux residual
         energy_balance_res(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
-          &                    + forc_hflx(ic) + snowmelt_energy(ic) + t_energy(ic)
+          &                    + forc_hflx(ic) - le_phase_change(ic) + t_energy(ic)
       END IF
 
 #ifndef _OPENACC
@@ -821,7 +816,7 @@ CONTAINS
           & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
           & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
           & 'Ground heat flux:        ', forc_hflx(ic),                                NEW_LINE('a'), &
-          & 'Snow melt flux:          ', snowmelt_energy(ic),                          NEW_LINE('a'), &
+          & 'Phase change flux:       ', -le_phase_change(ic),                         NEW_LINE('a'), &
           & 'Surface temp. change:    ', t_energy(ic),                                 NEW_LINE('a'), &
           & 'Temperature change [K]:  ', delta_t_srf(ic)
         CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
@@ -837,12 +832,10 @@ CONTAINS
   !>
   !! Implementation of "aggregate" for task "energy_balance"
   !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_energy_balance(tile, options)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_energy_balance'
 
