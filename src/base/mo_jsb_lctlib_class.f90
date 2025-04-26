@@ -760,7 +760,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values don't add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LitVeg_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LitVeg_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_litveg_coef = .TRUE.
@@ -772,7 +772,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LeafLit_coef(:)) .NE. 1.) &
+                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LeafLit_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_leaflit_coef = .TRUE.
@@ -784,7 +784,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%WoodLit_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for WoodLit_coef_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_woodlit_coef = .TRUE.
