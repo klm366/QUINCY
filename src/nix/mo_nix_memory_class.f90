@@ -17,7 +17,7 @@ MODULE mo_nix_memory_class
   USE mo_kind,             ONLY: wp
   USE mo_util,             ONLY: One_of
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_int2d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   ! Use of prcesses in this module
@@ -31,7 +31,7 @@ MODULE mo_nix_memory_class
 
   PUBLIC :: t_nix_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 6
+  INTEGER, PARAMETER :: max_no_of_vars = 7
 
   TYPE, EXTENDS(t_jsb_memory) :: t_nix_memory
 
@@ -44,6 +44,8 @@ MODULE mo_nix_memory_class
       &  theta_a_sn          , & ! volumetric air content               [ - ]
       &  dzm_sn                  ! snow layer thickness                 [ m ]
 
+    TYPE(t_jsb_var_int2d)   :: &
+      &  test_int2d               ! snow nodal temperature id             [ - ]
 
   CONTAINS
     PROCEDURE :: Init => Init_nix_memory
@@ -59,7 +61,7 @@ CONTAINS
   SUBROUTINE Init_nix_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
+    USE mo_jsb_io,            ONLY: grib_bits, DATATYPE_INT32, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -138,29 +140,14 @@ CONTAINS
         & prefix, suffix,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      CALL mem%Add_var('test_int2d', mem%test_int2d,                    &
+        & hgrid, surface,                                               &
+        & t_cf('test_int2d', '', '', DATATYPE_INT32),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                               &
+        & lrestart=.FALSE., initval_i=0 )
 
   END SUBROUTINE Init_nix_memory
-
-
-
-
-
-
 
 #endif
 END MODULE mo_nix_memory_class

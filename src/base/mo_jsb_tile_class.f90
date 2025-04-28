@@ -36,7 +36,7 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_int2d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
 #ifndef __NO_QUINCY__
@@ -64,7 +64,8 @@ MODULE mo_jsb_tile_class
   CONTAINS
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
-    GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
+    PROCEDURE(aggregate_interface_i2d), DEFERRED             :: Aggregate_i2d !< Aggregate operator for 2d variables
+    GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d, Aggregate_i2d
   END TYPE t_jsb_aggregator
 
   !> A type to hold vectors of pointers to t_jsb_aggregator objects
@@ -79,6 +80,9 @@ MODULE mo_jsb_tile_class
   END TYPE
   TYPE :: real_3d_p
     REAL(wp), POINTER :: p(:,:,:) => NULL()
+  END TYPE
+  TYPE :: int_2d_p
+    INTEGER,  POINTER :: p(:,:) => NULL()
   END TYPE
   !
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
@@ -122,8 +126,9 @@ MODULE mo_jsb_tile_class
     CLASS(t_jsb_tile_abstract),   POINTER :: first_child_tile    => NULL() !< pointer to the first child tile
     CLASS(t_jsb_tile_abstract),   POINTER :: next_sibling_tile   => NULL() !< pointer to the next sibling tile
     !
-    TYPE(real_2d_p),              POINTER :: ptrs2d_cache(:,:,:) => NULL() !< cache of pointers to 2d vars used for GPU porting
-    TYPE(real_3d_p),              POINTER :: ptrs3d_cache(:,:,:) => NULL() !< cache of pointers to 3d vars used for GPU porting
+    TYPE(real_2d_p),              POINTER :: ptrs2d_cache(:,:,:) => NULL()   !< cache of pointers to real 2d vars used for GPU porting
+    TYPE(real_3d_p),              POINTER :: ptrs3d_cache(:,:,:) => NULL()   !< cache of pointers to real 3d vars used for GPU porting
+    TYPE(int_2d_p),               POINTER :: ptrs_i2d_cache(:,:,:) => NULL() !< cache of pointers to int 2d vars used for GPU porting
     !
     INTEGER                               :: grid_id = -1                  !< ID of the grid used for the tile
     INTEGER                               :: owner_model_id = 0            !< ID of model instance (needed e.g. for nesting)
@@ -245,6 +250,16 @@ MODULE mo_jsb_tile_class
       CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
     END SUBROUTINE aggregate_interface_3d
 
+    !> Interface for deferred subroutine `Aggregate_i2d` of `t_jsb_aggregator`
+    SUBROUTINE aggregate_interface_i2d(this, tile, var, ics, ice, iblk, caller)
+      IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_int2d
+      CLASS(t_jsb_aggregator),    INTENT(inout) :: this            !< Aggregator
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+      TYPE(t_jsb_var_int2d),      INTENT(inout) :: var             !< Variable with 2 dimensions
+      INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
+      CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
+    END SUBROUTINE aggregate_interface_i2d
+
   END INTERFACE
 
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
@@ -258,8 +273,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
     PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
     GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
-    PROCEDURE :: Aggregate_2d     => Aggregate_weighted_by_fract_2d     !< Specific implementation of agg. of 2d vars
-    PROCEDURE :: Aggregate_3d     => Aggregate_weighted_by_fract_3d     !< Specific implementation of agg. of 3d vars
+    PROCEDURE :: Aggregate_2d     => Aggregate_weighted_by_fract_2d     !< Specific implementation of agg. of REAL 2d vars
+    PROCEDURE :: Aggregate_3d     => Aggregate_weighted_by_fract_3d     !< Specific implementation of agg. of REAL 3d vars
+    PROCEDURE :: Aggregate_i2d    => Aggregate_weighted_by_fract_i2d    !< Specific implementation of agg. of INT 2d vars
     FINAL     :: Finalize_aggregator_weighted_by_fract            !< Destructor to deallocate fields when aggregator is deallocated
   END TYPE t_jsb_aggregator_weighted_by_fract
 
@@ -1145,6 +1161,30 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
 
+  ! ====================================================================================================== !
+  !>
+  !> Aggregation of a 2d variable from the child tiles by weighted fractions
+  !>
+  SUBROUTINE Aggregate_weighted_by_fract_i2d(this, tile, var, ics, ice, iblk, caller)
+
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
+    TYPE(t_jsb_var_int2d),                     INTENT(inout) :: var            !< to be aggregated 2d variable
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
+    CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+
+    INTEGER, POINTER :: ptr(:,:)
+    TYPE(int_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
+
+    INTEGER :: no_children, icount,ichild, i, iproc, j
+    LOGICAL :: l_aggregate_all
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_i2d'
+
+    CALL finish(routine, 'Aggregation for integer variables not implemented yet!')
+
+  END SUBROUTINE Aggregate_weighted_by_fract_i2d
+
   FUNCTION Get_first_child_tile(this) RESULT(return_ptr)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
@@ -1340,8 +1380,9 @@ CONTAINS
     maxsize = MAXVAL( sizes )
 
     ALLOCATE( this%ptrs2d_cache(no_children,maxsize,nproc), &
-              this%ptrs3d_cache(no_children,maxsize,nproc)  )
-    !$ACC ENTER DATA CREATE(this%ptrs2d_cache, this%ptrs3d_cache)
+              this%ptrs3d_cache(no_children,maxsize,nproc), &
+              this%ptrs_i2d_cache(no_children,maxsize,nproc) )
+    !$ACC ENTER DATA CREATE(this%ptrs2d_cache, this%ptrs3d_cache, this%ptrs_i2d_cache)
 
     DO iproc=1,nproc
       IF (this%process_action(iproc) == 2) THEN
@@ -1366,6 +1407,15 @@ CONTAINS
                                           this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
                       this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
                       __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
+                    END IF
+                  END IF
+
+                  IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr_i2d)) THEN
+                    IF ( .NOT. ASSOCIATED(this%ptrs_i2d_cache(i,j,iproc)%p, &
+                                          this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr_i2d) ) THEN
+                      ! 2d cache pointer to proc iproc, child i, 2d variable j
+                      this%ptrs_i2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr_i2d
+                      __acc_attach(this%ptrs_i2d_cache(i,j,iproc)%p)
                     END IF
                   END IF
 

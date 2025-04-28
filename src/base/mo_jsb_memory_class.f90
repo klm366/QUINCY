@@ -20,11 +20,12 @@ MODULE mo_jsb_memory_class
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
     &                             add_var_list_element_r1d,                           &
     &                             add_var_list_element_r2d, add_var_list_element_r3d, &
+    &                             add_var_list_element_i2d,                           &
     &                             Get_var_group_name, VARNAME_LEN
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_int2d, &
-    &                             t_jsb_var_real3d, REAL1D, REAL2D, REAL3D
+    &                             t_jsb_var_real3d, REAL1D, REAL2D, REAL3D, INT2D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
     &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
@@ -77,18 +78,14 @@ MODULE mo_jsb_memory_class
     PROCEDURE         :: t_jsb_memory_add_var_r3d
     PROCEDURE         :: t_jsb_memory_add_pool         !< Add a (hierarchical) pool structure to memory (sub-pools and elements)
     PROCEDURE         :: t_jsb_memory_add_pool_var_r2d !< Add a 2d variable to pool (non-elements)
-    PROCEDURE         :: t_jsb_memory_add_pool_var_i2d !< Add a 2d integer variable to pool (non-elements)  
     GENERIC           :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
       &                             t_jsb_memory_add_var_i2d, t_jsb_memory_add_var_r3d, &
       &                             t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
     PROCEDURE         :: Get_var_position
     PROCEDURE, PUBLIC :: Collect_var_real2d            !< Collect 2d var from its child tiles
-    PROCEDURE, PUBLIC :: Collect_var_int2d             !< Collect 2d int var from its child tiles
     PROCEDURE, PUBLIC :: Collect_var_real3d            !< Collect 3d var from its child tiles
     PROCEDURE, PUBLIC :: HandDown_var_real2d           !< Hand back 2d var to child tiles
-    PROCEDURE, PUBLIC :: HandDown_var_int2d            !< Hand back 2d int var to child tiles
     PROCEDURE         :: Average_over_children_real2d  !< Average 2d var over the child tiles
-    PROCEDURE         :: Average_over_children_int2d   !< Average 2d int var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
@@ -650,6 +647,181 @@ CONTAINS
     __acc_attach(var%ptr)
 
   END SUBROUTINE t_jsb_memory_add_var_r3d
+
+  SUBROUTINE t_jsb_memory_add_var_i2d(mem, name, var,           &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
+    loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
+    lrestart, lrestart_cont, initval_i, isteptype,              &
+    resetval_i, lmiss, missval_i, l_aggregate_all,              &
+    output_level, output_groups, verbose                        &
+    )
+
+    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
+  !!$    TYPE(t_jsb_varlist),  INTENT(inout)        :: this_list           ! list
+    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
+    TYPE(t_jsb_var_int2d), TARGET, INTENT(inout) :: var               ! reference to jsbach var
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid type
+    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: initval_i           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
+    INTEGER,              INTENT(in), OPTIONAL :: resetval_i          ! reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
+    INTEGER,              INTENT(in), OPTIONAL :: missval_i           ! missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+
+    TYPE(t_jsb_varlist), POINTER :: this_list           ! list
+    CHARACTER(len=50) :: name_loc
+    LOGICAL           :: loutput_loc
+    TYPE(t_cf_var)    :: cf_loc
+    TYPE(t_grib2_var) :: grib2_loc
+    LOGICAL           :: lmiss_loc
+    INTEGER           :: missval_i_loc
+    LOGICAL           :: lrestart_cont_loc
+    INTEGER           :: ldims(2), gdims(2)
+    INTEGER           :: pos_of_var
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
+    CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_i2d'
+
+    name_loc = TRIM(name)
+    IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+
+    loutput_loc = .TRUE.
+    IF (PRESENT(loutput)) loutput_loc = loutput
+
+    lmiss_loc = .TRUE.
+    IF (PRESENT(lmiss)) lmiss_loc = lmiss
+    missval_i_loc = -2147483647 ! default value for missing INT32 integer
+    IF (PRESENT(missval_i)) missval_i_loc = missval_i
+
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
+
+    cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
+
+    ldims(1) = hgrid%nproma
+    ldims(2) = hgrid%nblks
+    gdims(1:2) = hgrid%dims_g(1:2)
+
+    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
+
+    IF (PRESENT(output_level)) THEN
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+      ELSE
+        no_groups = 0
+      END IF
+    ELSE
+      no_groups = 0
+    END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
+    IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
+      ! All variables are put into these three catch-all groups
+      groups(1) = 'ALL'
+      groups(2) = 'jsb_all'
+      ! var group jsb_<process>_all
+      groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
+        igroup = 4
+        DO out_level=output_level,3
+          out_level_name = Get_var_group_name(out_level)
+          groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
+          groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
+          igroup = igroup + 2
+        END DO
+      END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
+    ELSE
+      ALLOCATE(groups(1))
+      groups(1) = 'ALL'
+    END IF
+
+    CALL add_var_list_element_i2d( &
+      this_list, TRIM(name_loc), var%ptr_i2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
+      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
+      initval_i=initval_i, isteptype=isteptype, resetval_i=resetval_i, &
+      ! TODO: lmiss=.TRUE. adds the missing value attribute to the NetCDF file but with a value of zero, despite missval_i being set
+      ! lmiss=lmiss_loc, missval_i=missval_i_loc, in_groups=groups, &
+      lmiss=.FALSE., missval_i=missval_i_loc, in_groups=groups, &
+      verbose=verbose)
+
+    var%ptr => var%ptr_i2d
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%unit = TRIM(cf%units)
+    var%type = INT2D
+    var%missval = missval_i_loc
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (loutput_loc) THEN
+      IF (mem%in_var_groups) THEN
+        var%is_in_output = is_variable_in_output(var%full_name, groups(:))
+      ELSE
+        var%is_in_output = is_variable_in_output(var%full_name)
+      END IF
+    END IF
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
+
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+
+    var%owner_model_id = mem%owner_model_id
+    var%owner_proc_id  = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
+
+    ! If we want to add a variable we need to store it in the next position in vars
+    pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
+    IF (pos_of_var > mem%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
+    ELSE
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
+      mem%no_of_vars = pos_of_var
+    END IF
+
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
+    __acc_attach(var%ptr2d)
+    __acc_attach(var%ptr)
+
+  END SUBROUTINE t_jsb_memory_add_var_i2d
 
   RECURSIVE SUBROUTINE t_jsb_memory_add_pool(mem, pool,         &
     hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,             &

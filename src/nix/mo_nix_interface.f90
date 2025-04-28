@@ -128,6 +128,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: &
       & t_sn
 
+    dsl4jsb_Int2D_onChunk :: &
+      & test_int2d
 
 
     ! Declare local variables
@@ -149,6 +151,7 @@ CONTAINS
 
     ! Get fields from memory
     dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)  !< inout
+    dsl4jsb_Get_var2D_onChunk(NIX_,      test_int2d)  !< inout
 
     ! ---------------------------
     ! Go
