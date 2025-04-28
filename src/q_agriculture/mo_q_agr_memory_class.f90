@@ -13,7 +13,7 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### definition and init of (memory) variables for the quincy simple harvest process
+!>#### definition and init of (memory) variables for the quincy agriculture process
 !>
 MODULE mo_q_agr_memory_class
 #ifndef __NO_QUINCY__
@@ -94,9 +94,32 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
 
-    ! create memory at tiles of LAND_TYPE or VEG_TYPE
-    IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+    ! created memory depends on tile type
+    IF ( .NOT. ASSOCIATED(mem%parent)) THEN
+      ! memory to only create on the box tile
+      CALL mem%Add_var('n_fertiliser_c3', mem%n_fertiliser_c3, &
+        & hgrid, surface, &
+        & t_cf('n_fertiliser_c3', 'mol m-2 yr-1', 'N fertiliser application rate for C3 crops'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('n_fertiliser_c4', mem%n_fertiliser_c4, &
+        & hgrid, surface, &
+        & t_cf('n_fertiliser_c4', 'mol m-2 yr-1', 'N fertiliser application rate for C4 crops'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+    END IF
+
+    IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+      ! memory to create on tiles of or containing LAND_TYPE or VEG_TYPE
       CALL mem%Add_var('growth_phase', mem%growth_phase, &
         & hgrid, surface, &
         & t_cf('growth_phase', '[0 - 3]', 'growth phase of crop from planting to harvest'), &
@@ -136,26 +159,6 @@ CONTAINS
         & output_level = NONE, &
         & lrestart = .TRUE., &
         & initval_r = 150.0_wp)
-
-      CALL mem%Add_var('n_fertiliser_c3', mem%n_fertiliser_c3, &
-        & hgrid, surface, &
-        & t_cf('n_fertiliser_c3', 'mol m-2 yr-1', 'N fertiliser application rate for C3 crops'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & lrestart = .TRUE., &
-        & output_level = NONE, &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('n_fertiliser_c4', mem%n_fertiliser_c4, &
-        & hgrid, surface, &
-        & t_cf('n_fertiliser_c4', 'mol m-2 yr-1', 'N fertiliser application rate for C4 crops'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & lrestart = .TRUE., &
-        & output_level = NONE, &
-        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('crop_type_index', mem%crop_type_index, &
         & hgrid, surface, &

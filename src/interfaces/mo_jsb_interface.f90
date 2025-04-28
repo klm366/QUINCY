@@ -34,10 +34,10 @@ MODULE mo_jsb_interface
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_time_experiment_start
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
 
   IMPLICIT NONE
   PRIVATE
@@ -697,6 +697,8 @@ CONTAINS
     USE mo_alcc_init,           ONLY : read_land_use_data
 #ifndef __NO_QUINCY__
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+    USE mo_q_syl_init,          ONLY : read_harvest_fraction
+    USE mo_q_agr_init,          ONLY : read_fertiliser_input
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -730,9 +732,22 @@ CONTAINS
     END IF
 
 #ifndef __NO_QUINCY__
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      ! For the SB process data on n and p deposition might have to be read once a year and updated once a month
-      IF (is_newmonth(current_datetime,dtime) .AND. model%processes(SB_)%p%config%active) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%qmodel_id == QLAND) THEN
+
+      ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+      IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+        IF (model%processes(Q_SYL_)%p%config%active) THEN
+          CALL read_harvest_fraction(model_id, current_datetime)
+        END IF
+        IF (model%processes(Q_AGR_)%p%config%active) THEN
+          CALL read_fertiliser_input(model_id, current_datetime)
+        END IF
+      END IF
+
+      ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
+      ! and might need to be updated once a month
+      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
+          & .AND. model%processes(SB_)%p%config%active) THEN
         CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
       END IF
     END IF

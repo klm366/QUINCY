@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
-    &                               Q_PHENO_, Q_SH_, Q_AGR_, Q_ASSIMI_
+    &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -786,7 +786,7 @@ CONTAINS
     !$ACC ENTER DATA COPYIN(box_tile)
 
     ! IF PPLCC is active, then PPLCC should run for Quincy
-    ! ... for now it will only be used to provide tree area to the Q_SH_ process ...
+    ! ... for now it will only be used to provide tree area to the Q_SYL_ process ...
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
@@ -822,8 +822,8 @@ CONTAINS
         &                    parent = veg_tile)
 
       IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
-        IF (model%processes(Q_SH_)%p%config%active) THEN
-          CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+        IF (model%processes(Q_SYL_)%p%config%active) THEN
+          CALL pft_tile%Set_process_action(Q_SYL_, ON_TILE_, AGGREGATE_)
         END IF
       END IF
 
@@ -944,8 +944,8 @@ CONTAINS
         &                    parent = veg_tile)
 
       IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
-        IF (model%processes(Q_SH_)%p%config%active) THEN
-          CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+        IF (model%processes(Q_SYL_)%p%config%active) THEN
+          CALL pft_tile%Set_process_action(Q_SYL_, ON_TILE_, AGGREGATE_)
         END IF
       END IF
 
@@ -999,7 +999,6 @@ CONTAINS
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil' ]
     ! index of PFT (columns) in the lctlib file
-    ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13 /)
     CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_13_pfts'
 
@@ -1039,7 +1038,7 @@ CONTAINS
     !$ACC ENTER DATA COPYIN(box_tile)
 
     ! IF PPLCC is active, then PPLCC should run for Quincy
-    ! ... for now it will only be used to provide tree area to the Q_SH_ process ...
+    ! ... for now it will only be used to provide tree area to the Q_SYL_ process ...
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
@@ -1060,8 +1059,8 @@ CONTAINS
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_      /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
@@ -1075,8 +1074,8 @@ CONTAINS
         &                    parent = veg_tile)
 
       IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
-        IF (model%processes(Q_SH_)%p%config%active) THEN
-          CALL pft_tile%Set_process_action(Q_SH_, ON_TILE_, AGGREGATE_)
+        IF (model%processes(Q_SYL_)%p%config%active) THEN
+          CALL pft_tile%Set_process_action(Q_SYL_, ON_TILE_, AGGREGATE_)
         END IF
       END IF
 

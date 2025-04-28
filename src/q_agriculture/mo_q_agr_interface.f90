@@ -103,6 +103,7 @@ MODULE mo_q_agr_interface
     USE mo_jsb_math_constants,      ONLY: eps4, one_day
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
+    USE mo_q_assimi_constants,      ONLY: ic3phot
     USE mo_q_agr_process,           ONLY: calc_crop_phenology, calc_planting_flux, set_crop_n_fixation_status, &
       &                                   update_crop_growth_phase, calc_crop_allocation_factors, calc_fertiliser_application
     ! ----------------------------------------------------------------------------------------------------- !
@@ -126,10 +127,12 @@ MODULE mo_q_agr_interface
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Real2D_onChunk :: t_air
 
-    dsl4jsb_Def_memory(Q_AGR_)
-    dsl4jsb_Real2D_onChunk :: crop_type_index
+    dsl4jsb_Def_memory_tile(Q_AGR_, box_tile)
     dsl4jsb_Real2D_onChunk :: n_fertiliser_c3
     dsl4jsb_Real2D_onChunk :: n_fertiliser_c4
+
+    dsl4jsb_Def_memory(Q_AGR_)
+    dsl4jsb_Real2D_onChunk :: crop_type_index
     dsl4jsb_Real2D_onChunk :: growth_phase
     dsl4jsb_Real2D_onChunk :: gdd_mavg
     dsl4jsb_Real2D_onChunk :: nd_crop_season
@@ -180,12 +183,15 @@ MODULE mo_q_agr_interface
     REAL(wp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'
+    REAL(wp),     DIMENSION(options%nc) :: n_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
+    CLASS(t_jsb_tile_abstract), POINTER :: box_tile      !< pointer to the box tile to get the fertiliser data
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get pointers to process configs and memory
     model => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    CALL model%Get_top_tile(box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT.lctlib%CropFlag) RETURN !< do not run this routine at tiles other than croplands
     ! ----------------------------------------------------------------------------------------------------- !
@@ -213,10 +219,12 @@ MODULE mo_q_agr_interface
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                        ! in
 
+    dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c3, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c4, box_tile) ! in
+
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_type_index)            ! in
-    dsl4jsb_Get_var2D_onChunk(Q_AGR_, n_fertiliser_c3)            ! in
-    dsl4jsb_Get_var2D_onChunk(Q_AGR_, n_fertiliser_c4)            ! in
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, growth_phase)               ! inout
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, gdd_mavg)                   ! inout
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, nd_crop_season)             ! inout
@@ -321,11 +329,14 @@ MODULE mo_q_agr_interface
     !>
     !> - Apply fertiliser if today is a fertiliser day
     !>
-    CALL calc_fertiliser_application(nc, lctlib_ps_pathway, &                      ! in
-      &                               nd_crop_season(:), nd_crop_season_mavg(:), &
-      &                               n_fertiliser_c3(:), n_fertiliser_c4(:), &
-      &                               fertiliser_nh4(:), fertiliser_nh4_n15(:), &  ! out
-      &                               fertiliser_no3(:), fertiliser_no3_n15(:), &
+    IF (lctlib_ps_pathway == ic3phot) THEN
+      n_fertiliser(:) = n_fertiliser_c3
+    ELSE
+      n_fertiliser(:) = n_fertiliser_c4
+    END IF
+    CALL calc_fertiliser_application(nc, nd_crop_season(:), nd_crop_season_mavg(:), n_fertiliser(:), & ! in
+      &                               fertiliser_nh4(:), fertiliser_nh4_n15(:),                      &  ! out
+      &                               fertiliser_no3(:), fertiliser_no3_n15(:),                      &
       &                               fertiliser_po4(:))
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')

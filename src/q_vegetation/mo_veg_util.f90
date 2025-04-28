@@ -50,7 +50,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_SH_, Q_AGR_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
 
-    IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+    IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
       dsl4jsb_Get_mt2L2D(VEG_BGCM_HARVEST_LITTER_ID, veg_litter_flux_harvest_mt)
 
       IF (config_l_use_pp) THEN
@@ -177,7 +177,7 @@ CONTAINS
           DO ic = 1, nc
             veg_growth_mt(ix_comp,ix_elem,ic)      = zero
             veg_litterfall_mt(ix_comp,ix_elem,ic)  = zero
-            IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
               veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic)      = zero
             END IF
           END DO
@@ -190,7 +190,7 @@ CONTAINS
           veg_reserve_use_mt(ix_elem,ic)   = zero
 
           IF (config_l_use_pp) THEN
-            IF (tile%Is_process_calculated(Q_SH_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
               veg_pp_flux_harvest_mt(ix_elem,ic)      = zero
             END IF
           END IF
