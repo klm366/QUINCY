@@ -365,6 +365,14 @@ CONTAINS
         cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :))
         !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
 
+        ! Assert: fractions <= 0 and > 1, set it to 0.0_wp and 1.0_wp
+        IF (cf_current_year(:, i_tile, :) < 0.0_wp) THEN
+          cf_current_year(:, i_tile, :) = 0.0_wp
+        ENDIF
+        IF (cf_current_year(:, i_tile, :) > 1.0_wp + EPSILON(1._wp)) THEN
+          cf_current_year(:, i_tile, :) = 1.0_wp
+        ENDIF
+       
         ! Convert the first element of cf_current_year(:, i_tile, :) to a string for simplicity
         WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
         ! Use the formatted string in the message
@@ -400,6 +408,18 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
 
       END DO 
+
+        ! Assert: fractions >= 0 and < 1
+      IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+        CALL finish(TRIM(routine), &
+        & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
+        & // TRIM(current_tile%name)//'. Please check.') 
+      ENDIF
+      IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
+        CALL finish(TRIM(routine), &
+        & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
+        & // TRIM(current_tile%name)//'. Please check.') 
+      ENDIF
    
       
     CASE DEFAULT 
