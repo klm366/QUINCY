@@ -369,7 +369,7 @@ CONTAINS
         IF (cf_current_year(:, i_tile, :) < 0.0_wp) THEN
           cf_current_year(:, i_tile, :) = 0.0_wp
         ENDIF
-        IF (cf_current_year(:, i_tile, :) > 1.0_wp + EPSILON(1._wp)) THEN
+        IF (cf_current_year(:, i_tile, :) > (1.0_wp + EPSILON(1._wp))) THEN
           cf_current_year(:, i_tile, :) = 1.0_wp
         ENDIF
        
