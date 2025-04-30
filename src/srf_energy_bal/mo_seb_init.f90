@@ -67,6 +67,9 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
+#ifdef __QUINCY_STANDALONE__
+    ! quincy init
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL seb_read_init_vars(tile)
     END IF
@@ -77,7 +80,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(SEB_)) THEN
       CALL seb_finalize_init_vars()
     END IF
-
+#endif
 
     ! Initial values for the calculation of pseudo_soil_temp in SUBROUTINE calc_pseudo_soil_temp
     dsl4jsb_Get_memory(SEB_)
@@ -97,6 +100,8 @@ CONTAINS
     END IF
   END SUBROUTINE seb_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE seb_read_init_vars(tile)
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -135,6 +140,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE seb_read_init_vars
+#endif
 
   SUBROUTINE seb_finalize_init_vars
     IF (ALLOCATED(seb_init_vars%skin_conductivity)) DEALLOCATE(seb_init_vars%skin_conductivity)

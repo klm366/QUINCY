@@ -1159,6 +1159,7 @@ CONTAINS
 
 #ifndef __QUINCY_STANDALONE__
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
+#endif
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,            &
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_unlimited', 'm/s',                                         &
@@ -1174,6 +1175,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., initval_r=0.0_wp )
+#ifndef __QUINCY_STANDALONE__
       END IF
 #endif
 
