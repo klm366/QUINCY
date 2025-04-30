@@ -366,11 +366,12 @@ CONTAINS
         !cf_current_year(:, i_tile, :) = cf_current_year(:, i_tile, :) + cf_transition_gain(:, i_tile, :) - cf_transition_loss(:, i_tile, :)
 
         ! Assert: fractions <= 0 and > 1, set it to 0.0_wp and 1.0_wp
-        IF (cf_current_year(:, i_tile, :) < 0.0_wp) THEN
-          cf_current_year(:, i_tile, :) = 0.0_wp
+        IF (ANY(cf_current_year(:, i_tile, :) < 0.0_wp)) THEN
+          cf_current_year(:, i_tile, :) = MAX(0.0_wp, cf_current_year(:, i_tile, :))
         ENDIF
-        IF (cf_current_year(:, i_tile, :) > (1.0_wp + EPSILON(1._wp))) THEN
-          cf_current_year(:, i_tile, :) = 1.0_wp
+
+        IF (ANY(cf_current_year(:, i_tile, :) > (1.0_wp + EPSILON(1._wp)))) THEN
+          cf_current_year(:, i_tile, :) = MIN(1.0_wp, cf_current_year(:, i_tile, :))
         ENDIF
        
         ! Convert the first element of cf_current_year(:, i_tile, :) to a string for simplicity
