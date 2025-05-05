@@ -87,10 +87,10 @@ CONTAINS
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & fract_pond_max, evapotrans, evapopot,                         &
     & transpiration, rain, snow, wpi_rootzone, wpi_rootzone_max,    &
-    & wtr_soil, hyd_cond_sat_sl1, ice_impedance, le_phase,          &
+    & wtr_soil, hyd_cond_sat_sl1, ice_impedance, le_phase_change,   &
     & wtr_skin, weq_snow_soil, weq_snow_can,                        &
     & snow_soil_dens, wtr_pond, ice_pond,wtr_latflow_res_srf,       &
-    & le_phase_srf, le_phase_blg, q_snocpymlt, snow_accum,          &
+    & le_phase_change_res, q_snocpymlt, snow_accum,                 &
     & snowmelt_soil, pond_freeze, pond_melt,                        &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
@@ -112,12 +112,13 @@ CONTAINS
       & fract_skin(:), fract_pond(:), fract_pond_max(:),                        &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
       & wpi_rootzone(:), wpi_rootzone_max(:), wtr_soil(:),                      &
-      & hyd_cond_sat_sl1(:), ice_impedance(:), le_phase(:)
+      & hyd_cond_sat_sl1(:), ice_impedance(:), le_phase_change(:)
     REAL(wp), INTENT(inout) ::                                                  &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),      &
       & wtr_pond(:), ice_pond(:), wtr_latflow_res_srf(:)
     REAL(wp), INTENT(out) ::                                                    &
-      & le_phase_srf(:), le_phase_blg(:), q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),        &
+      & le_phase_change_res(:), q_snocpymlt(:), snow_accum(:),                  &
+      & snowmelt_soil(:), pond_freeze(:),                                       &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),         &
       & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:), evapo_deficit(:), &
       & infilt(:), runoff(:), runoff_horton(:), wtr_latflow_srf(:)
@@ -173,19 +174,19 @@ CONTAINS
     !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
 
     DO ic = 1, nc
-      le_phase_blg(ic)      = le_phase(ic)
-      snow_accum(ic)        = 0._wp
-      weq_snow_soil_old     = weq_snow_soil(ic)
-      snowmelt_soil(ic)     = 0._wp
-      evapotrans_soil(ic)   = 0._wp
-      evapo_skin(ic)        = 0._wp
-      evapo_snow(ic)        = 0._wp
-      pond_freeze(ic)       = 0._wp
-      pond_melt(ic)         = 0._wp
-      water_to_soil(ic)     = 0._wp
-      evapo_deficit(ic)     = 0._wp
-      wtr_pond_net_flx(ic)  = 0._wp
-      wtr_latflow_srf(ic)   = 0._wp
+      le_phase_change_res(ic) = le_phase_change(ic)
+      snow_accum(ic)          = 0._wp
+      weq_snow_soil_old       = weq_snow_soil(ic)
+      snowmelt_soil(ic)       = 0._wp
+      evapotrans_soil(ic)     = 0._wp
+      evapo_skin(ic)          = 0._wp
+      evapo_snow(ic)          = 0._wp
+      pond_freeze(ic)         = 0._wp
+      pond_melt(ic)           = 0._wp
+      water_to_soil(ic)       = 0._wp
+      evapo_deficit(ic)       = 0._wp
+      wtr_pond_net_flx(ic)    = 0._wp
+      wtr_latflow_srf(ic)     = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -245,10 +246,10 @@ CONTAINS
       !  Snow melt
       !------------------------
       IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-        IF (le_phase(ic) > 0._wp .AND. weq_snow_soil(ic) > 0._wp) THEN
-          snowmelt_soil(ic) = MIN(le_phase(ic) * dtime / (rhoh2o * alf), weq_snow_soil(ic))
-          le_phase_blg(ic)  = le_phase_blg(ic) - snowmelt_soil(ic) * rhoh2o * alf / dtime
-          weq_snow_soil(ic) = weq_snow_soil(ic) - snowmelt_soil(ic)                  ! reduce snow depth according to melting
+        IF (le_phase_change_res(ic) > 0._wp .AND. weq_snow_soil(ic) > 0._wp) THEN
+          snowmelt_soil(ic)       = MIN(le_phase_change_res(ic) * dtime / (rhoh2o * alf), weq_snow_soil(ic))
+          le_phase_change_res(ic) = le_phase_change_res(ic) - snowmelt_soil(ic) * rhoh2o * alf / dtime
+          weq_snow_soil(ic)       = weq_snow_soil(ic) - snowmelt_soil(ic) ! reduce snow depth according to melting
         END IF
       END IF
 
@@ -268,23 +269,20 @@ CONTAINS
       !  Freezing and melting of surface pond reservoir
       !------------------------
       ! 1.) Potential melting:
-      IF (le_phase_blg(ic) > 0._wp .AND. ice_pond(ic) > 0._wp) THEN
-        pond_melt(ic)        = MIN(le_phase_blg(ic) * dtime / (rhoh2o * alf), ice_pond(ic))
-        le_phase_blg(ic)     = le_phase_blg(ic) - pond_melt(ic) * rhoh2o * alf / dtime
-        ice_pond(ic)         = ice_pond(ic) - pond_melt(ic)
-        wtr_pond(ic)         = wtr_pond(ic) + pond_melt(ic)
-        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + pond_melt(ic)
+      IF (le_phase_change_res(ic) > 0._wp .AND. ice_pond(ic) > 0._wp) THEN
+        pond_melt(ic)           = MIN(le_phase_change_res(ic) * dtime / (rhoh2o * alf), ice_pond(ic))
+        le_phase_change_res(ic) = le_phase_change_res(ic) - pond_melt(ic) * rhoh2o * alf / dtime
+        ice_pond(ic)            = ice_pond(ic) - pond_melt(ic)
+        wtr_pond(ic)            = wtr_pond(ic) + pond_melt(ic)
+        wtr_pond_net_flx(ic)    = wtr_pond_net_flx(ic) + pond_melt(ic)
       ! 1.) Potential freezing:
-      ELSE IF (le_phase_blg(ic) < 0._wp .AND. wtr_pond(ic) > 0._wp) THEN
-        pond_freeze(ic)      = MIN(ABS(le_phase_blg(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
-        le_phase_blg(ic)     = le_phase_blg(ic) + pond_freeze(ic) * rhoh2o * alf / dtime
-        wtr_pond(ic)         = wtr_pond(ic) - pond_freeze(ic)
-        ice_pond(ic)         = ice_pond(ic) + pond_freeze(ic)
-        wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) - pond_freeze(ic)
+      ELSE IF (le_phase_change_res(ic) < 0._wp .AND. wtr_pond(ic) > 0._wp) THEN
+        pond_freeze(ic)         = MIN(ABS(le_phase_change_res(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
+        le_phase_change_res(ic) = le_phase_change_res(ic) + pond_freeze(ic) * rhoh2o * alf / dtime
+        wtr_pond(ic)            = wtr_pond(ic) - pond_freeze(ic)
+        ice_pond(ic)            = ice_pond(ic) + pond_freeze(ic)
+        wtr_pond_net_flx(ic)    = wtr_pond_net_flx(ic) - pond_freeze(ic)
       END IF
-
-      ! Splitting phase change heat fluxes in surface (snow and pond) and below ground (upper most soil layer)
-      le_phase_srf(ic) = le_phase(ic) - le_phase_blg(ic)
 
       !-----------------------------------------------------------
       !   Budget of water in skin and pond reservoir (canopy and ground)
@@ -532,7 +530,7 @@ CONTAINS
     & le_phase_change,                                       &
     & fract_snow,                                            &
     & evapotrans, evapopot, rain, snow,                      &
-    & weq_glac, q_snocpymlt,                                 &
+    & weq_glac, le_phase_change_res, q_snocpymlt,            &
     & snowmelt, runoff_glac,                                 &
     & pme_glacier)
 
@@ -548,7 +546,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & weq_glac
     REAL(wp), INTENT(out)   :: &
-      & q_snocpymlt, snowmelt, runoff_glac, pme_glacier
+      & le_phase_change_res, q_snocpymlt, snowmelt, runoff_glac, pme_glacier
 
     !
     !  local variables
@@ -584,11 +582,13 @@ CONTAINS
     !------------------------
 
     snowmelt_in_m = 0._wp
+    le_phase_change_res = le_phase_change
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (le_phase_change > 0._wp) THEN
         snowmelt_in_m     = le_phase_change * dtime / (rhoh2o * alf) ! there is an unlimited amount of snow
         weq_glac          = weq_glac - snowmelt_in_m                 ! reduce glacier depth according to melting
         runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m         ! add melt water to the runoff
+        le_phase_change_res = le_phase_change_res - le_phase_change  ! Substract accounted energy flux
       END IF
     END IF
 

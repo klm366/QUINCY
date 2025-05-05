@@ -74,8 +74,7 @@ MODULE mo_hydro_memory_class
       & weq_snow,             & !< Snow amount (including snow on canopy)                [m water equivalent]
       & evapo_snow,           & !< Evaporation from snow                                 [kg m-2 s-1]
       & snowmelt,             & !< Snow melt                                             [kg m-2 s-1]
-      & le_phase_change_srf,  & !< Energy flux due to phase change on top of the soil    [W m-2]
-      & le_phase_change_blg,  & !< Energy flux due to phase change in top soil layer     [W m-2]
+      & le_phase_change_res,  & !< Residual energy flux due to surface water phase change [W m-2]
       & evapopot,             & !< Potential evaporation                                 [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration                                    [kg m-2 s-1]
       & fract_pond,           & !< Inudated area fraction (area of temporary ponds)      []
@@ -391,22 +390,13 @@ CONTAINS
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
 
-    CALL mem%Add_var( 'le_phase_change_srf', mem%le_phase_change_srf,                               &
-      & hgrid, surface,                                                                             &
-      & t_cf('le_phase_change_srf', 'W m-2', 'Energy flux due to phase change on top of the soil'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
-      & prefix, suffix,                                                                             &
-      & lrestart=.FALSE.,                                                                           &
-      & loutput=.TRUE., output_level=BASIC,                                                         &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'le_phase_change_blg', mem%le_phase_change_blg,                              &
-      & hgrid, surface,                                                                            &
-      & t_cf('le_phase_change_blg', 'W m-2', 'Energy flux due to phase change in top soil layer'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
-      & prefix, suffix,                                                                            &
-      & lrestart=.FALSE.,                                                                          &
-      & loutput=.TRUE., output_level=BASIC,                                                        &
+    CALL mem%Add_var( 'le_phase_change_res', mem%le_phase_change_res,                &
+      & hgrid, surface,                                                              &
+      & t_cf('le_phase_change_res', 'W m-2',                                         &
+      &      'Residual energy flux due to surface water phase change'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE., output_level=BASIC,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'infilt', mem%infilt,                                          &

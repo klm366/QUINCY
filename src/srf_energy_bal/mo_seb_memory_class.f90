@@ -192,13 +192,13 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=280.0_wp )
 
-    CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                                &
-      & hgrid, surface,                                                                      &
-      & t_cf('le_phase_change', 'W m-2', 'Heat flux due to phase changes at land surface'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
-      & prefix, suffix,                                                                      &
-      & lrestart=.TRUE.,                                                                     &
-      & output_level=BASIC, &
+    CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                        &
+      & hgrid, surface,                                                              &
+      & t_cf('le_phase_change', 'W m-2',                                             &
+      &      'Heat flux due to phase changes at land surface'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE., output_level=BASIC,                                         &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
