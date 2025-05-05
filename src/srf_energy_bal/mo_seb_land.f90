@@ -449,19 +449,19 @@ CONTAINS
           ELSE
             hlp1 = wtr_soil_sl(ic,1)
           END IF
-          le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
-          le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
           hlp2 = ice_soil_sl(ic,1) * (rhoi / rhoh2o)
+          le_freeze_pot(ic) =  (               wtr_pond(ic) + hlp1) * hlp3
+          le_melt_pot(ic)   = -(weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
         ELSE
           ! Without freezing, the only phase change is snowmelt
           le_freeze_pot(ic) = 0._wp
-          le_melt_pot(ic)   = weq_snow(ic) * hlp3
+          le_melt_pot(ic)   = -weq_snow(ic) * hlp3
         END IF
       ELSE
         ! Glaciers are currently considered to provide unlimited ice for melting
         ! Setting available snow to 1 m weq should be more than sufficient for one time step
         le_freeze_pot(ic) = 0._wp
-        le_melt_pot(ic)   = 1.0_wp * hlp3
+        le_melt_pot(ic)   = -1.0_wp * hlp3
       END IF
 
     END DO
@@ -967,26 +967,34 @@ CONTAINS
             & phase_change_trgt                                   & ! out
             & )
 
-          IF (phase_change_trgt <= 0._wp) THEN ! Energy available for melting
-            IF (ABS(phase_change_trgt) <= le_melt_pot(ic)) THEN
-              le_phase_change(ic) = -phase_change_trgt
+          IF (phase_change_trgt <= 0._wp) THEN
+            ! Energy sink due to ice melting
+            IF (le_melt_pot(ic) <= phase_change_trgt) THEN
+              le_phase_change(ic) = phase_change_trgt
               s_star(ic) = s_trgt
               l_recalc_seb(ic) = .FALSE.
             ELSE
               le_phase_change(ic) = le_melt_pot(ic)
               l_recalc_seb(ic) = .TRUE.
             END IF
-          ELSE                                     ! Energy required from freezing
+          ELSE
+            ! Energy source due to water freezing
             IF (phase_change_trgt <= le_freeze_pot(ic)) THEN
-              le_phase_change(ic) = -phase_change_trgt
+              le_phase_change(ic) = phase_change_trgt
               s_star(ic) = s_trgt
               l_recalc_seb(ic) = .FALSE.
             ELSE
-              le_phase_change(ic) = -le_freeze_pot(ic)
+              le_phase_change(ic) = le_freeze_pot(ic)
               l_recalc_seb(ic) = .TRUE.
             END IF
           END IF
-          forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
+          forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
+          ! Switch sign of phase change flux. From the energy balance perspective, ice melting
+          !   is an energy sink (therefore negative) and freezing a source (therefore positive).
+          !   However, from the hydrology perspective melting occures when enough energy is
+          !   available (positive sign) and freezing if energy is 'missing' (therefore negative).
+          !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+          le_phase_change(ic) = -1._wp * le_phase_change(ic)
         END IF
       END DO
       !$ACC END PARALLEL LOOP
