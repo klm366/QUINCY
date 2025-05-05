@@ -57,7 +57,7 @@ CONTAINS
 
     USE mo_sse_process,            ONLY: Get_liquid_max
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cpd, cvd, alf
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, tpfac2, tpfac3, cpd, cvd, alf
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
@@ -449,9 +449,9 @@ CONTAINS
           ELSE
             hlp1 = wtr_soil_sl(ic,1)
           END IF
-          hlp2 = ice_soil_sl(ic,1)
           le_freeze_pot(ic) = (               wtr_pond(ic) + hlp1) * hlp3
           le_melt_pot(ic)   = (weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
+          hlp2 = ice_soil_sl(ic,1) * (rhoi / rhoh2o)
         ELSE
           ! Without freezing, the only phase change is snowmelt
           le_freeze_pot(ic) = 0._wp
@@ -975,7 +975,6 @@ CONTAINS
             ELSE
               le_phase_change(ic) = le_melt_pot(ic)
               l_recalc_seb(ic) = .TRUE.
-              forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
             END IF
           ELSE                                     ! Energy required from freezing
             IF (phase_change_trgt <= le_freeze_pot(ic)) THEN
@@ -985,9 +984,9 @@ CONTAINS
             ELSE
               le_phase_change(ic) = -le_freeze_pot(ic)
               l_recalc_seb(ic) = .TRUE.
-              forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
             END IF
           END IF
+          forc_hflx(ic) = forc_hflx(ic) - le_phase_change(ic)
         END IF
       END DO
       !$ACC END PARALLEL LOOP

@@ -784,7 +784,7 @@ CONTAINS
       IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
         ! Compute energy flux residual
         energy_balance_res(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
-          &                    + forc_hflx(ic) - le_phase_change(ic) + t_energy(ic)
+          &                    + forc_hflx(ic) + t_energy(ic)
       END IF
 
 #ifndef _OPENACC
@@ -815,8 +815,8 @@ CONTAINS
           & 'Net surface radiation:   ', rad_srf_net(ic),                              NEW_LINE('a'), &
           & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
           & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
-          & 'Ground heat flux:        ', forc_hflx(ic),                                NEW_LINE('a'), &
-          & 'Phase change flux:       ', -le_phase_change(ic),                         NEW_LINE('a'), &
+          & 'Ground heat flux:        ', forc_hflx(ic) - le_phase_change(ic),          NEW_LINE('a'), &
+          & 'Phase change flux:       ', le_phase_change(ic),                          NEW_LINE('a'), &
           & 'Surface temp. change:    ', t_energy(ic),                                 NEW_LINE('a'), &
           & 'Temperature change [K]:  ', delta_t_srf(ic)
         CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)

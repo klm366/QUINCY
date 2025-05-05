@@ -804,7 +804,7 @@ CONTAINS
         & wtr_soil(:),                    & ! soil layer aggregated water content until bedrock [m]
         & hyd_cond_sat_sl(:,1),           & ! saturated hydraulic conductivity of the top soil layer [m s-1]
         & ice_impedance_sl(:,1),          & ! ice impedance factor for top soil layer [-]
-        & le_phase_change(:),             & ! Energy flux due to phase change [w m-2]
+        & le_phase_change(:),             & ! Energy flux due to phase change [W m-2]
         ! inout
         & wtr_skin(:),                    & ! water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & ! snow depth at the ground [m water equivalent]
@@ -814,8 +814,8 @@ CONTAINS
         & ice_pond(:),                    & ! pond reservoir ice content [m]
         & wtr_latflow_res_srf(:),         & ! intermediate storage for surface runoff [m]
         ! out
-        & le_phase_change_srf(:),         & ! Energy flux due to phase change (srf)
-        & le_phase_change_blg(:),         & ! Energy flux due to phase change (blg)
+        & le_phase_change_srf(:),         & ! Energy flux due to phase change (srf) [W m-2]
+        & le_phase_change_blg(:),         & ! Energy flux due to phase change (blg) [W m-2]
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
         & snow_accum(:),                  & ! snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & ! snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
