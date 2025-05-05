@@ -45,7 +45,7 @@ MODULE mo_nix_memory_class
       &  dzm_sn                  ! snow layer thickness                 [ m ]
 
     TYPE(t_jsb_var_int2d)   :: &
-      &  test_int2d               ! snow nodal temperature id             [ - ]
+      &  top_sn                  ! snow nodal temperature id             [ - ]
 
   CONTAINS
     PROCEDURE :: Init => Init_nix_memory
@@ -140,10 +140,10 @@ CONTAINS
         & prefix, suffix,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var('test_int2d', mem%test_int2d,                    &
+      CALL mem%Add_var('top_sn', mem%top_sn,                    &
         & hgrid, surface,                                               &
-        & t_cf('test_int2d', '', '', DATATYPE_INT32),                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_cf('top_sn', '', '', DATATYPE_INT32),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(2, 3, 206, grib_bits), &
         & prefix, suffix,                                               &
         & lrestart=.FALSE., initval_i=0 )
 

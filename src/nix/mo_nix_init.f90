@@ -22,9 +22,16 @@ MODULE mo_nix_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
 
+  ! NIX
   dsl4jsb_Use_processes NIX_
   dsl4jsb_Use_config(NIX_)
-!  dsl4jsb_Use_memory(NIX_)
+  dsl4jsb_Use_memory(NIX_)
+
+  ! HYDRO
+  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_memory(HYDRO_)
+
 
   IMPLICIT NONE
   PRIVATE
@@ -38,26 +45,129 @@ CONTAINS
   !
   !> Intialize nix process (after memory has been set up)
   !
+
+
   SUBROUTINE nix_init(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_model), POINTER :: model
+ 
+    ! NIX_
+    dsl4jsb_Def_config(NIX_)
+    dsl4jsb_Def_memory(NIX_)
+
+    ! Pointers to variables in memory - NIX 
+    dsl4jsb_Real3D_onDomain :: &
+      & t_sn,                  &
+      & dzm_sn          
+    dsl4jsb_Int2D_onDomain ::  &
+      & top_sn
+
+    ! HYDRO_
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(HYDRO_)
+
+    ! Pointers to variables in memory - HYDRO
+    dsl4jsb_Real2D_onDomain :: &
+      & weq_snow               
+
+    ! Local variables
+    INTEGER :: nblks
+    INTEGER :: ib        ! loop indices
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':nix_init'
 
     model => get_model(tile%owner_model_id)
 
-    ! ---------------------------
+ 
+    ! Get required configs
+    dsl4jsb_Get_config(NIX_)
+    dsl4jsb_Get_config(HYDRO_)
+
+
+    ! Get references to variables for domain - NIX_
+    dsl4jsb_Get_memory(NIX_)
+
+    dsl4jsb_Get_var3D_onDomain(NIX_, t_sn)
+    dsl4jsb_Get_var3D_onDomain(NIX_, dzm_sn)
+
+    dsl4jsb_Get_var2D_onDomain(NIX_, top_sn)
+
+
+    ! Get references to variables for domain - HYDRO_
+    dsl4jsb_Get_memory(HYDRO_)
+
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, weq_snow)
+
+    !-----------------------------------------------------------------------
     ! Go   
 
+    ! Get some array sizes for loops    
+    nblks  = SIZE(t_sn,3)
 
-    CALL message (TRIM(modname), 'Hello NIX!')
+    ! Initiate stratigraphy
+    DO ib = 1, nblks 
+
+      CALL nix_init_stratigraphy(      &
+        & t_sn(:,:,ib),                &
+        & dzm_sn(:,:,ib),              &
+        & weq_snow(:,ib)               &
+        & ) 
+
+    ENDDO
 
 
   END SUBROUTINE nix_init
 
+! =============================================================================
+! + BEGIN subroutine: nix_init_stratigraphy
+! =============================================================================
 
+  SUBROUTINE nix_init_stratigraphy(    &
+    & t_sn,                            &
+    & dzm_sn,                          &
+    & weq_snow                         &
+    ) 
+
+    !-----------------------------------------------------------------------
+    !  Arguments
+
+    REAL(wp), INTENT(INOUT) ::  t_sn(:,:)           !! snow layer (element) temperature [K]
+    REAL(wp), INTENT(INOUT) ::  dzm_sn(:,:)         !! snow layer thickness             [m]
+
+    REAL(wp), INTENT(IN)    ::  weq_snow(:)         !! snow water equivialent           [m]
+
+    !-----------------------------------------------------------------------
+    !  Local Variables
+
+    INTEGER  :: ic, is
+    INTEGER  :: nproma, nsnow
+
+    ! Assign local variables    
+    nproma = SIZE(t_sn,1)
+    nsnow  = SIZE(t_sn,2)
+
+    !------------------------------
+    !  GO
+
+    DO is = 1, nsnow
+      DO ic = 1, nproma
+
+        t_sn(ic,is)   = 273.15_wp
+        dzm_sn(ic,is) = weq_snow(ic)    
+
+      END DO
+    END DO
+
+
+  END SUBROUTINE nix_init_stratigraphy
+
+! =============================================================================
+! - END subroutine: nix_init_stratigraphy
+! =============================================================================
 
 
 #endif

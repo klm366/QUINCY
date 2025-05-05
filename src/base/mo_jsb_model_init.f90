@@ -533,11 +533,6 @@ CONTAINS
           CALL rad_init(tile)
       END IF
 
-      ! Initiate NIX
-      IF (tile%Is_process_active(NIX_)) THEN
-          CALL nix_init(tile)
-      END IF
- 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(SEB_)) THEN
@@ -576,6 +571,10 @@ CONTAINS
       ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
+        END IF
+
+        IF (tile%Is_process_active(NIX_)) THEN
+          CALL nix_init(tile)
         END IF
 
 #ifndef __NO_QUINCY__

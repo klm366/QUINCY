@@ -27,14 +27,19 @@ CONTAINS
   !--------------------------------------------------------------------  
 
   SUBROUTINE calc_nix_layering(  &
-    & nc,        &
-    & t_sn       &           !< snow layer temperature - element     
-    & )    
+    & nc,            &
+    & t_sn,          &           !< snow layer temperature - element      [K]     
+    & dzm_sn,        &           !< snow layer thickness                  [m]
+    & top_sn)                    !< index of top (upper) snow layer       [-]
 
     INTEGER, INTENT(in)  :: nc                      !< dimensions
 
     REAL(wp), INTENT(INOUT), DIMENSION(:,:) :: &
-      & t_sn
+      & t_sn,           &
+      & dzm_sn
+
+    INTEGER, INTENT(INOUT), DIMENSION(:) :: &
+      & top_sn
 
     ! Local
     INTEGER  :: ic                              ! iteration over grid points
@@ -47,7 +52,11 @@ CONTAINS
 
     DO ic = 1,nc
 
-      WRITE(*,*) 'NIX CALC LAYERING',  t_sn(ic,1:3)
+      WRITE(*,*) 'NIX CALC LAYERING'
+      WRITE(*,"(A, 1I4)")     'top_sn:',     top_sn(ic)
+
+      WRITE (*,"(A, 10F8.3)") 't_sn:',       t_sn(ic,:)
+      WRITE (*,"(A, 10F8.3)") 'dzm_sn:',     dzm_sn(ic,:)
 
     END DO
 

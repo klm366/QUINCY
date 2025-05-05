@@ -124,12 +124,14 @@ CONTAINS
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_memory(NIX_)
 
-   ! Declare pointers for variables in memory - 3D
+    ! Declare pointers for variables in memory - 3D
     dsl4jsb_Real3D_onChunk :: &
-      & t_sn
+      & t_sn,        &
+      & dzm_sn
 
+    ! Declare pointers for variables in memory - 2D
     dsl4jsb_Int2D_onChunk :: &
-      & test_int2d
+      & top_sn
 
 
     ! Declare local variables
@@ -150,8 +152,10 @@ CONTAINS
     dsl4jsb_Get_memory(NIX_)
 
     ! Get fields from memory
-    dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)  !< inout
-    dsl4jsb_Get_var2D_onChunk(NIX_,      test_int2d)  !< inout
+    dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)            !< inout
+    dsl4jsb_Get_var3D_onChunk(NIX_,      dzm_sn)          !< inout
+
+    dsl4jsb_Get_var2D_onChunk(NIX_,      top_sn)          !< inout
 
     ! ---------------------------
     ! Go
@@ -160,7 +164,9 @@ CONTAINS
 
     CALL calc_nix_layering( &
       & nc,                 &
-      & t_sn(:,:)           &
+      & t_sn(:,:),          &
+      & dzm_sn(:,:),        &
+      & top_sn(:)           &
       & )
 
     ! Clean up and finish
