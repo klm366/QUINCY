@@ -93,9 +93,6 @@ CONTAINS
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sb_read_init_vars(tile)
-
-      CALL provide_n_and_p_deposition(tile%owner_model_id, &
-        & model%options(no_omp_thread)%current_datetime, model%options(no_omp_thread)%dtime, .TRUE.)
     END IF
 
     CALL sb_init_ic_bc(tile)
@@ -2064,11 +2061,10 @@ CONTAINS
   !
   !> Provide n and p deposition depending on the deposition configuration and the time of the year - for IQ
   !
-  SUBROUTINE provide_n_and_p_deposition(model_id, current_datetime, dtime, called_from_init_sb)
+  SUBROUTINE provide_n_and_p_deposition(model_id, current_datetime, dtime)
 
     USE mo_jsb_time_iface,         ONLY: t_datetime
-    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month
-    USE mo_jsb_varlist,            ONLY: VARNAME_LEN
+    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month, is_time_experiment_start
     USE mo_io_units,               ONLY: filename_max
     USE mo_jsb_parallel,           ONLY: Get_omp_thread
     USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -2081,7 +2077,6 @@ CONTAINS
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
-    LOGICAL, OPTIONAL,         INTENT(in) :: called_from_init_sb
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),           POINTER :: model
     TYPE(t_jsb_grid),            POINTER :: hgrid
@@ -2104,10 +2099,9 @@ CONTAINS
     REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
 
     INTEGER :: current_year, current_month, no_omp_thread, nproma, nblks, i_month
-    LOGICAL :: init_sb, read_deposition_data
+    LOGICAL :: is_experiment_start, read_deposition_data
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_deposition_data
-    CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':provide_n_and_p_deposition'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
@@ -2117,6 +2111,8 @@ CONTAINS
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
+
+    is_experiment_start = is_time_experiment_start(current_datetime)
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(A2L_)
@@ -2133,15 +2129,9 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    ! check if sb is initialised
-    init_sb = .FALSE.
-    IF (PRESENT(called_from_init_sb)) THEN
-      init_sb = called_from_init_sb
-    END IF
-
     ! In case that constants are to be used for the n and p deposition they are initialised here
     IF (dsl4jsb_Config(SB_)%deposition_scheme == CONST_DEP) THEN
-      IF (init_sb) THEN
+      IF (is_experiment_start) THEN
         ! set constants ...
         ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
         !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
@@ -2158,72 +2148,65 @@ CONTAINS
         noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
       END IF
 
-      RETURN
-    END IF
-
-    ! Check if data needs to be read.
-    ! First test if its a call by sb init and only if not check in the elseif for newyear because
-    ! the current_datetime passed by the init routine seems to cause runtime errors
-    read_deposition_data = .FALSE.
-    IF (init_sb) THEN
-      read_deposition_data = .TRUE.
-    ELSEIF (is_newyear(current_datetime, dtime) .AND. (dsl4jsb_Config(SB_)%deposition_scheme == TRANS_DEP)) THEN
-      read_deposition_data = .TRUE.
-    END IF
-
-    IF (read_deposition_data) THEN
-      IF (.NOT. init_sb) THEN
-        ! In this case we search a file ending on the current year
-        current_year  = get_year(current_datetime)
-
-        !>
-        !> Assertion: routine currently expects filenames with 4 digits
-        !>
-        IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
-          CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
-        ENDIF
-        WRITE(filename_deposition_data,'(a,a,I4.4,a)') &
-          & TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), '_', current_year, ".nc"
-      ELSE
-        ! else we expect a file name without a year
-        WRITE(filename_deposition_data,'(a,a)') TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), ".nc"
-      END IF
-      input_file = jsb_netcdf_open_input(TRIM(filename_deposition_data), model%grid_id)
-
-      ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NHx_deposition")) !, start_time_step=1, end_time_step=12)
-      DO i_month = 1,12
-        nhx_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
-      END DO
-      ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NOy_deposition")) !, start_time_step=1, end_time_step=12)
-      DO i_month = 1,12
-        noy_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
-      END DO
-      ptr_3D => input_file%Read_2d_time(variable_name=TRIM("pdep")) !, start_time_step=1, end_time_step=12)
-      DO i_month = 1,12
-        p_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
-      END DO
-
-      CALL input_file%Close()
-    END IF
-
-    ! Assign the deposition values of this month to the A2L variables
-    IF (.NOT. init_sb) THEN
-      current_month = get_month(current_datetime)
     ELSE
-      current_month = 1
+      ! Check if data needs to be read
+      IF (is_experiment_start &
+          & .OR. (is_newyear(current_datetime, dtime) .AND. (dsl4jsb_Config(SB_)%deposition_scheme == TRANS_DEP))) THEN
+        read_deposition_data = .TRUE.
+      ELSE
+        read_deposition_data = .FALSE.
+      END IF
+
+      IF (read_deposition_data) THEN
+        IF (.NOT. is_experiment_start) THEN
+          ! In this case we search a file ending on the current year
+          current_year  = get_year(current_datetime)
+
+          !>
+          !> Assertion: routine currently expects filenames with 4 digits
+          !>
+          IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
+            CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+          END IF
+          WRITE (filename_deposition_data,'(a,a,I4.4,a)') &
+            & TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), '_', current_year, ".nc"
+        ELSE
+          ! else we expect a file name without a year
+          WRITE (filename_deposition_data,'(a,a)') TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), ".nc"
+        END IF
+
+        input_file = jsb_netcdf_open_input(TRIM(filename_deposition_data), model%grid_id)
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NHx_deposition")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          nhx_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NOy_deposition")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          noy_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("pdep")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          p_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+
+        CALL input_file%Close()
+      END IF
+
+      ! Assign the deposition values of this month to the A2L variables
+      current_month = get_month(current_datetime)
+
+      ! ... convert from kg/m2/s -> mumol/m2/s
+      ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+      nhx_deposition(:,:) = nhx_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      noy_deposition(:,:) = noy_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      p_deposition  (:,:) = p_deposition_monthly  (:,current_month,:) * 1000._wp / molar_mass_P / 1.e-6_wp
+
+      ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     END IF
 
-    ! ... convert from kg/m2/s -> mumol/m2/s
-    ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
-    nhx_deposition(:,:) = nhx_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
-    noy_deposition(:,:) = noy_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
-    p_deposition  (:,:) = p_deposition_monthly  (:,current_month,:) * 1000._wp / molar_mass_P / 1.e-6_wp
-
-    ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
-    nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-
-    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE provide_n_and_p_deposition
 #endif

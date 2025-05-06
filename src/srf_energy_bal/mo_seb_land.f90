@@ -22,7 +22,7 @@ MODULE mo_seb_land
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, message_text, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -41,6 +41,11 @@ MODULE mo_seb_land
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
+
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_memory(VEG_)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -77,6 +82,9 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     LOGICAL                :: lstart
 
@@ -131,6 +139,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_bcoef
     dsl4jsb_Real2D_onChunk :: pch
     dsl4jsb_Real2D_onChunk :: richardson
+
+    ! VEG_
+    dsl4jsb_Real2D_onChunk :: height
 
     ! Locally allocated vectors
     !
@@ -213,6 +224,13 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      veg__mem => NULL()
+      dsl4jsb_Get_memory(VEG_)
+    END SELECT
+#endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
@@ -297,6 +315,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
+    SELECT CASE (model%config%model_scheme)
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_var2D_onChunk(VEG_,   height)       ! in
+#endif
+    CASE DEFAULT
+      height => NULL()
+    END SELECT
+
     !$ACC DATA &
     !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star, liquid_max) &
     !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract, t_radref)
@@ -334,7 +361,6 @@ CONTAINS
     tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
     !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
     !$ACC WAIT(1)
-
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
     ELSE
@@ -436,7 +462,8 @@ CONTAINS
       CALL update_surface_temperature_standalone ( &
           & tile, options, lstart, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), press_srf(:), &
           & t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), &
-          & heat_cap(:), skin_conductivity, t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
+          & heat_cap(:), skin_conductivity, height, &                               ! optional arguments come without '(:)'
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
           & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:) &
         )
     ELSE IF (use_tmx) THEN
@@ -578,7 +605,7 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_standalone ( &
         & tile, options, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
-        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, &
+        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, height, &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, drag_srf, richardson, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, &
         & t_radref &
       )
@@ -612,6 +639,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
     REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(wp), OPTIONAL, INTENT(IN) :: height(:)
 
     REAL(wp), INTENT(OUT) :: t_acoef(:)
     REAL(wp), INTENT(OUT) :: t_bcoef(:)
@@ -679,7 +707,9 @@ CONTAINS
           & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
           & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
-          & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+          & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+          & height = height) ! vegetation height (quincy specific)
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
@@ -720,7 +750,9 @@ CONTAINS
             & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
             & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
             ! INTENT out
-            & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+            & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+            ! optional (INTENT(IN)) argument
+            & height = height) ! vegetation height (quincy specific)
 
           !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
           DO ic = 1, nc
@@ -780,7 +812,9 @@ CONTAINS
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
-        & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+        & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+        & height = height) ! vegetation height (quincy specific)
 
       ! Get Asselin filter coefficient
       eps = get_asselin_coef()
@@ -829,6 +863,8 @@ CONTAINS
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
         & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+        & height = height, & ! vegetation height (quincy specific)
           ! Optional variables for filtering
         & t_srf_upd=t_star(:), zril_old=richardson(:))
 
@@ -1361,8 +1397,10 @@ CONTAINS
     L_s = fract_snow * als + (1._wp - fract_snow) * fact_qsat_srf * alv
 
     ! Differential sensible and latent heat conductivities between atmosphere and skin layer.
-    dcond_sen = MIN(0._wp, heat_tcoef * t2s_conv * (t_acoef - 1._wp) + dheat_tcoef * ((t_acoef - 1._wp) * s_old + t_bcoef))
-    dcond_lat = MIN(0._wp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old))
+    dcond_sen = MIN(0._wp, heat_tcoef * t2s_conv * (t_acoef - 1._wp) + dheat_tcoef &
+      &         * ((t_acoef - 1._wp) * s_old + t_bcoef))
+    dcond_lat = MIN(0._wp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef &
+      &         * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old))
 
     denom = lambda_sk_eff * (1._wp - t_tl_acoef) + 4._wp * stbo * zemiss_def * t_old**3 &
         & - dcond_sen - dcond_lat

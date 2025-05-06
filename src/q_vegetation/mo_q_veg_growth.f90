@@ -1300,10 +1300,15 @@ CONTAINS
 
     !> 1.3 apply demand driven reduction in uptake
     !!
-    uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
-    uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
+    SELECT CASE (bnf_scheme)
+    CASE ("unlimited")
+      uptake_nh4(:) = uptake_nh4_pot(:)
+      uptake_no3(:) = uptake_no3_pot(:)
+    CASE DEFAULT
+      uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
+      uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
+    END SELECT
     uptake_po4(:) = demand_uptake_p_tuptake_mavg(:) * uptake_po4_pot(:)
-
 
     !> 2.0 C costs for N acquisition
     !!
@@ -1381,11 +1386,17 @@ CONTAINS
 
       !>3.3 Case 3: Give enough N to maintain N requirement in the labile pool
       !>
-      CASE("unlimited")
+      CASE ("unlimited")
+        ! limit root uptake in case labile pool contains too much N
+        WHERE(labile_nitrogen(:) - labile_carbon(:) * growth_req_n_tlabile_mavg(:) > 0.0_wp)
+          uptake_nh4(:) = 0.0_wp
+          uptake_no3(:) = 0.0_wp
+        ENDWHERE
         ! N fixation in micro-mol N / m2 / s
-        n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / &
+        n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:) &
+          &                 - (uptake_nh4(:) + uptake_no3(:)) * dtime / 1000000._wp, 0.0_wp) / &
           &             dtime * 1000000.0_wp
-    ENDSELECT
+    END SELECT
 
     !>4.0 Determine C use for Root Exudates
     !>
@@ -1442,7 +1453,7 @@ CONTAINS
     SELECT CASE (bnf_scheme)
     !>  4.1 BNF unlimited case is the C-only case, N uptake pathways are assumed not to have a cost
     !>
-    CASE("unlimited")
+    CASE ("unlimited")
       n_transform_respiration(:)  = 0.0_wp
       n_fixation_respiration(:)   = 0.0_wp
     !>  4.2 in all other cases, BNF and N transformation have a respiratory cost
@@ -1459,10 +1470,10 @@ CONTAINS
         uptake_nh4(:) = uptake_nh4(:) * scal(:)
         uptake_no3(:) = uptake_no3(:) * scal(:)
         n_fixation(:) = n_fixation(:) * scal(:)
-      ENDWHERE
+      END WHERE
       n_transform_respiration(:)  = uptake_nh4(:) * transform_cost_nh4 + uptake_no3(:) * transform_cost_no3
       n_fixation_respiration(:)   = n_fixation(:) * k_cost_symb_bnf
-    ENDSELECT
+    END SELECT
     n_processing_respiration(:) = n_fixation_respiration(:) + n_transform_respiration(:)
 
     !> 5.0 update diagnostics and soil related variables, as well as N15 fluxes
@@ -1908,13 +1919,19 @@ CONTAINS
            k2_opt = k2_opt_w
         ENDIF
       CASE("dynamic")
-         ! empirical scaling of leaf to root ratio based on nitrogen, phosphorus and water availability
-         n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-         p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-         w_l2r_scal = w_root_lim / w_root_lim_max
-         ! actual ratio is given by the minimum of the three factors
-         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-              lctlib_k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+        ! empirical scaling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
+        w_l2r_scal = w_root_lim / w_root_lim_max
+        ! actual ratio is given by the minimum of the three factors
+        leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+          &                    lctlib_k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
       CASE("fixed")
          ! scaling factor for root to leaf mass
          ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
@@ -1981,9 +1998,15 @@ CONTAINS
           k2_opt = k2_opt_w
         ENDIF
       CASE("dynamic")
-         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-        p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
         w_l2r_scal = w_root_lim / w_root_lim_max
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
@@ -1997,8 +2020,14 @@ CONTAINS
         leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
         ! leaf:root ratio
         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-        p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
         w_l2r_scal = w_root_lim / w_root_lim_max
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
@@ -2020,14 +2049,21 @@ CONTAINS
     !>    hence, all '*_l2r_scal' range [0,1] where 0 == strongest limitation, and 1 lowest limitation considered here
     !>  range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1
     !>
-    n_l2r_scal = MIN(1._wp, growth_cn / MAX(eps8, labile_carbon   / MAX(eps8, labile_nitrogen)))
-    p_l2r_scal = MIN(1._wp, growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus)))
+    SELECT CASE (bnf_scheme)
+    ! Assume N and P not affecting root distribution in the unlimited case
+    CASE ("unlimited")
+      n_l2r_scal = 1.0_wp
+      p_l2r_scal = 1.0_wp
+    CASE DEFAULT
+      n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+      p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+    END SELECT
     w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
-    IF(n_l2r_scal <= p_l2r_scal) THEN
+    IF (n_l2r_scal <= p_l2r_scal) THEN
       root_limitation_state =  0.5_wp + 0.5_wp * (w_l2r_scal - n_l2r_scal)
     ELSE
       root_limitation_state = -0.5_wp - 0.5_wp * (w_l2r_scal - p_l2r_scal)
-    ENDIF
+    END IF
 
   END SUBROUTINE calc_allometry
 

@@ -1,4 +1,4 @@
-!> Contains structures and methods for hydrology config
+!> Contains structures and methods for the hydrology process configuration
 !>
 !> ICON-Land
 !>
@@ -11,65 +11,100 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Configuration of the hydrology process
+!>
+!> The module defines the data structure [[t_hydro_config]] that contains the hydrology
+!> configuration, i.e. all hydrology variables that are configurable via namelist.
+!> In subroutine [[Init_hydro_config]] we read the hydrology namelist 'jsb_hydro_nml'
+!> and set the hydrology configuration data structure accordingly. We also perform
+!> some consistency checks.
+!>
 MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_jsb_impl_constants,ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
-  USE mo_util,              ONLY: real2string
-  USE mo_util_string,       ONLY: tolower
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
-  USE mo_jsb_control,       ONLY: debug_on
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_exception,          ONLY: message_text, message, finish
+  USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+  USE mo_util,               ONLY: real2string
+  USE mo_util_string,        ONLY: tolower
+  USE mo_io_units,           ONLY: filename_max
+  USE mo_kind,               ONLY: wp
+  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_hydro_config
-
+  !> The data structure contains all configurable parameters of the HYDRO process. It extends
+  !> [[mo_jsb_config_class:t_jsb_config]], a data structure containing basic parameters defined
+  !> for all ICON-Land processes.
+  !>
+  !> _Note for the ford documentation_: The table lists the general parameters of
+  !> [[mo_jsb_config_class:t_jsb_config]] as well as the parameters specific to the hydrology
+  !> actually defined in [[t_hydro_config]].
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
-    CHARACTER(len=filename_max) :: bc_sso_filename   !< For elevation and oro_stddev
-    CHARACTER(len=filename_max) :: ic_moist_filename !< For `l_read_initial_moist=.TRUE.`
+    CHARACTER(len=filename_max) :: bc_sso_filename   !< Name of input file with orographic maps
+    CHARACTER(len=filename_max) :: ic_moist_filename !TODO: remove
     REAL(wp)               :: &
-      & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
-                                !  maximum snow depth on leaves  [m water equivalent]
-      & w_soil_limit,         & !< Upper limit for maximum soil moisture content
-      & w_soil_crit_fract,    & !< Fraction of field capacity at which soil starts to dry,
-                                !  i.e. at which water stress starts to be above zero
-      & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
-                                !  i.e. when no transpiration occurs anymore
-      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
-                                !  infinitely growing snow depth; -1. for no limitation
-      & ret_macro_blg,        & !< Assumed retention time for below ground runoff [s],
-                                !< i.e. avg. time before water reaches tributary
-      & ret_macro_srf           !< Assumed retention time for surface runoff [s],
-                                !< i.e. avg. time before water reaches tributary
+      & w_skin_max,           & !< Maximum amount of liquid water in skin reservoirs of soil
+                                !< and canopy [m], as well as maximum amount of snow on canopy
+                                !< [m water equivalent]
+      & w_soil_limit,         & !< Set a limit for the maximum amount of root zone moisture; -1. for
+                                !< no limitation
+      & w_soil_crit_fract,    & !< If the relative soil moisture drops below this critical fraction
+                                !< soil desiccation begins, i.e. water stress
+                                !< starts to be greater than zero.
+      & w_soil_wilt_fract,    & !< If the relative soil moisture drops below this fraction
+                                !< the soil is at its wilting point and no transpiration
+                                !< occurs anymore.
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] used to avoid grid
+                                !< cells with infinitely growing snow depth; -1. for no limitation
+      & ret_macro_blg,        & !< Assumed retention time for below ground runoff,
+                                !< i.e. avg. time before water reaches tributary [s]
+      & ret_macro_srf           !< Assumed retention time for surface runoff,
+                                !< i.e. avg. time before water reaches tributary [s]
 
     CHARACTER(len=10)     ::  &
-      & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
+      & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance: 'echam5' is only option
     LOGICAL               ::  &
-      & l_read_initial_moist, & !< Force reading initial soil moisture for layers from `ic_moist_filename`
-                                !  even if `init_from_ifs=.TRUE.`
-      & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
+      & l_read_initial_moist, & !< Force reading initial soil moisture from 'ic_filename' (this namelist),
+                                !< although [[t_jsb_model_config:init_from_ifs]]=true.
+      & sanitize_restart,     & !< Sanitize water budget in case the restart file has inconsistencies.
       & l_organic,            & !< Calculate soil hydrological parameters depending on organic matter fractions
-      & l_socmap,             & !< Read organic matter fractions from 3D map
-      & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
-      & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
-      & l_ponds                 !< Additional surface water storage
+      & l_socmap,             & !< Read organic matter fractions from three dim. map
+      & l_soil_texture,       & !< Calculate soil hydrological parameters from soil textures (silt, clay, sand)
+      & l_glac_in_soil,       & !< Treat glacier as part of soil, no separate glacier tile (not used)
+                                !TODO: remove?!
+      & l_infil_subzero,      & !< Allow infiltration of water into uppermost soil layer at soil temperatures
+                                !< below zero degC
+                                !TODO: might be removed and set to TRUE as default after the old snow scheme is removed
+      & l_ponds                 !< Representation of local depressions that might hold additional surface water
     INTEGER               ::  &
-      & soilhydmodel,         & !< Choice of soil hydrological model to calc soil hydraulic properties:
-                                !! 'VanGenuchten' (default), 'BrooksCorey', or 'Campbell'
-      & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface:
-                                !! 'upstream' (default) or 'arithmetic' mean
-      & pond_dynamics,        & !< Choice of pond dynamics scheme (i.e. depth-area scaling)
-                                !! 'tanh' (default), 'quadratic'
-      & hydro_scale,          & !< 'semi_distributed': use the ARNO scheme assuming sub-grid scale variations in infiltration
-                                !! and subsurface drainage (default)
-                                !! 'uniform': assume uniform soil moisture distribution
-                                !! (e.g. for applications like HydroTiles, HighRes or sitelevel)
-      & enforce_water_budget    !< Set water balance check level: 'unset', 'ignore', 'logging', 'error'
+      & soilhydmodel,         & !< Soil hydrological model to calculate soil hydraulic properties:</br>
+                                !< 'VanGenuchten' (1): van Genuchten (1980) (default)</br>
+                                !< 'BrooksCorey' (2): Brooks and Corey (1964)</br>
+                                !< 'Campbell' (3): Campbell (1974)
+      & interpol_mean,        & !< Interpolation scheme for hydraulic conductivity (K) and conductivity (C)
+                                !< at layer interfaces:</br>
+                                !< 'Upstream' (1): for K use value of the upper layer and for D the higher
+                                !< value of the two layers (default)</br>
+                                !< 'Arithmetic' (2): for K and D calculate arithmetic means of upper and
+                                !< lower layer values
+      & pond_dynamics,        & !< Pond dynamics scheme (i.e. scaling between of pond area and pond depth):</br>
+                                !< 'Quadratic' (1): quadratic scaling </br>
+                                !< 'Tanh' (2): scaling with tangent hyperbolicus (default)
+      & hydro_scale,          & !< Assumed effective scale of the process calculations</br>
+                                !< 'semi_distributed' (1): usage of the ARNO scheme assuming sub-grid scale topographic
+                                !<    variations (default)</br>
+                                !< 'uniform' (2): assume uniform soil moisture distribution for the tile,
+                                !<   e.g. for applications like HydroTiles, HighRes or sitelevel
+      & enforce_water_budget    !< Logging level in case of water balance violations in the HYDRO process - overwrites
+                                !< [[t_jsb_model_config:enforce_water_budget]] set in namelist 'jsb_model_nml' handling
+                                !< water balance issues of all ICON-Land processes.</br>
+                                !< default: 'unset': use setting from namelist 'jsb_model_nml'</br>
+                                !< 'ignore' (0):  short, one-line warning,</br>
+                                !< 'logging' (1): detailed debugging output,</br>
+                                !< 'error' (2):   debugging output and model stop
 
 
   CONTAINS
@@ -80,6 +115,18 @@ MODULE mo_hydro_config_class
 
 CONTAINS
 
+  ! ============================================================================================== !
+  !>
+  !>#### Configuration of the hydrology process
+  !>
+  !> In this subroutine we configure the hydrolology process based on the [[jsb_hydro_nml]]
+  !> parameter settings. Init_hydro_config is a type-bound procedure of [[t_hydro_config]].
+  !> It is called during initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
+  !> ('CALL this%processes(iproc)%p%Configure()').
+  !>
+  !> _Note_: For a more extensive documentation of the namelist parameters please check the
+  !> configuration data type [[t_hydro_config]].
+  !>
   SUBROUTINE Init_hydro_config(config)
 
     USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
@@ -93,15 +140,43 @@ CONTAINS
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active, lrestart_cont
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
-    REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    REAL(wp)                    :: ret_macro_blg, ret_macro_srf
-    CHARACTER(len=16)           :: scheme_stom_cond, soilhydmodel, interpol_mean, pond_dynamics, hydro_scale
-    CHARACTER(len=10)           :: enforce_water_budget
-    LOGICAL                     :: l_read_initial_moist, sanitize_restart, l_organic, &
-      &                            l_socmap, l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
+    !--------------------------------------------------------------------------------------------------------
+    ! Namelist parameters
+    !
+    LOGICAL :: &
+      & active,               & !< True: the HYDRO process is activated
+      & lrestart_cont           !< True: continue simulations even if HYDRO restart data is missing
+    CHARACTER(len=filename_max) :: &
+      & ic_filename,          & !< Name of input file with initial conditions
+      & bc_filename,          & !< Name of input file with boundary conditions
+      & bc_sso_filename         !< Name of input file with orographic boundary conditions
+    REAL(wp) :: &
+      & w_skin_max,           & !< Maximum filling of skin reservoirs: soil (liquid water [m]) and
+                                !< canopy (liquid water [m]) or snow [m water equivalent]
+      & snow_depth_max,       & !< Maximum snow depth [m water equivalent]
+      & w_soil_limit,         & !< Upper limit for maximum root zone soil water content [m]
+      & w_soil_crit_fract,    & !< Relative root zone moisture where water stress starts to matter
+      & w_soil_wilt_fract,    & !< Relative root zone moisture at wilting point
+      & ret_macro_blg,        & !< Retention time for below ground runoff [s]
+      & ret_macro_srf           !< Retention time for surface runoff [s]
+    CHARACTER(len=16) :: &
+      & scheme_stom_cond,     & !< Scheme to compute stomatal conductance
+      & soilhydmodel,         & !< Model to calculate soil hydraulic properties
+      & interpol_mean,        & !< Interpolation scheme for vertical diffusivity/conductivity
+      & pond_dynamics,        & !< Pond dynamics scheme
+      & hydro_scale,          & !< Assumption on effective area represented in calculations
+      & enforce_water_budget    !< Warn, stopp or ignore in case of water balance issues
+    LOGICAL :: &
+      & l_read_initial_moist, & !< True: read initial state of snow and soil moisture although
+                                !< init_from_ifs=true (namelist 'jsb_model_nml')
+      & sanitize_restart,     & !< True: fix possible inconsistencies of the restart file
+      & l_organic,            & !< True: soil properties depend on soil organic matter fractions
+      & l_socmap,             & !< True: soil organic matter fraction read from 3-dim. map
+      & l_soil_texture,       & !< True: calculate soil properties from soil texture data
+      & l_glac_in_soil,       & !< True: glaciers are part of the soil - not used
+      & l_infil_subzero,      & !< True: infiltration of surface water below zero degC possible
+      & l_ponds                 !< True: represent sub-grid scale surface depressions that might
+                                !< form small ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -131,19 +206,26 @@ CONTAINS
       & pond_dynamics,              &
       & hydro_scale
 
-    INTEGER :: nml_handler, nml_unit, istat
-    TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER :: ptr_1D(:)
-    REAL(wp), ALLOCATABLE :: depths(:), mids(:)
-    INTEGER :: nsoil
+    INTEGER :: &
+      & nml_handler,                   &  !< Handle to deal with namelist file
+      & nml_unit,                      &  !< IO unit of the namelist file
+      & istat                             !< Status flag
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
+    TYPE(t_input_file) :: input_file      !< Input file
+    REAL(wp), POINTER :: ptr_1D(:)        !< Pointer to a one dimensional variable
+    REAL(wp), ALLOCATABLE :: depths(:)    !< Upper/lower bounds of soil layers
+    REAL(wp), ALLOCATABLE :: mids(:)      !< Mid soil layer depth
+    INTEGER :: nsoil                      !< Number of soil layers
+
+    TYPE(t_jsb_vgrid), POINTER :: soil_w  !< Vertical grid used for soil layers of HYDRO process
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
-    ! Set defaults
+    !>
+    !> Default values are defined for all namelist parameters.
+    !
     active                 = .TRUE.
     lrestart_cont          = .FALSE.   ! TRUE: Continue although HYDRO variables are missing in restart file
     bc_filename            = 'bc_land_hydro.nc'
@@ -171,10 +253,21 @@ CONTAINS
     interpol_mean          = "upstream"
     hydro_scale            = "semi_distributed"
 
+    ! Open the file containing the hydrology namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
+    ! Find and read the hydrology namelist
+    ! The parameters defined in the namelist overwrite the default values defined above.
     nml_unit = position_nml('jsb_hydro_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
+
+    !> After reading the namelist, all configurable parameters of the hydrology - default parameters
+    !> and values set in the namelist - are stored in the configuration data structure 'config' to
+    !> make them easily accessible in all ICON-Land process modules ("dsl4jsb_Use_config(HYDRO_)").
+    !>
+    !> The specific choice of parameters is printed to the experiment's log file to document the
+    !> setup. Besides, we check the consistency of the settings and issue warnings if parameters
+    !> have been set questionably, or even stopp the simulation in case of unreasonable settings.
 
     config%active              = active
     config%lrestart_cont       = lrestart_cont
@@ -332,6 +425,7 @@ CONTAINS
     IF (l_organic .AND. nsoil < 3) &
       & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
+    ! calculate mid-points of each soil layer
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp

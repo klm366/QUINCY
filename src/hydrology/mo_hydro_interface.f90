@@ -29,7 +29,7 @@ MODULE mo_hydro_interface
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, message_text, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
@@ -39,7 +39,10 @@ MODULE mo_hydro_interface
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+#ifndef __QUINCY_STANDALONE__
+  dsl4jsb_Use_processes PHENO_
+#endif
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -52,14 +55,32 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
+#ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_memory(PHENO_)
+#endif
+
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_memory(VEG_)
+#endif
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_hydro_tasks, global_hydrology_diagnostics
+  PUBLIC :: Register_hydro_tasks
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: global_hydrology_diagnostics
+#endif
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_surface_hydrology, update_soil_properties, update_soil_hydrology, update_evaporation, &
+    &       update_canopy_cond_unstressed, update_water_stress, update_canopy_cond_stressed, &
+    &       update_snow_and_wet_fraction, update_water_balance
+  ! Currently done in SEB process
+  ! PUBLIC :: update_snow_and_ice_hydrology
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
@@ -150,7 +171,7 @@ MODULE mo_hydro_interface
   !> Type definition for snow_hydrology task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_ice_hydrology
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_snow_and_ice_hydrology
+    PROCEDURE, NOPASS :: Integrate => update_snow_and_ice_hydrology     ! Currently done in SEB process
     PROCEDURE, NOPASS :: Aggregate => aggregate_snow_and_ice_hydrology
   END TYPE tsk_snow_and_ice_hydrology
 
@@ -396,8 +417,13 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -444,6 +470,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
+    ! quincy
+    dsl4jsb_Real2d_onChunk :: fract_fpc
+
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
@@ -493,6 +522,8 @@ CONTAINS
       & l_latflow_to_streamflow, &
       & ltpe_closed,             &
       & use_tmx
+
+    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -570,7 +601,16 @@ CONTAINS
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
-      dsl4jsb_Get_memory(PHENO_)
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(VEG_)
+#endif
+      END SELECT
     END IF
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! in
@@ -632,10 +672,40 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_net_flx) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_latflow_srf)  ! out
       IF (tile%contains_vegetation) THEN
+
+        ALLOCATE(fract_fol_proj_cov(nc))
+        !$ACC ENTER DATA CREATE(fract_fol_proj_cov)
+
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
+
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)     ! in
-        dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
-        dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+        SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+        CASE (MODEL_JSBACH)
+          dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
+          dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          DO ic = 1, nc
+            fract_fol_proj_cov(ic) = fract_fpc_max(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+        CASE (MODEL_QUINCY)
+          dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
+          dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          DO ic = 1, nc
+            fract_fol_proj_cov(ic) = fract_fpc(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+        END SELECT
       END IF
     END IF
 
@@ -743,7 +813,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         IF (tile%contains_vegetation) THEN
-          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
+          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fol_proj_cov(ic)
         ELSE
           skinres_canopy_max(ic) = 0._wp
         END IF
@@ -868,6 +938,11 @@ CONTAINS
     !$ACC END PARALLEL
 
     !$ACC WAIT(1)
+
+    IF (.NOT. tile%is_glacier .AND. tile%contains_vegetation) THEN
+      !$ACC EXIT DATA DELETE(fract_fol_proj_cov)
+      DEALLOCATE(fract_fol_proj_cov)
+    END IF
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -1520,8 +1595,15 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
+
+    TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -1540,14 +1622,26 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
+    SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+    CASE (MODEL_JSBACH)
+      dsl4jsb_Get_memory(PHENO_)
+      dsl4jsb_Get_var2D_onChunk(PHENO_,  lai)                   ! IN
+#endif
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_memory(VEG_)
+      dsl4jsb_Get_var2D_onChunk(VEG_,    lai)                   ! IN
+#endif
+    END SELECT
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)        ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
@@ -2323,6 +2417,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), DIMENSION(options%nc) :: skinres_canopy_max, skinres_max, heat_tcoef
+    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_wet_fraction'
 
@@ -2337,7 +2432,12 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: lai
@@ -2362,6 +2462,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
+
+    ! quincy
+    dsl4jsb_Real2d_onChunk :: fract_fpc
 
     ! ---------------------------
     ! Go
@@ -2412,7 +2515,16 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      dsl4jsb_Get_memory(PHENO_)
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(VEG_)
+#endif
+      END SELECT
     END IF
 
     ! Set pointers
@@ -2438,8 +2550,38 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%contains_vegetation) THEN
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)               ! in
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)     ! in
+
+      ALLOCATE(fract_fol_proj_cov(nc))
+      !$ACC ENTER DATA CREATE(fract_fol_proj_cov)
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        fract_fol_proj_cov(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
+        dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = fract_fpc_max(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
+        dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = fract_fpc(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+      END SELECT
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)    ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
@@ -2465,7 +2607,7 @@ CONTAINS
     DO ic=1,nc
       ! Maximum capacity of skin reservoir (soil + canopy)
       IF (tile%contains_vegetation) THEN
-        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
+        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fol_proj_cov(ic)
       ELSE
         skinres_canopy_max(ic) = 0._wp
       END IF
@@ -2560,6 +2702,11 @@ CONTAINS
 
     !$ACC WAIT(1)
     !$ACC END DATA
+
+    IF (tile%contains_vegetation) THEN
+      !$ACC EXIT DATA DELETE(fract_fol_proj_cov)
+      DEALLOCATE(fract_fol_proj_cov)
+    END IF
 
   END SUBROUTINE update_snow_and_wet_fraction
 
@@ -2859,6 +3006,7 @@ CONTAINS
 
   END SUBROUTINE aggregate_water_balance
 
+#ifndef __QUINCY_STANDALONE__
   !-----------------------------------------------------------------------------------------------------
   !> Global land mean hydrology output
   !!
@@ -2998,6 +3146,7 @@ CONTAINS
     DEALLOCATE (scaling, in_domain)
 
   END SUBROUTINE global_hydrology_diagnostics
+#endif
 
 #endif
 END MODULE mo_hydro_interface

@@ -508,18 +508,28 @@ CONTAINS
       dzscfl = dzril * (sfact + 2.5_wp * zril / sfact)
 
       ufact = zcons11 * zchnl * SQRT(ABS(zril) * (1._wp + zgh / (grav * rough_h_srf_proc(ic))))
+      ! momentum
+      ! zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp + zg  / (grav * rough_m_srf_proc(ic)))))
+      ! heat
       zucfhl = - zril / (1._wp + ufact)
       dzucfhl = - dzril * (1._wp + 0.5_wp * ufact) / (1._wp + ufact)**2
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
       zcons = zcons12 * pressure(ic) / ztvir
+      ! momentum
+      ! zcfncl   = zcons * SQRT(zdu2) * zcdnl
+      ! heat
       zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
       ! Stable / Unstable case
       IF ( zril > 0._wp ) THEN
+        ! momentum
+        ! zcfml = zcfncl  / (1._wp + zcons8 * zril / zscfl)
+        ! heat
         zcfhl = zcfnchl / (1._wp + zcons9 * zscfl)
         dzcfhl = - zcfnchl * zcons9 * dzscfl / (1._wp + zcons9 * zscfl)**2
       ELSE
+        ! zcfml = zcfncl  * (1._wp - zcons8 * zril * zucfl)
         zcfhl = zcfnchl * (1._wp + zcons9 * zucfhl)
         dzcfhl = zcfnchl * zcons9 * dzucfhl
       END IF

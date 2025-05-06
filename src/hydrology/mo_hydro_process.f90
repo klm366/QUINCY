@@ -728,7 +728,8 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculation of vertical soil water movement for multiple soil layers
-    CALL soilhyd(nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget, &
+    CALL soilhyd( &
+      &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,       &
       &    slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,         &
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
@@ -741,7 +742,8 @@ CONTAINS
 
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
-      CALL soilhyd_lat(l_pf_soil, nc, nsoil, dtime,          &
+      CALL calc_soilhyd_lateral( &
+        &    l_pf_soil, nc, nsoil, dtime,                    &
         &    flowlag, hyd_cond_bot,                          &
         &    soil_depth_sl, vol_field_cap_sl,                &
         &    ice_soil_sl, wtr_soil_sl,                       &
@@ -1761,7 +1763,7 @@ CONTAINS
 
   !----------------------------------------------------------------------------------------------
 
-  SUBROUTINE soilhyd_lat(                                                   &
+  SUBROUTINE calc_soilhyd_lateral(                                          &
     & l_pf_soil, nc, nsoil, delta_time,                                     &
     & flowlag, hyd_cond_bot, soil_depth_sl, vol_field_cap_sl,               &
     & ice_soil_sl, wtr_soil_sl, wtr_latflow_res_sl, drainage_sl, drain_bot, &
@@ -1854,7 +1856,7 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
-  END SUBROUTINE soilhyd_lat
+  END SUBROUTINE calc_soilhyd_lateral
 
   !----------------------------------------------------------------------------------------------
 

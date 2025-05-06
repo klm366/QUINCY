@@ -47,7 +47,14 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks, global_seb_diagnostics, seb_check_temperature_range
+  PUBLIC :: Register_seb_tasks, seb_check_temperature_range
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: global_seb_diagnostics
+#endif
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_surface_energy, update_snowmelt_correction, update_asselin, update_surface_fluxes
+#endif
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -654,14 +661,14 @@ CONTAINS
     lon   => grid%lon(:,:)
 
     !vg no_omp_thread = Get_omp_thread()
-
+#ifndef __QUINCY_STANDALONE__
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
       IF (tile%visited(no_omp_thread) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
-
+#endif
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
 
@@ -679,10 +686,10 @@ CONTAINS
           END DO
         END DO
       END IF
-
+#ifndef __QUINCY_STANDALONE__
       CALL model%Goto_next_tile(tile)
     ENDDO
-
+#endif
   END SUBROUTINE seb_check_temperature_range
 
   !-----------------------------------------------------------------------------------------------------
@@ -691,6 +698,7 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
+#ifndef __QUINCY_STANDALONE__
   SUBROUTINE global_seb_diagnostics(tile)
 
     USE mo_sync,                  ONLY: global_sum_array
@@ -760,6 +768,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE global_seb_diagnostics
+#endif
 
   !
   ! ================================================================================================================================

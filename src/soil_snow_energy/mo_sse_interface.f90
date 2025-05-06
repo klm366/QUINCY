@@ -43,6 +43,10 @@ MODULE mo_sse_interface
   PRIVATE
 
   PUBLIC :: Register_sse_tasks
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_soil_and_snow_temperature, update_soil_and_snow_properties
+#endif
 
   !> Type definition for soil_temp_and_hydro task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_and_snow_temp
