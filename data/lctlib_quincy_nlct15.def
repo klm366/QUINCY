@@ -246,8 +246,8 @@ frac_sapwood_branch 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.
 # converted internally from g/cm3 to mol C m-3        
 wood_density 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.25
         
-#k_latosa: leaf area to sapwood area ratio        
-k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 40000.0
+#k_latosa: leaf area to sapwood area ratio (for shrubs: Zhang et al., 2013)       
+k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 125.0
         
 #k_crtos: coarse root to sapwood mass ratio         
 k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1 1
