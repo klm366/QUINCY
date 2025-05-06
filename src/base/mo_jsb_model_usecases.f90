@@ -863,12 +863,12 @@ CONTAINS
       &                              veg_tile, pft_tile                   !< tiles used with this usecase
     INTEGER                       :: i                                    !< for looping
     ! number of pft
-    INTEGER, PARAMETER            :: npft = 12
+    INTEGER, PARAMETER            :: npft = 13
     ! pft short names
     CHARACTER(len=5), PARAMETER   :: pft_shortnames(npft) = [character(len=5) :: &
       &                              'pft01', 'pft02', 'pft03', 'pft04', &
       &                              'pft05', 'pft06', 'pft07', 'pft08', &
-      &                              'pft09', 'pft10', 'pft11','pft12'  ]
+      &                              'pft09', 'pft10', 'pft11','pft12', 'pft13'  ]
     ! pft long names
     CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &
       &                              'BEM:  moist broadleaved evergreen',           &
@@ -882,10 +882,11 @@ CONTAINS
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
-      &                              'CSH:  low NE shrubs']
+      &                              'CSH:  low NE shrubs',                         &
+      &                              'BSH:  BD shrubs'             ]
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
-    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,15 /)
+    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,14,15 /)
     CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_11pS_pfts'
 
     ! overview of tile structure:
