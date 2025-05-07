@@ -185,17 +185,26 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    ! search a file ending on the current year
-    current_year  = get_year(current_datetime)
+    IF (dsl4jsb_Config(Q_SYL_)%harvest_scheme == REF_HARV) THEN
+      ! search a file not ending on a year ...
+      WRITE (filename_harvest_data,'(a,a)') &
+        & TRIM(dsl4jsb_Config(Q_SYL_)%harvest_filename_prefix), ".nc"
+    ELSE
+      ! search a file ending on the current year
+      current_year  = get_year(current_datetime)
 
-    !>
-    !> Assertion: routine currently expects filenames with 4 digits
-    !>
-    IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+      !>
+      !> Assertion: routine currently expects filenames with 4 digits
+      !>
+      IF ( current_year > 9999) THEN
+        CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+      ELSE IF (current_year < 1000) THEN
+        CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
+                                    //' for years < 1000 leading zeros are expected.')
+      END IF
+      WRITE (filename_harvest_data,'(a,a,I4.4,a)') &
+        & TRIM(dsl4jsb_Config(Q_SYL_)%harvest_filename_prefix), '_', current_year, ".nc"
     END IF
-    WRITE (filename_harvest_data,'(a,a,I4.4,a)') &
-      & TRIM(dsl4jsb_Config(Q_SYL_)%harvest_filename_prefix), '_', current_year, ".nc"
 
     input_file = jsb_netcdf_open_input(TRIM(filename_harvest_data), model%grid_id)
     ptr_2D => input_file%Read_2d(variable_name='harvest_fract', fill_array = fract_forest_harvest_y_read(:,:))

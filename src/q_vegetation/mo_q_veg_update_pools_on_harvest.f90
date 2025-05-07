@@ -68,7 +68,7 @@ CONTAINS
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_veg_config_class,      ONLY: get_number_of_veg_compartments
-    USE mo_q_agr_constants,       ONLY: max_harvesting_rate, ctlib_lai_max, ix_harvest
+    USE mo_q_agr_process,         ONLY: calc_crop_harvest_fraction
     USE mo_veg_constants,         ONLY: min_lai
     USE mo_q_syl_constants,       ONLY: fract_wood_to_pp_fuel, fract_wood_to_pp_paper, fract_wood_to_pp_fiberboard,   &
       &                                 fract_wood_to_pp_oirw, fract_wood_to_pp_pv, fract_wood_to_pp_sawnwood
@@ -98,7 +98,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onChunk :: crop_type_index
-    dsl4jsb_Real2D_onChunk :: growth_phase
+    dsl4jsb_Real2D_onChunk :: crop_growth_phase
 
     dsl4jsb_Def_memory(Q_SYL_)
     dsl4jsb_Real2D_onChunk :: fract_forest_harvest
@@ -184,7 +184,7 @@ CONTAINS
     IF (tile%Is_process_calculated(Q_AGR_)) THEN
       dsl4jsb_Get_memory(Q_AGR_)
       dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_type_index)
-      dsl4jsb_Get_var2D_onChunk(Q_AGR_, growth_phase)
+      dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_growth_phase)
 
     ELSE IF (tile%Is_process_calculated(Q_SYL_)) THEN
       dsl4jsb_Get_memory(Q_SYL_)
@@ -227,20 +227,9 @@ CONTAINS
     fract_harvest_rel_to_tile(:) = 0.0_wp
     IF (tile%Is_process_calculated(Q_AGR_)) THEN
       ! calculate flux from harvesting if crop has reached maturity (i.e. growth phase is 3)
-      !!  This follows the Q_AGR_ calculation of a litter flux, which can be later rerouted to products pools
-      !!  The assumption is as the model is applied at grid scale that harvesting takes 1/max_harvesting_rate
-      !!  days to complete
-      DO ic = 1,nc
-        ix_ct = INT(crop_type_index(ic))
-        IF (INT(growth_phase(ic)) == ix_harvest) THEN
-          IF (lai(ic) > min_lai) THEN
-            fract_harvest_rel_to_tile(ic) = MIN(1.0_wp, MAX(eps4, max_harvesting_rate * dtime / one_day &
-              &                                                    * ctlib_lai_max(ix_ct) / lai(ic)))
-          ELSE
-            fract_harvest_rel_to_tile(ic) = 1.0_wp
-          END IF
-        END IF
-      END DO
+      fract_harvest_rel_to_tile(:) = calc_crop_harvest_fraction(dtime, crop_type_index(:),   &
+                                                                crop_growth_phase(:), lai(:))
+
     ELSE IF (tile%Is_process_calculated(Q_SYL_)) THEN
       ! ----------------------------------------------------------------------------------------------------- !
       ! Derive the harvested fraction in proportion to the tile area given the absolute harvested fraction
@@ -407,7 +396,7 @@ CONTAINS
     & veg_pp_flux_harvest_mt)
 
     USE mo_lnd_bgcm_idx
-    USE mo_q_agr_constants,         ONLY: crop_planting_mass, fract_crop_to_slash
+    USE mo_q_agr_constants,         ONLY: crop_planting_mass, fstore_seed_min, fract_crop_to_slash
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                                !< dimensions
     REAL(wp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
@@ -437,10 +426,10 @@ CONTAINS
 
       ! fruits: first ensure that the seed pool does not decrease below twice planting level to have planting
       !         material for next growing season
-      IF (veg_pool_mt(ix_seed_bed,ixC,ic) < 2._wp * crop_planting_mass &
+      IF (veg_pool_mt(ix_seed_bed,ixC,ic) < fstore_seed_min * crop_planting_mass &
           & .AND. veg_litter_flux_harvest_mt(ix_fruit,ixC,ic) > eps8) THEN
         hlp1 = MIN(MAX( &
-          &             (2._wp * crop_planting_mass - veg_pool_mt(ix_seed_bed,ixC,ic)) &
+          &             (fstore_seed_min * crop_planting_mass - veg_pool_mt(ix_seed_bed,ixC,ic)) &
           &               / veg_litter_flux_harvest_mt(ix_fruit,ixC,ic),0.0_wp),1.0_wp)
         veg_pool_mt(ix_seed_bed,:,ic) = veg_pool_mt(ix_seed_bed,:,ic) &
           & + hlp1 * veg_litter_flux_harvest_mt(ix_fruit,:,ic)

@@ -819,6 +819,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c14
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
@@ -1099,6 +1100,7 @@ CONTAINS
 
         ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
+        dsl4jsb_Get_var2d_onDomain(A2L_, daylength_prev_day)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
         global_seconds_day = NINT(get_secs_of_day(datetime_new)) ! TODO time steps w/ fractional seconds not supported by quincy, yet!
@@ -1108,7 +1110,7 @@ CONTAINS
           DO ic = 1, nproma
             CALL update_local_time_and_daytime_counter( &
               &     global_seconds_day, dtime, lon(ic, iblk), swpar_srf_down(ic, iblk), &
-              &     daytime_counter(ic, iblk), local_time_day_seconds(ic, iblk))
+              &     daytime_counter(ic, iblk), daylength_prev_day(ic, iblk), local_time_day_seconds(ic, iblk))
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP

@@ -1671,13 +1671,18 @@ CONTAINS
     target_np_fine_root = target_np_leaf / root2leaf_np
     SELECT CASE(lctlib_growthform)
     CASE (itree) ! trees
+      target_np_fruit        = lctlib_np_leaf / root2leaf_np
       target_np_coarse_root  = lctlib_np_leaf / wood2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / wood2leaf_np
-    CASE (igrass, icrop) ! grasses, and crops
+    CASE (igrass) ! grasses
+      target_np_fruit        = lctlib_np_leaf / root2leaf_np
+      target_np_coarse_root  = lctlib_np_leaf / root2leaf_np
+      target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
+    CASE (icrop) ! crops
+      target_np_fruit        = lctlib_np_leaf
       target_np_coarse_root  = lctlib_np_leaf / root2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
     END SELECT
-    target_np_fruit = lctlib_np_leaf / root2leaf_np
 
   END SUBROUTINE calc_stoichiometry_changes
 

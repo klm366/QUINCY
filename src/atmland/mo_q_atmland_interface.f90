@@ -213,6 +213,7 @@ CONTAINS
       & q_bcoef_ice_ptr
 
     dsl4jsb_Real2D_onChunk :: daytime_counter
+    dsl4jsb_Real2D_onChunk :: daylength_prev_day
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execution_counter
@@ -374,6 +375,7 @@ CONTAINS
     END IF
 
     daytime_counter         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
+    daylength_prev_day      => dsl4jsb_var2D_onChunk(A2L_, daylength_prev_day)
     local_time_day_seconds  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
     IF (run_spinup_accelerator) THEN
       slow_sb_pool_accelerator_execute           => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execute)
@@ -648,7 +650,7 @@ CONTAINS
 
     ! Update local time and the daytime counter
     CALL update_local_time_and_daytime_counter( &
-      &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+      &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, daylength_prev_day, local_time_day_seconds)
 
     ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
     IF (run_spinup_accelerator) THEN
