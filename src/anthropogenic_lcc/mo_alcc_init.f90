@@ -282,16 +282,12 @@ CONTAINS
           ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(idx)), &
           & fill_array = cf_transition(:, idx, :) )
           
-          !print out the variable name and some values from ptr_2D
-          !CALL message(TRIM(routine), 'Variable name: '//TRIM(transitions(idx)))
-          
           !Convert the numerical value to a string
           WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(1, idx, 1)  ! Example: printing the first element for simplicity
           ! Use the formatted string in the message
           CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
             & 'value = '//TRIM(temporary_string_trans_value))
-          
-          
+           
         END IF
       END DO
       
@@ -373,12 +369,19 @@ CONTAINS
         IF (ANY(cf_current_year(:, i_tile, :) > (1.0_wp + EPSILON(1._wp)))) THEN
           cf_current_year(:, i_tile, :) = MIN(1.0_wp, cf_current_year(:, i_tile, :))
         ENDIF
-       
-        ! Convert the first element of cf_current_year(:, i_tile, :) to a string for simplicity
-        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
-        ! Use the formatted string in the message
-        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' '//TRIM(temporary_string_cf_trans_value))
         
+           ! Assert: fractions >= 0 and < 1
+        IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+        IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
@@ -404,24 +407,13 @@ CONTAINS
             !END IF
           END DO
         END DO
-        
+
         ! Get the next sibling tile
         current_tile => current_tile%Get_next_sibling_tile()
 
       END DO 
 
-        ! Assert: fractions >= 0 and < 1
-      IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
-      ENDIF
-      IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion in transition: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-        & // TRIM(current_tile%name)//'. Please check.') 
-      ENDIF
-   
+      
       
     CASE DEFAULT 
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
