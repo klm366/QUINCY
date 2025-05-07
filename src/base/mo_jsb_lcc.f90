@@ -472,8 +472,8 @@ CONTAINS
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     
-      IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) * 1.0e10_wp)) THEN
-      !IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
+      !IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) * 1.0e10_wp)) THEN
+      IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
       CALL message(routine, 'Violation of assertion: Lost area exceeds available area ' &
         & //'for lcc process '// TRIM(lcc_relocations%name))
       WRITE (message_text,*) 'MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
