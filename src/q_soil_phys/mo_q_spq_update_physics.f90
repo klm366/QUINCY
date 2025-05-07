@@ -69,7 +69,6 @@ CONTAINS
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: ic
-    REAL(wp)                              :: steplen
     REAL(wp)                              :: dtime          !< timestep length
     REAL(wp)                              :: alpha          !< implicitness factor
     REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)    !< surface drag, provided by atmosphere or TURB_
@@ -194,7 +193,6 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
     dtime   = options%dtime
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
@@ -392,7 +390,6 @@ CONTAINS
     !$ACC WAIT(1)
     CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                      lat, lon, &
-                                     steplen, &
                                      alpha, &
                                      jsb_standalone, &
                                      rad_srf_net(:), &
@@ -580,7 +577,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                          lat, lon, &
-                                         steplen, &
                                          alpha, &
                                          jsb_standalone, &
                                          rad_srf_net, &
@@ -634,7 +630,6 @@ CONTAINS
     REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp),                                         INTENT(in)    :: lat(:)                 !< timestep length
     REAL(wp),                                         INTENT(in)    :: lon(:)                 !< timestep length
-    REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
     REAL(wp),                                         INTENT(in)    :: alpha                  !< implicitness factor
     LOGICAL,                                          INTENT(in)    :: jsb_standalone         !< standalone run?
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rad_srf_net, &         !< surface net radiation [W/m2]
@@ -744,7 +739,7 @@ CONTAINS
     !>   1.1 Calculate heat transfer coefficient
     !>
     DO ic = 1, nc
-      heat_transfer_coefficient(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+      heat_transfer_coefficient(ic) = heat_transfer_coef(drag_srf(ic), dtime, alpha)
     END DO
 
     !>   1.2 Calculate potential evaporation rate
@@ -758,7 +753,6 @@ CONTAINS
     !>
     hlp1(:) = 0.0_wp
     CALL calc_wskin_fractions_veg(dtime, &
-                                  steplen, &
                                   w_skin_max * lai(:), &
                                   0.01_wp, &              ! IQ: oro_stddev from HYDRO_ init; QS: assume almost flat terrain
                                   evapopot(:), &
@@ -808,7 +802,7 @@ CONTAINS
       ENDIF
     ENDDO
 
-    hlp1 = calc_temp_srf_new_implicit(steplen, &
+    hlp1 = calc_temp_srf_new_implicit(dtime, &
                                       alpha, &
                                       t2s_conv(:), &
                                       t_acoef(:), &
@@ -1532,7 +1526,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
  ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
-    & steplen,                                   & ! in
     & wsr_max,                                   & ! in
     & oro_stddev,                                & ! in
     & evapo_pot,                                 & ! in
@@ -1550,8 +1543,7 @@ CONTAINS
 
 
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) :: &
       & oro_stddev,         &
       & evapo_pot,          &
@@ -1614,7 +1606,7 @@ CONTAINS
   !!   srf_energy_bal/mo_seb_land:update_surface_energy_land:surface_temp_implicit
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_temp_srf_new_implicit(steplen, alpha, t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, &
+  ELEMENTAL FUNCTION calc_temp_srf_new_implicit(dtime, alpha, t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, &
                                                   s_old,qsat_srf_old,dQdT, &
                                                   rad_srf_net,ground_heat_flx,heat_transfer_coefficient, &
                                                   cair,csat,snow_cover_fract,heat_capa_srf) RESULT (s_new)
@@ -1624,7 +1616,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 In
-    REAL(wp), INTENT(in) :: steplen, &
+    REAL(wp), INTENT(in) :: dtime, &
                             alpha, &
                             t2s_conv, &
                             t_Acoef, &
@@ -1646,7 +1638,7 @@ CONTAINS
      ! local
      REAL(wp) :: pdt, zicp, zca, zcs, zcolin, zcohfl, zcoind
 
-     pdt = alpha * steplen
+     pdt = alpha * dtime
 
      zicp = 1._wp / t2s_conv
 

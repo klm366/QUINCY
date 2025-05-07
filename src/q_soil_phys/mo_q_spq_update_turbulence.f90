@@ -62,7 +62,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic!< dimensions
     INTEGER                               :: model_scheme
     LOGICAL                               :: jsb_standalone
-    REAL(wp)                              :: steplen               !< ...
+    REAL(wp)                              :: dtime               !< ...
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -97,7 +97,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -165,7 +165,7 @@ CONTAINS
       ! calc drag
       CALL update_drag( &
         ! INTENT in
-        & nc, steplen, &
+        & nc, dtime, &
         & model_scheme, &
         & t_air(:), press_srf(:), q_air(:), wind_air(:), &
         & hlp1(:), &          ! jsbach t(:) from SEB_ (surface temperature)

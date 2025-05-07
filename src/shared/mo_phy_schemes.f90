@@ -278,7 +278,7 @@ CONTAINS
   !!
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) FUNCTION heat_transfer_coef(drag, steplen, alpha)
+  REAL(wp) FUNCTION heat_transfer_coef(drag, dtime, alpha)
 !NEC$ always_inline
 
     !$ACC ROUTINE SEQ
@@ -287,10 +287,10 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & drag,      &
-      & steplen,   &
+      & dtime,   &
       & alpha
 
-    heat_transfer_coef = drag / (alpha * grav * steplen)
+    heat_transfer_coef = drag / (alpha * grav * dtime)
 
   END FUNCTION heat_transfer_coef
 

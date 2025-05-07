@@ -370,7 +370,7 @@ CONTAINS
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime, dtime)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
     END DO
     CALL jsbach_label_run(.TRUE.)
 
@@ -1173,7 +1173,7 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue

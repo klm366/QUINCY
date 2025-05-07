@@ -71,7 +71,7 @@ CONTAINS
     REAL(wp)                              :: hlp                      !< helper variable
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
     INTEGER                               :: ic, isoil                !< loop counter
-    REAL(wp)                              :: steplen                  !< step length
+    REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
     CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
@@ -160,7 +160,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
@@ -339,7 +339,7 @@ CONTAINS
     ! calc aerodynamic conductance
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      aerodyn_cond(ic) = heat_transfer_coef(drag_srf_local(ic), steplen, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
+      aerodyn_cond(ic) = heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
     END DO
     !$ACC END PARALLEL LOOP
 

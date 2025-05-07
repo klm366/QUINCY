@@ -2112,7 +2112,7 @@ CONTAINS
       & heat_tcoef        !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, alpha
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -2124,7 +2124,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -2171,7 +2171,7 @@ CONTAINS
         !$ACC   PRIVATE(q_air, heat_tcoef)
         DO ic=1,nc
           q_air = q_acoef_wtr(ic) * qsat_lwtr(ic) + q_bcoef_wtr(ic) ! New moisture at lowest atmospheric level by back-substitution
-          heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_wtr(ic), dtime, alpha)    ! Transfer coefficient
           evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic))          ! Potential evaporation
         END DO
         !$ACC END PARALLEL LOOP
@@ -2202,7 +2202,7 @@ CONTAINS
           !$ACC   PRIVATE(q_air, heat_tcoef)
           DO ic=1,nc
             q_air = q_acoef_ice(ic) * qsat_lice(ic) + q_bcoef_ice(ic) ! New moisture at lowest atmospheric level by back-substitution
-            heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient
+            heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)    ! Transfer coefficient
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic))          ! Potential evaporation
             evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
@@ -2264,7 +2264,7 @@ CONTAINS
         !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
           q_air = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)       ! New moisture at lowest atmospheric level by back-substitution
-          heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)  ! Transfer coefficient
 
           ! Compute effective air moisture and surface saturation humidity
           q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
@@ -2423,7 +2423,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: pond_dynamics_scheme
-    REAL(wp) :: dtime, steplen, alpha, config_w_skin_max
+    REAL(wp) :: dtime, alpha, config_w_skin_max
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(SEB_)
@@ -2474,7 +2474,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    steplen = options%steplen
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
@@ -2635,7 +2634,7 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), dtime, alpha)
       END DO
       !$ACC END PARALLEL LOOP
     END IF

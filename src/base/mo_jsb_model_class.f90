@@ -442,7 +442,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc, &
+  SUBROUTINE Set_options(this, current_datetime, dtime, alpha, iblk, ics, ice, nc, &
     &                    nsoil_e, nsoil_w, nsnow_e)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
@@ -451,7 +451,6 @@ CONTAINS
     CLASS(t_jsb_model),                  INTENT(inout) :: this
     TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
-    REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
     REAL(wp),         OPTIONAL,          INTENT(in)    :: alpha
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
@@ -466,7 +465,6 @@ CONTAINS
     no_omp_thread = Get_omp_thread()
 
     CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
-    CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
     CALL assign_if_present(this%options(no_omp_thread)%alpha,   alpha)
     CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)

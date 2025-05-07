@@ -66,7 +66,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & rain,             &
@@ -140,8 +140,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -258,7 +257,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
+      & dtime=dtime, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -482,7 +481,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & press_air,        &
@@ -530,8 +529,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -593,7 +591,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=1._wp)
+      & dtime=dtime, alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -765,7 +763,7 @@ CONTAINS
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
-  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen, init)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, dtime, init)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
@@ -790,12 +788,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: steplen
+    REAL(wp),                  INTENT(in) :: dtime
     LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    REAL(wp)                            :: dtime
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: linit
@@ -822,9 +819,7 @@ CONTAINS
     CALL model%Reset_tiles()
 
     ! Update options
-    CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
-
-    dtime = model%options(no_omp_thread)%dtime
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
@@ -884,9 +879,9 @@ CONTAINS
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
     CASE (1)
-      l_trace_memory = is_newmonth(current_datetime, steplen)
+      l_trace_memory = is_newmonth(current_datetime, dtime)
     CASE (2)
-      l_trace_memory = is_newday(current_datetime, steplen)
+      l_trace_memory = is_newday(current_datetime, dtime)
     CASE (3)
       l_trace_memory = .TRUE.
     END SELECT
