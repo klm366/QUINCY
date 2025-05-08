@@ -171,11 +171,11 @@ CONTAINS
 
       h_snow_nix = weq_snow(ic) * rhoh2o / snow_soil_dens(ic) 
 
-IF(h_snow_nix .GT. 0.25_wp) THEN
-
-  WRITE(*,*) 'H_SNOW:', h_snow_nix
-
-ENDIF
+!IF(h_snow_nix .GT. 0.25_wp) THEN
+!
+!  WRITE(*,*) 'H_SNOW:', h_snow_nix
+!
+!ENDIF
 
     ENDDO
 

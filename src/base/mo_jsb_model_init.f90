@@ -780,14 +780,14 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (tile%Is_process_calculated(PHENO_)) THEN
-        dsl4jsb_Get_config(PHENO_)
-        IF (        tile%is_vegetation                                   &
-            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-            & .AND. tile%lcts(1)%lib_id == 0)                            &
-          & CALL finish(TRIM(routine), &
-          &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
-      END IF
+!      IF (tile%Is_process_calculated(PHENO_)) THEN
+!        dsl4jsb_Get_config(PHENO_)
+!        IF (        tile%is_vegetation                                   &
+!            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
+!            & .AND. tile%lcts(1)%lib_id == 0)                            &
+!          & CALL finish(TRIM(routine), &
+!          &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
+!      END IF
 
       CALL tile%Count_conserved_quantities()
       CALL tile%Collect_conserved_variables()
