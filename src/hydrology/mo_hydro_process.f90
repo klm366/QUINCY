@@ -227,7 +227,8 @@ CONTAINS
       new_snow_soil    = new_snow_soil + snow_blown
 
       ! Heating due to snow melt on canopy
-      ! @Todo Why is heating only computed for canopy?
+      !   Note, this energy sink is not part of the surface energy balance and therefore not
+      !   substracted from the le_phase_change flux. Instead it is given directly to the atmosphere model.
       q_snocpymlt(ic) = snowmelt_can * rhoh2o * alf / dtime
 
       !  Snowfall and sublimation

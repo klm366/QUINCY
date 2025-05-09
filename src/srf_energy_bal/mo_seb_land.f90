@@ -113,7 +113,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: weq_snow
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_pond
@@ -266,7 +266,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     IF (.NOT. tile%is_glacier) THEN
@@ -443,6 +443,8 @@ CONTAINS
 
       IF (.NOT. tile%is_glacier) THEN
         ! Compute the amount of water/ice that is available for freezing/melting
+        !   Note: Snow on canopy is ignored here as it's energy sink due to melting is not
+        !   considered in the surface energy balance but given to the atmosphere instead.
         IF (l_freeze_config) THEN
           IF (l_supercool_config) THEN
             hlp1 = MAX(wtr_soil_sl(ic,1) - wtr_soil_pot_scool_sl(ic,1), 0._wp)
@@ -450,12 +452,12 @@ CONTAINS
             hlp1 = wtr_soil_sl(ic,1)
           END IF
           hlp2 = ice_soil_sl(ic,1) * (rhoi / rhoh2o)
-          le_freeze_pot(ic) =  (               wtr_pond(ic) + hlp1) * hlp3
-          le_melt_pot(ic)   = -(weq_snow(ic) + ice_pond(ic) + hlp2) * hlp3
+          le_freeze_pot(ic) =  (                    wtr_pond(ic) + hlp1) * hlp3
+          le_melt_pot(ic)   = -(weq_snow_soil(ic) + ice_pond(ic) + hlp2) * hlp3
         ELSE
           ! Without freezing, the only phase change is snowmelt
           le_freeze_pot(ic) = 0._wp
-          le_melt_pot(ic)   = -weq_snow(ic) * hlp3
+          le_melt_pot(ic)   = -weq_snow_soil(ic) * hlp3
         END IF
       ELSE
         ! Glaciers are currently considered to provide unlimited ice for melting
@@ -578,9 +580,9 @@ CONTAINS
         ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
 
         IF (l_snow_config) THEN
-          has_snow_layer(ic) = weq_snow(ic) * rhoh2o / snow_soil_dens(ic) > snow_depth_min
+          has_snow_layer(ic) = weq_snow_soil(ic) * rhoh2o / snow_soil_dens(ic) > snow_depth_min
         ELSE
-          has_snow_layer(ic) = weq_snow(ic) > w_soil_critical_config
+          has_snow_layer(ic) = weq_snow_soil(ic) > w_soil_critical_config
         END IF
 
         ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
