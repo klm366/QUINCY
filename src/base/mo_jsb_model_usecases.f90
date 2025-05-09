@@ -102,7 +102,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, veg_tile_snow, veg_tile_no_snow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite'
 
@@ -117,11 +117,16 @@ CONTAINS
     !   |-------------
     !   |            |
     !  vegetation  glacier
+    !   |
+    !   |----------------------
+    !   |                     |
+    !  vegetation_snow       vegetation_no_snow
+
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_,  NIX_,    HYDRO_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_,      HYDRO_,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -161,6 +166,19 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(veg_tile)
+
+
+          ! Two additional tiles for NIX
+          veg_tile_snow => t_jsb_tile('veg_snow', 'Veg snow tile', processes=(/NIX_, HYDRO_, SSE_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+            & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(veg_tile_snow)
+
+          veg_tile_no_snow => t_jsb_tile('veg_no_snow', 'Veg no snow tile', processes=(/NIX_, HYDRO_, SSE_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+            & fract_varname='fract_veg')
+          !$ACC ENTER DATA COPYIN(veg_tile_no_snoow)
+
 
     NULLIFY(box_tile, land_tile, veg_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
@@ -243,7 +261,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, veg_tile_no_snow, veg_tile_snow, pft_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
 
     INTEGER :: i
 
@@ -284,18 +302,14 @@ CONTAINS
     !   |            |
     !  vegetation  glacier
     !   |
-    !   | -----------------------------
-    !   !        |                    |
-    !   |    vegetation_no_sow    vegetation_snow
-    !   |
     !   |-----------------
     !   |      |      |
     !  pft01  pft02  pftXX
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_  ,   NIX_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_TILE_,  ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -343,15 +357,6 @@ CONTAINS
           & fract_varname='fract_veg')
         !$ACC ENTER DATA COPYIN(veg_tile)
 
-        ! Addidtional tiles for NIX active below veg tile with and without snow 
-   
-        veg_tile_snow => t_jsb_tile('veg_snow', 'Veg tile snow', &
-          & processes       = (/HYDRO_,   SSE_,     NIX_,     ASSIMI_,   PHENO_/),    &
-          & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-          & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
-          & fract_varname='fract_veg')
-
-
         IF (model%processes(ALCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -386,7 +391,7 @@ CONTAINS
             NULLIFY(pft_tile)
           END DO
 
-    NULLIFY(box_tile, land_tile, veg_tile, veg_tile_no_snow, veg_tile_snow, pft_tile)
+    NULLIFY(box_tile, land_tile, veg_tile,  pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 

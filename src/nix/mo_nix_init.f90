@@ -184,7 +184,7 @@ CONTAINS
       DO ic = 1, nproma
 
         t_sn(ic,is)   = 273.15_wp
-        dzm_sn(ic,is) = 0.0_wp    
+        dzm_sn(ic,is) = h_snow_nix    
         
 
       END DO
