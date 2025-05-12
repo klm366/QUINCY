@@ -350,6 +350,15 @@ CONTAINS
           END IF
         END DO
 
+        DO ic = 1,nc
+          !Assert: if the lost area is bigger than the intial area, then lost area is set to initial area
+          IF (ANY(lost_area(ic, i_tile) > initial_area(ic, i_tile))) THEN
+            lost_area(ic, i_tile) = initial_area(ic, i_tile)
+            WRITE (message_text,*) 'Violation of assertion: lost area is bigger than initial area! Please check input data. ' &
+              & // 'Max difference of: ', MAXVAL(lost_area(ic, i_tile) - initial_area(ic, i_tile))
+          END IF   
+        END DO
+
         IF (.NOT. dynamic_tile) THEN
           CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
         END IF
@@ -466,6 +475,9 @@ CONTAINS
       END IF
 
     END DO
+
+
+    
 
     !>
     !> 5. make the passive matter transfer
