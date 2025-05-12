@@ -402,50 +402,50 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)       ! in
       END IF
 
-      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$ACC DATA CREATE(heat_cap) ASYNC(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
-        DO ic=1,nc
+      ! IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+      !   !$ACC DATA CREATE(heat_cap) ASYNC(1)
+      !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
+      !   DO ic=1,nc
 
-          IF (tile%is_glacier .AND. .NOT. jsbach_runs_standalone()) THEN
-            ! Correction for snowmelt on glaciers or in coupled setup
-            delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
-          ELSE
-            delta_temp = 0._wp
-          END IF
+      !     IF (tile%is_glacier .AND. .NOT. jsbach_runs_standalone()) THEN
+      !       ! Correction for snowmelt on glaciers or in coupled setup
+      !       delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+      !     ELSE
+      !       delta_temp = 0._wp
+      !     END IF
 
-          IF (.NOT. jsbach_runs_standalone() .AND. .NOT. tile%is_glacier) THEN
-            ! Correction pond melting/freezing in coupled mode
-            ! @TODO this correction can be removed as soon as the phase change feature runs
-            ! in a coupled setup
-            delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-            delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
+      !     IF (.NOT. jsbach_runs_standalone() .AND. .NOT. tile%is_glacier) THEN
+      !       ! Correction pond melting/freezing in coupled mode
+      !       ! @TODO this correction can be removed as soon as the phase change feature runs
+      !       ! in a coupled setup
+      !       delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+      !       delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
-            IF (l_freeze_config) THEN
-              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
-              IF (l_snow_config) THEN
-                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-                  ! Correction for melting of ice in soil layers
-                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-                END IF
-              ELSE   ! No snow layers present
-                IF (heat_cap(ic) > 0._wp) THEN
-                  ! Correction for melting of ice in soil layers
-                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-                END IF
-              END IF
-            END IF
-          END IF
+      !       IF (l_freeze_config) THEN
+      !         heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+      !         IF (l_snow_config) THEN
+      !           IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
+      !             ! Correction for melting of ice in soil layers
+      !             delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+      !             delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+      !           END IF
+      !         ELSE   ! No snow layers present
+      !           IF (heat_cap(ic) > 0._wp) THEN
+      !             ! Correction for melting of ice in soil layers
+      !             delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+      !             delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+      !           END IF
+      !         END IF
+      !       END IF
+      !     END IF
 
-          t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
-          t_srf(ic) = t_srf(ic) + delta_temp
-        END DO
-        !$ACC END PARALLEL LOOP
-        !$ACC WAIT(1)
-        !$ACC END DATA
-      END IF
+      !     t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
+      !     t_srf(ic) = t_srf(ic) + delta_temp
+      !   END DO
+      !   !$ACC END PARALLEL LOOP
+      !   !$ACC WAIT(1)
+      !   !$ACC END DATA
+      ! END IF
 
     ELSE
 
@@ -789,7 +789,8 @@ CONTAINS
 
 #ifndef _OPENACC
       IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
-        IF (ABS(energy_balance_res(ic)) > dsl4jsb_Config(SEB_)%eb_threshold) THEN
+        IF (ABS(energy_balance_res(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
+          & (t(ic) > 400._wp .AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
           n_errors = n_errors + 1       ! Count number of energy balance issues of this time step
           error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
         END IF
