@@ -88,7 +88,7 @@ CONTAINS
     USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   num_io_procs, pio_type,                     &
+      &                                   num_io_procs, pio_type, proc0_shift,                                 &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -275,7 +275,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0)
+         &                          pio_type, num_dio_procs=proc0_shift)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
