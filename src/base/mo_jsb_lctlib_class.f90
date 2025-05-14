@@ -455,11 +455,8 @@ CONTAINS
     LOGICAL            :: exists_k_root_dist = .FALSE.
     LOGICAL            :: exists_k_som_fast_init = .FALSE.
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
-<<<<<<< HEAD
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
-=======
->>>>>>> cc47977f3a891ff26e7652abc8b10232cc6614a6
     LOGICAL            :: exists_q_fuel_bulk_density = .FALSE.
     LOGICAL            :: exists_q_moisture_extinction = .FALSE.
     LOGICAL            :: exists_q_fwd_wind_factor = .FALSE.
@@ -1392,13 +1389,10 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-<<<<<<< HEAD
         IF(.NOT. exists_AlbedoLitterVIS) &
           CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_AlbedoLitterNIR) &
           CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
-=======
->>>>>>> cc47977f3a891ff26e7652abc8b10232cc6614a6
         IF(.NOT. exists_q_fuel_bulk_density) &
             CALL finish('init_lctlib','No data for q_fuel_bulk_density found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_moisture_extinction) &
@@ -1763,11 +1757,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
-<<<<<<< HEAD
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
-=======
->>>>>>> cc47977f3a891ff26e7652abc8b10232cc6614a6
         CALL p_bcast(lctlib(:)%q_fuel_bulk_density, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_moisture_extinction, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_fwd_wind_factor, p_io, mpi_comm)

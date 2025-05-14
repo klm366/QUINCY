@@ -436,15 +436,15 @@ CONTAINS
 
       !> 1.X Update veg_litterfall + litterfall from disturbances
       DO ic = 1, nc
-        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-          IF (model%config%is_element_used(ielem)) THEN
-            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-            DO ix_comp = 1, n_veg_bgcm_comp
+        DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (model%config%is_element_used(id_elem)) THEN
+            ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
+            DO ix_comp = 1, nr_of_veg_bgcm_comp
               veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
                                                         veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-            END DO ! ix_comp = 1, n_veg_bgcm_comp
-          END IF ! model%config%is_element_used(ielem)) THEN
-        END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            END DO ! ix_comp = 1, nr_of_veg_bgcm_comp
+          END IF ! model%config%is_element_used(id_elem)) THEN
+        END DO ! id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
       END DO ! ic = 1, nc
 
        !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
@@ -474,15 +474,15 @@ CONTAINS
       !< 1.7.1 Update dist_fire pools with veg_fire_emissions
       IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
         DO ic = 1, nc
-          DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-            IF (model%config%is_element_used(ielem)) THEN
-              ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-              DO ix_comp = 1, n_veg_bgcm_comp 
+          DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(id_elem)) THEN
+              ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
+              DO ix_comp = 1, nr_of_veg_bgcm_comp 
                 veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
                     veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
               END DO ! ix_comp
-            END IF ! is_element_used(ielem)
-          END DO ! ielem
+            END IF ! is_element_used(id_elem)
+          END DO ! id_elem
         END DO ! ic
       END IF ! flag_dfire
 

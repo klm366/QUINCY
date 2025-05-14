@@ -35,7 +35,7 @@ MODULE mo_lnd_bgcm_store_class
     &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
     &       VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
     &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,           &
-    &       VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
+    &       VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID, &
     &       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
 
   ! ======================================================================================================= !
