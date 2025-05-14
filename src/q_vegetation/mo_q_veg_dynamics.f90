@@ -55,6 +55,7 @@ CONTAINS
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
@@ -215,6 +216,13 @@ CONTAINS
           &                                         height(:), &
           &                                         diameter(:))
     ENDSELECT
+
+    !> 1.2 Load mortality_rate_fire
+    IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+      mortality_rate_fire(:) = pm_fire(:)
+    ELSE
+      mortality_rate_fire(:) = 0._wp !< no change
+    END IF
 
     !> 1.2 Load mortality_rate_fire
     IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN

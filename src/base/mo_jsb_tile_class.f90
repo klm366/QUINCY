@@ -884,6 +884,10 @@ CONTAINS
       CALL finish(routine, "mask not yet implemented")
     END IF
 
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
+
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
       &  'This should never happen!')
@@ -1045,6 +1049,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Aggregate_weighted_by_fract_3d'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
+
+    IF (PRESENT(mask)) THEN
+      CALL finish(routine, "mask not yet implemented")
+    END IF
 
     IF (PRESENT(mask)) THEN
       CALL finish(routine, "mask not yet implemented")
