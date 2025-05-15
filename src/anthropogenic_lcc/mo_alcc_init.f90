@@ -103,7 +103,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: transition_prob(:,:)  ! Mingyue add for transition probability to extend transition matrix
 
   
-    REAL(wp) :: sum_cf_current, cf_current_year_value   ! to calculte the sum of cf_current_year where LC_type2LC_class_mapping(k) grouped to the same C/N/P
+    REAL(wp) :: sum_cf_current(:,:)  ! to calculte the sum of cf_current_year where LC_type2LC_class_mapping(k) grouped to the same C/N/P
     INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks  !, ics, ice
     INTEGER :: idx, i, j, k,row, col, trans_idx, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
@@ -311,14 +311,13 @@ CONTAINS
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
         ! Initialize the sum to zero
-        sum_cf_current = 0.0_wp
+        ALLOCATE(sum_cf_current(nproma, nblks))
+        sum_cf_current(:,:) = 0.0_wp
         
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
         DO k = 1, npft 
           IF (LC_type2LC_class_mapping(k) == LC_type2LC_class_mapping(j)) THEN
-            cf_current_year_value = cf_current_year(:, k, :)  ! Extract the value for the current i and blk
-            sum_cf_current = sum_cf_current + cf_current_year_value
-            !sum_cf_current = sum_cf_current + cf_current_year(:, k, :)
+            sum_cf_current(:,:) = sum_cf_current(:,:) + cf_current_year(:, k, :)
           END IF
         END DO
         
