@@ -323,7 +323,7 @@ CONTAINS
         END DO
         
         ! Avoid division by zero
-        IF (sum_cf_current(:,:) > 0.0_wp) THEN
+        IF (ALL(sum_cf_current(:,:) > 0.0_wp)) THEN
           cf_transition_pfts(:, idx, :) = transition_prob(:,:) * cf_current_year(:, j, :) / sum_cf_current(:,:)
         ELSE
           cf_transition_pfts(:, idx, :) = 0.0_wp  ! Handle division by zero
