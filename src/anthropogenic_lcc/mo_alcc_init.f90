@@ -316,8 +316,8 @@ CONTAINS
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
         DO k = 1, npft 
           IF (LC_type2LC_class_mapping(k) == LC_type2LC_class_mapping(j)) THEN
-            current_value = cf_current_year(:, k, :)  ! Extract the value for the current i and blk
-            sum_cf_current = sum_cf_current + current_value
+            cf_current_year_value = cf_current_year(:, k, :)  ! Extract the value for the current i and blk
+            sum_cf_current = sum_cf_current + cf_current_year_value
             !sum_cf_current = sum_cf_current + cf_current_year(:, k, :)
           END IF
         END DO
