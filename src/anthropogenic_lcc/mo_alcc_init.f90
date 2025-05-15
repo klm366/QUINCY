@@ -101,9 +101,9 @@ CONTAINS
     REAL(wp),                    POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
     REAL(wp), ALLOCATABLE   :: transition_prob(:,:)  ! Mingyue add for transition probability to extend transition matrix
-
-  
-    REAL(wp) :: sum_cf_current(:,:)  ! to calculte the sum of cf_current_year where LC_type2LC_class_mapping(k) grouped to the same C/N/P
+    REAL(wp), ALLOCATABLE   :: sum_cf_current(:,:)  ! to calculte the sum of cf_current_year where LC_type2LC_class_mapping(k) grouped to the same C/N/P
+    
+    
     INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks  !, ics, ice
     INTEGER :: idx, i, j, k,row, col, trans_idx, pft_idx    ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
@@ -306,7 +306,8 @@ CONTAINS
         col = LC_type2LC_class_mapping(j)
         trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
       
-        transition_prob = cf_transition(:, trans_idx, :)
+        ALLOCATE(transition_prob(nproma, nblks))
+        transition_prob(:,:) = cf_transition(:, trans_idx, :)
       
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
@@ -443,7 +444,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-    DEALLOCATE(cf_correction)
+    DEALLOCATE(cf_correction,transition_prob, sum_cf_current)
 
     ! Assert: sum of absolute fractions needs to be <=1
     IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
