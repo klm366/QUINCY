@@ -331,9 +331,9 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & le_phase_change,                    &
     & dsoil, ws_max, matric_pot, bclapp,  &
-    & wtr, ice, frozen, melt, liquid_max  &
+    & wtr, ice, le_phase_change_res,      &
+    & frozen, melt, liquid_max            &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
@@ -365,13 +365,14 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  le_phase_change(:)!! Energy available for or required from phase change in top layer [W m-2]
     REAL(wp), INTENT(in), OPTIONAL    ::  dsoil(:,:)        !! soil depth until bedrock [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
     REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
+    REAL(wp), INTENT(inout), OPTIONAL ::  le_phase_change_res(:) !! Energy available for or required from phase change
+                                                                 !! in top layer [W m-2]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
@@ -435,17 +436,20 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    IF (PRESENT(le_phase_change)) THEN
-      le_phase(:) = le_phase_change(:)
-    ELSE
-      le_phase(:) = 0._wp
-    END IF
-
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       thaw_depth(ic) = 0._wp
+      le_phase(ic) = 0._wp
     END DO
     !$ACC END PARALLEL LOOP
+
+    IF (PRESENT(le_phase_change_res)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        le_phase(ic) = le_phase_change_res(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (.NOT. lstart) THEN
 
@@ -469,17 +473,18 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-      ! Adding top layer energy from phase change (from SEB).
-      ! Actual freezing and melting is calculated below.
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic=1,nc
-        t_soil_sl(ic,1) = t_soil_sl(ic,1) &
-                      & + le_phase(ic) / heat_cap(ic,1) * delta_time
-      END DO
-      !$ACC END PARALLEL LOOP
-
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN
+
+        ! Adding residual energy from phase change (from SEB) to top layer soil temperature.
+        ! Note that there is an unavoidable inconsistency between the phase change energy computed
+        ! in SEB and its use here, because in the mean time the soil heat capacity has changed.
+        ! The residual remains in the top layer soil temperature state.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1) * delta_time
+        END DO
+        !$ACC END PARALLEL LOOP
 
         IF (l_supercool) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -516,6 +521,16 @@ CONTAINS
                 & heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf)
             END IF
           END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+
+        ! Due to the above mentioned inconsistency, the phase change energy due to freezing or melting
+        ! does not match exactly with the energy residual and is ! not exactly which is applied
+        ! to the soil temperature, but also needs to be tracked in the le_phase variable
+        ! to be included in the energy balance check.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic=1,nc
+          le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf / delta_time
         END DO
         !$ACC END PARALLEL LOOP
 
@@ -579,6 +594,15 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
+
+        ! Update the le_phase
+        IF (PRESENT(le_phase_change_res)) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          DO ic = 1, nc
+            le_phase_change_res(ic) = le_phase(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
 
       END IF
 
