@@ -20,6 +20,7 @@ MODULE mo_phy_schemes
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, potential_temperature
   USE mo_jsb_surface_exchange_iface, ONLY: sfc_exchange_coefficients
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -411,7 +412,7 @@ CONTAINS
       l_zril_filter = .FALSE.
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(qsat_surf, dqsat_surf, qsat_surf_upd, zdu2, air_pressure, ztvd, ztvir)       &
     !$ACC   PRIVATE(r_exner_surf, qsurf_eff, dqsurf_eff, ztvs_act, dztvs_act, ztvs_upd, zg, zgh) &
     !$ACC   PRIVATE(zril, dzril, zril_act, zril_upd, zchnl, sfact, zscfl, dzscfl, ufact, zucfhl) &

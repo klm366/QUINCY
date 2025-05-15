@@ -362,6 +362,7 @@ CONTAINS
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,heat_cond))
+    !$ACC WAIT(1)
 
   END SUBROUTINE sse_init_bc
 
@@ -427,6 +428,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t))
     END IF
+    !$ACC WAIT(1)
 
     ! Note: called from model_init now
     ! CALL init_soil_properties(tile)

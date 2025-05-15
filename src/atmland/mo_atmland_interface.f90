@@ -17,7 +17,7 @@ MODULE mo_atmland_interface
   USE mo_exception,       ONLY: finish
   USE mo_kind,            ONLY: wp
 
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid,           ONLY: Get_grid
@@ -275,7 +275,7 @@ CONTAINS
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     IF (PRESENT(DEBUG_VAR)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -494,8 +494,6 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
-
   END SUBROUTINE update_atm2land
 
   SUBROUTINE update_land2atm(tile, options,                                          &
@@ -541,6 +539,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, i, j, it, nt
     LOGICAL  :: use_tmx, tile_is_carbon_active
+    INTEGER  :: stream, original_stream
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
@@ -623,7 +622,7 @@ CONTAINS
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
-    !$ACC DATA CREATE(fact_land, fact_lake)
+    !$ACC DATA CREATE(fact_land, fact_lake) ASYNC(acc_stream)
 
     IF (tile%contains_lake .AND. .NOT. use_tmx .AND. .NOT. jsbach_runs_standalone()) THEN
 
@@ -637,7 +636,7 @@ CONTAINS
         IF (tile%lcts(j)%id == LAKE_TYPE) EXIT         ! We get index j of the lake tile
       END DO
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) PRESENT(tile%lcts)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream) PRESENT(tile%lcts)
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         fact_lake(i) = tile%lcts(j)%fract(ics+i-1,iblk)      ! Lake fraction
@@ -658,7 +657,7 @@ CONTAINS
 
     ELSE    ! without lakes
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO i=1,nc
         fact_land(i) = 1._wp
         fact_lake(i) = 0._wp
@@ -748,7 +747,11 @@ CONTAINS
       albedo_lice_ptr       => dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    original_stream = acc_stream
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
+    !$ACC WAIT(original_stream) ASYNC(acc_stream)
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     IF (use_tmx) THEN
       IF (PRESENT(t_srf)) THEN
@@ -945,9 +948,12 @@ CONTAINS
     ! Exchange fields on lake water fractions
     ! ---------------------------------------
 
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
+    !$ACC WAIT(original_stream) ASYNC(acc_stream)
+
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
       IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -992,8 +998,8 @@ CONTAINS
         END DO
       END IF
 
-    ! Exchange fields on the ice fraction of lakes
-    ! --------------------------------------------
+      ! Exchange fields on the ice fraction of lakes
+      ! --------------------------------------------
 
       IF (PRESENT(ice_fract_lake)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1006,7 +1012,7 @@ CONTAINS
 
     ELSE
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
       IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1065,9 +1071,11 @@ CONTAINS
 
     END IF
 
+    IF (model%use_multiple_queues) acc_stream = acc_stream + 1
+    !$ACC WAIT(original_stream) ASYNC(acc_stream)
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
       IF (PRESENT(t_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1116,7 +1124,7 @@ CONTAINS
 
     ELSE
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
       IF (PRESENT(t_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1165,7 +1173,13 @@ CONTAINS
 
     END IF
 
-    !$ACC WAIT(1)
+    IF (model%use_multiple_queues) THEN
+      DO stream = original_stream + 1, acc_stream
+          !$ACC WAIT(stream) ASYNC(original_stream)
+      ENDDO
+      acc_stream = original_stream
+    END IF
+
     !$ACC END DATA
 
   END SUBROUTINE update_land2atm
