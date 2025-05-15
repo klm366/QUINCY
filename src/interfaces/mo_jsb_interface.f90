@@ -34,10 +34,10 @@ MODULE mo_jsb_interface
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_time_experiment_start
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
 
   IMPLICIT NONE
   PRIVATE
@@ -66,7 +66,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & rain,             &
@@ -140,8 +140,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -258,7 +257,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
+      & dtime=dtime, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -482,7 +481,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & press_air,        &
@@ -530,8 +529,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -593,7 +591,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=1._wp)
+      & dtime=dtime, alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -695,6 +693,11 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
+#ifndef __NO_QUINCY__
+    USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+    USE mo_q_syl_init,          ONLY : read_harvest_fraction
+    USE mo_q_agr_init,          ONLY : read_fertiliser_input
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -724,7 +727,29 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
-    ENDIF
+    END IF
+
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%qmodel_id == QLAND) THEN
+
+      ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+      IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+        IF (model%processes(Q_SYL_)%p%config%active) THEN
+          CALL read_harvest_fraction(model_id, current_datetime)
+        END IF
+        IF (model%processes(Q_AGR_)%p%config%active) THEN
+          CALL read_fertiliser_input(model_id, current_datetime)
+        END IF
+      END IF
+
+      ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
+      ! and might need to be updated once a month
+      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
+          & .AND. model%processes(SB_)%p%config%active) THEN
+        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+      END IF
+    END IF
+#endif
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -738,7 +763,7 @@ CONTAINS
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
-  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, dtime, init)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
@@ -763,13 +788,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: steplen
+    REAL(wp),                  INTENT(in) :: dtime
+    LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    REAL(wp)                            :: dtime
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
+    LOGICAL                             :: linit
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -779,6 +805,9 @@ CONTAINS
     no_omp_thread = Get_omp_thread()
 
     model => Get_model(model_id)
+
+    linit = .FALSE.
+    IF (PRESENT(init)) linit = init
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
@@ -790,9 +819,7 @@ CONTAINS
     CALL model%Reset_tiles()
 
     ! Update options
-    CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
-
-    dtime = model%options(no_omp_thread)%dtime
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
@@ -821,7 +848,10 @@ CONTAINS
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
-    CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    IF (.NOT. linit) THEN
+      ! Do not couple to ocean during initialisation step.
+      CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    END IF
 #endif
 
 ! #ifdef _OPENACC
@@ -849,9 +879,9 @@ CONTAINS
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
     CASE (1)
-      l_trace_memory = is_newmonth(current_datetime, steplen)
+      l_trace_memory = is_newmonth(current_datetime, dtime)
     CASE (2)
-      l_trace_memory = is_newday(current_datetime, steplen)
+      l_trace_memory = is_newday(current_datetime, dtime)
     CASE (3)
       l_trace_memory = .TRUE.
     END SELECT

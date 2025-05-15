@@ -49,19 +49,23 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
+    USE mo_quincy_model_config, ONLY: QLAND
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
+    USE mo_q_agr_constants,     ONLY: init_q_agr_constants
+    USE mo_q_syl_constants,     ONLY: init_q_syl_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_dfire_constants,     ONLY: init_dfire_constants
+    USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, &
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, Q_AGR_, &
       &                   DFIRE_
 
     dsl4jsb_Use_config(SSE_)
@@ -74,6 +78,10 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Use_config(Q_SYL_)
+    dsl4jsb_Use_config(Q_AGR_)
+#endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -87,6 +95,10 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(Q_AGR_)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
@@ -163,8 +175,11 @@ CONTAINS
 #ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
+           CALL init_q_agr_constants
+           CALL init_q_syl_constants
            CALL init_veg_constants
            CALL init_spq_constants
+           CALL init_turb_constants
            CALL init_sb_constants
            CALL init_dfire_constants
            CALL init_q_pheno_parameters
@@ -211,18 +226,18 @@ CONTAINS
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(SSE_)
+      dsl4jsb_Get_config(HYDRO_)
+      dsl4jsb_Get_config(PPLCC_)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_config(SSE_)
-        dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
-        dsl4jsb_Get_config(PPLCC_)
 
         ! Make number of vertical layers available from the options type
         IF (model%Is_process_enabled(HYDRO_)) THEN
@@ -266,11 +281,34 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
-        model%processes(SSE_)%p%config%active = .FALSE.
-        model%processes(SEB_)%p%config%active = .FALSE.
-        model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
+
+#ifndef __NO_QUINCY__
+        ! The Q_SYL_ process requires the PPLCC process to be active
+        dsl4jsb_Get_config(Q_SYL_)
+        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+            CALL message(TRIM(routine), 'Activating PPLCC_ process because it is required by the active Q_SYL_ process')
+          END IF
+          dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+
+        !... assert that syl and agr are only active in land mode
+        dsl4jsb_Get_config(Q_AGR_)
+        IF (model%config%qmodel_id /= QLAND) THEN
+          IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+            CALL message(TRIM(routine), 'Warning: agriculture can currently only be active in land mode, set active to .FALSE.')
+            dsl4jsb_Config(Q_AGR_)%active = .FALSE.
+          END IF
+          IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+            CALL message(TRIM(routine), 'Warning: sylviculture can currently only be active in land mode, set active to .FALSE.')
+            dsl4jsb_Config(Q_SYL_)%active = .FALSE.
+          END IF
+        END IF
+
+#endif
+
       CASE (MODEL_JSBACH)
 
         IF (model%Do_fractions_change()) THEN
@@ -366,7 +404,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     CASE ('quincy_3_pfts')
       lctlib_filename = 'lctlib_quincy_nlct3.def'

@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SH_, Q_ASSIMI_, DFIRE_, DFIRE_FUEL_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, DFIRE_, DFIRE_FUEL_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -152,7 +152,8 @@ CONTAINS
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
-    USE mo_q_sh_init,           ONLY: q_sh_init
+    USE mo_q_syl_init,          ONLY: q_syl_init
+    USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
@@ -407,10 +408,15 @@ CONTAINS
       END IF
 
       IF (model%config%qmodel_id == QLAND) THEN
-        IF(model%processes(Q_SH_)%p%config%active) THEN
-          CALL model%Queue_task(Q_SH_, "simple_harvest")          ! LAND ONLY; if Q_SH active
-          CALL model%Queue_task(VEG_, "pools_on_harvest")          ! LAND ONLY; if Q_SH active
-          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SH active
+        IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL model%Queue_task(Q_SYL_, "sylviculture")        ! LAND ONLY; if Q_SYL_ active
+          END IF
+          IF (model%processes(Q_AGR_)%p%config%active) THEN
+            CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
+          END If
+          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
         END IF
       END IF
 
@@ -448,6 +454,10 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
       ENDIF
 
+      CALL model%Queue_task(TURB_, "humidity_scaling")            ! ALL
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "surface_roughness")         ! ALL
+      END IF
       CALL model%Queue_task(RAD_, "albedo")                       ! ALL
 
       !-- averaging variables in time
@@ -540,15 +550,13 @@ CONTAINS
           CALL rad_init(tile)
       END IF
 
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SEB_)) THEN
-          CALL seb_init(tile)
-        END IF
-        IF (tile%Is_process_active(TURB_)) THEN
-          CALL turb_init(tile)
-        END IF
-      END SELECT
+      IF (tile%Is_process_active(SEB_)) THEN
+        CALL seb_init(tile)
+      END IF
+
+      IF (tile%Is_process_active(TURB_)) THEN
+        CALL turb_init(tile)
+      END IF
 
       ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       SELECT CASE (model%config%model_scheme)
@@ -566,14 +574,14 @@ CONTAINS
 
       ! HYDRO_ & SSE_
       ! SPQ_, SB_
+      IF (tile%Is_process_active(SSE_)) THEN
+        CALL sse_init(tile)
+      END IF
+      IF (tile%Is_process_active(HYDRO_)) THEN
+        CALL hydro_init(tile)
+      END IF
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SSE_)) THEN
-          CALL sse_init(tile)
-        END IF
-        IF (tile%Is_process_active(HYDRO_)) THEN
-          CALL hydro_init(tile)
-        END IF
       ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
@@ -593,8 +601,11 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN
-          IF (tile%Is_process_active(Q_SH_)) THEN
-            CALL q_sh_init(tile)
+          IF (tile%Is_process_active(Q_SYL_)) THEN
+            CALL q_syl_init(tile)
+          END IF
+          IF (tile%Is_process_active(Q_AGR_)) THEN
+            CALL q_agr_init(tile)
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN 

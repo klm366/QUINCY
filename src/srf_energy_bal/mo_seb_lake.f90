@@ -117,7 +117,8 @@ CONTAINS
       & hcap_wtr,           &
       & zero,               &
       & hflx_tmp,           &
-      & pch_wtr
+      & pch_wtr,            &
+      & ddrag_wtr
 
     REAL(wp), ALLOCATABLE :: &
       hcap_ice(:)
@@ -129,7 +130,8 @@ CONTAINS
     LOGICAL :: config_l_ice_on_lakes, use_tmx, jsb_standalone
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, steplen
+    INTEGER  :: model_scheme
+    REAL(wp) :: dtime
     REAL(wp) ::         &
       & cpd_or_cvd,     &
       & lhflx_tmp,      &
@@ -147,7 +149,6 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%contains_lake) RETURN
 
@@ -155,6 +156,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     use_tmx = model%config%use_tmx
+    model_scheme = model%config%model_scheme
 
     IF (use_tmx) THEN
       cpd_or_cvd = cvd
@@ -272,17 +274,19 @@ CONTAINS
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
       !$ACC DATA &
-      !$ACC   CREATE(pch_wtr)
+      !$ACC   CREATE(ddrag_wtr, pch_wtr)
 
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
       ! INTENT in
-      & nc, steplen, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & nc, dtime, &
+      & model_scheme, &
+      & t_air(:), press_srf(:), q_air(:), wind_air(:), &
       & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
       & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
       & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
       ! INTENT out
-      & drag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
+      & drag_wtr(:), ddrag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
 
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
@@ -721,7 +725,7 @@ CONTAINS
       & heat_tcoef    !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -732,7 +736,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
@@ -794,7 +798,7 @@ CONTAINS
         sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible energy flux
       ELSE
         s_air = t_acoef_wtr(ic) * s_lwtr(ic) + t_bcoef_wtr(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
-        heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
+        heat_tcoef = heat_transfer_coef(drag_wtr(ic), dtime, alpha)  ! Transfer coefficient
         sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible heat flux
       END IF
       latent_hflx_wtr(ic) = alv * evapo_wtr(ic) ! Latent heat flux
@@ -815,7 +819,7 @@ CONTAINS
           sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible energy flux
         ELSE
           s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
-          heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)  ! Transfer coefficient
           sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible heat flux
         END IF
         latent_hflx_ice(ic) = als * evapo_ice(ic) ! Latent heat flux

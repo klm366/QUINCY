@@ -87,6 +87,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
+#ifdef __QUINCY_STANDALONE__
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
     END IF
@@ -97,7 +99,7 @@ CONTAINS
     IF (tile%Is_last_process_tile(SSE_)) THEN
       CALL sse_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE sse_init
 
   SUBROUTINE sse_finalize_init_vars
@@ -122,6 +124,8 @@ CONTAINS
 
   END SUBROUTINE sse_finalize_init_vars
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE sse_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -416,8 +420,10 @@ CONTAINS
     IF ( model%config%use_tmx .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
+      dsl4jsb_var2D_onDomain(SEB_,t_srf)    = dsl4jsb_var2D_onDomain(SEB_,t)
 
       !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_srf)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t))
     END IF
@@ -426,6 +432,7 @@ CONTAINS
     ! CALL init_soil_properties(tile)
 
   END SUBROUTINE sse_init_ic
+#endif
 
   SUBROUTINE init_soil_properties(tile)
 

@@ -20,15 +20,9 @@ MODULE mo_rad_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
-#ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes SEB_, HYDRO_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SPQ_
-  dsl4jsb_Use_config(SPQ_)
-#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -173,7 +167,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: radiation
   !>
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -189,15 +183,11 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
-#endif
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
@@ -205,7 +195,6 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        !< ...
     LOGICAL                     :: l_ponds
-    LOGICAL                     :: l_ice_on_lakes_local         !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
 
@@ -229,19 +218,9 @@ CONTAINS
     vgrid_spectral => Get_vgrid('spectral_bands')
 #endif
 
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-      dsl4jsb_Get_config(HYDRO_)
-      l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
-      l_ponds = dsl4jsb_Config(SPQ_)%l_ponds
-#endif
-    END SELECT
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(HYDRO_)
+    l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
 
     CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
       & hgrid, surface,                                                    &
@@ -569,23 +548,7 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
-      l_ice_on_lakes_local = .FALSE.
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-      END SELECT
-
-      IF (l_ice_on_lakes_local) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                     &
           & hgrid, surface,                                                     &
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &

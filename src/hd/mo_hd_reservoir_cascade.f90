@@ -29,7 +29,7 @@ MODULE mo_hd_reservoir_cascade
 CONTAINS
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE reservoir_cascade(inflow, nc, steplen, retention, nres, res_content, outflow)
+  SUBROUTINE reservoir_cascade(inflow, nc, dtime, retention, nres, res_content, outflow)
   !------------------------------------------------------------------------------------------------
   ! routine based on jsbach3 routine kasglob by Stefan Hagemann
   !   cascade of n equal linear reservoirs.
@@ -37,7 +37,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
-    REAL(wp),  INTENT(in)    :: steplen          !< time step [s]
+    REAL(wp),  INTENT(in)    :: dtime          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
     REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
     REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
@@ -68,12 +68,12 @@ CONTAINS
       IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]
         amod  = retention(ic) * day_length
-        akdiv(ic) = steplen / (amod + steplen)
+        akdiv(ic) = dtime / (amod + dtime)
       ELSE                       ! ocean and lakes
         akdiv(ic) = 0._wp
       END IF
       ! conversions: [m3/s] -> [m3]
-      inflow_cascade(ic) = inflow(ic) * steplen
+      inflow_cascade(ic) = inflow(ic) * dtime
       !
       nres_int(ic) = NINT(nres(ic))
     END DO
@@ -103,7 +103,7 @@ CONTAINS
     ! conversions: [m3] -> [m3/s]
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      outflow(ic) = outflow(ic) / steplen
+      outflow(ic) = outflow(ic) / dtime
     END DO
     !$ACC END PARALLEL LOOP
 

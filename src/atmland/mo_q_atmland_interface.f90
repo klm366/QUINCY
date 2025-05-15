@@ -28,11 +28,12 @@ MODULE mo_q_atmland_interface
   !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, VEG_
+  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, VEG_, TURB_
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(TURB_)
 
 
   IMPLICIT NONE
@@ -146,7 +147,7 @@ CONTAINS
       & q_bcoef_ice
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(TURB_)
 
     INTEGER  :: iblk, ics, ice, nc, i
     INTEGER  :: global_seconds_day, current_year
@@ -212,6 +213,7 @@ CONTAINS
       & q_bcoef_ice_ptr
 
     dsl4jsb_Real2D_onChunk :: daytime_counter
+    dsl4jsb_Real2D_onChunk :: daylength_prev_day
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execution_counter
@@ -244,7 +246,7 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(TURB_)
     IF (PRESENT(DEBUG_VAR)) THEN
       DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
     END IF
@@ -294,23 +296,23 @@ CONTAINS
     IF (PRESENT(rho_srf)) THEN
       rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
     END IF
-    IF(PRESENT(drag_srf)) THEN
-      drag_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, spq_drag_srf)
+    IF (PRESENT(drag_srf)) THEN
+      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
     END IF
     IF (PRESENT(t_acoef)) THEN
-      t_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_acoef)
+      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
     END IF
     IF (PRESENT(t_bcoef)) THEN
-      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_t_bcoef)
+      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
     END IF
     IF (PRESENT(q_acoef)) THEN
-      q_acoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_acoef)
+      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(SPQ_, spq_q_bcoef)
+      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
     END IF
     IF (PRESENT(pch)) THEN
-      pch_ptr               => dsl4jsb_var2D_onChunk(SPQ_, spq_pch)
+      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
@@ -373,6 +375,7 @@ CONTAINS
     END IF
 
     daytime_counter         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
+    daylength_prev_day      => dsl4jsb_var2D_onChunk(A2L_, daylength_prev_day)
     local_time_day_seconds  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
     IF (run_spinup_accelerator) THEN
       slow_sb_pool_accelerator_execute           => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execute)
@@ -647,7 +650,7 @@ CONTAINS
 
     ! Update local time and the daytime counter
     CALL update_local_time_and_daytime_counter( &
-      &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+      &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, daylength_prev_day, local_time_day_seconds)
 
     ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
     IF (run_spinup_accelerator) THEN
@@ -767,6 +770,7 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(TURB_)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -845,6 +849,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(TURB_)
 
     ! set all output var to zero
     !   because at the moment QUINCY does not provide all output var, but only the ones needed without tmx and without lakes
@@ -904,16 +909,16 @@ CONTAINS
     t_eff_srf_ptr      => dsl4jsb_var2D_onChunk(SPQ_, temp_srf_eff_4)
     qsat_srf_ptr       => dsl4jsb_var2D_onChunk(SPQ_, qsat_star)
     s_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, s_star)
-    fact_q_air_ptr     => dsl4jsb_var2D_onChunk(SPQ_, fact_q_air)
-    fact_qsat_srf_ptr  => dsl4jsb_var2D_onChunk(SPQ_, fact_qsat_srf)
+    fact_q_air_ptr     => dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+    fact_qsat_srf_ptr  => dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
     evapopot_ptr       => dsl4jsb_var2D_onChunk(SPQ_, evapopot)
     evapotrans_ptr     => dsl4jsb_var2D_onChunk(SPQ_, evapotranspiration)
     latent_hflx_ptr    => dsl4jsb_var2D_onChunk(SPQ_, latent_heat_flx)
     sensible_hflx_ptr  => dsl4jsb_var2D_onChunk(SPQ_, sensible_heat_flx)
     grnd_hflx_ptr      => dsl4jsb_var2D_onChunk(SPQ_, ground_heat_flx)
     grnd_hcap_ptr      => dsl4jsb_var3D_onChunk(SPQ_, heat_capa_sl)           ! 3D var, use first soil layer
-    rough_h_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0h)
-    rough_m_srf_ptr    => dsl4jsb_var2D_onChunk(SPQ_, z0m)
+    rough_h_srf_ptr    => dsl4jsb_var2D_onChunk(TURB_, rough_h)
+    rough_m_srf_ptr    => dsl4jsb_var2D_onChunk(TURB_, rough_m)
     !q_snocpymlt_ptr    => dsl4jsb_var2D_onChunk(SPQ_, ) ! just set to zero, no variable available
     alb_vis_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_vis)
     alb_nir_dir_ptr    => dsl4jsb_var2D_onChunk(RAD_, alb_nir)

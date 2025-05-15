@@ -133,6 +133,11 @@ CONTAINS
     dsl4jsb_var2D_onChunk(SB_, emission_noy_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2o_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2_n15)                = zero
+    dsl4jsb_var2D_onChunk(SB_, fertiliser_nh4)                 = zero
+    dsl4jsb_var2D_onChunk(SB_, fertiliser_nh4_n15)             = zero
+    dsl4jsb_var2D_onChunk(SB_, fertiliser_no3)                 = zero
+    dsl4jsb_var2D_onChunk(SB_, fertiliser_no3_n15)             = zero
+    dsl4jsb_var2D_onChunk(SB_, fertiliser_po4)                 = zero
     ! 3D
     dsl4jsb_var3D_onChunk(SB_, het_respiration)                  = zero
     dsl4jsb_var3D_onChunk(SB_, het_respiration_c13)              = zero

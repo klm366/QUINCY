@@ -23,7 +23,7 @@ tmpdir=${work_dir}/hd_tmp
 mkdir -p ${tmpdir}; rm -f ${tmpdir}/*.nc
 cd ${tmpdir}
 
-cdo="cdo -s"
+cdo="$cdo"
 
 echo "=============================================================="
 echo "===  Generation of the HD parameter file"

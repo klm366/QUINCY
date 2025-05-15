@@ -93,11 +93,12 @@ MODULE mo_jsb_memory_class
   ! Note: argument "mem" needs to have the TARGET attribute so that we can point to individual variables
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
       IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
+      INTEGER,             INTENT(in)    :: lib_id         !< id of primary lct in lctlib
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
@@ -214,7 +215,7 @@ CONTAINS
         END DO
       END IF
       DO add_group = 1, no_add_groups
-        igroup = no_groups + add_group
+        igroup = 3 + no_groups + add_group
         groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! e.g. group jsb_mon for monitoring output
       END DO
     ELSE
@@ -389,7 +390,7 @@ CONTAINS
         END DO
       END IF
       DO add_group = 1, no_add_groups
-        igroup = no_groups + add_group
+        igroup = 3 + no_groups + add_group
         groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
       END DO
     ELSE
@@ -567,7 +568,7 @@ CONTAINS
     END IF
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
@@ -582,6 +583,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'

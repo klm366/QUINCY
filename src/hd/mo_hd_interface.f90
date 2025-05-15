@@ -136,14 +136,14 @@ CONTAINS
     CHARACTER(len=32) :: routing_scheme
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen
+    REAL(wp) :: dtime
     LOGICAL  :: is_experiment_start
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
 
     IF (ASSOCIATED(tile%parent)) &
       & CALL finish(TRIM(routine), 'HD model works on root tile only!')
@@ -212,21 +212,21 @@ CONTAINS
         inflow(ic) = runoff(ic) * tile_fract(ic) * area(ic) / rhoh2o
       END DO
       !$ACC END PARALLEL LOOP
-      CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
+      CALL reservoir_cascade (inflow(:), nc, dtime, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         inflow(ic) = drainage(ic) * tile_fract(ic) * area(ic) / rhoh2o
       END DO
       !$ACC END PARALLEL LOOP
-      CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
+      CALL reservoir_cascade (inflow(:), nc, dtime, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         inflow(ic) = discharge(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
+      CALL reservoir_cascade (inflow(:), nc, dtime, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
 
       ! 1. Check water balance locally
 
@@ -245,7 +245,7 @@ CONTAINS
             &               - outflow_runoff(ic) - outflow_drainage(ic) - outflow_rivers(ic)
 
           ! Local water balance error [m3]
-          local_wbal_error(ic) = local_budget_old(ic) + local_fluxes(ic) * steplen - local_budget(ic)
+          local_wbal_error(ic) = local_budget_old(ic) + local_fluxes(ic) * dtime - local_budget(ic)
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -343,6 +343,8 @@ CONTAINS
       & global_outflow,         &
       & global_internal_drain,  &
       & global_discharge_ocean, &
+      & internal_drain_share,   &
+      & global_ocean_cells,     &
       & sum_weights
 
     INTEGER  ::         &
@@ -618,6 +620,18 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       global_discharge_ocean = global_sum_array(ztemp, lacc=.TRUE.)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO blk = 1, nblks
+        DO jc = 1, nproma
+          IF (NINT(hd_mask(jc,blk)) <= 0._wp .AND. is_in_domain(jc,blk)) THEN
+            ztemp(jc,blk) = 1._wp
+          ELSE
+            ztemp(jc,blk) = 0._wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      global_ocean_cells = global_sum_array(ztemp, lacc=.TRUE.)
 
       IF (debug_hd) THEN
         !
@@ -636,9 +650,9 @@ CONTAINS
         CALL message (routine, message_text)
       END IF
 
-      ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
-      factor = 1._wp + global_internal_drain / global_discharge_ocean
       IF (global_discharge_ocean > 0._wp) THEN
+        ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
+        factor = 1._wp + global_internal_drain / global_discharge_ocean
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
@@ -647,9 +661,18 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE IF (global_internal_drain > 0._wp) THEN
-        WRITE (message_text,*) 'no discharge to ocean! Internal drainage of ', &
-          & global_internal_drain, ' m3/s will be lost.'
-        CALL finish (routine, message_text)
+        ! Without (positive) river discharge towards the ocean, the internal drainage needs
+        ! to be distributed equally over all coastal and ocean cells
+        internal_drain_share = global_internal_drain / global_ocean_cells
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO blk = 1, nblks
+          DO jc = 1, nproma
+            IF (NINT(hd_mask(jc,blk)) <= 0) THEN
+              discharge_ocean(jc,blk) = discharge_ocean(jc,blk) + internal_drain_share
+            END IF
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
       IF (debug_hd) THEN
@@ -784,7 +807,7 @@ CONTAINS
       & tile_fract(:,:)
 
     REAL(wp) ::                   &
-      & steplen,                  &
+      & dtime,                    &
       & global_water_budget,      &  ! water budget of current step
       & global_water_budget_old,  &  ! water budget of previous step
       & global_water_error,       &  ! water budget change within the time step
@@ -807,7 +830,7 @@ CONTAINS
     IF (ASSOCIATED(tile%parent)) &
       & CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
-    steplen = options%steplen
+    dtime = options%dtime
 
     dsl4jsb_Get_memory(HD_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -896,7 +919,7 @@ CONTAINS
           &   SUM(overlflow_res(jc,:,blk)) * in_domain(jc,blk) & !< water in overland flow reservoirs
           & + SUM(baseflow_res (jc,:,blk)) * in_domain(jc,blk) & !< water in baseflow reservoir
           & + SUM(riverflow_res(jc,:,blk)) * in_domain(jc,blk) & !< water in riverflow reservoirs
-          & + discharge(jc,blk) * in_domain(jc,blk) * steplen    !< river discharge [m3/s -> m3]
+          & + discharge(jc,blk) * in_domain(jc,blk) * dtime      !< river discharge [m3/s -> m3]
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -938,7 +961,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   discharge             : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      WRITE(message_text,*) '-   discharge             : ', global_sum_array(ztemp, lacc=.TRUE.)*dtime, ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-->          total budget : ', global_water_budget, ' m3'
       CALL message(routine, message_text)
@@ -970,7 +993,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', global_sum_array(ztemp, lacc=.TRUE.)*dtime, ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -979,7 +1002,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   drainage              : ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      WRITE(message_text,*) '-   drainage              : ', global_sum_array(ztemp, lacc=.TRUE.)*dtime, ' m3'
       CALL message(routine, message_text)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO blk = 1, nblks
@@ -988,9 +1011,9 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      WRITE(message_text,*) '-   discharge_ocean (neg.): ', global_sum_array(ztemp, lacc=.TRUE.)*steplen, ' m3'
+      WRITE(message_text,*) '-   discharge_ocean (neg.): ', global_sum_array(ztemp, lacc=.TRUE.)*dtime, ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
+      WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*dtime, ' m3'
       CALL message(routine, message_text)
     END IF
 
@@ -1025,7 +1048,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
-        water_budget_change(jc,blk) = water_budget_old(jc,blk) + water_flux(jc,blk) * steplen - water_budget(jc,blk)
+        water_budget_change(jc,blk) = water_budget_old(jc,blk) + water_flux(jc,blk) * dtime - water_budget(jc,blk)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
