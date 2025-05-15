@@ -306,13 +306,13 @@ CONTAINS
         col = LC_type2LC_class_mapping(j)
         trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
       
-        !ALLOCATE(transition_prob(nproma, nblks))
+        ALLOCATE(transition_prob(nproma, nblks))
         transition_prob(:,:) = cf_transition(:, trans_idx, :)
       
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
         ! Initialize the sum to zero
-        !ALLOCATE(sum_cf_current(nproma, nblks))
+        ALLOCATE(sum_cf_current(nproma, nblks))
         sum_cf_current(:,:) = 0.0_wp
         
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
@@ -329,6 +329,8 @@ CONTAINS
           cf_transition_pfts(:, idx, :) = 0.0_wp  ! Handle division by zero
         END IF
 
+        DEALLOCATE(transition_prob)
+        DEALLOCATE(sum_cf_current)
       END DO
       
 
