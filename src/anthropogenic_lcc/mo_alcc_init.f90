@@ -306,13 +306,13 @@ CONTAINS
         col = LC_type2LC_class_mapping(j)
         trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
       
-        ALLOCATE(transition_prob(nproma, nblks))
+        !ALLOCATE(transition_prob(nproma, nblks))
         transition_prob(:,:) = cf_transition(:, trans_idx, :)
       
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
         ! Initialize the sum to zero
-        ALLOCATE(sum_cf_current(nproma, nblks))
+        !ALLOCATE(sum_cf_current(nproma, nblks))
         sum_cf_current(:,:) = 0.0_wp
         
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
@@ -444,7 +444,8 @@ CONTAINS
 
     CALL input_file%Close()
 
-    DEALLOCATE(cf_correction,transition_prob, sum_cf_current)
+    !DEALLOCATE(cf_correction,transition_prob, sum_cf_current)
+    DEALLOCATE(cf_correction)
 
     ! Assert: sum of absolute fractions needs to be <=1
     IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
