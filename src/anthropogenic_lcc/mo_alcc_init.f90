@@ -102,7 +102,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
     REAL(wp), ALLOCATABLE   :: transition_prob(:,:)  ! Mingyue add for transition probability to extend transition matrix
     REAL(wp), ALLOCATABLE   :: sum_cf_current(:,:)  ! to calculte the sum of cf_current_year where LC_type2LC_class_mapping(k) grouped to the same C/N/P
-    
+    REAL(wp), ALLOCATABLE   :: total_sum(:,:)  ! to calculate the sum of cf_current_year for each tile
     
     INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks  !, ics, ice
     INTEGER :: idx, i, j, k,row, col, trans_idx, pft_idx, blk   ! Mingyue add for transition matrix index
@@ -507,15 +507,15 @@ CONTAINS
       ! Check if the sum along dimension 2 exceeds the threshold and normalize it
       IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
         CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
-    
-        DO i = 1, SIZE(cf_current_year, 1)    ! Loop over the first dimension (nproma)
-          DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension (nblks)
-            total_sum = SUM(cf_current_year(i, :, j))  ! Sum over the second dimension (tiles)
-            IF (total_sum > 1.0_wp + min_tolerated_cf_mismatch) THEN
-              cf_current_year(i, :, j) = cf_current_year(i, :, j) / total_sum  ! Normalize
-            END IF
-          END DO
+         
+        total_sum(:,:) = SUM(cf_current_year(:,:,:), DIM=2)  ! Sum along the second dimension (tiles)
+        ! Normalize the values in cf_current_year
+        DO idx =1,npft
+          
+              cf_current_year(:, idx, :) = cf_current_year(:, idx, :) / total_sum(:, :)  ! Normalize
+  
         END DO
+
       END IF
       !----------------------------------------------------------------------------------!
       
