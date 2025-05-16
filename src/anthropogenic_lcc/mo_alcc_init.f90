@@ -357,7 +357,8 @@ CONTAINS
         
         ! Print all values of transition_prob
         WRITE(temporary_string_trans_value, '(F10.5)') transition_prob(1, 1)
-        CALL message(TRIM(routine), 'Step idx=' // TRIM(idx) // ', transition_prob=' // TRIM(temporary_string_trans_value))
+        WRITE(temp_string_i, '(I0)') idx
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(temp_string_i) // ', transition_prob=' // TRIM(temporary_string_trans_value))
 
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
@@ -374,7 +375,8 @@ CONTAINS
         
         ! Print the value of sum_cf_current
         WRITE(temporary_string_trans_value, '(F10.5)') sum_cf_current(1, 1)
-        CALL message(TRIM(routine), 'Step idx=' // TRIM(idx) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
+        WRITE(temp_string_i, '(I0)') idx
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(temp_string_i) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
         
 
         ! Avoid division by zero
