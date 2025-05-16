@@ -402,50 +402,42 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)       ! in
       END IF
 
-      ! IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-      !   !$ACC DATA CREATE(heat_cap) ASYNC(1)
-      !   !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
-      !   DO ic=1,nc
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+        !$ACC DATA CREATE(heat_cap) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(delta_temp)
+        DO ic=1,nc
 
-      !     IF (tile%is_glacier .AND. .NOT. jsbach_runs_standalone()) THEN
-      !       ! Correction for snowmelt on glaciers or in coupled setup
-      !       delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
-      !     ELSE
-      !       delta_temp = 0._wp
-      !     END IF
+          ! Correction for snowmelt and pond melting/freezing
+          delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          IF (.NOT. tile%is_glacier) THEN
+            delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
-      !     IF (.NOT. jsbach_runs_standalone() .AND. .NOT. tile%is_glacier) THEN
-      !       ! Correction pond melting/freezing in coupled mode
-      !       ! @TODO this correction can be removed as soon as the phase change feature runs
-      !       ! in a coupled setup
-      !       delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-      !       delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
+            IF (l_freeze_config) THEN
+              heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+              IF (l_snow_config) THEN
+                IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
+                  ! Correction for melting of ice in soil layers
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              ELSE   ! No snow layers present
+                IF (heat_cap(ic) > 0._wp) THEN
+                  ! Correction for melting of ice in soil layers
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                END IF
+              END IF
+            END IF
+          END IF
 
-      !       IF (l_freeze_config) THEN
-      !         heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
-      !         IF (l_snow_config) THEN
-      !           IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-      !             ! Correction for melting of ice in soil layers
-      !             delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-      !             delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-      !           END IF
-      !         ELSE   ! No snow layers present
-      !           IF (heat_cap(ic) > 0._wp) THEN
-      !             ! Correction for melting of ice in soil layers
-      !             delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-      !             delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
-      !           END IF
-      !         END IF
-      !       END IF
-      !     END IF
-
-      !     t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
-      !     t_srf(ic) = t_srf(ic) + delta_temp
-      !   END DO
-      !   !$ACC END PARALLEL LOOP
-      !   !$ACC WAIT(1)
-      !   !$ACC END DATA
-      ! END IF
+          t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
+          t_srf(ic) = t_srf(ic) + delta_temp
+        END DO
+        !$ACC END PARALLEL LOOP
+        !$ACC WAIT(1)
+        !$ACC END DATA
+      END IF
 
     ELSE
 

@@ -306,7 +306,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-      CALL model%Queue_task(SEB_,    "snowmelt_correction")
+      ! CALL model%Queue_task(SEB_,    "snowmelt_correction")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
