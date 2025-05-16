@@ -1040,8 +1040,8 @@ CONTAINS
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SSE_,      SEB_,      HYDRO_,    SB_       /), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SSE_,      SEB_,      HYDRO_,    SB_      , DFIRE_FUEL_, DFIRE_   /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_  , ON_TILE_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
@@ -1170,8 +1170,8 @@ CONTAINS
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_      /), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_     , DFIRE_FUEL_, DFIRE_   /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_  , ON_TILE_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
