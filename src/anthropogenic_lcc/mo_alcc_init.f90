@@ -255,6 +255,50 @@ CONTAINS
       ENDDO
         
     CASE ('trans')
+
+      !read in the initial cf current year from the map file
+      IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
+      WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+
+      
+      !print *, 'varname_within_file', varname_within_file     !mingyue added
+      CALL message(TRIM(routine), 'varname_within_file: '//TRIM(varname_within_file))
+      !print *, 'current_tile%name', current_tile%name          !mingyue added
+      CALL message(TRIM(routine), 'current_tile%name: '//TRIM((current_tile%name)))
+
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+        
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
+        & fill_array = cf_current_year(:,i_tile,:) )
+        !-- end: rewritten remainder from Rainer Schnecks alcc implementation
+
+        ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
+        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
+         
+        ! Assert: fractions >= 0 and < 1
+        IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+        IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
+          CALL finish(TRIM(routine), &
+          & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
+          & // TRIM(current_tile%name)//'. Please check.') 
+        ENDIF
+    
+        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
+        ! Use the formatted string in the message
+        CALL message(TRIM(routine), 'cf_current_year: '// TRIM(temporary_string_cf_trans_value))
+
+
+        current_tile => current_tile%Get_next_sibling_tile()
+      ENDDO
+
+
       !Mingyue Zhang added for reading in transition data start 
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop
@@ -268,21 +312,6 @@ CONTAINS
       DO idx = 1, SIZE(transitions)
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(idx))) // ')')
       END DO
-
-      current_tile => tile%Get_first_child_tile()
-      i_tile = 0
-
-      DO WHILE (ASSOCIATED(current_tile))   
-        i_tile = i_tile + 1
-
-        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
-        ! Use the formatted string in the message
-        CALL message(TRIM(routine), 'cf_current_year: '// TRIM(temporary_string_cf_trans_value))
-     
-        ! Get the next sibling tile
-        current_tile => current_tile%Get_next_sibling_tile()
-
-      END DO 
 
 
       ! Loop over gridcell in the chunk to read in transition matrix data
@@ -299,7 +328,7 @@ CONTAINS
         ELSE
           ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(idx)), &
           & fill_array = cf_transition(:, idx, :) )
-          
+
           !Convert the numerical value to a string
           WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(1, idx, 1)  ! Example: printing the first element for simplicity
           ! Use the formatted string in the message
@@ -328,7 +357,7 @@ CONTAINS
         
         ! Print all values of transition_prob
         WRITE(temporary_string_trans_value, '(F10.5)') transition_prob(1, 1)
-        CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', transition_prob=' // TRIM(temporary_string_trans_value))
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(idx) // ', transition_prob=' // TRIM(temporary_string_trans_value))
 
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
@@ -345,7 +374,7 @@ CONTAINS
         
         ! Print the value of sum_cf_current
         WRITE(temporary_string_trans_value, '(F10.5)') sum_cf_current(1, 1)
-        CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(idx) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
         
 
         ! Avoid division by zero
