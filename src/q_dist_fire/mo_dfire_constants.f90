@@ -198,8 +198,9 @@ MODULE mo_dfire_constants
                                                            !< below eq. 15, Thonicke et al. (2010)
 
   ! todo: smarter way to do it? 
-  LOGICAL, PARAMETER :: dfire_pft_mask(11) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
+  LOGICAL, PARAMETER :: dfire_pft_mask(13) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                               .TRUE., .TRUE., &                                 ! grass pfts
+                                              .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
                                               .FALSE., .FALSE., &                               ! crop pfts
                                               .FALSE.]                                          ! Bar soil
 CONTAINS
