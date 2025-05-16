@@ -394,25 +394,25 @@ CONTAINS
       END DO
       
 
-      ! Print out the value of cf_transition_pfts (here shows 121 elements) 
-      DO i = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
-        DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
-          DO j = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
-            !IF (cf_transition_pfts(i, idx, j) > 0.0_wp) THEN
-              ! Convert the value to a string
-              WRITE(temporary_string_trans_pft_value, '(F10.5)') cf_transition_pfts(i, idx, j)
-              ! Convert indices to strings
-              WRITE(temp_string_i, '(I0)') i
-              WRITE(temp_string_j, '(I0)') idx
-              WRITE(temp_string_k, '(I0)') j
-              ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_transition_pfts: (nproma='//TRIM(ADJUSTL(temp_string_i))//', transition_idx='// &
-                & TRIM(ADJUSTL(temp_string_j))//', iblk='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
-            !END IF
-          END DO
-        END DO
-      END DO
-      ! Mingyue Zhang added for reading in transition data end
+            ! ! Print out the value of cf_transition_pfts (here shows 121 elements) 
+      !      DO i = 1, SIZE(cf_transition_pfts, 1)  ! Loop over the first dimension
+      !        DO idx = 1, SIZE(cf_transition_pfts, 2)  ! Loop over the second dimension
+      !          DO j = 1, SIZE(cf_transition_pfts, 3)  ! Loop over the third dimension
+      !            !IF (cf_transition_pfts(i, idx, j) > 0.0_wp) THEN
+      !              ! Convert the value to a string
+      !              WRITE(temporary_string_trans_pft_value, '(F10.5)') cf_transition_pfts(i, idx, j)
+      !              ! Convert indices to strings
+      !              WRITE(temp_string_i, '(I0)') i
+      !              WRITE(temp_string_j, '(I0)') idx
+      !              WRITE(temp_string_k, '(I0)') j
+      !              ! Use the formatted string in the message
+      !              CALL message(TRIM(routine), 'cf_transition_pfts: (nproma='//TRIM(ADJUSTL(temp_string_i))//', transition_idx='// &
+      !                & TRIM(ADJUSTL(temp_string_j))//', iblk='//TRIM(ADJUSTL(temp_string_k))//'): '//TRIM(temporary_string_trans_pft_value))
+      !            !END IF
+      !          END DO
+      !        END DO
+      !      END DO
+      !      ! Mingyue Zhang added for reading in transition data end
       
       !----------------------------------------------------------------------------------!
       ! Initialize transition gain and loss
@@ -471,42 +471,41 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
       
-      !----------------------------------------------------------------------------------! 
+        !----------------------------------------------------------------------------------!
       !print out the value of cf_current_year start
-      current_tile => tile%Get_first_child_tile()
-      i_tile = 0
-
-      DO WHILE (ASSOCIATED(current_tile))   
-        i_tile = i_tile + 1
-
-        DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
-          DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
-            !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
-              ! Convert the non-zero value to a string
-              WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
-              ! Convert indices to strings
-              WRITE(temp_string_i, '(I0)') i
-              WRITE(temp_string_j, '(I0)') j
-              ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
-                & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
-            !END IF
-          END DO
-        END DO
-
-        ! Get the next sibling tile
-        current_tile => current_tile%Get_next_sibling_tile()
-
-      END DO 
+      !current_tile => tile%Get_first_child_tile()
+      !i_tile = 0
+      
+      !DO WHILE (ASSOCIATED(current_tile))   
+      !  i_tile = i_tile + 1
+      
+      !  DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
+      !    DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
+      !      !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
+      !        ! Convert the non-zero value to a string
+      !        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
+      !        ! Convert indices to strings
+      !        WRITE(temp_string_i, '(I0)') i
+      !        WRITE(temp_string_j, '(I0)') j
+      !        ! Use the formatted string in the message
+      !        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
+      !          & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
+      !      !END IF
+      !    END DO
+      !  END DO
+      
+      !  ! Get the next sibling tile
+      !  current_tile => current_tile%Get_next_sibling_tile()
+      
+      !END DO 
       !print out the value of cf_current_year end
       !----------------------------------------------------------------------------------!
-
 
 
       !----------------------------------------------------------------------------------!
       ! Check if the sum along dimension 2 exceeds the threshold and normalize it
       ALLOCATE(total_sum(nproma, nblks))
-      total_sum(:,:) = 0.0_wp
+      total_sum(:,:) = 1.0_wp
       IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
         CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
          
@@ -531,7 +530,6 @@ CONTAINS
 
     CALL input_file%Close()
 
-    !DEALLOCATE(cf_correction,transition_prob, sum_cf_current)
     DEALLOCATE(cf_correction)
 
     ! Assert: sum of absolute fractions needs to be <=1
