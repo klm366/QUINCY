@@ -269,6 +269,22 @@ CONTAINS
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(idx))) // ')')
       END DO
 
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+
+      DO WHILE (ASSOCIATED(current_tile))   
+        i_tile = i_tile + 1
+
+        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(1, i_tile, 1)
+        ! Use the formatted string in the message
+        CALL message(TRIM(routine), 'cf_current_year: '// TRIM(temporary_string_cf_trans_value))
+     
+        ! Get the next sibling tile
+        current_tile => current_tile%Get_next_sibling_tile()
+
+      END DO 
+
+
       ! Loop over gridcell in the chunk to read in transition matrix data
       ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
       ! Read and set transition matrix
@@ -311,16 +327,8 @@ CONTAINS
       
         
         ! Print all values of transition_prob
-        DO blk = 1, nblks
-          DO i = 1, nproma
-            WRITE(temporary_string_trans_value, '(F10.5)') transition_prob(i, blk)
-            WRITE(temp_string_i, '(I0)') i
-            WRITE(temp_string_j, '(I0)') blk
-            WRITE(temp_string_k, '(I0)') idx  
-            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', blk=' // TRIM(ADJUSTL(temp_string_j)) // &
-              ', i=' // TRIM(ADJUSTL(temp_string_i)) // ', transition_prob=' // TRIM(temporary_string_trans_value))
-          END DO
-        END DO
+        WRITE(temporary_string_trans_value, '(F10.5)') transition_prob(1, 1)
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', transition_prob=' // TRIM(temporary_string_trans_value))
 
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
@@ -336,16 +344,9 @@ CONTAINS
         END DO
         
         ! Print the value of sum_cf_current
-        DO blk = 1, nblks
-          DO i = 1, nproma
-            WRITE(temporary_string_trans_value, '(F10.5)') sum_cf_current(i, blk)
-            WRITE(temp_string_i, '(I0)') i
-            WRITE(temp_string_j, '(I0)') blk 
-            WRITE(temp_string_k, '(I0)') idx  
-            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', blk=' // TRIM(ADJUSTL(temp_string_j)) // &
-              ', i=' // TRIM(ADJUSTL(temp_string_i)) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
-          END DO
-        END DO
+        WRITE(temporary_string_trans_value, '(F10.5)') sum_cf_current(1, 1)
+        CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
+        
 
         ! Avoid division by zero
         IF (ANY(sum_cf_current(:,:) > 0.0_wp)) THEN
