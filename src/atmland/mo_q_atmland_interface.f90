@@ -28,10 +28,11 @@ MODULE mo_q_atmland_interface
   !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, VEG_, TURB_
+  dsl4jsb_Use_processes A2L_, RAD_, SPQ_, SEB_, VEG_, TURB_
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SPQ_)
+  dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(TURB_)
 
@@ -769,6 +770,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(TURB_)
 
@@ -848,6 +850,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(TURB_)
 
@@ -905,9 +908,9 @@ CONTAINS
     ! Exchange fields on the land tile
     ! --------------------------------
 
-    t_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, t_srf_new)
+    t_srf_ptr          => dsl4jsb_var2D_onChunk(SEB_, t)
     t_eff_srf_ptr      => dsl4jsb_var2D_onChunk(SPQ_, temp_srf_eff_4)
-    qsat_srf_ptr       => dsl4jsb_var2D_onChunk(SPQ_, qsat_star)
+    qsat_srf_ptr       => dsl4jsb_var2D_onChunk(SEB_, qsat_star)
     s_srf_ptr          => dsl4jsb_var2D_onChunk(SPQ_, s_star)
     fact_q_air_ptr     => dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
     fact_qsat_srf_ptr  => dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)

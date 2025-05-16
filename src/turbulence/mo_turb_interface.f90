@@ -58,8 +58,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_memory(ASSIMI_)
 #endif
 #ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SPQ_, VEG_, Q_ASSIMI_
-  dsl4jsb_Use_memory(SPQ_)
+  dsl4jsb_Use_processes VEG_, Q_ASSIMI_
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
 #endif
@@ -794,9 +793,7 @@ CONTAINS
   SUBROUTINE update_humidity_scaling(tile, options)
 
     !USE mo_jsb_physical_constants, ONLY: rhoh2o
-#ifndef __QUINCY_STANDALONE__
     USE mo_sse_process,            ONLY: relative_humidity_soil
-#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -813,7 +810,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
 #endif
 #ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
@@ -840,9 +836,8 @@ CONTAINS
       & canopy_cond,            &
       & q_sat_srf
     dsl4jsb_Real3D_onChunk ::   &
-      & w_soil_sl,              &
-      & w_soil_fc_sl,           &
-      & w_soil_pwp_sl
+      & wtr_soil_fc_sl,         &
+      & wtr_soil_pwp_sl
 
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl,          &
@@ -914,7 +909,6 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(SPQ_)
       dsl4jsb_Get_memory(VEG_)
       dsl4jsb_Get_memory(Q_ASSIMI_)
 #endif
@@ -963,25 +957,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
 
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)                ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)                ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)              ! in
       SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
-        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
-#endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_,  qsat_star)                ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_sl)                ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_fc_sl)             ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_pwp_sl)            ! in
-#endif
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
       END SELECT
     END IF
 
@@ -1016,7 +1004,7 @@ CONTAINS
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)                     ! in
         dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
-        dsl4jsb_Get_var2D_onChunk(SPQ_,      q_sat_srf)                     ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_,      q_sat_srf)                     ! in
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           canopy_conductance(ic) = canopy_cond(ic)
@@ -1070,16 +1058,12 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(rel_hum)
       DO ic = 1, nc
         SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
         CASE (MODEL_JSBACH)
           weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
           weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
           rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
-#endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
-          rel_hum = MIN(1.0_wp, (w_soil_sl(ic,1) - w_soil_pwp_sl(ic,1)) / (w_soil_fc_sl(ic,1) - w_soil_pwp_sl(ic,1)))
-#endif
+          rel_hum = MIN(1.0_wp, (wtr_soil_sl(ic,1) - wtr_soil_pwp_sl(ic,1)) / (wtr_soil_fc_sl(ic,1) - wtr_soil_pwp_sl(ic,1)))
         END SELECT
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &

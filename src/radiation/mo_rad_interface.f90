@@ -60,8 +60,7 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(CARBON_)
 #endif
 #ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SPQ_, SB_, VEG_
-  dsl4jsb_Use_memory(SPQ_)
+  dsl4jsb_Use_processes SB_, VEG_
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(VEG_)
 #endif
@@ -228,9 +227,6 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(SPQ_)
-#endif
 
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -250,13 +246,9 @@ CONTAINS
       & albedo_lwtr,          &
       & albedo_lice,          &
       & t,                    &
+      & t_old,                &
       & t_lwtr,               &
       & t_lice
-
-    ! quincy
-    dsl4jsb_Real2D_onChunk :: &
-      & t_srf_new,            &
-      & t_srf_old
 
     REAL(wp) ::                  &
       & lw_net_lwtr(options%nc), &
@@ -265,7 +257,6 @@ CONTAINS
       & sw_net_lice(options%nc)
 
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp), ALLOCATABLE      :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
     INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
@@ -287,12 +278,6 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SEB_)
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(SPQ_)
-    END SELECT
-#endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down) ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down) ! in
@@ -370,29 +355,13 @@ CONTAINS
     !!
     !!
     ELSE
-      ALLOCATE(temperature_surface(nc))
-      !$ACC ENTER DATA CREATE(temperature_surface) ASYNC(acc_stream)
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1,nc
-          temperature_surface(ic) = t(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-#endif
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
 #ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_,      t_srf_new)      ! in
-        dsl4jsb_Get_var2D_onChunk(SPQ_,      t_srf_old)      ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1,nc
-          temperature_surface(ic) = t_srf_new(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-#endif
+        dsl4jsb_Get_var2D_onChunk(SEB_,    t_old)          ! in
       END SELECT
+#endif
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
@@ -404,7 +373,7 @@ CONTAINS
         & alb_vis_lnd(:),               & ! in
         & alb_nir_lnd(:),               & ! in
         & lw_srf_down(:),               & ! in
-        & temperature_surface(:),       & ! in
+        & t(:),                         & ! in
         & rad_srf_net(:),               & ! out
         & swvis_net = swvis_srf_net(:), & ! out
         & swnir_net = swnir_srf_net(:), & ! out
@@ -412,16 +381,13 @@ CONTAINS
         & lw_net    = lw_srf_net(:)     & ! out
         & )
 
-      !$ACC EXIT DATA DELETE(temperature_surface) ASYNC(acc_stream)
-      DEALLOCATE(temperature_surface)
-
 #ifndef __NO_QUINCY__
       ! re-calculate rad_srf_net for QUINCY
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_srf_old(ic) ** 4._wp
+          rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_old(ic) ** 4._wp
         END DO
         !$ACC END PARALLEL LOOP
       END SELECT
@@ -1035,7 +1001,6 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
 #endif
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
@@ -1117,7 +1082,7 @@ CONTAINS
     ! quincy
     dsl4jsb_Real2D_onChunk ::       &
       & sb_pool_total_ag_litter_c,  &
-      & t_srf_new,                  &
+      & t,                          &
       & num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk ::       &
       & sb_pool_total_bg_soil_c,    &
@@ -1182,13 +1147,6 @@ CONTAINS
       END IF
     END SELECT
 #endif
-
-    SELECT CASE (model%config%model_scheme)
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(SPQ_)
-#endif
-    END SELECT
 
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
@@ -1258,10 +1216,10 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(SB_)
-        dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock)      ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)             ! in
-        dsl4jsb_Get_var3D_onChunk(SB_,  sb_pool_total_bg_soil_c)   ! in
-        dsl4jsb_Get_var2D_onChunk(SB_,  sb_pool_total_ag_litter_c) ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)      ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)             ! in
+        dsl4jsb_Get_var3D_onChunk(SB_,    sb_pool_total_bg_soil_c)   ! in
+        dsl4jsb_Get_var2D_onChunk(SB_,    sb_pool_total_ag_litter_c) ! in
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
@@ -1309,10 +1267,10 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var2D_onChunk(SPQ_,   t_srf_new)             ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t)                   ! in
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1,nc
-        temperature_surface(ic) = t_srf_new(ic)
+        temperature_surface(ic) = t(ic)
       END DO
       !$ACC END PARALLEL LOOP
 #endif

@@ -983,13 +983,13 @@ CONTAINS
       ! Initialize hydrology variables from bc file
 
       ! Total soil depth until bedrock
-      dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) = hydro_init_vars%soil_depth
+      ! dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) = hydro_init_vars%soil_depth
 
       ! Compute actual soil layer depths based on the fixed layer thicknesses from input file and
       ! the bedrock depth just read in.
-      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
-        & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
-        & soil_w%dz(:))                                                          ! Soil layer thicknesses
+      ! dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
+      !   & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
+      !   & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
       ! ! Volumetric soil porosity
       ! dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
@@ -1072,10 +1072,10 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
 
-      dsl4jsb_var_ptr(HYDRO_, root_depth) = hydro_init_vars%root_depth
-      dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
-        & dsl4jsb_var2D_onDomain(HYDRO_, root_depth),                          & ! Total rooting depth
-        & soil_w%dz(:))    ! Soil layer thicknesses
+      ! dsl4jsb_var_ptr(HYDRO_, root_depth) = hydro_init_vars%root_depth
+      ! dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
+      !   & dsl4jsb_var2D_onDomain(HYDRO_, root_depth),                          & ! Total rooting depth
+      !   & soil_w%dz(:))    ! Soil layer thicknesses
 
       ! ! Maximum root zone soil moisture
       ! ! Note: wpi_rootzone_max corresponds to water content at field capacity.

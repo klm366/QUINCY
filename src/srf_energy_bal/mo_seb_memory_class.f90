@@ -18,7 +18,7 @@ MODULE mo_seb_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
@@ -51,6 +51,7 @@ MODULE mo_seb_memory_class
       & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
+      & q_sat_srf,              & !< surface saturated specific humidity  [?]
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
@@ -144,6 +145,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
+    LOGICAL :: lrestart_local                                  !< add var to restart file, model specific (quincy/jsbach)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_seb_memory'
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
@@ -156,6 +158,12 @@ CONTAINS
     surface => Get_vgrid('surface')
 
     dsl4jsb_Get_config(SEB_)
+
+    ! set local lrestart switch to TRUE for the MODEL_QUINCY
+    lrestart_local = .FALSE.
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      lrestart_local = .TRUE.
+    END IF
 
     CALL mem%Add_var( 't', mem%t,                                                    &
       & hgrid, surface,                                                              &
@@ -180,7 +188,7 @@ CONTAINS
       & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
+      & lrestart = lrestart_local,                                                   &
       & initval_r=280.0_wp )
 
     CALL mem%Add_var( 't_unfilt', mem%t_unfilt,                                      &
@@ -246,7 +254,9 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+      ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
+      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
@@ -265,6 +275,22 @@ CONTAINS
         & lrestart=.TRUE.,                                                                   &
         & output_level=BASIC,                                                                &
         & initval_r=0.0075_wp )
+
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        CALL mem%Add_var('q_sat_srf', mem%q_sat_srf, &
+          & hgrid, surface, &
+          & t_cf('q_sat_srf', '[?]', 'surface saturated specific humidity'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart=.TRUE., &
+          & initval_r=0.0_wp)
+      END SELECT
+#endif
 
       CALL mem%Add_var( 't_unfilt_old', mem%t_unfilt_old,                                    &
         & hgrid, surface,                                                                    &

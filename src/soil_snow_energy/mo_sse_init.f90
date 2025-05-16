@@ -614,7 +614,7 @@ CONTAINS
       DEALLOCATE(liquid_max)
 
       ! dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
-      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))
       ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
 
     END IF
