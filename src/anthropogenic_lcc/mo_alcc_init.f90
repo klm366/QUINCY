@@ -257,8 +257,8 @@ CONTAINS
     CASE ('trans')
 
       !read in the initial cf current year from the map file
-      IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
-      WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+      !IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
+      !WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
 
       
       !print *, 'varname_within_file', varname_within_file     !mingyue added
