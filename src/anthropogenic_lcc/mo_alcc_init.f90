@@ -255,7 +255,8 @@ CONTAINS
       ENDDO
         
     CASE ('trans')
-
+      
+      !----------------------------------------------------------------------------------!
       !read in the initial cf current year from the map file
       current_tile => tile%Get_first_child_tile()
       IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
@@ -299,7 +300,7 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       ENDDO
 
-
+      !----------------------------------------------------------------------------------!
       !Mingyue Zhang added for reading in transition data start 
       !here the loop is over each tile, meaning each pfts, but the matrix should be based on each grid box instead of tiles, 
       !so possibly here the CASE ('transitions') should not be inside the do while loop
@@ -314,7 +315,7 @@ CONTAINS
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(transitions(idx))) // ')')
       END DO
 
-
+      !----------------------------------------------------------------------------------!
       ! Loop over gridcell in the chunk to read in transition matrix data
       ! Define a 1D vector `TransMtrxVec` for the 3x3 matrix, dimensioned as 9 elements
       ! Read and set transition matrix
@@ -340,8 +341,8 @@ CONTAINS
         
       END DO
       
-      
-
+    
+      !----------------------------------------------------------------------------------!
       ! Loop over all pairs of PFTs and extend the transition matrix for PFTs
       DO idx = 1, npft * npft
         ! Calculate the row (`i`) and column (`j`) indices in the `npft x npft` matrix
@@ -413,6 +414,7 @@ CONTAINS
       END DO
       ! Mingyue Zhang added for reading in transition data end
       
+      !----------------------------------------------------------------------------------!
       ! Initialize transition gain and loss
       cf_transition_gain = 0.0
       cf_transition_loss = 0.0
@@ -432,6 +434,7 @@ CONTAINS
         END DO
       END DO
 
+      !----------------------------------------------------------------------------------!
       ! Loop over the vegetation grid to update the current year's cover fractions
       ! by subtracting transition losses and adding transition gains for each tile.
       current_tile => tile%Get_first_child_tile()
@@ -468,34 +471,53 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       END DO
       
+      !----------------------------------------------------------------------------------! 
+      !print out the value of cf_current_year start
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
 
-      !current_tile => tile%Get_first_child_tile()
-      !i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))   
+        i_tile = i_tile + 1
 
-      !DO WHILE (ASSOCIATED(current_tile))   
-      !  i_tile = i_tile + 1
+        DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
+          DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
+            !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
+              ! Convert the non-zero value to a string
+              WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
+              ! Convert indices to strings
+              WRITE(temp_string_i, '(I0)') i
+              WRITE(temp_string_j, '(I0)') j
+              ! Use the formatted string in the message
+              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
+                & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
+            !END IF
+          END DO
+        END DO
 
-      !  DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
-      !    DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
-      !      !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
-      !        ! Convert the non-zero value to a string
-      !        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
-      !        ! Convert indices to strings
-      !        WRITE(temp_string_i, '(I0)') i
-      !        WRITE(temp_string_j, '(I0)') j
-      !        ! Use the formatted string in the message
-      !        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
-      !          & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
-      !      !END IF
-      !    END DO
-      !  END DO
+        ! Get the next sibling tile
+        current_tile => current_tile%Get_next_sibling_tile()
 
-      !  ! Get the next sibling tile
-      !  current_tile => current_tile%Get_next_sibling_tile()
+      END DO 
+      !print out the value of cf_current_year end
+      !----------------------------------------------------------------------------------!
 
-      !END DO 
 
-      
+
+      !----------------------------------------------------------------------------------!
+      ! Check if the sum along dimension 2 exceeds the threshold and normalize it
+      IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
+        CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
+    
+        DO i = 1, SIZE(cf_current_year, 1)    ! Loop over the first dimension (nproma)
+          DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension (nblks)
+            total_sum = SUM(cf_current_year(i, :, j))  ! Sum over the second dimension (tiles)
+            IF (total_sum > 1.0_wp + min_tolerated_cf_mismatch) THEN
+              cf_current_year(i, :, j) = cf_current_year(i, :, j) / total_sum  ! Normalize
+            END IF
+          END DO
+        END DO
+      END IF
+      !----------------------------------------------------------------------------------!
       
     CASE DEFAULT 
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
