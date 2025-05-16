@@ -306,25 +306,31 @@ CONTAINS
         col = LC_type2LC_class_mapping(j)
         trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
       
-        ALLOCATE(transition_prob(nproma, nblks))
-        transition_prob(:,:) = cf_transition(:, trans_idx, :)
+        ALLOCATE(transition_prob(1, 1))
+        transition_prob(1,1) = cf_transition(:, trans_idx, :)
       
+        ! Print the value of transition_prob
+        WRITE(*, '(A, I0, A, F10.5)') 'Step idx=', idx, ', transition_prob =', transition_prob(1, 1)
+
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
         ! Initialize the sum to zero
-        ALLOCATE(sum_cf_current(nproma, nblks))
-        sum_cf_current(:,:) = 0.0_wp
+        ALLOCATE(sum_cf_current(1, 1))
+        sum_cf_current(1,1) = 0.0_wp
         
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
         DO k = 1, npft 
           IF (LC_type2LC_class_mapping(k) == LC_type2LC_class_mapping(j)) THEN
-            sum_cf_current(:,:) = sum_cf_current(:,:) + cf_current_year(:, k, :)
+            sum_cf_current(1,1) = sum_cf_current(1,1) + cf_current_year(:, k, :)
           END IF
         END DO
         
+        ! Print the value of sum_cf_current
+        WRITE(*, '(A, I0, A, F10.5)') 'Step idx=', idx, ', sum_cf_current =', sum_cf_current(1, 1)
+
         ! Avoid division by zero
-        IF (ALL(sum_cf_current(:,:) > 0.0_wp)) THEN
-          cf_transition_pfts(:, idx, :) = transition_prob(:,:) * cf_current_year(:, j, :) / sum_cf_current(:,:)
+        IF (ALL(sum_cf_current(1,1) > 0.0_wp)) THEN
+          cf_transition_pfts(:, idx, :) = transition_prob(1,1) * cf_current_year(:, j, :) / sum_cf_current(1,1)
         ELSE
           cf_transition_pfts(:, idx, :) = 0.0_wp  ! Handle division by zero
         END IF
@@ -410,31 +416,31 @@ CONTAINS
       END DO
       
 
-      current_tile => tile%Get_first_child_tile()
-      i_tile = 0
+      !current_tile => tile%Get_first_child_tile()
+      !i_tile = 0
 
-      DO WHILE (ASSOCIATED(current_tile))   
-        i_tile = i_tile + 1
+      !DO WHILE (ASSOCIATED(current_tile))   
+      !  i_tile = i_tile + 1
 
-        DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
-          DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
-            !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
-              ! Convert the non-zero value to a string
-              WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
-              ! Convert indices to strings
-              WRITE(temp_string_i, '(I0)') i
-              WRITE(temp_string_j, '(I0)') j
-              ! Use the formatted string in the message
-              CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
-                & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
-            !END IF
-          END DO
-        END DO
+      !  DO i = 1, SIZE(cf_current_year, 1)  ! Loop over the first dimension
+      !    DO j = 1, SIZE(cf_current_year, 3)  ! Loop over the third dimension
+      !      !IF (cf_current_year(i, i_tile, j) > 0.0_wp) THEN
+      !        ! Convert the non-zero value to a string
+      !        WRITE(temporary_string_cf_trans_value, '(F10.5)') cf_current_year(i, i_tile, j)
+      !        ! Convert indices to strings
+      !        WRITE(temp_string_i, '(I0)') i
+      !        WRITE(temp_string_j, '(I0)') j
+      !        ! Use the formatted string in the message
+      !        CALL message(TRIM(routine), 'cf_current_year: '//TRIM(current_tile%name)//' (nproma='// &
+      !          & TRIM(ADJUSTL(temp_string_i))//', iblk='//TRIM(ADJUSTL(temp_string_j))//'): '//TRIM(temporary_string_cf_trans_value))
+      !      !END IF
+      !    END DO
+      !  END DO
 
-        ! Get the next sibling tile
-        current_tile => current_tile%Get_next_sibling_tile()
+      !  ! Get the next sibling tile
+      !  current_tile => current_tile%Get_next_sibling_tile()
 
-      END DO 
+      !END DO 
 
       
       
