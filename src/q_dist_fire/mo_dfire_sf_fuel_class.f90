@@ -327,6 +327,8 @@ CONTAINS
   !> todo: rename dead_fuel to fuel (a more generic naming).
   !>
   FUNCTION sf_calc_has_any_fuel_r3(dead_fuel) RESULT (has_dead_fuel)
+    USE mo_jsb_math_constants,   ONLY: eps8
+
     REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)      !< [g DM m-2]
     LOGICAL, ALLOCATABLE  :: has_dead_fuel(:)      !< True if gridcell has any fuel (> 0)
     REAL(wp), ALLOCATABLE :: sum_of_dead_fuels(:)
@@ -336,7 +338,7 @@ CONTAINS
     IF (.NOT. ALLOCATED(has_dead_fuel)) ALLOCATE(has_dead_fuel(nc))
 
     sum_of_dead_fuels = sf_calc_aggr_fuels(dead_fuel)
-    has_dead_fuel = (sum_of_dead_fuels > 0._wp)
+    has_dead_fuel = (sum_of_dead_fuels > eps8)
   END FUNCTION sf_calc_has_any_fuel_r3
 
   ! ======================================================================================================= !
@@ -347,6 +349,8 @@ CONTAINS
   !> Note: In fortran a generic function must implemente each type and rank, See INTERFACE sf_calc_has_any_fuel
   !>
   FUNCTION sf_calc_has_any_fuel_r2(dead_fuel) RESULT (has_dead_fuel)
+    USE mo_jsb_math_constants,   ONLY: eps8
+
     REAL(wp), INTENT(in)  :: dead_fuel(:,:)        !< [g DM m-2]
     LOGICAL, ALLOCATABLE  :: has_dead_fuel(:)     !< True if gridcell has any fuel (> 0)
     INTEGER :: nc
@@ -354,7 +358,7 @@ CONTAINS
     nc = SIZE(dead_fuel, dim=1) !< 1 = nc index
     IF (.NOT. ALLOCATED(has_dead_fuel)) ALLOCATE(has_dead_fuel(nc))
 
-    has_dead_fuel = (SUM(dead_fuel, dim=2) > 0._wp)
+    has_dead_fuel = (SUM(dead_fuel, dim=2) > eps8)
   END FUNCTION sf_calc_has_any_fuel_r2
 
 
