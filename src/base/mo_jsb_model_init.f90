@@ -29,6 +29,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(DFIRE_)
+  dsl4jsb_Use_config(DFIRE_FUEL_)
 #endif
 
   USE mo_jsb_class,        ONLY: Get_model
@@ -190,6 +191,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(DFIRE_)
+    dsl4jsb_Def_config(DFIRE_FUEL_)
 #endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -373,6 +375,7 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(DFIRE_)
+      dsl4jsb_Get_config(DFIRE_FUEL_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -609,10 +612,8 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN 
-          IF (tile%Is_process_active(DFIRE_FUEL_)) THEN
+          IF (tile%Is_process_active(DFIRE_FUEL_) .AND. tile%Is_process_active(DFIRE_)) THEN
             CALL dfire_fuel_init(tile)
-          ENDIF
-          IF (tile%Is_process_active(DFIRE_)) THEN
             CALL dfire_init(tile)
           END IF
         ENDIF
