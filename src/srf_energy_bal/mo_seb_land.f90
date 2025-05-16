@@ -481,7 +481,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     DO ic=1,nc
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-      IF (use_tmx) THEN
+      IF (use_tmx .OR. jsb_standalone) THEN
         t_unfilt(ic) = s_star(ic) / t2s_conv(ic)
         t_srf(ic) = s_srf(ic) / t2s_conv(ic)
       ELSE
@@ -618,7 +618,7 @@ CONTAINS
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(TURB_)
 
-    l_skin_temp        = dsl4jsb_Config(SEB_)%l_skin_temp
+    l_skin_temp = dsl4jsb_Config(SEB_)%l_skin_temp
     model_scheme = model%config%model_scheme
 
     ! Get surface roughness
@@ -818,7 +818,7 @@ CONTAINS
             & phase_change_trgt                                   & ! out
             & )
 
-          IF (phase_change_trgt <= 0._wp) THEN
+          IF (phase_change_trgt < 0._wp) THEN
             ! Energy sink due to ice melting
             IF (le_melt_pot(ic) <= phase_change_trgt) THEN
               le_phase_change(ic) = phase_change_trgt
@@ -826,9 +826,8 @@ CONTAINS
               l_recalc_seb(ic) = .FALSE.
             ELSE
               le_phase_change(ic) = le_melt_pot(ic)
-              l_recalc_seb(ic) = .TRUE.
             END IF
-          ELSE
+          ELSE IF (phase_change_trgt > 0._wp) THEN
             ! Energy source due to water freezing
             IF (phase_change_trgt <= le_freeze_pot(ic)) THEN
               le_phase_change(ic) = phase_change_trgt
@@ -836,7 +835,6 @@ CONTAINS
               l_recalc_seb(ic) = .FALSE.
             ELSE
               le_phase_change(ic) = le_freeze_pot(ic)
-              l_recalc_seb(ic) = .TRUE.
             END IF
           END IF
           forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
@@ -992,7 +990,7 @@ CONTAINS
             & phase_change_trgt                                   & ! out
             & )
 
-          IF (phase_change_trgt <= 0._wp) THEN
+          IF (phase_change_trgt < 0._wp) THEN
             ! Energy sink due to ice melting
             IF (le_melt_pot(ic) <= phase_change_trgt) THEN
               le_phase_change(ic) = phase_change_trgt
@@ -1000,9 +998,8 @@ CONTAINS
               l_recalc_seb = .FALSE.
             ELSE
               le_phase_change(ic) = le_melt_pot(ic)
-              l_recalc_seb = .TRUE.
             END IF
-          ELSE
+          ELSE IF (phase_change_trgt > 0._wp) THEN
             ! Energy source due to water freezing
             IF (phase_change_trgt <= le_freeze_pot(ic)) THEN
               le_phase_change(ic) = phase_change_trgt
@@ -1010,7 +1007,6 @@ CONTAINS
               l_recalc_seb = .FALSE.
             ELSE
               le_phase_change(ic) = le_freeze_pot(ic)
-              l_recalc_seb = .TRUE.
             END IF
           END IF
           forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
