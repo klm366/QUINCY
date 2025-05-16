@@ -329,14 +329,15 @@ CONTAINS
         ELSE
           ptr_2D => input_file_trans%Read_2d(variable_name = TRIM(transitions(idx)), &
           & fill_array = cf_transition(:, idx, :) )
-
-          !Convert the numerical value to a string
-          WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(1, idx, 1)  ! Example: printing the first element for simplicity
-          ! Use the formatted string in the message
-          CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
-            & 'value = '//TRIM(temporary_string_trans_value))
-           
         END IF
+
+        !Convert the numerical value to a string
+        WRITE(temporary_string_trans_value, '(F10.5)') cf_transition(1, idx, 1)  ! Example: printing the first element for simplicity
+        ! Use the formatted string in the message
+        CALL message(TRIM(routine), 'value of the previous transition type: '//TRIM(transitions(idx))//': '// &
+          & 'value = '//TRIM(temporary_string_trans_value))
+           
+        
       END DO
       
       
@@ -381,10 +382,10 @@ CONTAINS
         
 
         ! Avoid division by zero
-        IF (ANY(sum_cf_current(:,:) > 0.0_wp)) THEN
-          cf_transition_pfts(:, idx, :) = transition_prob(:,:) * (cf_current_year(:, j, :) / sum_cf_current(:,:))
-        ELSE
+        IF (ANY(sum_cf_current(:,:) <= 0.0_wp)) THEN
           cf_transition_pfts(:, idx, :) = 0.0_wp  ! Handle division by zero
+        ELSE
+          cf_transition_pfts(:, idx, :) = transition_prob(:,:) * (cf_current_year(:, j, :) / sum_cf_current(:,:))
         END IF
 
         DEALLOCATE(transition_prob)
