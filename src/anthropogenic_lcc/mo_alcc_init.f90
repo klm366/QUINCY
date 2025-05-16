@@ -314,8 +314,11 @@ CONTAINS
         DO blk = 1, nblks
           DO i = 1, nproma
             WRITE(temporary_string_trans_value, '(F10.5)') transition_prob(i, blk)
-            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(STRING(idx))) // ', blk=' // TRIM(ADJUSTL(STRING(blk))) // &
-              ', i=' // TRIM(ADJUSTL(STRING(i))) // ', transition_prob=' // TRIM(temporary_string_trans_value))
+            WRITE(temp_string_i, '(I0)') i
+            WRITE(temp_string_j, '(I0)') blk
+            WRITE(temp_string_k, '(I0)') idx  
+            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', blk=' // TRIM(ADJUSTL(temp_string_j)) // &
+              ', i=' // TRIM(ADJUSTL(temp_string_i)) // ', transition_prob=' // TRIM(temporary_string_trans_value))
           END DO
         END DO
 
@@ -336,11 +339,14 @@ CONTAINS
         DO blk = 1, nblks
           DO i = 1, nproma
             WRITE(temporary_string_trans_value, '(F10.5)') sum_cf_current(i, blk)
-            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(STRING(idx))) // ', blk=' // TRIM(ADJUSTL(STRING(blk))) // &
-              ', i=' // TRIM(ADJUSTL(STRING(i))) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
+            WRITE(temp_string_i, '(I0)') i
+            WRITE(temp_string_j, '(I0)') blk 
+            WRITE(temp_string_k, '(I0)') idx  
+            CALL message(TRIM(routine), 'Step idx=' // TRIM(ADJUSTL(temp_string_k)) // ', blk=' // TRIM(ADJUSTL(temp_string_j)) // &
+              ', i=' // TRIM(ADJUSTL(temp_string_i)) // ', sum_cf_current=' // TRIM(temporary_string_trans_value))
           END DO
         END DO
-        
+
         ! Avoid division by zero
         IF (ANY(sum_cf_current(:,:) > 0.0_wp)) THEN
           cf_transition_pfts(:, idx, :) = transition_prob(:,:) * (cf_current_year(:, j, :) / sum_cf_current(:,:))
