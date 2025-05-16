@@ -105,7 +105,7 @@ CONTAINS
     
     
     INTEGER :: ic, nc, current_year, i_tile, npft, no_omp_thread, nproma, nblks  !, ics, ice
-    INTEGER :: idx, i, j, k,row, col, trans_idx, pft_idx    ! Mingyue add for transition matrix index
+    INTEGER :: idx, i, j, k,row, col, trans_idx, pft_idx, blk   ! Mingyue add for transition matrix index
     TYPE(t_input_file)          :: input_file
     TYPE(t_input_file)          :: input_file_trans                    ! Mingyue Zhang
     CHARACTER(len=filename_max) :: filename_land_use_data
@@ -306,31 +306,39 @@ CONTAINS
         col = LC_type2LC_class_mapping(j)
         trans_idx = (row - 1) * 3 + col  ! Mapping to 3x3 transition matrix vector index
       
-        ALLOCATE(transition_prob(1, 1))
-        transition_prob(1,1) = cf_transition(:, trans_idx, :)
+        ALLOCATE(transition_prob(nproma, nblks))
+        transition_prob(:, :) = cf_transition(:, trans_idx, :)
       
-        ! Print the value of transition_prob
-        WRITE(*, '(A, I0, A, F10.5)') 'Step idx=', idx, ', transition_prob =', transition_prob(1, 1)
+        
+        ! Print all values of transition_prob
+        DO blk = 1, nblks
+          DO i = 1, nproma
+            WRITE(*, '(A, I0, A, I0, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', transition_prob(i, blk)
+          END DO
+        END DO
 
         ! Calculate transition probabilities for PFTs
         ! Compute transition probabilities based on LC_type2LC_class_mapping
         ! Initialize the sum to zero
-        ALLOCATE(sum_cf_current(1, 1))
-        sum_cf_current(1,1) = 0.0_wp
+        ALLOCATE(sum_cf_current(nproma, nblks))
+        sum_cf_current(:,:) = 0.0_wp
         
         ! Compute the sum of cf_current(:, k, :) where LC_type2LC_class_mapping(k) matches LC_type2LC_class_mapping(j)
         DO k = 1, npft 
           IF (LC_type2LC_class_mapping(k) == LC_type2LC_class_mapping(j)) THEN
-            sum_cf_current(1,1) = sum_cf_current(1,1) + cf_current_year(:, k, :)
+            sum_cf_current(:,:) = sum_cf_current(:,:) + cf_current_year(:, k, :)
           END IF
         END DO
         
         ! Print the value of sum_cf_current
-        WRITE(*, '(A, I0, A, F10.5)') 'Step idx=', idx, ', sum_cf_current =', sum_cf_current(1, 1)
-
+        DO blk = 1, nblks
+          DO i = 1, nproma
+            WRITE(*, '(A, I0, A, I0, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', sum_cf_current(i, blk)
+          END DO
+        END DO
         ! Avoid division by zero
-        IF (ALL(sum_cf_current(1,1) > 0.0_wp)) THEN
-          cf_transition_pfts(:, idx, :) = transition_prob(1,1) * cf_current_year(:, j, :) / sum_cf_current(1,1)
+        IF (ANY(sum_cf_current(:,:) > 0.0_wp)) THEN
+          cf_transition_pfts(:, idx, :) = transition_prob(:,:) * (cf_current_year(:, j, :) / sum_cf_current(:,:))
         ELSE
           cf_transition_pfts(:, idx, :) = 0.0_wp  ! Handle division by zero
         END IF
