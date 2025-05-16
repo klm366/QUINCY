@@ -313,7 +313,7 @@ CONTAINS
         ! Print all values of transition_prob
         DO blk = 1, nblks
           DO i = 1, nproma
-            WRITE(*, '(A, I0, A, I0, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', transition_prob(i, blk)
+            WRITE(*, '(A, I5, A, I5, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', transition_prob(i, blk)
           END DO
         END DO
 
@@ -333,7 +333,7 @@ CONTAINS
         ! Print the value of sum_cf_current
         DO blk = 1, nblks
           DO i = 1, nproma
-            WRITE(*, '(A, I0, A, I0, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', sum_cf_current(i, blk)
+            WRITE(*, '(A, I5, A, I5, A, F10.5)') 'Step idx=', idx, ', blk=', blk, ', i=', i, ', transition_prob =', sum_cf_current(i, blk)
           END DO
         END DO
         ! Avoid division by zero
