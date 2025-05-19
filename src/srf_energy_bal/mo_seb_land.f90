@@ -153,7 +153,7 @@ CONTAINS
     LOGICAL  :: l_freeze_config, l_supercool_config, use_tmx, l_skin_temp
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, steplen, alpha
     REAL(wp) :: hlp1, hlp2, hlp3
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday, jsb_standalone
@@ -165,6 +165,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+    dtime = options%dtime
     steplen = options%steplen
     alpha   = options%alpha
 
@@ -417,7 +418,7 @@ CONTAINS
       ! as limited by the avaiablity of water / ice.
       hlp1 = 0._wp
       hlp2 = 0._wp
-      hlp3 = rhoh2o * alf / steplen
+      hlp3 = rhoh2o * alf / dtime
 
       IF (.NOT. tile%is_glacier) THEN
         ! Compute the amount of water/ice that is available for freezing/melting
@@ -598,7 +599,6 @@ CONTAINS
     REAL(wp) :: alpha, steplen
 
     LOGICAL :: l_skin_temp
-    LOGICAL :: l_recalc_seb(options%nc)
 
     REAL(wp) :: ddrag_srf(options%nc), t_star(options%nc), s_srf_in(options%nc)
     REAL(wp) :: s_ref, heat_tcoef, dheat_tcoef, eps, rad_net_star
@@ -625,7 +625,77 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)  ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)  ! in
 
-    !$ACC DATA CREATE(ddrag_srf, t_star, l_recalc_seb) ASYNC(1)
+    ! Get Asselin filter coefficient
+    eps = get_asselin_coef()
+
+    ! Update drag and exchange coefficients based on external forcing data
+    CALL update_drag( &
+        ! INTENT in
+      & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
+      & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+      & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+        ! INTENT out
+      & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+
+    ! Compute energy available/required for melting and freezing of ice and water
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(heat_tcoef, s_ref, s_trgt, phase_change_trgt)
+    DO ic = 1, nc
+
+      qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
+      dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+
+      heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+
+      IF (.NOT. lstart) THEN
+        ! Get dry static energy at actual temperature as well as melting/freezing point
+        IF (l_skin_temp) THEN
+          ! The skin temperature scheme needs the surface temperature as reference
+          s_ref  = s_srf(ic)
+        ELSE
+          ! Without skin scheme there is only surface temperature
+          s_ref  = t2s_conv(ic) * t(ic)
+        END IF
+        s_trgt = surface_dry_static_energy( tmelt, &
+          & q_effective(qsat_star(ic), q_air(ic),   &
+          & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
+
+        ! Determine potential energy sinks / sources due to phase change at the surface
+        ! for reaching a target temperature of 0 deg C.
+        CALL phase_change_pot(                                  & ! in
+          & alpha, steplen, t2s_conv(ic),                       & ! in
+          & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+          & s_trgt, s_ref,                                      & ! in
+          & qsat_star(ic), dQdT(ic),                            & ! in
+          & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
+          & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+          & frozen_fract(ic), heat_cap(ic),                     & ! in
+          & phase_change_trgt                                   & ! out
+          & )
+
+        ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
+        IF (phase_change_trgt < 0._wp) THEN
+          le_phase_change(ic) = MAX(le_melt_pot(ic), phase_change_trgt)
+        ELSE IF (phase_change_trgt > 0._wp) THEN
+          le_phase_change(ic) = MIN(le_freeze_pot(ic), phase_change_trgt)
+        ELSE
+          le_phase_change(ic) = 0._wp
+        END IF
+        ! Modify the ground heat flux to account for the phase change
+        forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
+        ! Switch sign of phase change flux. From the energy balance perspective, ice melting
+        !   is an energy sink (therefore negative) and freezing a source (therefore positive).
+        !   However, from the hydrology perspective melting occures when enough energy is
+        !   available (positive sign) and freezing if energy is required (therefore negative).
+        !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+        le_phase_change(ic) = -1._wp * le_phase_change(ic)
+      ELSE
+        le_phase_change(ic) = 0._wp
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC DATA CREATE(ddrag_srf, t_star) ASYNC(1)
     IF (l_skin_temp) THEN
       !$ACC DATA CREATE(s_srf_in) ASYNC(1)
 
@@ -722,31 +792,11 @@ CONTAINS
       END IF
       !$ACC END DATA
     ELSE ! l_skin_temp
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-        dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
-        t_radref(ic) = t(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      ! Update drag and exchange coefficients based on external forcing data
-      CALL update_drag( &
-          ! INTENT in
-        & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
-        & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
-        & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
-          ! INTENT out
-        & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
-
-      ! Get Asselin filter coefficient
-      eps = get_asselin_coef()
-
       ! Compute the updated surface temperature to be used for a filtered drag computation
       ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(s_ref)
       DO ic = 1, nc
+        t_radref(ic) = t(ic)
         heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
 
         IF (lstart) THEN
@@ -790,64 +840,6 @@ CONTAINS
           ! Optional variables for filtering
         & t_srf_upd=t_star(:), zril_old=richardson(:))
 
-      ! Compute energy available for melting and freezing of ice and water
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(s_ref, s_trgt, phase_change_trgt)
-      DO ic = 1, nc
-        heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
-
-        le_phase_change(ic) = 0._wp
-        l_recalc_seb(ic)    = .TRUE.
-
-        IF (.NOT. lstart) THEN
-          ! Get dry static energy at melting/freezing point
-          s_ref  = t2s_conv(ic) * t(ic)
-          s_trgt = surface_dry_static_energy( tmelt, &
-            & q_effective(qsat_star(ic), q_air(ic),   &
-            & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
-
-          ! Determine potential energy sinks / sources due to phase change at the surface
-          ! for reaching a target temperature of 0. C.
-          CALL phase_change_pot(                                  & ! in
-            & alpha, steplen, t2s_conv(ic),                       & ! in
-            & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-            & s_trgt, s_ref,                                      & ! in
-            & qsat_star(ic), dQdT(ic),                            & ! in
-            & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
-            & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-            & frozen_fract(ic), heat_cap(ic),                     & ! in
-            & phase_change_trgt                                   & ! out
-            & )
-
-          IF (phase_change_trgt < 0._wp) THEN
-            ! Energy sink due to ice melting
-            IF (le_melt_pot(ic) <= phase_change_trgt) THEN
-              le_phase_change(ic) = phase_change_trgt
-              s_star(ic) = s_trgt
-              l_recalc_seb(ic) = .FALSE.
-            ELSE
-              le_phase_change(ic) = le_melt_pot(ic)
-            END IF
-          ELSE IF (phase_change_trgt > 0._wp) THEN
-            ! Energy source due to water freezing
-            IF (phase_change_trgt <= le_freeze_pot(ic)) THEN
-              le_phase_change(ic) = phase_change_trgt
-              s_star(ic) = s_trgt
-              l_recalc_seb(ic) = .FALSE.
-            ELSE
-              le_phase_change(ic) = le_freeze_pot(ic)
-            END IF
-          END IF
-          forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
-          ! Switch sign of phase change flux. From the energy balance perspective, ice melting
-          !   is an energy sink (therefore negative) and freezing a source (therefore positive).
-          !   However, from the hydrology perspective melting occures when enough energy is
-          !   available (positive sign) and freezing if energy is 'missing' (therefore negative).
-          !   Thus, we switch the sign now to make the hydrology equations more intuitive.
-          le_phase_change(ic) = -1._wp * le_phase_change(ic)
-        END IF
-      END DO
-      !$ACC END PARALLEL LOOP
-
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(heat_tcoef, s_ref)
       DO ic = 1, nc
         heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
@@ -857,7 +849,7 @@ CONTAINS
         ELSE IF (tile_fract_zero(ic)) THEN
           ! Fix needed for numerical reasons on grid cells without real land fraction
           s_star(ic) = 280._wp * t2s_conv(ic)
-        ELSE IF (l_recalc_seb(ic)) THEN
+        ELSE
           ! Compute new surface temperature only if it is not set to 0C due to melting/freezing
           s_ref = t2s_conv(ic) * t(ic)
           CALL surface_temp_implicit( steplen, alpha,             & ! in

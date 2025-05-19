@@ -278,14 +278,14 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_old,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_old,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_star,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, le_phase_change, weighted_by_fract)
 
     IF (model%config%use_lakes) THEN
