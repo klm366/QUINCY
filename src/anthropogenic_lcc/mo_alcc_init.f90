@@ -503,23 +503,23 @@ CONTAINS
 
 
       !----------------------------------------------------------------------------------!
-      ! Check if the sum along dimension 2 exceeds the threshold and normalize it
-      !ALLOCATE(total_sum(nproma, nblks))
-      !total_sum(:,:) = 1.0_wp
-      !IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
-      !  CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
-      !   
-      !  total_sum(:,:) = SUM(cf_current_year(:,:,:), DIM=2)  ! Sum along the second dimension (tiles)
-      !  ! Normalize the values in cf_current_year
-      !  DO idx =1,npft
-      !   
-      !        cf_current_year(:, idx, :) = cf_current_year(:, idx, :) / total_sum(:, :)  ! Normalize
+       Check if the sum along dimension 2 exceeds the threshold and normalize it
+      ALLOCATE(total_sum(nproma, nblks))
+      total_sum(:,:) = 1.0_wp
+      IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
+        CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
+         
+        total_sum(:,:) = MAX(SUM(cf_current_year(:,:,:), DIM=2))  ! Sum along the second dimension (tiles)
+        ! Normalize the values in cf_current_year
+        DO idx =1,npft
+         
+              cf_current_year(:, idx, :) = cf_current_year(:, idx, :) / total_sum(:, :)  ! Normalize
   
-      !  END DO
+        END DO
 
-      !END IF
+      END IF
 
-      !DEALLOCATE(total_sum)
+      DEALLOCATE(total_sum)
       !----------------------------------------------------------------------------------!
       
     CASE DEFAULT 
