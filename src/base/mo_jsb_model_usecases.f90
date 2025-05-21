@@ -162,25 +162,23 @@ CONTAINS
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
-          veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
+          veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/NIX_, SSE_, PHENO_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(veg_tile)
 
+            ! Two additional tiles for NIX
+            veg_tile_snow => t_jsb_tile('veg_snow', 'Veg snow tile', &
+              & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+              & fract_varname='equal')  ! half of veg tile for now, should be read from bc_fract file
+            !$ACC ENTER DATA COPYIN(veg_tile_snow)
 
-          ! Two additional tiles for NIX
-          veg_tile_snow => t_jsb_tile('veg_snow', 'Veg snow tile', processes=(/NIX_, HYDRO_, SSE_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
-            & fract_varname='fract_veg')
-          !$ACC ENTER DATA COPYIN(veg_tile_snow)
+            veg_tile_no_snow => t_jsb_tile('veg_no_snow', 'Veg no snow tile', &
+              & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+              & fract_varname='equal') ! half of veg tile for now, should be read from bc_fract file
+            !$ACC ENTER DATA COPYIN(veg_tile_no_snoow)
 
-          veg_tile_no_snow => t_jsb_tile('veg_no_snow', 'Veg no snow tile', processes=(/NIX_, HYDRO_, SSE_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
-            & fract_varname='fract_veg')
-          !$ACC ENTER DATA COPYIN(veg_tile_no_snoow)
-
-
-    NULLIFY(box_tile, land_tile, veg_tile)
+    NULLIFY(box_tile, land_tile, veg_tile, veg_tile_snow, veg_tile_no_snow)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
@@ -190,7 +188,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tilem veg_tile_snow, veg_tile_no_snow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_tmx'
 
@@ -198,8 +196,8 @@ CONTAINS
     box_tile => t_jsb_tile('box', 'Top tile', &
       ! & processes      =(/A2L_,     L2A_,     RAD_,      HYDRO_,    TURB_    /), &
       ! & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
-      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_,   NIX_,    HYDRO_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_,    HYDRO_,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -242,13 +240,24 @@ CONTAINS
           !$ACC ENTER DATA COPYIN(glacier_tile, veg_tile)
         ELSE
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
+            & processes=(/PHENO_, NIX_/), process_actions=(/ON_TILE_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='equal')
           !$ACC ENTER DATA COPYIN(veg_tile)
         END IF
 
-    NULLIFY(box_tile, land_tile, veg_tile)
+            ! Two additional tiles for NIX
+            veg_tile_snow => t_jsb_tile('veg_snow', 'Veg snow tile', &
+              & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+              & fract_varname='equal')  ! half of veg tile for now, should be read from bc_fract file
+            !$ACC ENTER DATA COPYIN(veg_tile_snow)
+
+            veg_tile_no_snow => t_jsb_tile('veg_no_snow', 'Veg no snow tile', &
+              & lct=t_jsb_lct(VEG_TYPE), parent=veg_tile,  &
+              & fract_varname='equal') ! half of veg tile for now, should be read from bc_fract file
+            !$ACC ENTER DATA COPYIN(veg_tile_no_snoow)
+
+    NULLIFY(box_tile, land_tile, veg_tile, veg_tile_snow, veg_tile_no_snow)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
@@ -451,8 +460,8 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_  ,   NIX_,      HYDRO_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_  ,    HYDRO_,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -597,8 +606,8 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_  ,   NIX_,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -793,8 +802,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_,    NIX_,     TURB_     /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes      =(/A2L_,     L2A_,     RAD_,      TURB_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)
@@ -915,8 +924,8 @@ CONTAINS
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     SPQ_,     RAD_,     NIX_,     TURB_     /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes      =(/A2L_,     L2A_,     SPQ_,     RAD_,      TURB_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_ /), &
       & model_id=model%id, fract_varname='notsea')  ! fraction: all that "is not sea"
     model%top => box_tile
     !$ACC ENTER DATA COPYIN(box_tile)

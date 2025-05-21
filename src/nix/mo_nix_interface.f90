@@ -146,6 +146,10 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
+    IF (.NOT. tile%Is_process_calculated(NIX_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
 
     ! Get memory
