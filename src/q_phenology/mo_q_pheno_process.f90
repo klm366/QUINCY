@@ -108,18 +108,19 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    dsl4jsb_Get_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active) RETURN !< do not run this routine for crops if
+                                                                    !< the crop process is active
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active) RETURN !< do not run this routine for crops if
-                                                                    !< the crop process is active
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
@@ -140,7 +141,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)        ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)        ! inout
-    ! ----------------------------------------------------------------------------------------------------- !
 
     lctlib_phenology_type = dsl4jsb_Lctlib_param(phenology_type)
     lctlib_beta_soil_flush = dsl4jsb_Lctlib_param(beta_soil_flush)
@@ -223,7 +223,7 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop,   &
+    USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop_phenology, &
       &                                   ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, &
       &                                   ipheno_type_cbalance_deciduous
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
@@ -281,7 +281,7 @@ CONTAINS
            growth_req_n_tlabile_mavg = 1._wp / cn_leaf
            growth_req_p_tlabile_mavg = 1._wp / np_leaf
         ENDIF
-      CASE (iperennial,icrop)
+      CASE (iperennial,icrop_phenology)
         ! if temperature and soil moisture are not limiting growth
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
@@ -307,7 +307,7 @@ CONTAINS
           & mean_leaf_age > min_leaf_age) THEN
           growing_season = false
         ENDIF
-      CASE (iperennial,icrop)
+      CASE (iperennial,icrop_phenology)
         ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
         !  leaves have been out a given number of days
         IF ((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &

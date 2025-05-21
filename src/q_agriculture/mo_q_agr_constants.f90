@@ -63,18 +63,21 @@ MODULE mo_q_agr_constants
 
   ! generic parameters for agriculture model
   REAL(wp), SAVE :: &
-    & def_n_fertiliser                  = def_parameters, &      !< default rate of fertiliser application for crops per year (mol / m2 / year)
-    & def_crop_type                     = def_parameters, &      !< default crop type (1-8)
-    & crop_planting_mass                = def_parameters, &      !< initial mass of crops on planting, taken from the seed bed (mol/m2)
-    & max_harvesting_rate               = def_parameters, &      !< maximum harvesting fraction (1/days)
-    & fract_crop_to_slash               = def_parameters, &      !< initial mass of crops on planting, taken from the seed bed (mol/m2)
-    & frac_fertil_nh4                   = def_parameters, &      !< fraction of fertiliser applied that is NH4 (unitless)
-    & frac_fertil_po4                   = def_parameters, &      !< molar ratio of P fertiliser to N fertiliser application
-    & fcs_fertappl_day1                 = def_parameters, &      !< fraction of crop growing season when 1st fertiliser dose is applied
-    & fcs_fertappl_day2                 = def_parameters, &      !< fraction of crop growing season when 2nd fertiliser dose is applied
-    & fcs_fertappl_day3                 = def_parameters, &      !< fraction of crop growing season when 3rd fertiliser dose is applied
-    & fcs_fertappl_day4                 = def_parameters, &      !< fraction of crop growing season when 4th fertiliser dose is applied
-    & eta_fertiliser                    = def_parameters         !< fractionation of N15 due to NH3 volatilisation [per mill]
+    & qs_def_n_fertiliser             = def_parameters, &  !< QS-only default rate of fertiliser application for crops per year (mol / m2 / year)
+    & iq_background_n_fertiliser_rate = def_parameters, &  !< IQ-only minimum entry from natural fertilisation sources (manure etc.)
+                                                           !< in extensive agriculture lacking mineral N input (mol / m2 / year)
+    & crop_planting_mass           = def_parameters, &  !< initial mass of crops on planting, taken from the seed bed (mol/m2)
+    & fstore_seed_min              = def_parameters, &  !< minimal seed pool size as fraction of crop planting mass
+    & fstore_seed_max              = def_parameters, &  !< maximal seed pool size as fraction of crop planting mass
+    & max_harvesting_rate          = def_parameters, &  !< maximum harvesting fraction (1/days)
+    & fract_crop_to_slash          = def_parameters, &  !< initial mass of crops on planting, taken from the seed bed (mol/m2)
+    & frac_fertil_nh4              = def_parameters, &  !< fraction of fertiliser applied that is NH4 (unitless)
+    & frac_fertil_po4              = def_parameters, &  !< molar ratio of P fertiliser to N fertiliser application
+    & fcs_fertappl_day1            = def_parameters, &  !< fraction of crop growing season when 1st fertiliser dose is applied
+    & fcs_fertappl_day2            = def_parameters, &  !< fraction of crop growing season when 2nd fertiliser dose is applied
+    & fcs_fertappl_day3            = def_parameters, &  !< fraction of crop growing season when 3rd fertiliser dose is applied
+    & fcs_fertappl_day4            = def_parameters, &  !< fraction of crop growing season when 4th fertiliser dose is applied
+    & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
   ! phenology parameters for all crop types
   REAL(wp), SAVE :: &
@@ -83,14 +86,17 @@ MODULE mo_q_agr_constants
 
   !< phenology parameters for crop types
   REAL(wp), DIMENSION(ncroptype), SAVE :: &
-    & ctlib_t_thres_planting, &                                  !< weekly air temperature threshold for planting (K)
-    & ctlib_t_thres_gdd_gs, &                                    !< reference temperature for GDD calculation during growing season (K)
-    & ctlib_gdd_mat_min, &                                       !< minimum GDD requirement for maturity (degC days)
-    & ctlib_gdd_mat_max, &                                       !< maximum GDD requirement for maturity (degC days)
-    & ctlib_gdd_max, &                                           !< maximum daily GDD increment (degC days)
-    & ctlib_nd_gs_max, &                                         !< maximum number of days in to maturity (days)
-    & ctlib_nd_dorm_max, &                                       !< maximum number of days in dormant period (days)
-    & ctlib_fract_gdd_mat_gp2to3                                 !< fraction of GDD maturity required to start grainfilling (unitless)
+    & cttab_t_thres_planting, &                                  !< weekly air temperature threshold for planting (K)
+    & cttab_t_thres_gdd_gs, &                                    !< reference temperature for GDD calculation during growing season (K)
+    & cttab_fgdd_mat, &                                          !< fraction of GDD_X needed to reach maturity (unitless)
+    & cttab_gdd_mat_min, &                                       !< minimum GDD requirement for maturity (degC days)
+    & cttab_gdd_mat_max, &                                       !< maximum GDD requirement for maturity (degC days)
+    & cttab_gdd_max, &                                           !< maximum daily GDD increment (degC days)
+    & cttab_nd_gs_max, &                                         !< maximum number of days in to maturity (days)
+    & cttab_nd_dorm_max, &                                       !< maximum number of days in dormant period (days)
+    & cttab_min_daylength, &                                     !< minimum daylength for emergence (seconds)
+    & cttab_fract_gdd_mat_gp2to3, &                              !< fraction of GDD maturity required to start grainfilling (unitless)
+    & cttab_crop_season_max                                      !< maximum permitted number of crop seasons per year (# yr-1)
 
   ! allometry parameters for all crop types
   REAL(wp), SAVE :: &
@@ -99,28 +105,29 @@ MODULE mo_q_agr_constants
 
   !< allometry and allocation parameters for crop types
   REAL(wp), DIMENSION(ncroptype), SAVE :: &
-    & ctlib_k_hi_leaf, &                                         !< shape parameter for leaf allocation response to heat index (unitless)
-    & ctlib_k_hi_stem, &                                         !< shape parameter for stem allocation response to heat index (unitless)
-    & ctlib_leaf2root_mass_init, &                               !< initial ratio of leaf to fine root mass at planting (unitless)
-    & ctlib_leaf2root_mass_fin, &                                !< final ratio of leaf to fine root mass at maturity (unitless)
-    & ctlib_sapwood2leaf_mass_init, &                            !< initial ratio of leaf to stem mass at planting (unitless)
-    & ctlib_sapwood2leaf_mass_fin, &                             !< final ratio of leaf to stem mass at maturity (unitless)
-    & ctlib_falloc_fruit_max, &                                  !< maximum allocation fraction to fruits (unitless)
-    & ctlib_active_n_fixation, &                                 !< whether crop is N fixing crop or not (0-1)
-    & ctlib_lai_max                                              !< maximum leaf area of crop (unitless)
+    & cttab_k_hi_leaf, &                                         !< shape parameter for leaf allocation response to heat index (unitless)
+    & cttab_k_hi_stem, &                                         !< shape parameter for stem allocation response to heat index (unitless)
+    & cttab_leaf2root_mass_init, &                               !< initial ratio of leaf to fine root mass at planting (unitless)
+    & cttab_leaf2root_mass_fin, &                                !< final ratio of leaf to fine root mass at maturity (unitless)
+    & cttab_sapwood2leaf_mass_init, &                            !< initial ratio of leaf to stem mass at planting (unitless)
+    & cttab_sapwood2leaf_mass_fin, &                             !< final ratio of leaf to stem mass at maturity (unitless)
+    & cttab_falloc_fruit_max, &                                  !< maximum allocation fraction to fruits (unitless)
+    & cttab_active_n_fixation, &                                 !< whether crop is N fixing crop or not (0-1)
+    & cttab_lai_max                                              !< maximum leaf area of crop (unitless)
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_agr_constants'
 
-  !$ACC DECLARE CREATE(def_n_fertiliser, def_crop_type, crop_planting_mass, max_harvesting_rate)
-  !$ACC DECLARE CREATE(fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1)
+  !$ACC DECLARE CREATE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate, crop_planting_mass)
+  !$ACC DECLARE CREATE(fstore_seed_min, fstore_seed_max)
+  !$ACC DECLARE CREATE(max_harvesting_rate, fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1)
   !$ACC DECLARE CREATE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, eta_fertiliser)
-  !$ACC DECLARE CREATE(mavg_period_cropseason, gdd_t_thres_dormseason, ctlib_t_thres_planting)
-  !$ACC DECLARE CREATE(ctlib_t_thres_gdd_gs, ctlib_gdd_mat_min, ctlib_gdd_mat_max, ctlib_gdd_max)
-  !$ACC DECLARE CREATE(ctlib_nd_dorm_max)
-  !$ACC DECLARE CREATE(ctlib_nd_gs_max, ctlib_fract_gdd_mat_gp2to3, k_heatindex, ctlib_k_hi_leaf)
-  !$ACC DECLARE CREATE(ctlib_k_hi_stem, ctlib_leaf2root_mass_init, ctlib_leaf2root_mass_fin)
-  !$ACC DECLARE CREATE(ctlib_sapwood2leaf_mass_init, ctlib_sapwood2leaf_mass_fin, ctlib_falloc_fruit_max)
-  !$ACC DECLARE CREATE(ctlib_active_n_fixation, ctlib_lai_max, leaf2sapwood_min_ratio)
+  !$ACC DECLARE CREATE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting)
+  !$ACC DECLARE CREATE(cttab_t_thres_gdd_gs, cttab_gdd_mat_min, cttab_gdd_mat_max, cttab_gdd_max)
+  !$ACC DECLARE CREATE(cttab_fgdd_mat, cttab_nd_gs_max, cttab_nd_dorm_max, cttab_min_daylength)
+  !$ACC DECLARE CREATE(cttab_fract_gdd_mat_gp2to3, cttab_crop_season_max, k_heatindex, cttab_k_hi_leaf)
+  !$ACC DECLARE CREATE(cttab_k_hi_stem, cttab_leaf2root_mass_init, cttab_leaf2root_mass_fin)
+  !$ACC DECLARE CREATE(cttab_sapwood2leaf_mass_init, cttab_sapwood2leaf_mass_fin, cttab_falloc_fruit_max)
+  !$ACC DECLARE CREATE(cttab_active_n_fixation, cttab_lai_max, leaf2sapwood_min_ratio)
 
 CONTAINS
 
@@ -135,15 +142,17 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_agr_constants'
 
     ! general crop parameters
-    def_n_fertiliser                  = 100._wp / 10._wp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr
-    def_crop_type                     = 1.0_wp
+    qs_def_n_fertiliser               = 100._wp / 10._wp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
+    iq_background_n_fertiliser_rate   = 20._wp / 10._wp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
     crop_planting_mass                = 4.5_wp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
+    fstore_seed_min                   = 2.0_wp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
+    fstore_seed_max                   = 20.0_wp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
     max_harvesting_rate               = 0.1_wp                      !< harvesting season takes 1/par days
     fract_crop_to_slash               = 0.08_wp                     !< from IPCC bookkeeping model
     fcs_fertappl_day1                 = 0.0_wp                      !< at planting
-    fcs_fertappl_day2                 = 0.20_wp                     !< intermediate
-    fcs_fertappl_day3                 = 0.45_wp                     !< intermediate
-    fcs_fertappl_day4                 = 0.75_wp                     !< during grainfilling
+    fcs_fertappl_day2                 = 0.10_wp                     !< intermediate
+    fcs_fertappl_day3                 = 0.35_wp                     !< intermediate
+    fcs_fertappl_day4                 = 0.55_wp                     !< during grainfilling
     frac_fertil_nh4                   = 7._wp / 8._wp               !< an global average value
     frac_fertil_po4                   = 0.5_wp * 0.4366197_wp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
@@ -152,56 +161,64 @@ CONTAINS
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
     mavg_period_cropseason            = 20.0_wp                     !< AgroIBIS/CLM5
     gdd_t_thres_dormseason            = 8.0_wp + Tzero              !< AgroIBIS/CLM5
-    ctlib_t_thres_planting = &
+    cttab_t_thres_planting = &
       & (/ 7._wp, 10._wp, 13._wp, 21._wp, 21._wp, 21._wp, 21._wp, 21._wp /) + TZero
-    ctlib_t_thres_gdd_gs = &
-      & (/ 0._wp, 8._wp, 10._wp, 10._wp, 10._wp, 10._wp, 10._wp, 10._wp /) + TZero
-    ctlib_gdd_mat_min = &
+    cttab_t_thres_gdd_gs = &
+      & (/ 5._wp, 8._wp, 10._wp, 5._wp, 5._wp, 8._wp, 10._wp, 10._wp /) + TZero
+    cttab_fgdd_mat = &
+      & (/ 1._wp, 0.85_wp, 1._wp, 0.85_wp, 1._wp, 1._wp, 1._wp, 1._wp /)
+    cttab_gdd_mat_min = &
       & (/ 0._wp, 950._wp, 0._wp , 0._wp, 0._wp, 950._wp, 950._wp, 0._wp /)
-    ctlib_gdd_mat_max = &
+    cttab_gdd_mat_max = &
       & (/ 1700._wp, 1850._wp, 1900._wp, 1700._wp, 2100._wp, 1850._wp, 1850._wp, 2100._wp/)
-    ctlib_gdd_max = &
-      & (/ 26._wp, 30._wp, 30._wp, 30._wp, 30._wp, 30._wp, 30._wp, 30._wp/)
-    ctlib_nd_gs_max = &
+    cttab_gdd_max = &
+      & (/ 26._wp, 30._wp, 30._wp, 26._wp, 26._wp, 30._wp, 30._wp, 30._wp/)
+    cttab_nd_gs_max = &
       & (/ 150._wp, 165._wp, 150._wp, 160._wp, 150._wp, 300._wp, 160._wp, 150._wp /)
-    ctlib_nd_dorm_max = &
-      & (/ 100._wp, 100._wp, 100._wp, 30._wp, 30._wp, 30._wp, 30._wp, 30._wp /)
-    ctlib_fract_gdd_mat_gp2to3 = &
+    cttab_nd_dorm_max = &
+      & (/ 100._wp, 100._wp, 100._wp, 50._wp, 50._wp, 50._wp, 30._wp, 30._wp /)
+    cttab_min_daylength = &
+      & (/ 12._wp, 12._wp, 12._wp, 8._wp, 6._wp, 8._wp, 8._wp, 8._wp /) * 3600._wp
+    cttab_fract_gdd_mat_gp2to3 = &
       & (/ 0.6_wp, 0.65_wp, 0.5_wp, 0.5_wp, 0.4_wp, 0.65_wp, 0.5_wp, 0.5_wp /)
+    cttab_crop_season_max = &
+      & (/ 1._wp, 1._wp, 1._wp, 1._wp, 2._wp, 2._wp, 2._wp, 2._wp /)
 
     ! allocation parameters per crop type
     k_heatindex                             = 0.1_wp      ! AgroIBIS/CLM5 parameter b
     leaf2sapwood_min_ratio                  = 3.0_wp      ! calibrated
 
-    ctlib_k_hi_leaf = &
+    cttab_k_hi_leaf = &
       & (/ 3._wp, 5._wp, 2._wp, 2._wp, 3._wp, 5._wp, 5._wp, 2._wp /)
-    ctlib_k_hi_stem = &
+    cttab_k_hi_stem = &
       & (/ 1._wp, 2._wp, 5._wp, 5._wp, 1._wp, 2._wp, 2._wp, 5._wp /)
-    ctlib_leaf2root_mass_init = &
-      & (/ 3.0_wp, 2.0_wp, 2.0_wp, 2.8_wp, 2.3_wp, 2.0_wp, 2.0_wp, 2.0_wp /)
-    ctlib_leaf2root_mass_fin = &
-      & (/ 1.75_wp, 1.75_wp, 2.0_wp, 1.75_wp, 1.75_wp, 1.75_wp, 1.75_wp, 2.0_wp /)
-    ctlib_sapwood2leaf_mass_init = &
+    cttab_leaf2root_mass_init = &
+      & (/ 2.0_wp, 1.5_wp, 1.5_wp, 2.0_wp, 1.7_wp, 1.5_wp, 1.5_wp, 1.5_wp /)
+    cttab_leaf2root_mass_fin = &
+      & (/ 1.2_wp, 1.0_wp, 1.0_wp, 1.25_wp, 1.2_wp, 1.0_wp, 1.0_wp, 1.2_wp /)
+    cttab_sapwood2leaf_mass_init = &
       & (/ 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp /)
-    ctlib_sapwood2leaf_mass_fin = &
+    cttab_sapwood2leaf_mass_fin = &
       & (/ 0.1_wp, 0.1_wp, 0.3_wp, 0.3_wp, 0.1_wp, 0.1_wp, 0.1_wp, 0.3_wp /)
-    ctlib_falloc_fruit_max = &
+    cttab_falloc_fruit_max = &
       & (/ 0.8_wp, 0.7_wp, 0.6_wp, 0.6_wp, 0.7_wp, 0.8_wp, 0.6_wp, 0.6_wp /)
-    ctlib_active_n_fixation = &
+    cttab_active_n_fixation = &
       & (/ 0._wp, 0._wp, 1._wp, 0._wp, 0._wp, 0._wp, 0._wp, 1._wp /)
-    ctlib_lai_max = &
+    cttab_lai_max = &
       & (/ 7._wp, 5._wp, 6._wp, 6._wp, 7._wp, 5._wp, 5._wp, 6._wp /)
 
-    !$ACC UPDATE DEVICE(def_n_fertiliser, def_crop_type, crop_planting_mass, max_harvesting_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max) ASYNC(1)
+    !$ACC UPDATE DEVICE(crop_planting_mass, max_harvesting_rate) ASYNC(1)
     !$ACC UPDATE DEVICE(fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1) ASYNC(1)
     !$ACC UPDATE DEVICE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, eta_fertiliser) ASYNC(1)
-    !$ACC UPDATE DEVICE(mavg_period_cropseason, gdd_t_thres_dormseason, ctlib_t_thres_planting) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_t_thres_gdd_gs, ctlib_gdd_mat_min, ctlib_gdd_mat_max, ctlib_gdd_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_nd_dorm_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_nd_gs_max, ctlib_fract_gdd_mat_gp2to3, k_heatindex, ctlib_k_hi_leaf) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_k_hi_stem, ctlib_leaf2root_mass_init, ctlib_leaf2root_mass_fin) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_sapwood2leaf_mass_init, ctlib_sapwood2leaf_mass_fin, ctlib_falloc_fruit_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(ctlib_active_n_fixation, ctlib_lai_max, leaf2sapwood_min_ratio) ASYNC(1)
+    !$ACC UPDATE DEVICE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_t_thres_gdd_gs, cttab_gdd_mat_min, cttab_gdd_mat_max, cttab_gdd_max) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_fgdd_mat, cttab_nd_gs_max, cttab_nd_dorm_max, cttab_min_daylength) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_fract_gdd_mat_gp2to3, cttab_crop_season_max, k_heatindex, cttab_k_hi_leaf) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_k_hi_stem, cttab_leaf2root_mass_init, cttab_leaf2root_mass_fin) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_sapwood2leaf_mass_init, cttab_sapwood2leaf_mass_fin, cttab_falloc_fruit_max) ASYNC(1)
+    !$ACC UPDATE DEVICE(cttab_active_n_fixation, cttab_lai_max, leaf2sapwood_min_ratio) ASYNC(1)
 
   END SUBROUTINE init_q_agr_constants
 

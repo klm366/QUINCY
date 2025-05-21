@@ -25,7 +25,7 @@ MODULE mo_seb_lake
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
 
   dsl4jsb_Use_processes SEB_, TURB_, RAD_, HYDRO_, A2L_
   dsl4jsb_Use_config(SEB_)
@@ -131,7 +131,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: model_scheme
-    REAL(wp) :: dtime, steplen
+    REAL(wp) :: dtime
     REAL(wp) ::         &
       & cpd_or_cvd,     &
       & lhflx_tmp,      &
@@ -149,7 +149,6 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%contains_lake) RETURN
 
@@ -244,15 +243,15 @@ CONTAINS
       END IF
 
       ALLOCATE(hcap_ice(nc))
-      !$ACC ENTER DATA CREATE(hcap_ice)
+      !$ACC ENTER DATA CREATE(hcap_ice) ASYNC(acc_stream)
     ELSE
       ALLOCATE(hflx_form_ice(nc))
-      !$ACC ENTER DATA CREATE(hflx_form_ice)
+      !$ACC ENTER DATA CREATE(hflx_form_ice) ASYNC(acc_stream)
     END IF
 
-    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp)
+    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       zero            (ic) = 0._wp
       hcap_wtr        (ic) = 0._wp
@@ -270,17 +269,17 @@ CONTAINS
       forc_hflx       (ic) = 0._wp ! Always zero for lake
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! Compute surface drag and exchange coefficients for the offline model
     IF (jsb_standalone) THEN
+      !$ACC WAIT
       !$ACC DATA &
       !$ACC   CREATE(ddrag_wtr, pch_wtr)
 
       ! Update drag and exchange coefficients for lake surface based on external forcing data
       CALL update_drag( &
       ! INTENT in
-      & nc, steplen, &
+      & nc, dtime, &
       & model_scheme, &
       & t_air(:), press_srf(:), q_air(:), wind_air(:), &
       & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
@@ -292,7 +291,7 @@ CONTAINS
       IF (config_l_ice_on_lakes) THEN
         ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
         ! provide separate exchange coefficients for water and ice. Both are set to identical values.
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           drag_ice(ic)    = drag_wtr(ic)
           t_acoef_ice(ic) = t_acoef_wtr(ic)
@@ -306,7 +305,7 @@ CONTAINS
     END IF
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       CALL calc_lake_wtr_temp( &
         & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
@@ -321,7 +320,6 @@ CONTAINS
         & min_ice_depth)                                    !< in;    Minimum ice thickness
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! TODO How to put this on GPU? The following block is wrong!
 
@@ -347,7 +345,7 @@ CONTAINS
 
       ! Calculate new ice thickness
       ! Tendency = freezing + conductive heat flux - ice melting + sublimation/deposition
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         CALL calc_lice_thickness(                           &
           & depth_lice(ic),                                 & !< inout; Ice thickness [m]
@@ -364,10 +362,9 @@ CONTAINS
           & )
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       ! Calculate new water temperature for the case of complete ice melting
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL calc_lake_wtr_temp( &
             & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
@@ -382,11 +379,10 @@ CONTAINS
             & min_ice_depth)                                    !< in;    Minimum ice thickness
         END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
       !$ACC   PRIVATE(lhflx_tmp)
       DO ic=1,nc
         lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
@@ -407,11 +403,10 @@ CONTAINS
           & dtime)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
       s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd_or_cvd, jsb_standalone)
@@ -419,7 +414,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (config_l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
@@ -436,11 +431,10 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(hcap_ice)
+      !$ACC EXIT DATA DELETE(hcap_ice) ASYNC(acc_stream)
       DEALLOCATE(hcap_ice)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         t(ic) = t_lwtr(ic)
         t_unfilt(ic) = t(ic)
@@ -455,8 +449,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(hflx_form_ice)
+      !$ACC EXIT DATA DELETE(hflx_form_ice) ASYNC(acc_stream)
       DEALLOCATE(hflx_form_ice)
     END IF
 
@@ -726,7 +719,7 @@ CONTAINS
       & heat_tcoef    !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -737,7 +730,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
@@ -789,7 +782,7 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(s_air, heat_tcoef)
     DO ic=1,nc
 
@@ -799,7 +792,7 @@ CONTAINS
         sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible energy flux
       ELSE
         s_air = t_acoef_wtr(ic) * s_lwtr(ic) + t_bcoef_wtr(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
-        heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
+        heat_tcoef = heat_transfer_coef(drag_wtr(ic), dtime, alpha)  ! Transfer coefficient
         sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible heat flux
       END IF
       latent_hflx_wtr(ic) = alv * evapo_wtr(ic) ! Latent heat flux
@@ -811,7 +804,7 @@ CONTAINS
     ! Surface fluxes for lake ice
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR PRIVATE(s_air, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR PRIVATE(s_air, heat_tcoef)
       DO ic=1,nc
 
         IF (use_tmx) THEN
@@ -820,7 +813,7 @@ CONTAINS
           sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible energy flux
         ELSE
           s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
-          heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)  ! Transfer coefficient
           sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible heat flux
         END IF
         latent_hflx_ice(ic) = als * evapo_ice(ic) ! Latent heat flux
@@ -833,7 +826,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         sensible_hflx(ic) = sensible_hflx_wtr(ic)
         latent_hflx  (ic) = latent_hflx_wtr  (ic)

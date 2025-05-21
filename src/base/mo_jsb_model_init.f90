@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SH_, Q_AGR_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -151,7 +151,7 @@ CONTAINS
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
-    USE mo_q_sh_init,           ONLY: q_sh_init
+    USE mo_q_syl_init,          ONLY: q_syl_init
     USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
@@ -403,15 +403,15 @@ CONTAINS
       END IF
 
       IF (model%config%qmodel_id == QLAND) THEN
-        IF (model%processes(Q_SH_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
-          IF (model%processes(Q_SH_)%p%config%active) THEN
-            CALL model%Queue_task(Q_SH_, "simple_harvest")        ! LAND ONLY; if Q_SH active
+        IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL model%Queue_task(Q_SYL_, "sylviculture")        ! LAND ONLY; if Q_SYL_ active
           END IF
           IF (model%processes(Q_AGR_)%p%config%active) THEN
-            CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR active
+            CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
           END If
-          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SH or Q_AGR active
-          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SH or Q_AGR active
+          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
         END IF
       END IF
 
@@ -584,8 +584,8 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN
-          IF (tile%Is_process_active(Q_SH_)) THEN
-            CALL q_sh_init(tile)
+          IF (tile%Is_process_active(Q_SYL_)) THEN
+            CALL q_syl_init(tile)
           END IF
           IF (tile%Is_process_active(Q_AGR_)) THEN
             CALL q_agr_init(tile)
@@ -736,6 +736,8 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
 
     END DO
+
+    !$ACC WAIT(1)
 
     DEALLOCATE(fract_tmp)
 

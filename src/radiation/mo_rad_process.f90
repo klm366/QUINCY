@@ -14,7 +14,8 @@
 MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control, ONLY: acc_stream
+  USE mo_kind,        ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -77,7 +78,7 @@ CONTAINS
 
     nc = SIZE(swvis_down)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
     DO ic=1,nc
 
@@ -1484,8 +1485,8 @@ CONTAINS
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
@@ -1502,7 +1503,7 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
 
     !> 2.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !!
@@ -1514,8 +1515,8 @@ CONTAINS
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
@@ -1531,11 +1532,11 @@ CONTAINS
     END DO
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
 
     !> 3.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
         albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &

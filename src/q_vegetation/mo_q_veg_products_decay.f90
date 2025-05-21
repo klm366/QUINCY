@@ -45,11 +45,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_SH_, Q_AGR_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_
     USE mo_veg_constants,         ONLY: tau_pp_crop, tau_pp_fuelwood, tau_pp_paper, tau_pp_fiberboard, &
       &                                 tau_pp_oirw, tau_pp_pv, tau_pp_sawnwood
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -63,7 +63,7 @@ CONTAINS
     INTEGER                           :: iblk, ics, ice, nc         !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':update_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
@@ -88,12 +88,12 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
 
-    IF ((dsl4jsb_Config(Q_SH_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
+    IF ((dsl4jsb_Config(Q_SYL_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
         & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
 
       dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
@@ -116,7 +116,7 @@ CONTAINS
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    IF ((dsl4jsb_Config(Q_SH_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
+    IF ((dsl4jsb_Config(Q_SYL_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
         & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
 
       prod_decay_mt(:,:) = 0._wp

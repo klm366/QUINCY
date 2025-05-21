@@ -23,7 +23,7 @@ MODULE mo_turb_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,         ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,         ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_kind,                ONLY: wp
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish
@@ -58,8 +58,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_memory(ASSIMI_)
 #endif
 #ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SPQ_, VEG_, Q_ASSIMI_
-  dsl4jsb_Use_memory(SPQ_)
+  dsl4jsb_Use_processes VEG_, Q_ASSIMI_
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
 #endif
@@ -292,9 +291,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
-    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf)
+    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
       pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
@@ -304,7 +303,7 @@ CONTAINS
 
     IF (tile%is_lake .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(qsat_lice)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_lice)
         DO ic = 1, nc
           qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
           qsat_srf(ic) = (1._wp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
@@ -317,7 +316,7 @@ CONTAINS
     !   & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
     !   & km(:), kh(:), km_neutral(:), kh_neutral(:)                                                      &
     !   &)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ! CALL registered_exchange_coefficients_procedure( &
       CALL sfc_exchange_coefficients( &
@@ -326,7 +325,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (tile%fract(ics+ic-1,iblk) <= 0._wp) THEN
         km(ic) = 0._wp
@@ -335,13 +334,11 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$ACC WAIT(1)
 
     !$ACC END DATA
 
@@ -388,11 +385,15 @@ CONTAINS
 
     dsl4jsb_Get_memory(TURB_)
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(TURB_, kh,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, km,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, kh_neutral, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, km_neutral, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, ch,         weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_exchange_coefficients
 #endif
@@ -443,12 +444,11 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: model_scheme
     REAL(wp), DIMENSION(options%nc) :: &
-      & rough_veg_star_local, rough_bare_star, rough_snow_star
+      & rough_veg_star_local, rough_bare_star, rough_snow_star, fract_fol_proj_cov
     REAL(wp) :: &
       & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
       & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
     LOGICAL :: lctlib_ForestFlag
-    REAL(wp), ALLOCATABLE           :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
     LOGICAL                         :: l_veg_bare_glac_tile      !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -469,12 +469,9 @@ CONTAINS
     dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
 
-    ALLOCATE(fract_fol_proj_cov(nc))
+    !$ACC DATA CREATE(fract_fol_proj_cov, rough_veg_star_local, rough_bare_star, rough_snow_star) ASYNC(acc_stream)
 
-    !$ACC DATA CREATE(rough_veg_star_local, rough_bare_star, rough_snow_star)
-    !$ACC ENTER DATA CREATE(fract_fol_proj_cov)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       fract_fol_proj_cov(ic) = 0._wp
     END DO
@@ -534,7 +531,7 @@ CONTAINS
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         rough_bare_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_bare) ** 2
         rough_snow_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_snow) ** 2
@@ -548,7 +545,7 @@ CONTAINS
         CASE (MODEL_JSBACH)
           dsl4jsb_Get_memory(PHENO_)
           dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)   ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             fract_fol_proj_cov(ic) = fract_fpc_max(ic)
           END DO
@@ -558,7 +555,7 @@ CONTAINS
         CASE (MODEL_QUINCY)
           dsl4jsb_Get_memory(VEG_)
           dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)         ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             fract_fol_proj_cov(ic) = fract_fpc(ic)
           END DO
@@ -576,7 +573,7 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
           CASE (MODEL_JSBACH)
             dsl4jsb_Get_var2D_onChunk(PHENO_, lai)              ! in
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
               rough_veg_star_local(ic) =                                                                           &
                 & 1._wp / LOG(config_blending_height                                                        &
@@ -588,7 +585,7 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
           CASE (MODEL_QUINCY)
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
               ! calculated at PFT-tile level and aggregated to box tile (TURB_ could be calculated at box tile)
               rough_veg_star_local(ic) = rough_veg_star(ic)
@@ -602,7 +599,7 @@ CONTAINS
           IF (model%config%model_scheme == MODEL_QUINCY) CALL finish(TRIM(routine), 'QUINCY: roughness calc. should depend on LAI')
 #endif
           lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             rough_veg_star_local(ic) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness) ** 2
           END DO
@@ -610,7 +607,7 @@ CONTAINS
         ENDIF
 
         lctlib_ForestFlag = dsl4jsb_Lctlib_param(ForestFlag)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m_star(ic) = (1._wp - fract_fol_proj_cov(ic)) &
             &                * rough_bare_star(ic) + fract_fol_proj_cov(ic) * rough_veg_star_local(ic)
@@ -637,7 +634,7 @@ CONTAINS
         ! rough_m and rough_m_star are taken from values from init
         !
         ! We don't have PFTs so use rough_m from ini file
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(ic)))**2 &
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
@@ -645,7 +642,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
       ELSE  ! bare or glacier tile
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m_star(ic) = rough_bare_star(ic)
           ! Modify roughness length heat for bare part by snow cover
@@ -656,14 +653,14 @@ CONTAINS
       END IF  ! vegetated or bare tile
 
       IF (tile%lcts(1)%lib_id /= 0 .OR. .NOT. tile%is_vegetation) THEN ! PFT or bare/glacier
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
         END DO
         !$ACC END PARALLEL LOOP
       END IF
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
       END DO
@@ -675,20 +672,20 @@ CONTAINS
         dsl4jsb_Get_memory(SEB_)
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m_star(ic) =            fract_lice(ic)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
             &               + (1._wp - fract_lice(ic)) / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m_star(ic) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         rough_h_star(ic) = rough_m_star(ic)
         rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
@@ -701,16 +698,11 @@ CONTAINS
     END IF
 
     ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
-    ! $noACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    ! $noACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     ! DO ic = 1, nc
     !   rough_h(ic) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(ic))))
     ! END DO
     ! $noACC END PARALLEL LOOP
-
-    !$ACC WAIT(1)
-
-    !$ACC EXIT DATA DELETE(fract_fol_proj_cov)
-    DEALLOCATE(fract_fol_proj_cov)
 
     !$ACC END DATA
 
@@ -760,8 +752,12 @@ CONTAINS
 
     dsl4jsb_Get_memory(TURB_)
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     model => Get_model(tile%owner_model_id)
 
@@ -775,7 +771,7 @@ CONTAINS
     config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
     config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
       rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
@@ -797,9 +793,7 @@ CONTAINS
   SUBROUTINE update_humidity_scaling(tile, options)
 
     !USE mo_jsb_physical_constants, ONLY: rhoh2o
-#ifndef __QUINCY_STANDALONE__
     USE mo_sse_process,            ONLY: relative_humidity_soil
-#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -816,7 +810,6 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
 #endif
 #ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
@@ -843,9 +836,8 @@ CONTAINS
       & canopy_cond,            &
       & q_sat_srf
     dsl4jsb_Real3D_onChunk ::   &
-      & w_soil_sl,              &
-      & w_soil_fc_sl,           &
-      & w_soil_pwp_sl
+      & wtr_soil_fc_sl,         &
+      & wtr_soil_pwp_sl
 
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl,          &
@@ -896,7 +888,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
     !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask, ch_tmp)
 
@@ -910,14 +902,13 @@ CONTAINS
     CASE (MODEL_JSBACH)
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(PHENO_)
-        IF (tile%Is_process_calculated(ASSIMI_)) THEN
+        IF (tile%Is_process_active(ASSIMI_)) THEN
           dsl4jsb_Get_memory(ASSIMI_)
         END IF
       END IF
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(SPQ_)
       dsl4jsb_Get_memory(VEG_)
       dsl4jsb_Get_memory(Q_ASSIMI_)
 #endif
@@ -926,7 +917,7 @@ CONTAINS
     ! Set pointers to variables in memory
     IF (model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(TURB_, kh)                 ! in
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ch_tmp(ic) = kh(ic)
       END DO
@@ -935,7 +926,7 @@ CONTAINS
       SELECT CASE (model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           ch_tmp(ic) = pch(ic)
         END DO
@@ -943,14 +934,14 @@ CONTAINS
       CASE (MODEL_QUINCY)
         IF (jsb_standalone) THEN
           dsl4jsb_Get_var2D_onChunk(TURB_,   pch_stdalone)     ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             ch_tmp(ic) = pch_stdalone(ic)
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
           dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             ch_tmp(ic) = pch(ic)
           END DO
@@ -966,25 +957,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
 
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)                ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)                ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)              ! in
       SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
-        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
-#endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(SPQ_,  qsat_star)                ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_sl)                ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_fc_sl)             ! in
-        dsl4jsb_Get_var3D_onChunk(SPQ_,  w_soil_pwp_sl)            ! in
-#endif
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
       END SELECT
     END IF
 
@@ -992,24 +977,24 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       ALLOCATE(canopy_conductance(nc))
-      !$ACC ENTER DATA CREATE(canopy_conductance)
+      !$ACC ENTER DATA CREATE(canopy_conductance) ASYNC(acc_stream)
       SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
-        IF (tile%Is_process_calculated(ASSIMI_)) THEN
+        IF (tile%Is_process_active(ASSIMI_)) THEN
           dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited)         ! in
         ELSE
           dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
         END IF
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           canopy_conductance(ic) = canopy_cond_limited(ic)
         END DO
         !$ACC END PARALLEL LOOP
         w_soil_wilt_fract_config = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
         END DO
@@ -1019,14 +1004,14 @@ CONTAINS
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)                     ! in
         dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
-        dsl4jsb_Get_var2D_onChunk(SPQ_,      q_sat_srf)                     ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        dsl4jsb_Get_var2D_onChunk(SEB_,      q_sat_srf)                     ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           canopy_conductance(ic) = canopy_cond(ic)
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           mask(ic) = canopy_conductance(ic) > eps8 .AND. (q_sat_srf(ic) - q_air(ic)) > 0.0_wp
         END DO
@@ -1034,7 +1019,7 @@ CONTAINS
 #endif
       END SELECT
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         IF (mask(ic)) THEN
           fact_qsat_veg(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) *  &
@@ -1050,16 +1035,16 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fact_qair_veg(ic) = fact_qsat_veg(ic)
         zfract_fpc(ic)    = fract_fpc(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC EXIT DATA DELETE(canopy_conductance)
+      !$ACC EXIT DATA DELETE(canopy_conductance) ASYNC(acc_stream)
       DEALLOCATE(canopy_conductance)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fact_qsat_veg(ic)   = 0._wp
         fact_qsat_trans(ic) = 0._wp
@@ -1070,19 +1055,15 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(rel_hum)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(rel_hum)
       DO ic = 1, nc
         SELECT CASE (model_scheme)
-#ifndef __QUINCY_STANDALONE__
         CASE (MODEL_JSBACH)
           weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
           weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
           rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
-#endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
-          rel_hum = MIN(1.0_wp, (w_soil_sl(ic,1) - w_soil_pwp_sl(ic,1)) / (w_soil_fc_sl(ic,1) - w_soil_pwp_sl(ic,1)))
-#endif
+          rel_hum = MIN(1.0_wp, (wtr_soil_sl(ic,1) - wtr_soil_pwp_sl(ic,1)) / (wtr_soil_fc_sl(ic,1) - wtr_soil_pwp_sl(ic,1)))
         END SELECT
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &
@@ -1100,14 +1081,14 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
     ELSE IF (tile%contains_glacier .OR. tile%is_lake) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fact_qsat_soil(ic) = 1._wp
         fact_qair_soil(ic) = 1._wp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         fact_qsat_soil(ic) = 0._wp
         fact_qair_soil(ic) = 0._wp
@@ -1115,15 +1096,13 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       fact_qsat_srf(ic) = zfract_fpc(ic) * fact_qsat_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qsat_soil(ic)
       fact_q_air(ic)    = zfract_fpc(ic) * fact_qair_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qair_soil(ic)
       fact_qsat_trans_srf(ic) = zfract_fpc(ic) * fact_qsat_trans(ic)
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$ACC WAIT(1)
 
     !$ACC END DATA
 
@@ -1163,9 +1142,13 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(TURB_, fact_q_air,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_srf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_trans_srf, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

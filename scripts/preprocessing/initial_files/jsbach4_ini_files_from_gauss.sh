@@ -216,6 +216,7 @@ function prepare_data_from_05_grid {
   # - All 05 deg grids are expected to be identical (lon: 0.25 -> 359.75; lat: -89.75 -> 89.75)
   # - The non-glacier-land mask is expected to be identical for all variables (additional
   #   missing values do not matter)
+  # - Depression storage would be available on resultions up to 15 arcsec if needed
 
   # Soil parameters
   echo "Prepare soil parameter ..."
@@ -230,7 +231,7 @@ function prepare_data_from_05_grid {
 
   if [[ $varlist_05 == *"surf_depr_fract"* ]]; then
     echo "Prepare depression data ..."
-    ${cdo} splitname ${pool_prepare}/05/topo_depres_05deg_1.5.nc             reg_05_
+    ${cdo} splitname ${pool_prepare}/05/depr_stor_cop_05.nc                  reg_05_
   fi
 
   # Non-glacier-land mask

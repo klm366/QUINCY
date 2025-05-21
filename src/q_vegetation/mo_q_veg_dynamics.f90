@@ -51,16 +51,16 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, SPQ_, Q_SH_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_AGR_)
-    dsl4jsb_Use_config(Q_SH_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -84,15 +84,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_AGR_)
-    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
@@ -142,10 +142,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_AGR_)
-    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -155,8 +155,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)         ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                   ! in
@@ -296,14 +296,14 @@ CONTAINS
       ! Standard case: calculate establishment from seed pool
       ! (Exceptions: no establishment on cropland or if we just had a stand replacing harvest running QS)
       IF (.NOT. (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
-        IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
+        IF (.NOT. dsl4jsb_Config(Q_SYL_)%flag_stand_harvest_event) THEN
           CALL calc_veg_establishment( &
             & nc                                  , & ! in
             & dtime                               , &
             & model%config%elements_index_map(:)  , &
             & model%config%is_element_used(:)     , &
             & lctlib%tau_seed_est                 , &
-            & w_soil_root_theta(:)                , &
+            & wtr_rootzone_rel(:)                 , &
             & growing_season(:)                   , &
             & t_air_week_mavg(:)                  , &
             & fpc(:)                              , &
@@ -755,7 +755,7 @@ CONTAINS
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_tau_seed_est         , &
-    & w_soil_root_theta           , &
+    & wtr_rootzone_rel            , &
     & growing_season              , &
     & t_air_week_mavg             , &
     & fpc                         , &
@@ -772,7 +772,7 @@ CONTAINS
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum]
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: wtr_rootzone_rel             !< plant available water [fraction of maximum]
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< growing season
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                          !< folage projective cover
@@ -811,7 +811,7 @@ CONTAINS
     ELSEWHERE
       flim_temp(:) = 1.0_wp - EXP(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero)) ** k_est_temp)
     END WHERE
-    flim_moist(:)  = 1.0_wp - EXP(-(lambda_est_moist * w_soil_root_theta(:)) ** k_est_moist)
+    flim_moist(:)  = 1.0_wp - EXP(-(lambda_est_moist * wtr_rootzone_rel(:)) ** k_est_moist)
 
     !>  1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !>

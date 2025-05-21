@@ -273,7 +273,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -447,7 +447,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -640,7 +640,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -833,7 +833,7 @@ CONTAINS
 
       __acc_attach(var%ptr2d)
 
-      !$acc update device(var%ptr2d)
+      !$ACC UPDATE DEVICE(var%ptr2d)
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)

@@ -131,7 +131,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
-    !X if necessary: REAL(wp) :: dtime, steplen
+    !X if necessary: REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
@@ -147,7 +147,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     ! If process is not active on this tile, do nothing
     !IF (.NOT. tile%Is_process_calculated(<PROCESS_NAME_UPPER_CASE>_)) RETURN
@@ -183,7 +182,7 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
+    !X if necessary: REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
 
     ! Get local variables from options argument
@@ -192,7 +191,6 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

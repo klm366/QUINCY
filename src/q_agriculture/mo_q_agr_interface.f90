@@ -28,16 +28,14 @@ MODULE mo_q_agr_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,   ONLY: t_jsb_process
 
-  dsl4jsb_Use_processes Q_AGR_, VEG_, Q_PHENO_, Q_ASSIMI_, SB_, SPQ_, A2L_
+  dsl4jsb_Use_processes Q_AGR_, VEG_, Q_PHENO_, Q_ASSIMI_, SB_, A2L_
   dsl4jsb_Use_config(Q_AGR_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(Q_PHENO_)
   dsl4jsb_Use_config(Q_ASSIMI_)
   dsl4jsb_Use_config(SB_)
-  dsl4jsb_Use_config(SPQ_)
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(Q_PHENO_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_AGR_)
@@ -102,7 +100,9 @@ MODULE mo_q_agr_interface
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_math_constants,      ONLY: eps4, one_day
     USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_time,                ONLY: is_newyear
     USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
+    USE mo_q_assimi_constants,      ONLY: ic3phot
     USE mo_q_agr_process,           ONLY: calc_crop_phenology, calc_planting_flux, set_crop_n_fixation_status, &
       &                                   update_crop_growth_phase, calc_crop_allocation_factors, calc_fertiliser_application
     ! ----------------------------------------------------------------------------------------------------- !
@@ -118,22 +118,26 @@ MODULE mo_q_agr_interface
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(Q_PHENO_)
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(VEG_)
 
     ! A2L_ 2D
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: daylength_prev_day
+
+    dsl4jsb_Def_memory_tile(Q_AGR_, box_tile)
+    dsl4jsb_Real2D_onChunk :: n_fertiliser_c3
+    dsl4jsb_Real2D_onChunk :: n_fertiliser_c4
 
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onChunk :: crop_type_index
-    dsl4jsb_Real2D_onChunk :: n_fertiliser_c3
-    dsl4jsb_Real2D_onChunk :: n_fertiliser_c4
-    dsl4jsb_Real2D_onChunk :: growth_phase
+    dsl4jsb_Real2D_onChunk :: crop_growth_phase
     dsl4jsb_Real2D_onChunk :: gdd_mavg
     dsl4jsb_Real2D_onChunk :: nd_crop_season
     dsl4jsb_Real2D_onChunk :: nd_crop_season_mavg
+    dsl4jsb_Real2D_onChunk :: crop_season_per_year
+    dsl4jsb_Real2D_onChunk :: crop_season_per_year_mavg
 
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Real2D_onChunk :: beta_soil_gs_tphen_mavg
@@ -149,10 +153,6 @@ MODULE mo_q_agr_interface
     dsl4jsb_Real2D_onChunk :: fertiliser_no3
     dsl4jsb_Real2D_onChunk :: fertiliser_no3_n15
     dsl4jsb_Real2D_onChunk :: fertiliser_po4
-
-    dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Real2D_onChunk :: lai
@@ -180,12 +180,15 @@ MODULE mo_q_agr_interface
     REAL(wp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'
+    REAL(wp),     DIMENSION(options%nc) :: n_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
+    CLASS(t_jsb_tile_abstract), POINTER :: box_tile      !< pointer to the box tile to get the fertiliser data
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get pointers to process configs and memory
     model => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    CALL model%Get_top_tile(box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT.lctlib%CropFlag) RETURN !< do not run this routine at tiles other than croplands
     ! ----------------------------------------------------------------------------------------------------- !
@@ -193,7 +196,6 @@ MODULE mo_q_agr_interface
     dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(Q_PHENO_)
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_AGR_)) RETURN
@@ -212,15 +214,20 @@ MODULE mo_q_agr_interface
 
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, daylength_prev_day)           ! in
+
+    dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c3, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c4, box_tile) ! in
 
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_type_index)            ! in
-    dsl4jsb_Get_var2D_onChunk(Q_AGR_, n_fertiliser_c3)            ! in
-    dsl4jsb_Get_var2D_onChunk(Q_AGR_, n_fertiliser_c4)            ! in
-    dsl4jsb_Get_var2D_onChunk(Q_AGR_, growth_phase)               ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_growth_phase)          ! inout
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, gdd_mavg)                   ! inout
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, nd_crop_season)             ! inout
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, nd_crop_season_mavg)        ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_season_per_year)       ! inout
+    dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_season_per_year_mavg)  ! inout
 
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tphen_mavg) ! in
@@ -229,10 +236,6 @@ MODULE mo_q_agr_interface
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)           ! inout
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, gdd)                      ! inout
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, nd_dormance)              ! inout
-
-    dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock)         ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                ! in
 
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_var2D_onChunk(SB_, fertiliser_nh4)                ! out
@@ -277,7 +280,7 @@ MODULE mo_q_agr_interface
     !>
     !> - Update phenology (GDD, number of days in crop growing season), initialise growing season
     !>
-    CALL calc_crop_phenology(nc,  dtime, &                                                   ! in
+    CALL calc_crop_phenology(nc,  dtime, is_newyear(options%current_datetime, dtime), &      ! in
       &                       lctlib_beta_soil_flush, lctlib_gdd_req_max, &
       &                       lctlib_beta_soil_senescence, lctlib_t_air_senescence, &
       &                       lctlib_cn_leaf, lctlib_np_leaf, &
@@ -285,16 +288,17 @@ MODULE mo_q_agr_interface
       &                       t_air_month_mavg(:), beta_soil_gs_tphen_mavg(:), &
       &                       t_air_tphen_mavg(:), t_soil_srf_tphen_mavg(:), &
       &                       gpp_tlabile_mavg(:), maint_respiration_tlabile_mavg(:), &
-      &                       growing_season(:), &
+      &                       daylength_prev_day(:), growing_season(:), &
+      &                       crop_season_per_year(:), crop_season_per_year_mavg(:), &
       &                       growth_req_n_tlabile_mavg(:), growth_req_p_tlabile_mavg(:), & ! inout
-      &                       gdd(:), gdd_mavg(:), growth_phase(:), nd_dormance(:))
+      &                       gdd(:), gdd_mavg(:), crop_growth_phase(:), nd_dormance(:))
     ! ----------------------------------------------------------------------------------------------------- !
     !>
     !> - Determine establishment flux if this is a planting time step, and set whether the planted crop
     !>   is a N fixing crop (1) or not (0)
     !>
     CALL calc_planting_flux(nc, &                            ! in
-      &                      growth_phase(:), &
+      &                      crop_growth_phase(:), &
       &                      veg_pool_mt(ix_seed_bed,:,:), &
       &                      veg_establishment_mt(:,:))      ! inout
     active_n_fixation(:) = set_crop_n_fixation_status(crop_type_index(:))
@@ -306,26 +310,31 @@ MODULE mo_q_agr_interface
       &                            crop_type_index(:), gdd(:), &
       &                            gdd_mavg(:), lai(:), &
       &                            nd_crop_season(:), nd_crop_season_mavg(:), & ! inout
-      &                            growth_phase(:))
+      &                            crop_growth_phase(:))
     ! ----------------------------------------------------------------------------------------------------- !
     !>
     !> - Calculate crop allocation factors
     !>
     CALL calc_crop_allocation_factors(nc, &
-      &                                crop_type_index(:), growth_phase(:), & ! in
+      &                                crop_type_index(:), crop_growth_phase(:), & ! in
       &                                gdd(:), gdd_mavg(:), lai(:), &
-      &                                leaf2sapwood_mass_ratio(:), &          ! out
+      &                                leaf2sapwood_mass_ratio(:), &               ! out
       &                                leaf2root_mass_ratio(:), &
       &                                falloc_fruit_crop(:))
     ! ----------------------------------------------------------------------------------------------------- !
     !>
     !> - Apply fertiliser if today is a fertiliser day
     !>
-    CALL calc_fertiliser_application(nc, lctlib_ps_pathway, &                      ! in
-      &                               nd_crop_season(:), nd_crop_season_mavg(:), &
-      &                               n_fertiliser_c3(:), n_fertiliser_c4(:), &
-      &                               fertiliser_nh4(:), fertiliser_nh4_n15(:), &  ! out
-      &                               fertiliser_no3(:), fertiliser_no3_n15(:), &
+    IF (lctlib_ps_pathway == ic3phot) THEN
+      n_fertiliser(:) = n_fertiliser_c3
+    ELSE
+      n_fertiliser(:) = n_fertiliser_c4
+    END IF
+
+    CALL calc_fertiliser_application(nc, nd_crop_season(:), nd_crop_season_mavg(:),                  & ! in
+      &                               crop_season_per_year_mavg(:), n_fertiliser(:),                 &
+      &                               fertiliser_nh4(:), fertiliser_nh4_n15(:),                      &  ! out
+      &                               fertiliser_no3(:), fertiliser_no3_n15(:),                      &
       &                               fertiliser_po4(:))
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')

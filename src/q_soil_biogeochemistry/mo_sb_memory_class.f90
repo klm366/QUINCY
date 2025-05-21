@@ -321,6 +321,14 @@ MODULE mo_sb_memory_class
       & enzyme_frac_poly_n_mavg, & !< moving average of enzyme_frac_poly_n [unitless]
       & enzyme_frac_poly_p_mavg    !< moving average of enzyme_frac_poly_p [unitless]
 
+    ! soil physical properties
+    TYPE(t_jsb_var_real3d)  :: &
+      & volume_min_sl       , &  !< soil mineral volumetric fraction
+      & qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
+      & qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+      & qmax_nh4_min_sl     , &  !< maximum nh4 sorption capacity of mineral soil, [mol N kg-1 mineral soil]
+      & qmax_po4_om_sl           !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
+
     !------------------------------------------------------------------------------------------------------ !
     !>2D N and P fertiliser input
     !>
@@ -2901,6 +2909,61 @@ CONTAINS
       CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('enzyme_frac_poly_p_mavg', unitless, 'moving average of enzyme_frac_poly_p'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('volume_min_sl', '', 'soil mineral volumetric proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_org_min_sl', mem%qmax_org_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_org_min_sl', 'mol C kg-1 mineral soil', 'maximum OM sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_po4_min_sl', mem%qmax_po4_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_po4_min_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_nh4_min_sl', mem%qmax_nh4_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_nh4_min_sl', 'mol N kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_po4_om_sl', mem%qmax_po4_om_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_po4_om_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
