@@ -116,11 +116,12 @@ CONTAINS
     ! Initiate stratigraphy
     DO ib = 1, nblks 
 
-      CALL nix_init_stratigraphy(      &
-        & t_sn(:,:,ib),                &
-        & dzm_sn(:,:,ib),              &
-        & weq_snow(:,ib),              &
-        & snow_soil_dens(:,ib)         &
+      CALL nix_init_stratigraphy(                &
+        & t_sn(:,:,ib),                          &
+        & dzm_sn(:,:,ib),                        &
+        & weq_snow(:,ib),                        &
+        & snow_soil_dens(:,ib),                  &
+        & dsl4jsb_Config(NIX_)%itype_nix_start   &
         & ) 
 
     ENDDO
@@ -136,8 +137,9 @@ CONTAINS
     & t_sn,                            &
     & dzm_sn,                          &
     & weq_snow,                        &
-    & snow_soil_dens                   &
-    ) 
+    & snow_soil_dens,                  &
+    & itype_nix_start                  &
+    & ) 
 
     !-----------------------------------------------------------------------
     !  Arguments
@@ -148,6 +150,8 @@ CONTAINS
     REAL(wp), INTENT(IN)    ::  weq_snow(:)         !! snow water equivialent           [m]
     REAL(wp), INTENT(IN)    ::  snow_soil_dens(:)   !! snow density                     [kg/m3]    
 
+    INTEGER,  INTENT(IN)    ::  itype_nix_start     !! type of initialization           [-]
+
 
     !-----------------------------------------------------------------------
     !  Local Variables
@@ -157,39 +161,53 @@ CONTAINS
 
     REAL(KIND = wp) :: &
      & h_snow_nix
-
+ 
+    CHARACTER(len=*), PARAMETER ::  &
+      &  routine = 'mo_nix_init:nix_init_stratigtaphy'
 
     ! Assign local variables    
     nproma = SIZE(t_sn,1)
     nsnow  = SIZE(t_sn,2)
 
+
+    SELECT CASE (itype_nix_start)
  
-    !------------------------------
+    !------------------------------------------------------------------------
     !  GO
 
-    DO ic = 1,nproma
+    !----------------------------
+    ! Case 1 - Hard cold start - All snow is wiped out.
 
-      h_snow_nix = weq_snow(ic) * rhoh2o / snow_soil_dens(ic) 
+    CASE (1)
 
-!IF(h_snow_nix .GT. 0.25_wp) THEN
-!
-!  WRITE(*,*) 'H_SNOW:', h_snow_nix
-!
-!ENDIF
+    !----------------------------
+    ! Case 2 - Soft cold start - Use mandatory analysis fields to initiate
 
-    ENDDO
+    CASE (2)
+
+      CALL message(TRIM(routine), "itype_nix_start = 2 was chosen, soft cold start")
+
+      ! --------------------------
+      ! Compute snow height and top layer index
+      ! --------------------------
+
+      DO ic = 1,nproma
+
+        h_snow_nix = weq_snow(ic) * rhoh2o / snow_soil_dens(ic) 
+
+       ENDDO
 
 
-    DO is = 1, nsnow
-      DO ic = 1, nproma
+      DO is = 1, nsnow
+        DO ic = 1, nproma
 
-        t_sn(ic,is)   = 273.15_wp
-        dzm_sn(ic,is) = h_snow_nix    
+          t_sn(ic,is)   = 273.15_wp
+          dzm_sn(ic,is) = h_snow_nix    
         
-
+        END DO
       END DO
-    END DO
 
+    END SELECT
 
   END SUBROUTINE nix_init_stratigraphy
 

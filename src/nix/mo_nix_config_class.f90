@@ -33,14 +33,16 @@ MODULE mo_nix_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_nix_config
 
-!  ! Logicals
-!  LOGICAL ::    &
-!    active                    !< TRUE:  NIX is switched on 
-                               !< FALSE: NIX is switched off     
-
   INTEGER ::    &
-    nlev_sn                     !< Maximum number of snow layers
+    nlev_sn                    !< Maximum number of snow layers
 
+  INTEGER ::    &              ! > initiation 1: hard cold start; 2: soft cold start;
+    itype_nix_start            !              3: warm start; 4: warm start + snow analysis;
+
+
+  REAL (KIND = wp) ::                   &
+    max_height_layer     , &   ! > maximum height of snow layer
+    min_height_layer           ! > minimum height of snow layer
 
 
   CONTAINS
@@ -72,11 +74,22 @@ CONTAINS
 
     LOGICAL :: active
 
-    INTEGER :: nlev_sn
+    INTEGER :: nlev_sn, &
+      &        itype_nix_start
+
+
+    REAL (KIND = wp) ::                  &
+               max_height_layer        , &      ! > maximum height of snow layer
+               min_height_layer                 ! > minimum height of snow layer
+
+
 
     NAMELIST /jsb_nix_nml/ &
-      & active,                &
-      & nlev_sn                 
+      & active,            &
+      & nlev_sn,           &
+      & itype_nix_start,   &
+      & min_height_layer,  &
+      & max_height_layer                 
 
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -90,9 +103,11 @@ CONTAINS
     
       ! ----------------------------------------------------------------------------------------------------- !
       ! Set defaults
-      active          = .FALSE.
-      nlev_sn         = 10
-
+      active           = .FALSE.
+      nlev_sn          = 10
+      itype_nix_start  = 2
+      min_height_layer = 0.002_wp
+      max_height_layer = 0.01_wp
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! Read namelist
@@ -106,8 +121,11 @@ CONTAINS
       ! ----------------------------------------------------------------------------------------------------- !
       ! Write namelist values into config FIXME: This would also be the place for call's to finish incase settings don't work
       !                                          compare sse_config
-        config%active     = active
-        config%nlev_sn    = nlev_sn 
+        config%active           = active
+        config%nlev_sn          = nlev_sn 
+        config%itype_nix_start  = itype_nix_start
+        config%min_height_layer = min_height_layer
+        config%max_height_lyer  = max_height_layer
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! Add NIX specific vertical grid
