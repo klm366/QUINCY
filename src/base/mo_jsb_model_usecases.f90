@@ -188,7 +188,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tilem veg_tile_snow, veg_tile_no_snow
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, veg_tile_snow, veg_tile_no_snow
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_tmx'
 
