@@ -57,7 +57,7 @@ MODULE mo_jsb4_forcing
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
     &       forcing_options
 
-  REAL(wp), SAVE :: delta_time, time_step_len
+  REAL(wp), SAVE :: delta_time
   INTEGER,  SAVE :: time_steps_per_day
 
   LOGICAL, SAVE :: lstart, lresume
@@ -818,14 +818,14 @@ CONTAINS
   !>
   !> Initialize and configure reading the forcing data (read namelist, set options...)
   !>
-  SUBROUTINE init_forcing(model_id, namelist_filename, dtime, steplen)
+  SUBROUTINE init_forcing(model_id, namelist_filename, dtime)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
     USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
 
     INTEGER,  INTENT(in) :: model_id
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    REAL(wp), INTENT(in) :: dtime, steplen
+    REAL(wp), INTENT(in) :: dtime
 
     TYPE(t_input_file) :: input_file
 
@@ -924,7 +924,6 @@ CONTAINS
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
     delta_time    = dtime
-    time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
     ! Assertion: delta_time needs to be smaller or equal 86400
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &

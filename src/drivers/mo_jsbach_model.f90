@@ -88,7 +88,7 @@ CONTAINS
     USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   num_io_procs, pio_type,                     &
+      &                                   num_io_procs, pio_type, proc0_shift,                                 &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -275,7 +275,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0)
+         &                          pio_type, num_dio_procs=proc0_shift)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -370,7 +370,7 @@ CONTAINS
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime, dtime)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
     END DO
     CALL jsbach_label_run(.TRUE.)
 
@@ -819,6 +819,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c14
     dsl4jsb_Real2D_onDomain :: swpar_srf_down
     dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
     dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
@@ -1099,6 +1100,7 @@ CONTAINS
 
         ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
+        dsl4jsb_Get_var2d_onDomain(A2L_, daylength_prev_day)
         dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
         global_seconds_day = NINT(get_secs_of_day(datetime_new)) ! TODO time steps w/ fractional seconds not supported by quincy, yet!
@@ -1108,7 +1110,7 @@ CONTAINS
           DO ic = 1, nproma
             CALL update_local_time_and_daytime_counter( &
               &     global_seconds_day, dtime, lon(ic, iblk), swpar_srf_down(ic, iblk), &
-              &     daytime_counter(ic, iblk), local_time_day_seconds(ic, iblk))
+              &     daytime_counter(ic, iblk), daylength_prev_day(ic, iblk), local_time_day_seconds(ic, iblk))
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -1173,7 +1175,7 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue

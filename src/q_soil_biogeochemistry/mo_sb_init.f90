@@ -33,7 +33,7 @@ MODULE mo_sb_init
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID
 
-  USE mo_jsb_process_class,       ONLY: SB_, SPQ_, VEG_, A2L_
+  USE mo_jsb_process_class,       ONLY: SB_, HYDRO_, SSE_, VEG_, A2L_
   USE mo_sb_config_class,         ONLY: CONST_DEP, REFYEAR_DEP, TRANS_DEP
 
 #ifndef __QUINCY_STANDALONE__
@@ -120,7 +120,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -144,27 +145,24 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 3D
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onDomain :: num_sl_above_bedrock
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
-    dsl4jsb_Real3D_onDomain :: w_soil_sl
-    dsl4jsb_Real3D_onDomain :: soil_depth_sl             ! (soil_depth_sl == soil_lay_width_sl)
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain :: soil_depth_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_ubound_sl
-    dsl4jsb_Real3D_onDomain :: qmax_org_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_po4_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_nh4_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onDomain :: wtr_soil_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
     dsl4jsb_Real3D_onDomain :: silt_sl
     dsl4jsb_Real3D_onDomain :: clay_sl
-    dsl4jsb_Real3D_onDomain :: volume_min_sl
     ! SB_ 3D
     dsl4jsb_Real3D_onDomain :: nh4_assoc
     dsl4jsb_Real3D_onDomain :: nh4_solute
@@ -206,6 +204,11 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: fact_n_status_mic_c_growth
     dsl4jsb_Real3D_onDomain :: fact_p_status_mic_c_growth
     dsl4jsb_Real3D_onDomain :: enzyme_frac_AP
+    dsl4jsb_Real3D_onDomain :: qmax_org_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_nh4_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onDomain :: volume_min_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -221,7 +224,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -229,22 +233,18 @@ CONTAINS
     sb_pool_mt_domain => bgcm_store%store_2l_3d_bgcms(bgcm_store%idx_in_store(sb_pool_idx))%mt_2l_3d_bgcm(:,:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onDomain(VEG_,   root_fraction_sl)
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onDomain(SPQ_,   num_sl_above_bedrock)     ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   bulk_dens_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_depth_sl)            ! in  (soil_depth_sl == soil_lay_width_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_width_sl)        ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_center_sl) ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_ubound_sl) ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_org_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_nh4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_om_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   silt_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   clay_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   volume_min_sl)
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, num_sl_above_bedrock)     ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)            ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_width_sl)        ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_center_sl) ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_ubound_sl) ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_,   bulk_dens_sl)             ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_,   silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_,   clay_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_assoc)
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_solute)
@@ -286,6 +286,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_n_status_mic_c_growth)
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_p_status_mic_c_growth)
     dsl4jsb_Get_var3D_onDomain(SB_,    enzyme_frac_AP)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_nh4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 init bgcm with zero
@@ -397,7 +402,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & w_soil_sl(:,:,:), &
+        & wtr_soil_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & bulk_soil_carbon_sl(:,:,:), &
@@ -462,7 +467,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & w_soil_sl(:,:,:), &
+        & wtr_soil_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & qmax_po4_min_sl(:,:,:), &
@@ -519,7 +524,7 @@ CONTAINS
     END IF
 
     ! IN
-    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), w_soil_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), wtr_soil_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
 
@@ -546,7 +551,7 @@ CONTAINS
   END SUBROUTINE sb_init_ic_bc
 
   ! ======================================================================================================= !
-  !> de-allocate SPQ_ init vars
+  !> de-allocate SB_ init vars
   !>
   SUBROUTINE sb_finalize_init_vars
     DEALLOCATE( &
@@ -803,7 +808,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & w_soil_sl, &
+    & wtr_soil_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & bulk_soil_carbon_sl, &
@@ -885,7 +890,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: w_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
@@ -1083,7 +1088,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1137,7 +1142,7 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
+          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
         ENDDO
       ENDDO
     ENDDO
@@ -1316,7 +1321,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & w_soil_sl, &
+    & wtr_soil_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & qmax_po4_min_sl, &
@@ -1395,7 +1400,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: w_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
@@ -1679,7 +1684,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1732,7 +1737,7 @@ CONTAINS
         & qmax_nh4_min_sl(:,:,iblk), &       ! in
         & qmax_nh4(:,:,iblk) )               ! out
     END DO
-    qmax_nh4(:,:,:) = qmax_nh4(:,:,:) * w_soil_sl(:,:,:) / soil_depth_sl(:,:,:)
+    qmax_nh4(:,:,:) = qmax_nh4(:,:,:) * wtr_soil_sl(:,:,:) / soil_depth_sl(:,:,:)
     DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &   ! in

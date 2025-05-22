@@ -24,12 +24,12 @@ MODULE mo_hydro_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, message_text, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
@@ -39,7 +39,10 @@ MODULE mo_hydro_interface
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+#ifndef __QUINCY_STANDALONE__
+  dsl4jsb_Use_processes PHENO_
+#endif
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -52,14 +55,32 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
+#ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_memory(PHENO_)
+#endif
+
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_memory(VEG_)
+#endif
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_hydro_tasks, global_hydrology_diagnostics
+  PUBLIC :: Register_hydro_tasks
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: global_hydrology_diagnostics
+#endif
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_surface_hydrology, update_soil_properties, update_soil_hydrology, update_evaporation, &
+    &       update_canopy_cond_unstressed, update_water_stress, update_canopy_cond_stressed, &
+    &       update_snow_and_wet_fraction, update_water_balance
+  ! Currently done in SEB process
+  ! PUBLIC :: update_snow_and_ice_hydrology
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
@@ -150,7 +171,7 @@ MODULE mo_hydro_interface
   !> Type definition for snow_hydrology task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_ice_hydrology
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_snow_and_ice_hydrology
+    PROCEDURE, NOPASS :: Integrate => update_snow_and_ice_hydrology     ! Currently done in SEB process
     PROCEDURE, NOPASS :: Aggregate => aggregate_snow_and_ice_hydrology
   END TYPE tsk_snow_and_ice_hydrology
 
@@ -396,8 +417,13 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: q_snocpymlt
@@ -443,6 +469,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
+    ! quincy
+    dsl4jsb_Real2d_onChunk :: fract_fpc
+
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
@@ -492,6 +521,8 @@ CONTAINS
       & l_latflow_to_streamflow, &
       & ltpe_closed,             &
       & use_tmx
+
+    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -545,7 +576,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
       IF (use_tmx) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)    ! out
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR
       DO ic=1,nc
         runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)
         infilt(ic)   = 0._wp
@@ -555,21 +586,28 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       IF (use_tmx) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR
         DO ic=1,nc
           q_snocpymlt(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
       END IF
 
-      !$ACC WAIT(1)
-
       RETURN
     END IF
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
-      dsl4jsb_Get_memory(PHENO_)
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(VEG_)
+#endif
+      END SELECT
     END IF
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! in
@@ -630,10 +668,40 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_net_flx) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_latflow_srf)  ! out
       IF (tile%contains_vegetation) THEN
+
+        ALLOCATE(fract_fol_proj_cov(nc))
+        !$ACC ENTER DATA CREATE(fract_fol_proj_cov) ASYNC(acc_stream)
+
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
+
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)     ! in
-        dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
-        dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+        SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+        CASE (MODEL_JSBACH)
+          dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
+          dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1, nc
+            fract_fol_proj_cov(ic) = fract_fpc_max(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+        CASE (MODEL_QUINCY)
+          dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
+          dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1, nc
+            fract_fol_proj_cov(ic) = fract_fpc(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+        END SELECT
       END IF
     END IF
 
@@ -641,7 +709,7 @@ CONTAINS
     l_latflow_to_streamflow = .TRUE.
 
     IF (is_experiment_start) THEN ! Start of experiment
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         weq_snow(ic) = 0._wp
       END DO
@@ -649,7 +717,7 @@ CONTAINS
     END IF
 
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
 #ifdef NFORT_BROKEN_INLINES
         !NEC$ noinline
@@ -677,23 +745,22 @@ CONTAINS
         snow_soil_dens(ic) = dens_snow
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, wpi_rootzone, wpi_rootzone_max) &
       !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
-      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc))
+      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc)) ASYNC(acc_stream)
 
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         slope_used(ic)   = steepness(ic)
         flowlag_used(ic) = dtime / ret_macro_srf
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO  ic = 1, nc
           wpi_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
@@ -709,13 +776,13 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO  ic = 1, nc
         wtr_soil(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
@@ -724,8 +791,6 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL
-
-      !$ACC WAIT(1)
 
       ! Compute actual and maximum total rootzone moisture as well as the total water amount in the soil (liquid + ice)
       ! Note, here wpi_rootzone_max is computed based on porosity, not field capacity. This is because it is used to
@@ -738,10 +803,10 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  wpi_rootzone_max(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (tile%contains_vegetation) THEN
-          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
+          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fol_proj_cov(ic)
         ELSE
           skinres_canopy_max(ic) = 0._wp
         END IF
@@ -757,7 +822,6 @@ CONTAINS
         END IF
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       ! Compute soil hydrological properties to get top layer ice impedance and
       ! soil hydrological conductivity for point scale infiltration
@@ -833,17 +897,16 @@ CONTAINS
         & )
 
       ! Update weq_pond storage
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         weq_pond(ic) = wtr_pond(ic) + ice_pond(ic)
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
       !$ACC END DATA
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     IF (tile%is_glacier) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
@@ -865,7 +928,10 @@ CONTAINS
     END IF
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
+    IF (.NOT. tile%is_glacier .AND. tile%contains_vegetation) THEN
+      !$ACC EXIT DATA DELETE(fract_fol_proj_cov) ASYNC(acc_stream)
+      DEALLOCATE(fract_fol_proj_cov)
+    END IF
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -900,6 +966,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_skin,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,       weighted_by_fract)
@@ -927,6 +995,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, le_phase_change_res, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1040,7 +1110,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_wres_sl)        ! out
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is=1,nsoil
       DO ic=1,nc
         hyd_cond_sat_sl   (ic,is) = hyd_cond_sat(ic)
@@ -1068,12 +1138,12 @@ CONTAINS
       ALLOCATE(fract_uncon        (nc, nsoil))  ! fraction of the soil with unconnected organic matter
       ALLOCATE(hyd_cond_sat_uncon (nc, nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
-      !$ACC DATA &
+      !$ACC DATA ASYNC(acc_stream) &
       !$ACC   CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
       !$ACC   CREATE(bclapp_org, matric_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org, vol_wres_org)
 
       ! Use different parameters for top layer and deeper layers
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         hyd_cond_sat_org(ic,1) = hyd_cond_sat_org_top
         vol_porosity_org(ic,1) = vol_porosity_org_top
@@ -1085,7 +1155,7 @@ CONTAINS
         vol_wres_org(ic,1) = vol_wres_org_top
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is=2,nsoil
         DO ic=1,nc
           hyd_cond_sat_org(ic,is) = hyd_cond_sat_org_below
@@ -1103,7 +1173,7 @@ CONTAINS
       ! Saturated hydraulic conductivity following percolation theory
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is=1,nsoil
         DO ic=1,nc
@@ -1151,7 +1221,6 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-      !$ACC WAIT(1)
       !$ACC END DATA
 
       DEALLOCATE(hyd_cond_sat_org)
@@ -1202,6 +1271,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp_sl,          weighted_by_fract)
@@ -1211,6 +1282,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_wres_sl,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_org_sl,       weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1265,8 +1338,7 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
-    REAL(wp), POINTER :: area(:), lat(:), lon(:)
-    REAL(wp) :: tile_fract(options%nc)
+    REAL(wp), POINTER :: area(:), lat(:), lon(:), tile_fract(:)
     REAL(wp) :: slope_used(options%nc)
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
@@ -1298,9 +1370,10 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
 
-    area => grid%area(ics:ice, iblk)
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
+    tile_fract => tile%fract(ics:ice, iblk)
+    area       => grid%area (ics:ice, iblk)
+    lat        => grid%lat  (ics:ice, iblk)
+    lon        => grid%lon  (ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1324,16 +1397,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
-    !$ACC DATA CREATE(l_fract, tile_fract) &
+    !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
 
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-    l_fract(:) = tile_fract(:) > 0._wp
-    !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      l_fract(ic) = tile_fract(ic) > 0._wp
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Setting the depth limit until which the presence of permafrost may affect bottom drainage
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
       l_pf_soil(ic)   = (thaw_depth_max_ym1(ic) < depth_thrsh(ic) .AND. &
@@ -1344,7 +1418,7 @@ CONTAINS
     ! Set to true, until HydroTiles are implemented
     l_latflow_to_streamflow = .TRUE.
     ret_macro_blg = dsl4jsb_Config(HYDRO_)%ret_macro_blg
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       slope_used(ic)   = steepness(ic)
       flowlag_used(ic) = dtime / ret_macro_blg
@@ -1409,7 +1483,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      &
       & )
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     !$ACC LOOP GANG VECTOR
@@ -1428,7 +1502,7 @@ CONTAINS
 
     ! Compute volumetric soil moisture (liquid + ice) in m3/m3 (= m/m) water equivalent
     ! Note that the soil ice content needs to be converted to water equivalent first.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         vol_weq_soil_sl(ic,is) = (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * (rhoi / rhoh2o)) / soil_w%dz(is)
@@ -1436,7 +1510,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1473,6 +1546,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_weq_soil_sl,     weighted_by_fract)
@@ -1494,6 +1569,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1519,8 +1596,15 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
+
+    TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -1539,18 +1623,30 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
+    SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+    CASE (MODEL_JSBACH)
+      dsl4jsb_Get_memory(PHENO_)
+      dsl4jsb_Get_var2D_onChunk(PHENO_,  lai)                   ! IN
+#endif
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_memory(VEG_)
+      dsl4jsb_Get_var2D_onChunk(VEG_,    lai)                   ! IN
+#endif
+    END SELECT
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)        ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       canopy_cond_unlimited(ic) = get_canopy_conductance( lai(ic), swpar_srf_down(ic) )
     END DO
@@ -1588,7 +1684,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_unlimited, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1688,7 +1788,7 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl)
+    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) ASYNC(acc_stream)
 
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
@@ -1702,7 +1802,7 @@ CONTAINS
 
     ! Compute maximum root zone water content based on soil field capacity
     ! (replacing the one used for the ARNO scheme (surface hydrology) based on porosity)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO  ic = 1, nc
         wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
@@ -1717,7 +1817,7 @@ CONTAINS
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is=1,nsoil
         DO ic=1,nc
           wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
@@ -1726,14 +1826,14 @@ CONTAINS
       !$ACC END PARALLEL LOOP
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
       ! Available liquid water in the root zone
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         wtr_rootzone_avail(ic) = wtr_rootzone(ic)
       END DO
@@ -1751,7 +1851,7 @@ CONTAINS
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
       END DO
@@ -1759,13 +1859,13 @@ CONTAINS
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = wpi_rootzone_max(ic)
       END DO
@@ -1774,7 +1874,7 @@ CONTAINS
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       water_stress(ic) = &
         & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
@@ -1783,7 +1883,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
@@ -1794,7 +1894,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1832,6 +1931,8 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! HYDRO_
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wpi_rootzone_max,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_rootzone,           weighted_by_fract)
@@ -1839,6 +1940,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1909,7 +2012,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic=1,nc
       q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
@@ -1920,7 +2023,6 @@ CONTAINS
                                                       )
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1956,7 +2058,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_limited, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2017,7 +2123,7 @@ CONTAINS
       & heat_tcoef        !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, alpha
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -2029,7 +2135,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -2063,7 +2169,7 @@ CONTAINS
       END IF
 
       IF (model%config%use_tmx) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
         !$ACC   PRIVATE(q_air, heat_tcoef)
         DO ic=1,nc
           q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
@@ -2072,11 +2178,11 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
         !$ACC   PRIVATE(q_air, heat_tcoef)
         DO ic=1,nc
           q_air = q_acoef_wtr(ic) * qsat_lwtr(ic) + q_bcoef_wtr(ic) ! New moisture at lowest atmospheric level by back-substitution
-          heat_tcoef = heat_transfer_coef(drag_wtr(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_wtr(ic), dtime, alpha)    ! Transfer coefficient
           evapo_wtr (ic) = heat_tcoef * (q_air - qsat_lwtr(ic))          ! Potential evaporation
         END DO
         !$ACC END PARALLEL LOOP
@@ -2093,7 +2199,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
         IF (model%config%use_tmx) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
           !$ACC   PRIVATE(q_air, heat_tcoef)
           DO ic=1,nc
             q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
@@ -2103,24 +2209,24 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
           !$ACC   PRIVATE(q_air, heat_tcoef)
           DO ic=1,nc
             q_air = q_acoef_ice(ic) * qsat_lice(ic) + q_bcoef_ice(ic) ! New moisture at lowest atmospheric level by back-substitution
-            heat_tcoef = heat_transfer_coef(drag_ice(ic), steplen, alpha)  ! Transfer coefficient
+            heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)    ! Transfer coefficient
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic))          ! Potential evaporation
             evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
           !$ACC END PARALLEL LOOP
         END IF
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           evapopot(ic) = evapo_wtr(ic)
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         evapotrans(ic) = evapopot(ic)
       END DO
@@ -2147,7 +2253,7 @@ CONTAINS
       END IF
 
       IF (model%config%use_tmx) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
         !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
           q_air = q_bcoef(ic)  ! Old moisture at lowest atmospheric level
@@ -2165,11 +2271,11 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
         !$ACC   PRIVATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
         DO ic=1,nc
           q_air = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)       ! New moisture at lowest atmospheric level by back-substitution
-          heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)  ! Transfer coefficient
+          heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)  ! Transfer coefficient
 
           ! Compute effective air moisture and surface saturation humidity
           q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
@@ -2187,8 +2293,6 @@ CONTAINS
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
-
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2230,6 +2334,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration,      weighted_by_fract)
@@ -2238,6 +2344,8 @@ CONTAINS
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,        weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2322,12 +2430,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), DIMENSION(options%nc) :: skinres_canopy_max, skinres_max, heat_tcoef
+    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_wet_fraction'
 
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: pond_dynamics_scheme
-    REAL(wp) :: dtime, steplen, alpha, config_w_skin_max
+    REAL(wp) :: dtime, alpha, config_w_skin_max
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(SEB_)
@@ -2336,7 +2445,12 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
+#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: lai
@@ -2362,6 +2476,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
 
+    ! quincy
+    dsl4jsb_Real2d_onChunk :: fract_fpc
+
     ! ---------------------------
     ! Go
 
@@ -2370,7 +2487,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    steplen = options%steplen
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
@@ -2395,7 +2511,7 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           CALL calc_wskin_fractions_lice( &
             & weq_snow_lice(ic),          & ! in
@@ -2403,7 +2519,6 @@ CONTAINS
             & )
         END DO
         !$ACC END PARALLEL LOOP
-        !$ACC WAIT(1)
       END IF
       RETURN
     END IF
@@ -2411,7 +2526,16 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      dsl4jsb_Get_memory(PHENO_)
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(PHENO_)
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(VEG_)
+#endif
+      END SELECT
     END IF
 
     ! Set pointers
@@ -2437,8 +2561,38 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%contains_vegetation) THEN
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)               ! in
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)     ! in
+
+      ALLOCATE(fract_fol_proj_cov(nc))
+      !$ACC ENTER DATA CREATE(fract_fol_proj_cov) ASYNC(acc_stream)
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        fract_fol_proj_cov(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
+        dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = fract_fpc_max(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
+        dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          fract_fol_proj_cov(ic) = fract_fpc(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+      END SELECT
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)    ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
@@ -2458,13 +2612,13 @@ CONTAINS
     END IF
 #endif
 
-    !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef)
+    !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       ! Maximum capacity of skin reservoir (soil + canopy)
       IF (tile%contains_vegetation) THEN
-        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
+        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fol_proj_cov(ic)
       ELSE
         skinres_canopy_max(ic) = 0._wp
       END IF
@@ -2480,19 +2634,18 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! Transfer coefficient
     IF (model%config%use_tmx) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         heat_tcoef(ic) = ch(ic)  ! TODO: distinguish between wtr and ice?
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), dtime, alpha)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -2522,7 +2675,7 @@ CONTAINS
         & fract_snow_soil(:)         & ! out
         & )
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
@@ -2550,15 +2703,19 @@ CONTAINS
         & fract_wet(:),               & ! out
         & fract_snow_soil(:)          & ! out
         & )
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
     !$ACC END DATA
+
+    IF (tile%contains_vegetation) THEN
+      !$ACC EXIT DATA DELETE(fract_fol_proj_cov) ASYNC(acc_stream)
+      DEALLOCATE(fract_fol_proj_cov)
+    END IF
 
   END SUBROUTINE update_snow_and_wet_fraction
 
@@ -2597,6 +2754,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_skin,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,       weighted_by_fract)
@@ -2606,6 +2765,8 @@ CONTAINS
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_lice,  weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2690,8 +2851,8 @@ CONTAINS
 
     tile_fract => tile%fract(ics:ice, iblk)
     area       => grid%area (ics:ice, iblk)
-    lat        => grid%lat(ics:ice, iblk)
-    lon        => grid%lon(ics:ice, iblk)
+    lat        => grid%lat  (ics:ice, iblk)
+    lon        => grid%lon  (ics:ice, iblk)
 
     tile_contains_soil = tile%contains_soil
 
@@ -2724,9 +2885,7 @@ CONTAINS
 
     n_errors = 0   ! initialize error counter
 
-    !$ACC DATA CREATE(weq_soil, wtr_latflow_res)
-
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res) ASYNC(acc_stream)
 
     ! Calculate total amout of soil water (liquid and frozen)
     IF (tile_contains_soil) THEN
@@ -2779,7 +2938,6 @@ CONTAINS
 #endif
     END DO
     !$ACC END PARALLEL
-    !$ACC END DATA
 
 #ifndef _OPENACC
     IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget /= WB_IGNORE) THEN
@@ -2858,6 +3016,7 @@ CONTAINS
 
   END SUBROUTINE aggregate_water_balance
 
+#ifndef __QUINCY_STANDALONE__
   !-----------------------------------------------------------------------------------------------------
   !> Global land mean hydrology output
   !!
@@ -2997,6 +3156,7 @@ CONTAINS
     DEALLOCATE (scaling, in_domain)
 
   END SUBROUTINE global_hydrology_diagnostics
+#endif
 
 #endif
 END MODULE mo_hydro_interface

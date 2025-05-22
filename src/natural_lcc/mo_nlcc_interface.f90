@@ -199,7 +199,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     model => Get_model(tile%owner_model_id)
 

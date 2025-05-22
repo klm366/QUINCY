@@ -213,7 +213,6 @@ else
 
   # Directory for extpar input data
   # If not running on levante or breeze4, add a case for your machine here
-  #  Note: "extpar_merit_rema_dir" is only needed until the Rema data is updated in "extpar_data_dir"
   case $(hostname) in
     levante*|*.lvt.dkrz.de)
       export extpar_data_dir=/work/pd1167/extpar-input-data
@@ -244,7 +243,7 @@ if [[ ${coupled} == true ]]; then
     # Needs to exist
     export fractional_mask=${icon_grid_rootdir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
     if [[ ! -f ${fractional_mask} ]]; then
-      echo "${script_name}: ERROR: fractional mask file ${fractional_mask} does not exist!"
+      echo "$0: ERROR: fractional mask file ${fractional_mask} does not exist!"
       exit 1
     fi
   fi
@@ -300,11 +299,13 @@ function finish {
 }
 trap finish EXIT
 
-# Directory of this script
-if [[ $SLURM_SUBMIT_DIR == "" ]]; then
+# Name and directory of this script
+if [[ $SLURM_JOB_NAME == "" || $SLURM_JOB_NAME == "interactive" ]]; then
+  # Interactive job
   scripts_dir=$(dirname $0)
-  script_name=$0
+  script_name=./${0##*/}
 else
+  # Batch job
   scripts_dir=$SLURM_SUBMIT_DIR
   script_name=$SLURM_JOB_NAME
 fi

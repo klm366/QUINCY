@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -65,7 +65,8 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -108,7 +109,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
@@ -145,12 +147,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
-    ! SPQ_ 3D
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pot_sl
+    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -297,7 +300,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -344,13 +348,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_p_tlabile_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)                 ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_center_sl)          ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pot_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                         ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_rootzone_rel)              ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_lay_depth_center_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   matric_pot_sl)                 ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                          ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
@@ -487,7 +492,7 @@ CONTAINS
 
     !>1.0 calculate potential growth rate relative to labile pool size
     !>
-    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_rootzone_rel(:), growing_season(:))
 
     !>  1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and
     !>      update N-specific maintenance respiration rate
@@ -947,7 +952,7 @@ CONTAINS
         & root_limitation_state(:)                       , &
         & soil_depth_sl(:,:)                             , &
         & soil_lay_depth_center_sl(:,:)                  , &
-        & w_soil_pot_sl(:,:)                             , &
+        & matric_pot_sl(:,:)                             , &
         & t_soil_sl(:,:)                                 , &
         & nh4_solute(:,:)                                , &
         & no3_solute(:,:)                                , &
@@ -970,7 +975,7 @@ CONTAINS
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
-                                                 w_soil_root_theta, &
+                                                 wtr_rootzone_rel, &
                                                  growing_season) &
                                                  RESULT(kstar_labile)
 
@@ -986,7 +991,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K)
-    REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity)
+    REAL(wp),   INTENT(in)    :: wtr_rootzone_rel       !< soil moisture scalar (fraction of available water holding capacity)
     REAL(wp),   INTENT(in)    :: growing_season         !< is the plant growing?
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! ---------------------------
@@ -1001,7 +1006,7 @@ CONTAINS
       ELSE
         ftemp = 0.0_wp
     ENDIF
-    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * w_soil_root_theta)**k_labile_theta)
+    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_rootzone_rel)**k_labile_theta)
     IF(growing_season > test_false_true)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE
@@ -1300,10 +1305,15 @@ CONTAINS
 
     !> 1.3 apply demand driven reduction in uptake
     !!
-    uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
-    uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
+    SELECT CASE (bnf_scheme)
+    CASE ("unlimited")
+      uptake_nh4(:) = uptake_nh4_pot(:)
+      uptake_no3(:) = uptake_no3_pot(:)
+    CASE DEFAULT
+      uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
+      uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
+    END SELECT
     uptake_po4(:) = demand_uptake_p_tuptake_mavg(:) * uptake_po4_pot(:)
-
 
     !> 2.0 C costs for N acquisition
     !!
@@ -1381,11 +1391,17 @@ CONTAINS
 
       !>3.3 Case 3: Give enough N to maintain N requirement in the labile pool
       !>
-      CASE("unlimited")
+      CASE ("unlimited")
+        ! limit root uptake in case labile pool contains too much N
+        WHERE(labile_nitrogen(:) - labile_carbon(:) * growth_req_n_tlabile_mavg(:) > 0.0_wp)
+          uptake_nh4(:) = 0.0_wp
+          uptake_no3(:) = 0.0_wp
+        ENDWHERE
         ! N fixation in micro-mol N / m2 / s
-        n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / &
+        n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:) &
+          &                 - (uptake_nh4(:) + uptake_no3(:)) * dtime / 1000000._wp, 0.0_wp) / &
           &             dtime * 1000000.0_wp
-    ENDSELECT
+    END SELECT
 
     !>4.0 Determine C use for Root Exudates
     !>
@@ -1442,7 +1458,7 @@ CONTAINS
     SELECT CASE (bnf_scheme)
     !>  4.1 BNF unlimited case is the C-only case, N uptake pathways are assumed not to have a cost
     !>
-    CASE("unlimited")
+    CASE ("unlimited")
       n_transform_respiration(:)  = 0.0_wp
       n_fixation_respiration(:)   = 0.0_wp
     !>  4.2 in all other cases, BNF and N transformation have a respiratory cost
@@ -1459,10 +1475,10 @@ CONTAINS
         uptake_nh4(:) = uptake_nh4(:) * scal(:)
         uptake_no3(:) = uptake_no3(:) * scal(:)
         n_fixation(:) = n_fixation(:) * scal(:)
-      ENDWHERE
+      END WHERE
       n_transform_respiration(:)  = uptake_nh4(:) * transform_cost_nh4 + uptake_no3(:) * transform_cost_no3
       n_fixation_respiration(:)   = n_fixation(:) * k_cost_symb_bnf
-    ENDSELECT
+    END SELECT
     n_processing_respiration(:) = n_fixation_respiration(:) + n_transform_respiration(:)
 
     !> 5.0 update diagnostics and soil related variables, as well as N15 fluxes
@@ -1660,13 +1676,18 @@ CONTAINS
     target_np_fine_root = target_np_leaf / root2leaf_np
     SELECT CASE(lctlib_growthform)
     CASE (itree) ! trees
+      target_np_fruit        = lctlib_np_leaf / root2leaf_np
       target_np_coarse_root  = lctlib_np_leaf / wood2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / wood2leaf_np
-    CASE (igrass, icrop) ! grasses, and crops
+    CASE (igrass) ! grasses
+      target_np_fruit        = lctlib_np_leaf / root2leaf_np
+      target_np_coarse_root  = lctlib_np_leaf / root2leaf_np
+      target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
+    CASE (icrop) ! crops
+      target_np_fruit        = lctlib_np_leaf
       target_np_coarse_root  = lctlib_np_leaf / root2leaf_np
       target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
     END SELECT
-    target_np_fruit = lctlib_np_leaf / root2leaf_np
 
   END SUBROUTINE calc_stoichiometry_changes
 
@@ -1908,13 +1929,19 @@ CONTAINS
            k2_opt = k2_opt_w
         ENDIF
       CASE("dynamic")
-         ! empirical scaling of leaf to root ratio based on nitrogen, phosphorus and water availability
-         n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-         p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-         w_l2r_scal = w_root_lim / w_root_lim_max
-         ! actual ratio is given by the minimum of the three factors
-         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-              lctlib_k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+        ! empirical scaling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
+        w_l2r_scal = w_root_lim / w_root_lim_max
+        ! actual ratio is given by the minimum of the three factors
+        leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+          &                    lctlib_k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
       CASE("fixed")
          ! scaling factor for root to leaf mass
          ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
@@ -1981,9 +2008,15 @@ CONTAINS
           k2_opt = k2_opt_w
         ENDIF
       CASE("dynamic")
-         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-        p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
         w_l2r_scal = w_root_lim / w_root_lim_max
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
@@ -1997,8 +2030,14 @@ CONTAINS
         leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
         ! leaf:root ratio
         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-        p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        SELECT CASE (bnf_scheme)
+        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
+          n_l2r_scal = 1.0_wp
+          p_l2r_scal = 1.0_wp
+        CASE DEFAULT
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+        END SELECT
         w_l2r_scal = w_root_lim / w_root_lim_max
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
@@ -2020,14 +2059,21 @@ CONTAINS
     !>    hence, all '*_l2r_scal' range [0,1] where 0 == strongest limitation, and 1 lowest limitation considered here
     !>  range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1
     !>
-    n_l2r_scal = MIN(1._wp, growth_cn / MAX(eps8, labile_carbon   / MAX(eps8, labile_nitrogen)))
-    p_l2r_scal = MIN(1._wp, growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus)))
+    SELECT CASE (bnf_scheme)
+    ! Assume N and P not affecting root distribution in the unlimited case
+    CASE ("unlimited")
+      n_l2r_scal = 1.0_wp
+      p_l2r_scal = 1.0_wp
+    CASE DEFAULT
+      n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+      p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+    END SELECT
     w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
-    IF(n_l2r_scal <= p_l2r_scal) THEN
+    IF (n_l2r_scal <= p_l2r_scal) THEN
       root_limitation_state =  0.5_wp + 0.5_wp * (w_l2r_scal - n_l2r_scal)
     ELSE
       root_limitation_state = -0.5_wp - 0.5_wp * (w_l2r_scal - p_l2r_scal)
-    ENDIF
+    END IF
 
   END SUBROUTINE calc_allometry
 
@@ -3194,7 +3240,7 @@ CONTAINS
                                             root_limitation_state            , &
                                             soil_depth_sl                    , &
                                             soil_lay_depth_center_sl         , &
-                                            w_soil_pot_sl                    , &
+                                            matric_pot_sl                    , &
                                             t_soil_sl                        , &
                                             nh4_solute_sl                    , &
                                             no3_solute_sl                    , &
@@ -3221,7 +3267,7 @@ CONTAINS
                                                        root_limitation_state            !< dominating limiting factor affecting root growth
     REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m)
                                                        soil_lay_depth_center_sl     , & !< soil layer axis (m)
-                                                       w_soil_pot_sl                , & !< soil moisture potential (MPa)
+                                                       matric_pot_sl                , & !< soil moisture potential (MPa)
                                                        t_soil_sl                    , & !< soil temperature (K)
                                                        nh4_solute_sl                , & !< plant available NH4 (mol N / m3)
                                                        no3_solute_sl                , & !< plant available NO3 (mol N / m3)
@@ -3250,9 +3296,9 @@ CONTAINS
         hlp1(ic,:) = 0.0_wp
         IF(root_limitation_state(ic) >= 0.0_wp) THEN
           hlp1(ic,:) = root_limitation_state(ic) * (nh4_solute_sl(ic,:) + no3_solute_sl(ic,:)) &
-            &          + (1._wp - root_limitation_state(ic)) * MAX(w_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
+            &          + (1._wp - root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
         ELSE ! note sign difference!
-          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(w_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
+          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
             &          - root_limitation_state(ic) * po4_solute_sl(ic,:)
         ENDIF
       END DO

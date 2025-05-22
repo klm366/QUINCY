@@ -36,12 +36,12 @@ MODULE mo_hydro_memory_class
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_control,      ONLY: jsbach_runs_standalone
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_model_class,  ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
-  USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
+  USE mo_jsb_varlist,      ONLY: NONE, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
@@ -62,7 +62,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 115   !< Maximum number of 'Add_var' calls in this module
+  INTEGER, PARAMETER :: max_no_of_vars = 130   !< Maximum number of 'Add_var' calls in this module
 
   !> Memory of the HYDRO process:
   !> _Note for the ford documentation_: The table lists the general jsbach memory variables
@@ -116,10 +116,18 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real3d) :: &
-      & soil_depth_sl,        & !< Depth of each soil layer until bedrock                [m]
+      & soil_depth_sl,        & !< Thickness of each soil layer until bedrock            [m]
       & fract_org_sl            !< Fractions of organic material in soil layers          []
+
+    TYPE(t_jsb_var_real3d) :: &
+      & soil_lay_width_sl, &        !< thickness of each soil layer that can be saturated with water, identical with soil_depth_sl (until bedrock) [m]
+      & soil_lay_depth_center_sl, & !< depth at the center of each soil layer that can be saturated with water (until bedrock) [m]
+      & soil_lay_depth_ubound_sl, & !< depth at the upper bounddary (ubound > lbound !) of each soil layer that can be saturated with water (until bedrock) [m]
+      & soil_lay_depth_lbound_sl    !< depth at the lower bounddary (ubound > lbound !) of each soil layer that can be saturated with water (until bedrock) [m]
+
     TYPE(t_jsb_var_real2d) :: &
       & soil_depth,           & !< Soil depth until bedrock                              [m]
+      & num_sl_above_bedrock, & !< number of soil layers (thickness > eps8) above bedrock[]
       & wpi_rootzone_max ,    & !< Maximum amount of water or ice in the root zone       [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                        [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                    [m/m]
@@ -128,6 +136,7 @@ MODULE mo_hydro_memory_class
       & pore_size_index,      & !< Soil pore size distribution index                     []
       & bclapp,               & !< Exponent B in Clapp and Hornberger                    []
       & matric_pot,           & !< Soil matric potential                                 [m]
+      & matric_pot_root,      & !< Soil matric potential in the root zone                [m]
       & hyd_cond_sat            !< Saturated hydraulic conductivity                      [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
@@ -183,6 +192,15 @@ MODULE mo_hydro_memory_class
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
       & wtr_latflow_sl          !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
+
+    TYPE(t_jsb_var_real2d) :: &
+      & w_skin,           &     !< Water content in skin reservoir                                    [m]
+      & w_soil_root_fc,   &     !< Water content at field capacity in root zone of the soil           [m]
+      & w_soil_root_pwp         !< Water content at permanent wilting point in root zone of the soil  [m]
+
+    TYPE(t_jsb_var_real3d) :: &
+      & frac_w_lat_loss_sl, &   !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
+      & percolation_sl          !< fraction of material transferred to below layer                                             [fraction s-1]
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real3d) ::   &
@@ -288,6 +306,7 @@ CONTAINS
     REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
     LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
     LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
+    LOGICAL  :: lrestart_local                  !< add var to restart file, model specific (quincy/jsbach)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
 
@@ -321,6 +340,11 @@ CONTAINS
     END IF
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
 
+    ! set local lrestart switch to TRUE for the MODEL_QUINCY
+    lrestart_local = .FALSE.
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      lrestart_local = .TRUE.
+    END IF
 
     ! Variables defined on all tiles
     ! -------------------------------
@@ -630,9 +654,25 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
+          & hgrid, surface, &
+          & t_cf('num_sl_above_bedrock', '[unitless]', 'number of soil layers above bedrock'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart=.TRUE., &
+          & initval_r=0.0_wp)
+      END SELECT
+#endif
+
       CALL mem%Add_var( 'soil_depth_sl', mem%soil_depth_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('soil_depth_sl', 'm', 'Soil depth within each soil layer'),     &
+        & t_cf('soil_depth_sl', 'm', 'Thickness of each soil layer'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE.,                                                      &
@@ -648,6 +688,55 @@ CONTAINS
           & lrestart=.TRUE.,                                                         &
           & initval_r=0.0_wp )
       END IF
+
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        CALL mem%Add_var('soil_lay_width_sl', mem%soil_lay_width_sl, &
+          & hgrid, soil_w, &
+          & t_cf('soil_lay_width_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('soil_lay_depth_center_sl', mem%soil_lay_depth_center_sl, &
+          & hgrid, soil_w, &
+          & t_cf('soil_lay_depth_center_sl', 'm', 'Depth at the center of each soil layer, until bedrock'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('soil_lay_depth_ubound_sl', mem%soil_lay_depth_ubound_sl, &
+          & hgrid, soil_w, &
+          & t_cf('soil_lay_depth_ubound_sl', 'm', 'Depth at the upper boundary of each soil layer, until bedrock'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('soil_lay_depth_lbound_sl', mem%soil_lay_depth_lbound_sl, &
+          & hgrid, soil_w, &
+          & t_cf('soil_lay_depth_lbound_sl', 'm', 'Depth at the lower boundary of each soil layer, until bedrock'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      END SELECT
+#endif
 
       CALL mem%Add_var( 'wpi_rootzone_max', mem%wpi_rootzone_max,                    &
         & hgrid, surface,                                                            &
@@ -761,12 +850,22 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        CALL mem%Add_var( 'matric_pot_root', mem%matric_pot_root,                &
+          & hgrid, surface,                                                      &
+          & t_cf('matric_pot_root', 'm', 'Soil saturated matric potential root zone'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & initval_r=0.0_wp)
+      END SELECT
+
       CALL mem%Add_var( 'matric_pot_sl', mem%matric_pot_sl,                    &
         & hgrid, soil_w,                                                       &
         & t_cf('matric_pot_sl', 'm', 'Soil saturated matric potential'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart = lrestart_local,                                           &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'hyd_cond_sat', mem%hyd_cond_sat,                           &
@@ -1170,6 +1269,7 @@ CONTAINS
 
 #ifndef __QUINCY_STANDALONE__
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
+#endif
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,            &
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_unlimited', 'm/s',                                         &
@@ -1185,6 +1285,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., initval_r=0.0_wp )
+#ifndef __QUINCY_STANDALONE__
       END IF
 #endif
 
@@ -1197,7 +1298,67 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    END IF
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        CALL mem%Add_var('w_skin', mem%w_skin, &
+          & hgrid, surface, &
+          & t_cf('w_skin', 'm', 'Water content in skin reservoir'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
+          & hgrid, surface, &
+          & t_cf('w_soil_root_fc', 'm', 'Water content at field capacity in root zone of the soil'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('w_soil_root_pwp', mem%w_soil_root_pwp, &
+          & hgrid, surface, &
+          & t_cf('w_soil_root_pwp', 'm', 'Water content at permanent wilting point in root zone of the soil'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('frac_w_lat_loss_sl', mem%frac_w_lat_loss_sl, &
+          & hgrid, soil_w, &
+          & t_cf('frac_w_lat_loss_sl', '', 'fraction of lateral (horizontal) water loss of w_soil_sl_old'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = NONE, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('percolation_sl', mem%percolation_sl, &
+          & hgrid, soil_w, &
+          & t_cf('percolation_sl', 'fraction s-1', 'fraction of mass transferred to below layer'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      END SELECT
+#endif
+
+    END IF ! VEG_TYPE/LAND_TYPE
 
     ! Additional variables for tiles containing GLACIER lct
     ! --------------------------

@@ -21,7 +21,7 @@ MODULE mo_sse_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -43,6 +43,10 @@ MODULE mo_sse_interface
   PRIVATE
 
   PUBLIC :: Register_sse_tasks
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_soil_and_snow_temperature, update_soil_and_snow_properties
+#endif
 
   !> Type definition for soil_temp_and_hydro task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_and_snow_temp
@@ -271,14 +275,15 @@ CONTAINS
     lstart = is_time_experiment_start(options%current_datetime)
     l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
 
-    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_soil_top) &
+    !$ACC ENTER DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(snow_depth, snow_fract, t_soil_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
     ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-    !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
     DO ic = 1, nc
       ! Save old ground heat flux and heat capacity before updating
@@ -290,8 +295,9 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
-      ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
-      !$ACC UPDATE DEVICE(ldglac) ASYNC(1)
+      !$ACC KERNELS DEFAULT(PRESENT) ASYNC(acc_stream)
+      ldglac(:) = tile%is_glacier
+      !$ACC END KERNELS
 
       CALL calc_soiltemp_old(                          &
         & nc,                                          &
@@ -314,8 +320,7 @@ CONTAINS
         & )
 
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA &
+      !$ACC EXIT DATA ASYNC(acc_stream) &
       !$ACC   DELETE(snow_depth, snow_fract, t_soil_top) &
       !$ACC   DELETE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
@@ -330,9 +335,9 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
 #ifdef _CRAYFTN
         ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
         DO ic = 1,nc
           snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / snow_soil_dens(ic)
@@ -341,9 +346,9 @@ CONTAINS
       ELSE
 #ifdef _CRAYFTN
         ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
         DO ic = 1,nc
           snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / dens_snow
@@ -354,9 +359,9 @@ CONTAINS
       ! Calculate top snow layer for previous time step
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         itop_old(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._wp)
@@ -366,9 +371,9 @@ CONTAINS
       ! Calculate depths of snow layers
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
       DO isnow=1,nsnow
         DO ic = 1,nc
@@ -379,9 +384,9 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
@@ -396,13 +401,11 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(1)
+      !$ACC PARALLEL PRESENT(sse__mem, seb__mem, hydro__mem) ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 #endif
       !$ACC LOOP SEQ
       DO isnow=nsnow,1,-1
@@ -420,9 +423,9 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         snow_depth_sl(ic,nsnow) = snow_depth_sl(ic,nsnow) + snow_depth(ic)
@@ -433,9 +436,9 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         itop(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._wp)
@@ -463,9 +466,9 @@ CONTAINS
       IF (.NOT. l_uniform_snow) THEN
 #ifdef _CRAYFTN
         ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
         DO ic = 1, nc
           IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN
@@ -481,9 +484,9 @@ CONTAINS
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
       DO isnow = 1,nsnow
         DO ic = 1, nc
@@ -494,9 +497,9 @@ CONTAINS
 
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1, nc
         snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / dens_snow
@@ -537,12 +540,12 @@ CONTAINS
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
-      !$ACC ENTER DATA CREATE(ws_max_sl)
+      !$ACC ENTER DATA CREATE(ws_max_sl) ASYNC(acc_stream)
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
 #endif
       DO is = 1,nsoil
         DO ic = 1, nc
@@ -588,8 +591,7 @@ CONTAINS
         & ice_melt_sl                         (:,:), &
         & wtr_soil_pot_scool_sl               (:,:)  &
         & )
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(ws_max_sl)
+      !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
 
       CALL calc_snow_abcoeff( &
@@ -621,9 +623,9 @@ CONTAINS
     IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         thaw_depth_max_ym1(ic) = thaw_depth_max(ic)
@@ -633,9 +635,9 @@ CONTAINS
     ELSE
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         thaw_depth_max(ic) = MAX(thaw_depth_max(ic),thaw_depth(ic))
@@ -646,9 +648,9 @@ CONTAINS
     IF (.NOT. tile%is_glacier) THEN
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP PRESENT(sse__mem, seb__mem, hydro__mem) GANG VECTOR ASYNC(acc_stream)
 #else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
         IF (.NOT. l_uniform_snow .AND. snow_depth_sl(ic,nsnow) > 0._wp) THEN
@@ -665,8 +667,8 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
-    !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_soil_top, hcap_grnd_snow) &
+    !$ACC EXIT DATA ASYNC(acc_stream) &
+    !$ACC   DELETE(snow_depth, snow_fract, t_soil_top, hcap_grnd_snow) &
     !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -703,6 +705,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_acoef,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_bcoef,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,        weighted_by_fract)
@@ -724,6 +728,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -815,7 +821,7 @@ CONTAINS
 
     ! On glacier tile, set variables and return
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
@@ -846,8 +852,8 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
-      !$ACC ENTER DATA CREATE(fract_org_sl)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC ENTER DATA CREATE(fract_org_sl) ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           fract_org_sl(ic,is) = 0._wp
@@ -858,9 +864,9 @@ CONTAINS
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
-      !$ACC ENTER DATA CREATE(fract_water, fract_ice)
+      !$ACC ENTER DATA CREATE(fract_water, fract_ice) ASYNC(acc_stream)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           IF (soil_depth_sl(ic,is) > 0._wp) THEN
@@ -875,15 +881,15 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ALLOCATE(vol_heat_cap_tmp(nc,nsoil), vol_heat_cap_org_tmp(nc,nsoil))
-      !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, vol_heat_cap_org_tmp)
+      !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, vol_heat_cap_org_tmp) ASYNC(acc_stream)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         vol_heat_cap_tmp    (ic,1) = vol_heat_cap(ic)
         vol_heat_cap_org_tmp(ic,1) = vol_hcap_org_top
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 2, nsoil
         DO ic = 1, nc
           vol_heat_cap_tmp    (ic,is) = vol_heat_cap(ic)
@@ -892,7 +898,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           vol_heat_cap_sl(ic,is) = calc_vol_heat_capacity(          &
@@ -909,11 +915,10 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp)
+      !$ACC EXIT DATA DELETE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp) ASYNC(acc_stream)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           vol_heat_cap_sl(ic,is) = vol_heat_cap(ic)
@@ -926,9 +931,9 @@ CONTAINS
 
       ALLOCATE(heat_cond_tmp(nc,nsoil), vol_porosity_org_tmp(nc,nsoil), &
              & hcond_org_tmp(nc,nsoil), hcond_dry_org_tmp(nc,nsoil))
-      !$ACC ENTER DATA CREATE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
+      !$ACC ENTER DATA CREATE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp) ASYNC(acc_stream)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         heat_cond_tmp(ic,1)         = heat_cond(ic)
         vol_porosity_org_tmp(ic,1)  = vol_porosity_org_top
@@ -937,7 +942,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 2, nsoil
         DO ic = 1, nc
           heat_cond_tmp(ic,is)        = heat_cond(ic)
@@ -948,7 +953,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           heat_cond_sl (ic,is) = calc_thermal_conductivity( &
@@ -966,11 +971,10 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp)
+      !$ACC EXIT DATA DELETE(heat_cond_tmp, vol_porosity_org_tmp, hcond_org_tmp, hcond_dry_org_tmp) ASYNC(acc_stream)
       DEALLOCATE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp)
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           heat_cond_sl(ic,is) = heat_cond(ic)
@@ -980,15 +984,14 @@ CONTAINS
     END IF
 
     IF (.NOT. (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil)) THEN
-      !$ACC WAIT(1)
-      !$ACC EXIT DATA DELETE(fract_org_sl)
+      !$ACC EXIT DATA DELETE(fract_org_sl) ASYNC(acc_stream)
       DEALLOCATE(fract_org_sl)
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
             vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
@@ -1005,7 +1008,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           vol_heat_cap_snow(ic) = vol_hcap_snow  ! Use specific heat of snow (cs * dens_snow)
           heat_cond_snow   (ic) = hcond_snow
@@ -1013,7 +1016,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         vol_heat_cap_snow(ic) = vol_hcap_snow    ! Use specific heat of snow (cs * dens_snow)
         heat_cond_snow   (ic) = hcond_snow
@@ -1055,10 +1058,14 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, heat_cond_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_snow, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, heat_cond_snow,    weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -90,9 +90,10 @@ MODULE mo_a2l_memory_class
       & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
-    TYPE(t_jsb_var_real2d) ::   &
-      & daytime_counter       , &  !< number of timesteps of current day with light available [#]
-      & local_time_day_seconds     !< seconds passed on this day (local cell time)
+    TYPE(t_jsb_var_real2d) ::     &
+      & daytime_counter         , &  !< number of timesteps of current day with light available [#]
+      & daylength_prev_day      , &  !< time of previous day with light available [s]
+      & local_time_day_seconds       !< seconds passed on this day (local cell time)
 
     ! For slow soil pool spin-up accelerator
     TYPE(t_jsb_var_real2d) ::   &
@@ -580,6 +581,17 @@ CONTAINS
       CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
         & hgrid, surface, &
         & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('daylength_prev_day', mem%daylength_prev_day, &
+        & hgrid, surface, &
+        & t_cf('daylength_prev_day', 's', 'time of previous day with light available'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

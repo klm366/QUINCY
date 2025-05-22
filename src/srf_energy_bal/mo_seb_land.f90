@@ -22,13 +22,13 @@ MODULE mo_seb_land
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, message_text, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
-  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
@@ -41,6 +41,11 @@ MODULE mo_seb_land
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
+
+#ifndef __NO_QUINCY__
+  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_memory(VEG_)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -75,6 +80,9 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(VEG_)
+#endif
 
     LOGICAL                :: lstart
 
@@ -127,6 +135,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: pch
     dsl4jsb_Real2D_onChunk :: richardson
 
+    ! VEG_
+    dsl4jsb_Real2D_onChunk :: height
+
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc)  :: &
@@ -151,7 +162,7 @@ CONTAINS
     LOGICAL  :: l_freeze_config, l_supercool_config, use_tmx, l_skin_temp
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, steplen, alpha
+    REAL(wp) :: dtime, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday, jsb_standalone
     INTEGER  :: ilct
@@ -162,8 +173,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    dtime = options%dtime
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -205,6 +215,13 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      veg__mem => NULL()
+      dsl4jsb_Get_memory(VEG_)
+    END SELECT
+#endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
@@ -282,13 +299,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star) &
-    !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract, t_radref) &
+    !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract, t_radref)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     IF (use_tmx) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         is_glacier(ic) = tile%is_glacier
       END DO
@@ -297,7 +314,7 @@ CONTAINS
       IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
         DO ilct=1,SIZE(tile%lcts)
           IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic=1,nc
               is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._wp
             END DO
@@ -306,7 +323,7 @@ CONTAINS
           END IF
         END DO
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           is_glacier(ic) = .FALSE.
         END DO
@@ -316,9 +333,11 @@ CONTAINS
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
-    tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
-    !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=ics,ice
+      tile_fract_zero(ic-ics+1) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._wp
+    END DO
+    !$ACC END PARALLEL LOOP
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
@@ -326,7 +345,7 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(t_air_in_Celcius)
     DO ic=1,nc
 
@@ -358,7 +377,7 @@ CONTAINS
     l_freeze_config        = dsl4jsb_Config(SSE_)%l_freeze
     l_supercool_config     = dsl4jsb_Config(SSE_)%l_supercool
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
 
       ! Save old surface temperature and saturation spec. humidity
@@ -440,7 +459,8 @@ CONTAINS
       CALL update_surface_temperature_standalone ( &
           & tile, options, lstart, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), press_srf(:), &
           & t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), &
-          & heat_cap(:), skin_conductivity, t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
+          & heat_cap(:), skin_conductivity, height, &                               ! optional arguments come without '(:)'
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
           & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:) &
         )
     ELSE IF (use_tmx) THEN
@@ -457,14 +477,14 @@ CONTAINS
         )
     ELSE
       CALL update_surface_temperature_oneshot ( &
-          & nc, alpha, steplen, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), press_srf(:), &
+          & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), press_srf(:), &
           & rad_srf_net(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), &
           & skin_conductivity, t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), s_star(:), &
           & s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:) &
         )
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
 
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
@@ -476,7 +496,6 @@ CONTAINS
         t_srf(ic) = tpfac2 * s_srf(ic) / t2s_conv(ic) + tpfac3 * t_srf_old(ic)
       END IF
 
-      ! TODO Check whether both lines are necessary.
       t_star(ic) = s_star(ic) / t2s_conv(ic)
       qsat_star(ic) = qsat_star(ic) + dQdT(ic) * (t_star(ic) * t2s_conv(ic) - s_star(ic)) / t2s_conv(ic)
 
@@ -503,12 +522,11 @@ CONTAINS
 #endif
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       t_eff4(ic) = t_radref(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_radref(ic))
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     !$ACC END DATA
 
@@ -519,7 +537,7 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_standalone ( &
         & tile, options, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
-        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, &
+        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, height, &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, drag_srf, richardson, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, &
         & t_radref &
       )
@@ -553,6 +571,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
     REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(wp), OPTIONAL, INTENT(IN) :: height(:)
 
     REAL(wp), INTENT(OUT) :: t_acoef(:)
     REAL(wp), INTENT(OUT) :: t_bcoef(:)
@@ -580,7 +599,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic, iter
     INTEGER  :: model_scheme
-    REAL(wp) :: alpha, steplen
+    REAL(wp) :: alpha, dtime
 
     LOGICAL :: l_skin_temp
 
@@ -594,7 +613,7 @@ CONTAINS
     ice = options%ice
     nc = options%nc
     alpha = options%alpha
-    steplen = options%steplen
+    dtime = options%dtime
 
     seb__conf => NULL()
     turb__mem => NULL()
@@ -608,21 +627,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)  ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)  ! in
 
-    !$ACC DATA CREATE(ddrag_srf, t_star) ASYNC(1)
+    !$ACC DATA CREATE(ddrag_srf, t_star) ASYNC(acc_stream)
     IF (l_skin_temp) THEN
-      !$ACC DATA CREATE(s_srf_in) ASYNC(1)
+      !$ACC DATA CREATE(s_srf_in) ASYNC(acc_stream)
 
       IF (lstart) THEN
         CALL update_drag( &
           ! INTENT in
-          & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+          & nc, dtime, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
           & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
           & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
           & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
-          & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+          & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+          & height = height) ! vegetation height (quincy specific)
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           ! We are still missing the top-layer heat capacity here, so no actual skin temperature calculation is possible.
           s_star(ic) = t2s_conv(ic) * t(ic)
@@ -634,7 +655,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           ! Save s_srf since we don't want to update it between iterations.
           s_srf_in(ic) = s_srf(ic)
@@ -656,18 +677,21 @@ CONTAINS
           ! Update drag and exchange coefficients based on external forcing data
           CALL update_drag( &
             ! INTENT in
-            & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+            & nc, dtime, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
             & t_star(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
             & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
             & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
             ! INTENT out
-            & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+            & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+            ! optional (INTENT(IN)) argument
+            & height = height) ! vegetation height (quincy specific)
 
-          !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
+          !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) &
+          !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
           DO ic = 1, nc
             IF (.NOT. tile_fract_zero(ic)) THEN
-              heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
-              dheat_tcoef = heat_transfer_coef(ddrag_srf(ic), steplen, alpha)
+              heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
+              dheat_tcoef = heat_transfer_coef(ddrag_srf(ic), dtime, alpha)
 
               ! Update reference point and linearizations
               rad_net_star = rad_srf_net(ic) + stbo * zemiss_def * (t(ic)**4 - t_star(ic)**4)
@@ -682,7 +706,7 @@ CONTAINS
 
               CALL skin_temp_implicit(                                & ! in
                 & alpha,                                              & ! in
-                & steplen,                                            & ! in
+                & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
                 & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -705,7 +729,7 @@ CONTAINS
       END IF
       !$ACC END DATA
     ELSE ! l_skin_temp
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
         dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
@@ -716,21 +740,23 @@ CONTAINS
       ! Update drag and exchange coefficients based on external forcing data
       CALL update_drag( &
           ! INTENT in
-        & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & nc, dtime, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
         & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
-        & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:))
+        & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+        & height = height) ! vegetation height (quincy specific)
 
       ! Get Asselin filter coefficient
       eps = get_asselin_coef()
 
       ! Compute the updated surface temperature to be used for a filtered drag computation
       ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(s_ref)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(s_ref)
       DO ic = 1, nc
-        heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+        heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
@@ -739,7 +765,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( steplen, alpha,             & ! in
+          CALL surface_temp_implicit( dtime, alpha,             & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -764,18 +790,20 @@ CONTAINS
       ! Update drag based on updated surface temperature and filtered richardson number
       CALL update_drag( &
           ! INTENT in
-        & nc, steplen, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
+        & nc, dtime, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
         & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
         & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
         & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
           ! INTENT out
         & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
+          ! optional (INTENT(IN)) argument
+        & height = height, & ! vegetation height (quincy specific)
           ! Optional variables for filtering
         & t_srf_upd=t_star(:), zril_old=richardson(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(heat_tcoef, s_ref)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(heat_tcoef, s_ref)
       DO ic = 1, nc
-        heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+        heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
@@ -784,7 +812,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( steplen, alpha,             & ! in
+          CALL surface_temp_implicit( dtime, alpha,             & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -810,7 +838,7 @@ CONTAINS
 
 
   SUBROUTINE update_surface_temperature_oneshot ( &
-        & nc, alpha, steplen, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
+        & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
         & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, t_acoef, t_bcoef, q_acoef, q_bcoef, &
         & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref &
       )
@@ -819,7 +847,7 @@ CONTAINS
 
     INTEGER, INTENT(IN) :: nc
     REAL(wp), INTENT(IN) :: alpha
-    REAL(wp), INTENT(IN) :: steplen
+    REAL(wp), INTENT(IN) :: dtime
 
     LOGICAL, INTENT(IN) :: lstart
     LOGICAL, INTENT(IN) :: l_skin_temp
@@ -856,7 +884,7 @@ CONTAINS
     REAL(wp) :: heat_tcoef
 
     IF (lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         s_star(ic) = t2s_conv(ic) * t(ic)
         s_srf(ic) = s_star(ic)
@@ -867,7 +895,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(s_ref, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) NO_CREATE(skin_conductivity) PRIVATE(s_ref, heat_tcoef)
       DO ic = 1, nc
         IF (tile_fract_zero(ic)) THEN
           s_star(ic) = t2s_conv(ic) * 280._wp
@@ -877,7 +905,7 @@ CONTAINS
           qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.TRUE.)
           dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
         ELSE
-          heat_tcoef = heat_transfer_coef(drag_srf(ic), steplen, alpha)
+          heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
           t_radref(ic) = t(ic)
           qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
@@ -888,7 +916,7 @@ CONTAINS
           IF (l_skin_temp) THEN
             CALL skin_temp_implicit(                                & ! in
               & alpha,                                              & ! in
-              & steplen,                                            & ! in
+              & dtime,                                              & ! in
               & t2s_conv(ic),                                       & ! in
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
               & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -902,7 +930,7 @@ CONTAINS
           ELSE
             CALL surface_temp_implicit(                             & ! in
               & alpha,                                              & ! in
-              & steplen,                                            & ! in
+              & dtime,                                              & ! in
               & t2s_conv(ic),                                       & ! in
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
               & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -973,7 +1001,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_unfilt
 
     INTEGER :: iblk, ics, ice, nc, niter, ic, iter
-    REAL(wp) :: alpha, steplen
+    REAL(wp) :: alpha, dtime
 
     LOGICAL :: l_skin_temp
     REAL(wp) :: s_ref, rad_net_star
@@ -985,7 +1013,7 @@ CONTAINS
     ice = options%ice
     nc = options%nc
     alpha = options%alpha
-    steplen = options%steplen
+    dtime = options%dtime
 
     seb__conf => NULL()
     seb__mem => NULL()
@@ -1001,10 +1029,10 @@ CONTAINS
     niter = dsl4jsb_Config(SEB_)%niter_tmx
     l_skin_temp = dsl4jsb_Config(SEB_)%l_skin_temp
 
-    !$ACC DATA CREATE(t_star, s_srf_in) ASYNC(1)
+    !$ACC DATA CREATE(t_star, s_srf_in) ASYNC(acc_stream)
 
     IF (lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         s_star(ic) = t2s_conv(ic) * t(ic)
         s_srf(ic) = s_star(ic)
@@ -1021,7 +1049,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     ELSE
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Save s_srf since we don't want to update it between iterations.
         s_srf_in(ic) = s_srf(ic)
@@ -1041,7 +1069,7 @@ CONTAINS
 
       ! For consistency with previous implementation, 1 is added to the iteration count.
       DO iter = 1, niter + 1
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(s_ref)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) NO_CREATE(skin_conductivity) PRIVATE(s_ref)
         DO ic = 1, nc
           IF (.NOT. tile_fract_zero(ic)) THEN
             t_radref(ic) = t_star(ic)
@@ -1061,7 +1089,7 @@ CONTAINS
               s_srf(ic) = s_srf_in(ic)
               CALL skin_temp_implicit(                                & ! in
                 & alpha,                                              & ! in
-                & steplen,                                            & ! in
+                & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
                 & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -1075,7 +1103,7 @@ CONTAINS
             ELSE
               CALL surface_temp_implicit(                             & ! in
                 & alpha,                                              & ! in
-                & steplen,                                            & ! in
+                & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
                 & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -1095,7 +1123,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC WAIT(1)
         IF (iter < niter + 1) CALL update_exchange_coefficients(tile, options)
 
       END DO ! iter
@@ -1330,7 +1357,7 @@ CONTAINS
   END SUBROUTINE update_ground_heat_flux
 
 
-  SUBROUTINE surface_temp_implicit(alpha, steplen,     &
+  SUBROUTINE surface_temp_implicit(alpha, dtime,       &
     &            pcp,                                  &
     &            pescoe, pfscoe, peqcoe, pfqcoe,       &
     &            psold, pqsold, pdqsold,               &
@@ -1349,7 +1376,7 @@ CONTAINS
       & als
 
     REAL(wp), INTENT(in)    :: alpha
-    REAL(wp), INTENT(in)    :: steplen
+    REAL(wp), INTENT(in)    :: dtime
     ! REAL(wp), INTENT(in)    :: pcp(:), pfscoe(:), pescoe(:), pfqcoe(:), peqcoe(:)
     ! REAL(wp), INTENT(in)    :: psold(:), pqsold(:), pdqsold(:)
     ! REAL(wp), INTENT(in)    :: pnetrad(:), pgrdfl(:)
@@ -1370,7 +1397,7 @@ CONTAINS
 
     ! nc = SIZE(psold)
 
-    pdt     = alpha * steplen
+    pdt     = alpha * dtime
     !pc16    = cpd * cpvd1
 
     ! DO ic=1,nc
@@ -1411,7 +1438,7 @@ CONTAINS
   END SUBROUTINE surface_temp_implicit
 
   SUBROUTINE skin_temp_implicit ( &
-        & alpha, steplen, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, qsat_srf_old, &
+        & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, qsat_srf_old, &
         & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf, &
         & fract_snow, heat_cap, lambda_sk, s_srf, s_star, dT_sk_dT_srf, limit_dt &
       )
@@ -1425,7 +1452,7 @@ CONTAINS
       & zemiss_def
 
     REAL(wp), INTENT(IN) :: alpha
-    REAL(wp), INTENT(IN) :: steplen
+    REAL(wp), INTENT(IN) :: dtime
     REAL(wp), INTENT(IN) :: t2s_conv
     REAL(wp), INTENT(IN) :: t_acoef
     REAL(wp), INTENT(IN) :: t_bcoef
@@ -1521,7 +1548,7 @@ CONTAINS
     ! This modification effectively deactivates the skin when the cell is snow-covered, ensuring s_star ~= s_srf.
     lambda_sk_eff = lambda_sk + fract_snow * (LAMBDA_SK_SNOW - lambda_sk)
 
-    tl_impedance = alpha * steplen / heat_cap
+    tl_impedance = alpha * dtime / heat_cap
     t_tl_acoef = (tl_impedance * lambda_sk_eff) / (1._wp + tl_impedance * lambda_sk_eff)
     t_tl_bcoef = (s_srf / t2s_conv + tl_impedance * forc_hflx) / (1._wp + tl_impedance * lambda_sk_eff)
 
@@ -1529,8 +1556,10 @@ CONTAINS
     L_s = fract_snow * als + (1._wp - fract_snow) * fact_qsat_srf * alv
 
     ! Differential sensible and latent heat conductivities between atmosphere and skin layer.
-    dcond_sen = MIN(0._wp, heat_tcoef * t2s_conv * (t_acoef - 1._wp) + dheat_tcoef * ((t_acoef - 1._wp) * s_old + t_bcoef))
-    dcond_lat = MIN(0._wp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old))
+    dcond_sen = MIN(0._wp, heat_tcoef * t2s_conv * (t_acoef - 1._wp) + dheat_tcoef &
+      &         * ((t_acoef - 1._wp) * s_old + t_bcoef))
+    dcond_lat = MIN(0._wp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef &
+      &         * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old))
 
     denom = lambda_sk_eff * (1._wp - t_tl_acoef) + 4._wp * stbo * zemiss_def * t_old**3 &
         & - dcond_sen - dcond_lat
@@ -1608,7 +1637,7 @@ CONTAINS
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
       IF (eps > 0._wp) THEN
         t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))
@@ -1621,7 +1650,6 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1666,7 +1694,7 @@ CONTAINS
       & frozen_fract
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: steplen, alpha
+    REAL(wp) :: dtime, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1677,7 +1705,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime = options%dtime
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
@@ -1719,8 +1747,8 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC DATA CREATE(s_air, heat_tcoef, frozen_fract) ASYNC(acc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
 
       s_air(ic) = t_acoef(ic) * s_star(ic) + t_bcoef(ic)
@@ -1728,7 +1756,7 @@ CONTAINS
       IF (use_tmx) THEN
         sensible_hflx(ic) = ch(ic) * (s_air(ic) - s_star(ic))             ! Sensible heat flux
       ELSE
-        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen, alpha) ! Transfer coefficient
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), dtime, alpha) ! Transfer coefficient
         sensible_hflx(ic) = heat_tcoef(ic) * (s_air(ic) - s_star(ic))     ! Sensible heat flux
       END IF
 
@@ -1754,7 +1782,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')

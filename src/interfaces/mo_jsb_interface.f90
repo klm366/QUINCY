@@ -34,8 +34,10 @@ MODULE mo_jsb_interface
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_time_experiment_start
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, &
+                                    is_time_experiment_start, is_time_restart
   USE mo_jsb_physical_constants, ONLY: cvdifts
+  USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
   dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
 
@@ -44,6 +46,7 @@ MODULE mo_jsb_interface
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
   PUBLIC :: jsbach_get_var
+  PUBLIC :: invalidate_cuda_graphs
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -52,6 +55,8 @@ MODULE mo_jsb_interface
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
+  LOGICAL :: invalidate_cuda_graphs ! If true, all the existing graphs will be deleted
+                                    ! For example, after reading new data or at the start of a new day
 
 CONTAINS
 
@@ -66,7 +71,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & rain,             &
@@ -140,8 +145,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -258,7 +262,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
+      & dtime=dtime, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -482,7 +486,7 @@ CONTAINS
     & model_id,         &
     & iblk, ics, ice,   &
     & current_datetime, &
-    & dtime, steplen,   &
+    & dtime,            &
     & t_air,            &
     & q_air,            &
     & press_air,        &
@@ -530,8 +534,7 @@ CONTAINS
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -593,7 +596,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, steplen=steplen, alpha=1._wp)
+      & dtime=dtime, alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -753,6 +756,18 @@ CONTAINS
     END IF
 #endif
 
+    ! If this is .true., old graphs will be invalidated and the new ones will be captured
+    invalidate_cuda_graphs = .FALSE.
+    IF (     is_time_experiment_start(current_datetime) .OR. is_time_restart(current_datetime)  &
+        .OR. is_newday(current_datetime, dtime) .OR. is_newyear(current_datetime, dtime) ) THEN
+      ! Invalidate graphs when the workflow is changing
+      invalidate_cuda_graphs = .TRUE.
+    END IF
+
+    ! Save time interpolation weights for further usage
+    ! This simplifies access of the weights in case of CUDA graphs
+    CALL cache_time_interpolation_weights()
+
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
@@ -765,10 +780,10 @@ CONTAINS
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
-  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen, init)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, dtime, init)
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
-    USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
+    USE mo_jsb_time,    ONLY: is_newmonth
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
     USE mo_seb_interface,      ONLY: global_seb_diagnostics, seb_check_temperature_range
@@ -790,12 +805,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: steplen
+    REAL(wp),                  INTENT(in) :: dtime
     LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    REAL(wp)                            :: dtime
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: linit
@@ -822,9 +836,7 @@ CONTAINS
     CALL model%Reset_tiles()
 
     ! Update options
-    CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
-
-    dtime = model%options(no_omp_thread)%dtime
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
@@ -884,9 +896,9 @@ CONTAINS
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
     CASE (1)
-      l_trace_memory = is_newmonth(current_datetime, steplen)
+      l_trace_memory = is_newmonth(current_datetime, dtime)
     CASE (2)
-      l_trace_memory = is_newday(current_datetime, steplen)
+      l_trace_memory = is_newday(current_datetime, dtime)
     CASE (3)
       l_trace_memory = .TRUE.
     END SELECT
@@ -906,11 +918,12 @@ CONTAINS
     & tile,                  &
     & ics, ice, iblk,        &
     & arr1d, arr2d, arr3d,   &
-    & ptr1d, ptr2d, ptr3d, lacc)
+    & ptr1d, ptr2d, ptr3d,   &
+    & lacc, opt_acc_async_queue)
 
     USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
     USE mo_jsb_process_class, ONLY: Get_process_id
-    USE mo_fortran_tools,     ONLY: copy, set_acc_host_or_device
+    USE mo_fortran_tools,     ONLY: copy, set_acc_host_or_device, set_acc_async_queue
 
     CHARACTER(len=*),  INTENT(in)          :: var_name
                                               !< Name of requested variable including the leading process name
@@ -927,6 +940,9 @@ CONTAINS
                                               !< Pointers to the requested variable (section); must not be associated
     LOGICAL, OPTIONAL, INTENT(in)          :: lacc
                                               !< Switch whether the variables should be copied to GPU
+    INTEGER, OPTIONAL, INTENT(in)          :: opt_acc_async_queue
+                                              !< OpenACC async queue to use, default is 1
+    INTEGER :: acc_async_queue
 
     TYPE(t_jsb_model),           POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
@@ -941,6 +957,7 @@ CONTAINS
     LOGICAL :: lzacc
 
     CALL set_acc_host_or_device(lzacc, lacc)
+    CALL set_acc_async_queue(acc_async_queue, opt_acc_async_queue)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -1022,7 +1039,7 @@ CONTAINS
           IF (SIZE(arr1d,1) /= nc) THEN
             CALL finish(routine, 'arr1d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:), lacc=lzacc)
+            CALL copy(var_ptr%ptr2d(ics:ice,iblk), arr1d(:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr1d or arr1d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -1034,7 +1051,7 @@ CONTAINS
           IF (SIZE(arr2d,1) /= nc .OR. SIZE(arr2d,2) /= SIZE(var_ptr%ptr3d,2)) THEN
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
-            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr3d(ics:ice,:,iblk), arr2d(:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
           END IF
         ELSE
           CALL finish(routine, 'argument ptr2d or arr2d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
@@ -1051,7 +1068,7 @@ CONTAINS
             CALL finish(routine, 'arr2d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr2d(:,:), arr2d(:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
 !$OMP END PARALLEL
           END IF
         ELSE
@@ -1066,7 +1083,7 @@ CONTAINS
             CALL finish(routine, 'arr3d dimension mismatch')
           ELSE
 !$OMP PARALLEL
-            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:), lacc=lzacc)
+            CALL copy(var_ptr%ptr3d(:,:,:), arr3d(:,:,:), lacc=lzacc, opt_acc_async_queue=acc_async_queue)
 !$OMP END PARALLEL
           END IF
         ELSE

@@ -47,7 +47,7 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_, SPQ_
+    USE mo_jsb_process_class,               ONLY: VEG_, HYDRO_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_grid, Get_vgrid
     USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
@@ -63,7 +63,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
@@ -84,12 +84,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onDomain    :: root_depth
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
-    ! SPQ_ 3D
+    dsl4jsb_Real2D_onDomain    :: root_depth
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain      :: target_cn_leaf
@@ -190,17 +190,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
     veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, num_sl_above_bedrock)
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_depth_ubound_sl)
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)        ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)

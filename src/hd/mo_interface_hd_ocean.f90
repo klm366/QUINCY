@@ -30,6 +30,7 @@ MODULE mo_interface_hd_ocean
   USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+  USE mo_jsb_control,        ONLY: acc_stream
 
   dsl4jsb_Use_processes HYDRO_, HD_
   dsl4jsb_Use_config(HD_)
