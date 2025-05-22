@@ -56,7 +56,7 @@ CONTAINS
   !> Run agriculture init
   !>
   SUBROUTINE q_agr_init(tile)
-    USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, def_crop_type, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy
+    USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy
     USE mo_q_assimi_constants,    ONLY: ic3phot
     dsl4jsb_Use_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -99,7 +99,6 @@ CONTAINS
     lctlib_ps_pathway = dsl4jsb_Lctlib_param(ps_pathway)
 
     !---- For QS: Determine crop type index from latitudes
-    ! crop_type_index(:,:) = def_crop_type
     ! set defaults based on photosynthesis type and latitude
     IF (lctlib_ps_pathway == ic3phot) THEN ! C3 Crops
       DO ic = 1,nproma

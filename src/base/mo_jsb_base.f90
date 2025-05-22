@@ -49,6 +49,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
+    USE mo_quincy_model_config, ONLY: QLAND
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
@@ -63,7 +64,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, Q_AGR_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -77,6 +78,7 @@ CONTAINS
     dsl4jsb_Use_config(PPLCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
+    dsl4jsb_Use_config(Q_AGR_)
 #endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -93,6 +95,7 @@ CONTAINS
     dsl4jsb_Def_config(PPLCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(Q_AGR_)
 #endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
@@ -198,6 +201,8 @@ CONTAINS
        END IF
 
       CALL model%Set_mode(model%config%hsm_mode)
+      ! Disable multi-queue processing for QUINCY while it's not ready
+      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
 
       surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)
@@ -287,6 +292,20 @@ CONTAINS
           END IF
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
         END IF
+
+        !... assert that syl and agr are only active in land mode
+        dsl4jsb_Get_config(Q_AGR_)
+        IF (model%config%qmodel_id /= QLAND) THEN
+          IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+            CALL message(TRIM(routine), 'Warning: agriculture can currently only be active in land mode, set active to .FALSE.')
+            dsl4jsb_Config(Q_AGR_)%active = .FALSE.
+          END IF
+          IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+            CALL message(TRIM(routine), 'Warning: sylviculture can currently only be active in land mode, set active to .FALSE.')
+            dsl4jsb_Config(Q_SYL_)%active = .FALSE.
+          END IF
+        END IF
+
 #endif
 
       CASE (MODEL_JSBACH)
@@ -384,7 +403,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_11pS_pfts', 'quincy_13_pfts')
+    CASE ('quincy_11_pfts', 'quincy_13_pfts_for_coupling', 'quincy_11pS_pfts', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

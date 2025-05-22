@@ -47,7 +47,8 @@
 # 12: TrC:  C4 crop
 # 13: BSO:  bare soil
 # 14: UAR:  urban area
-# 15: CSH:  evergreen (needleleaf) cool low shrubs                             
+# 15: CSH:  evergreen (needleleaf) cool low shrubs 
+# 16: BSH:  tall broadleaf decidious shrubs
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 15 # number of landcover types
@@ -61,7 +62,7 @@ LandcoverClass 3 3 3 3 3 3 4 4 7 7 6 6 0 0 5 5
         
 #growthform: vegetation growth form (itree: 1; igrass: 2)        
 # JSBACH4: (tree: 0; grass: 1)        
-growthform 1 1 1 1 1 1 2 2 2 2 2 2 2 2 1
+growthform 1 1 1 1 1 1 2 2 2 2 2 2 2 2 1 1
         
 #ps_pathway: Photosynthetic pathway (ic3phot: 1, ic4phot: 2)        
 # JSBACH4: C4flag (C3: 0; C4: 1)        

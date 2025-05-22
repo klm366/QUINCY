@@ -51,7 +51,7 @@
 # 16: BSH:  tall broadleaf decidious shrubs
 #----------------------------------------------------------------------------------------                             
                              
-NLCT 15 # number of landcover types
+NLCT 16 # number of landcover types
         
 #----------------------------------------------------------------------------------------                             
 #LctNumber: Landcover type index numbers (not used in the model)                             
@@ -250,11 +250,11 @@ wood_density 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.2
 k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 125.0 500.0 
         
 #k_crtos: coarse root to sapwood mass ratio         
-k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1 1
+k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1.0 1.0
         
 #k_rtos: trade-off parametr for hydraulic investment into sapwood or fine roots         
 # Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
-k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
         
 #k2_fruit_alloc: maximum fraction of biomass growth going to fruits         
 k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.1 0.1
