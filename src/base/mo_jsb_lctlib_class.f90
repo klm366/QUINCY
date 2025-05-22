@@ -1684,7 +1684,7 @@ CONTAINS
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
     ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling', 'quincy_13_pfts')
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif

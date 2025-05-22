@@ -29,7 +29,6 @@ MODULE mo_jsb_interface
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
-  USE mo_q_atmland_interface, ONLY: update_atm2land_quincy, update_land2atm_quincy
   USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
@@ -268,8 +267,28 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 2.0 Put atmospheric forcing into the a2l memory
     !>
+
+    ! In case of quincy: check if model setup is supported
+#ifndef __NO_QUINCY__
+    IF (model_scheme == MODEL_QUINCY) THEN
+      IF(.NOT. model%config%usecase == 'quincy_13_pfts_for_coupling') THEN
+        CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
+          &  //' would be quincy_13_pfts_for_coupling, not '// model%config%usecase)
+      END IF
+
+#ifdef _OPENACC
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+
+      IF (model%config%qmodel_id /= QCANOPY) THEN
+        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      END IF
+#endif
+
+    END IF
+#endif
+
+
     CALL model%Get_top_tile(tile)
-    IF (.NOT. model_scheme == MODEL_QUINCY) THEN
       CALL update_atm2land(                           &
         & tile,                                       &
         & model%options(no_omp_thread),               &
@@ -306,66 +325,7 @@ CONTAINS
         & q_acoef_ice        = q_acoef_ice,           &
         & q_bcoef_ice        = q_bcoef_ice            &
         & )
-#ifndef __NO_QUINCY__
-    ELSE
-      IF(.NOT. model%config%usecase == 'quincy_11_pfts_for_coupling') THEN
-        CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
-          &  //' would be quincy_11_pfts_for_coupling, not '// model%config%usecase)
-      ENDIF
 
-#ifdef _OPENACC
-      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
-
-      IF (model%config%qmodel_id /= QCANOPY) THEN
-        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
-      ENDIF
-#endif
-
-      CALL update_atm2land_quincy(                    &
-        & tile,                                       &
-        & model%options(no_omp_thread),               &
-        & t_air              = t_air(:),              &
-        & q_air              = q_air(:),              &
-        & rain               = rain(:),               &
-        & snow               = snow(:),               &
-        & wind_air           = wind_air(:),           &
-        & wind_10m           = wind_10m(:),           &
-        & lw_srf_down        = lw_srf_down(:),        &
-        & swvis_srf_down     = swvis_srf_down(:),     &
-        & swnir_srf_down     = swnir_srf_down(:),     &
-        & swpar_srf_down     = swpar_srf_down(:),     &
-        & fract_par_diffuse   = fract_par_diffuse(:), &
-        & press_srf          = press_srf(:),          &
-        & drag_srf           = drag_srf(:),           &
-        & t_acoef            = t_acoef(:),            &
-        & t_bcoef            = t_bcoef(:),            &
-        & q_acoef            = q_acoef(:),            &
-        & q_bcoef            = q_bcoef(:),            &
-        & pch                = pch(:),                &
-        & cos_zenith_angle   = cos_zenith_angle(:),   &
-        & CO2_air            = CO2_air(:),            &
-        & DEBUG_VAR          = DEBUG_VAR,             &
-        & nhx_deposition     = nhx_deposition,        &
-        & noy_deposition     = noy_deposition,        &
-        & nhx_n15_deposition = nhx_n15_deposition,    &
-        & noy_n15_deposition = noy_n15_deposition,    &
-        & p_deposition       = p_deposition,          &
-        & CO2_mixing_ratio_c13 = CO2_mixing_ratio_c13(:), &
-        & CO2_mixing_ratio_c14 = CO2_mixing_ratio_c14(:)  &
-        ! For lakes
-        ! & drag_wtr           = drag_wtr,              &
-        ! & drag_ice           = drag_ice,              &
-        ! & t_acoef_wtr        = t_acoef_wtr,           &
-        ! & t_bcoef_wtr        = t_bcoef_wtr,           &
-        ! & q_acoef_wtr        = q_acoef_wtr,           &
-        ! & q_bcoef_wtr        = q_bcoef_wtr,           &
-        ! & t_acoef_ice        = t_acoef_ice,           &
-        ! & t_bcoef_ice        = t_bcoef_ice,           &
-        ! & q_acoef_ice        = q_acoef_ice,           &
-        ! & q_bcoef_ice        = q_bcoef_ice            &
-        & )
-#endif
-      ENDIF
     NULLIFY(tile)
 
 
@@ -380,7 +340,6 @@ CONTAINS
     !> 4.0 Give the required variables back to the atmosphere
     !>
     CALL model%Get_top_tile(tile)
-    IF (.NOT. model_scheme == MODEL_QUINCY) THEN
       CALL update_land2atm(                        &
         & tile,                                    &
         & model%options(no_omp_thread),            &
@@ -420,49 +379,6 @@ CONTAINS
         & albedo_lwtr        = albedo_lwtr,        &
         & albedo_lice        = albedo_lice         &
         & )
-#ifndef __NO_QUINCY__
-    ELSE
-      CALL update_land2atm_quincy(                 &
-        & tile,                                    &
-        & model%options(no_omp_thread),            &
-        & t_srf              = t_srf,              &
-        & t_eff_srf          = t_eff_srf,          &
-        & qsat_srf           = qsat_srf,           &
-        & s_srf              = s_srf,              &
-        & fact_q_air         = fact_q_air,         &
-        & fact_qsat_srf      = fact_qsat_srf,      &
-        & evapopot           = evapopot,           &
-        & evapotrans         = evapotrans,         &
-        & latent_hflx        = latent_hflx,        &
-        & sensible_hflx      = sensible_hflx,      &
-        & grnd_hflx          = grnd_hflx,          &
-        & grnd_hcap          = grnd_hcap,          &
-        & rough_h_srf        = rough_h_srf,        &
-        & rough_m_srf        = rough_m_srf,        &
-        & q_snocpymlt        = q_snocpymlt,        &
-        & alb_vis_dir        = alb_vis_dir,        &
-        & alb_nir_dir        = alb_nir_dir,        &
-        & alb_vis_dif        = alb_vis_dif,        &
-        & alb_nir_dif        = alb_nir_dif,        &
-        & CO2_flux           = CO2_flux,           &
-        & t_lwtr             = t_lwtr,             &
-        & qsat_lwtr          = qsat_lwtr,          &
-        & s_lwtr             = s_lwtr,             &
-        & evapo_wtr          = evapo_wtr,          &
-        & latent_hflx_wtr    = latent_hflx_wtr,    &
-        & sensible_hflx_wtr  = sensible_hflx_wtr,  &
-        & t_lice             = t_lice,             &
-        & qsat_lice          = qsat_lice,          &
-        & s_lice             = s_lice,             &
-        & evapo_ice          = evapo_ice,          &
-        & latent_hflx_ice    = latent_hflx_ice,    &
-        & sensible_hflx_ice  = sensible_hflx_ice,  &
-        & ice_fract_lake     = ice_fract_lake,     &
-        & albedo_lwtr        = albedo_lwtr,        &
-        & albedo_lice        = albedo_lice         &
-        & )
-#endif
-    ENDIF
     NULLIFY(tile)
 
     ! ----------------------------------------------------------------------------------------------------- !
