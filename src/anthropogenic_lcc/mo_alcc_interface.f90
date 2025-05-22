@@ -349,14 +349,27 @@ CONTAINS
             lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
           END IF
         END DO
-
+        
+        ! Assert: if the gained area is bigger than the intial area, then gained area is set to initial area Mingyue Zhang
         DO ic = 1,nc
-          !Assert: if the lost area is bigger than the intial area, then lost area is set to initial area
+          !Assert: if the lost area is bigger than the intial area, then lost area is set to initial area Mingyue Zhang
           IF (lost_area(ic, i_tile) > initial_area(ic, i_tile)) THEN
             lost_area(ic, i_tile) = initial_area(ic, i_tile)
             WRITE (message_text,*) 'Violation of assertion: lost area is bigger than initial area! Please check input data. ' &
               & // 'Difference: ', lost_area(ic, i_tile) - initial_area(ic, i_tile)
           END IF  
+
+          ! Ensure lost_area and initial_area are within the valid range [0.0_wp, 1.0_wp]
+          IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp) &
+              & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp)) THEN
+            CALL message(TRIM(routine), 'Adjusting lost_area and initial_area to be within [0.0_wp, 1.0_wp].')
+          
+            ! Clamp lost_area to the range [0.0_wp, 1.0_wp]
+            lost_area = MIN(1.0_wp, MAX(0.0_wp, lost_area))
+          
+            ! Clamp initial_area to the range [0.0_wp, 1.0_wp]
+            initial_area = MIN(1.0_wp, MAX(0.0_wp, initial_area))
+          ENDIF
         END DO
 
         IF (.NOT. dynamic_tile) THEN
