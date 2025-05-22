@@ -327,4 +327,4 @@ VegRoughness 2.0 1.0 1.0 1.0 1.4 1.4 0.5 0.5 0.5 0.5 0.5 0.5 0.005 1.0 0.2 0.5
 MinVegRoughness 2.0 1.0 1.0 1.0 1.0 1.0 0.005 0.005 0.005 0.005 0.005 0.005 0.005 1.0 0.05 0.1
 
 #MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
-MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.5 1
+MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.5 1.0

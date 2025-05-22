@@ -748,7 +748,8 @@ CONTAINS
       &                              'TrH:  C4 grass',                              &
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
-      &                              'BSO:  bare soil' ]            
+      &                              'BSO:  bare soil']
+
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13 /)
@@ -883,10 +884,10 @@ CONTAINS
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
       &                              'CSH:  low NE shrubs',                         &
-      &                              'BSH:  BD shrubs'             ]
+      &                              'BSH:  BD shrubs'          ]
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
-    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,14,15 /)
+    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,15,16 /)
     CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_11pS_pfts'
 
     ! overview of tile structure:

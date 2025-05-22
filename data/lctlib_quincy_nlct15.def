@@ -204,7 +204,7 @@ bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 1.0
 lambda_est_light 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5
         
 #k_est_light: parameter in the Weibull function controlling light-limited establishment         
-k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0
+k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 2.0 4.0
         
 #seed_size: seed size (mol C)        
 seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.5
