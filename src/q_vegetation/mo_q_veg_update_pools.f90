@@ -518,7 +518,10 @@ CONTAINS
           IF (model%config%is_element_used(id_elem)) THEN
             ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
             DO ix_comp = 1, nr_of_veg_bgcm_comp
-              veg_pool_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_pool_mt(ix_comp, ix_elem, ic))
+              IF (veg_pool_mt(ix_comp,ix_elem,ic) < 0.0_wp) THEN
+                ! Nullify all elements, e.g: in case of N<0 it breaks any consistency for C,P,... when not set to 0
+                veg_pool_mt(ix_comp,:,ic) = 0.0_wp
+              ENDIF
             END DO
           END IF
         END DO
