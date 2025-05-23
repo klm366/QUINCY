@@ -436,7 +436,8 @@ CONTAINS
     & kh,               &
     & km,               &
     & kh_neutral,       &
-    & km_neutral        &
+    & km_neutral,       &
+    & CO2_flux          &
     & )
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_tmx'
@@ -488,7 +489,8 @@ CONTAINS
       & kh                (:), &
       & km                (:), &
       & kh_neutral        (:), &
-      & km_neutral        (:)
+      & km_neutral        (:), &
+      & CO2_flux          (:)
 
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
@@ -567,7 +569,8 @@ CONTAINS
       & kh                 = kh,                 &
       & km                 = km,                 &
       & kh_neutral         = kh_neutral,         &
-      & km_neutral         = km_neutral          &
+      & km_neutral         = km_neutral,         &
+      & CO2_flux           = CO2_flux            &
       & )
     NULLIFY(tile)
 
