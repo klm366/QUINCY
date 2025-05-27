@@ -85,9 +85,15 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
 #ifdef __QUINCY_STANDALONE__
+    model  => Get_model(tile%owner_model_id)
+    IF (model%config%use_soil_phys_jsbach) THEN
+      CALL qs_sse_init_bc(tile)
+      CALL sse_init_ic(tile)
+    END IF
 #else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
@@ -311,7 +317,75 @@ CONTAINS
     END IF
 
   END SUBROUTINE sse_read_init_vars
+#endif
 
+#ifdef __QUINCY_STANDALONE__
+  SUBROUTINE qs_sse_init_bc(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model), POINTER :: model
+    CHARACTER(len=*), PARAMETER :: routine = modname//':qs_sse_init_bc'
+
+    dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_memory(SSE_)
+
+    dsl4jsb_Real2D_onDomain :: vol_heat_cap
+    dsl4jsb_Real2D_onDomain :: heat_cond
+    dsl4jsb_Real3D_onDomain :: sand_sl
+    dsl4jsb_Real3D_onDomain :: silt_sl
+    dsl4jsb_Real3D_onDomain :: clay_sl
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting QS soil energy boundary conditions for tile '//TRIM(tile%name))
+
+    model => get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_memory(SSE_)
+
+    dsl4jsb_Get_var2D_onDomain(SSE_, vol_heat_cap)
+    dsl4jsb_Get_var2D_onDomain(SSE_, heat_cond)
+    dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+
+    !> sand
+    !>
+    sand_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_sand
+    !> silt
+    !>
+    silt_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_silt
+    !> clay
+    !>
+    clay_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_clay
+    !> bulk density
+    !>
+    bulk_dens_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_bulk_density
+
+    ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+    CALL soil_init_from_texture( &
+      &     heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc, &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     vol_heat_cap(:,:))
+
+    ! calculate soil heat conductivity incl. organic fraction
+    CALL soil_init_from_texture( &
+      &     heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     heat_cond(:,:))
+
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(vol_heat_cap(:,:), heat_cond(:,:)) &
+    !$ACC   DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:))
+    !$ACC WAIT(1)
+
+  END SUBROUTINE qs_sse_init_bc
+#else
   SUBROUTINE sse_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -365,6 +439,7 @@ CONTAINS
     !$ACC WAIT(1)
 
   END SUBROUTINE sse_init_bc
+#endif
 
   SUBROUTINE sse_init_ic(tile)
 
@@ -407,12 +482,16 @@ CONTAINS
       CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
 
     ELSE
+#ifdef __QUINCY_STANDALONE__
+      dsl4jsb_var_ptr(SSE_,t_soil_sl) = 273.15_wp
+#else
       DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
         CALL init_soil_temperature(                   &
           & soil_e%levels(:),                         &
           & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
           & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk))
       END DO
+#endif
     END IF
 
     !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl)) ASYNC(1)
@@ -432,9 +511,11 @@ CONTAINS
 
     ! Note: called from model_init now
     ! CALL init_soil_properties(tile)
+#ifdef __QUINCY_STANDALONE__
+    CALL init_soil_properties(tile)
+#endif
 
   END SUBROUTINE sse_init_ic
-#endif
 
   SUBROUTINE init_soil_properties(tile)
 

@@ -52,29 +52,37 @@ CONTAINS
   !> Intialize SPQ_ process
   !>
   SUBROUTINE spq_init(tile)
-
-    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_init'
 
+    model  => Get_model(tile%owner_model_id)
+    !> QUINCY with SPQ_ process
+    !>
+    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+
 #ifdef __QUINCY_STANDALONE__
-    CALL spq_qs_read_init_vars(tile)
-    CALL spq_init_ic_bc(tile)
-    CALL spq_finalize_init_vars()
-#else
-    ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-      CALL spq_read_init_vars(tile)
-    END IF
-
-    CALL spq_init_ic_bc(tile)
-
-    IF (tile%Is_last_process_tile(SPQ_)) THEN
+      CALL spq_qs_read_init_vars(tile)
+      CALL spq_init_ic_bc(tile)
       CALL spq_finalize_init_vars()
-    END IF
+#else
+      ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL spq_read_init_vars(tile)
+      END IF
+
+      CALL spq_init_ic_bc(tile)
+
+      IF (tile%Is_last_process_tile(SPQ_)) THEN
+        CALL spq_finalize_init_vars()
+      END IF
 #endif
+    END IF
   END SUBROUTINE spq_init
 
   ! ======================================================================================================= !
@@ -677,7 +685,7 @@ CONTAINS
       & fill_array = spq_init_vars%soil_sand)
     ! convert from % to [0,1]
     spq_init_vars%soil_sand(:,:) = spq_init_vars%soil_sand(:,:) / 100.0_wp
-    spq_init_vars%soil_sand(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.3_wp, ptr_2D > 0.0_wp))
+    spq_init_vars%soil_sand(:,:) = MIN(1.0_wp, MERGE(spq_init_vars%soil_sand(:,:), 0.3_wp, spq_init_vars%soil_sand(:,:) > 0.0_wp))
 
     !> silt
     !>
@@ -686,7 +694,7 @@ CONTAINS
       & fill_array = spq_init_vars%soil_silt)
     ! convert from % to [0,1]
     spq_init_vars%soil_silt(:,:) = spq_init_vars%soil_silt(:,:) / 100.0_wp
-    spq_init_vars%soil_silt(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.4_wp, ptr_2D > 0.0_wp))
+    spq_init_vars%soil_silt(:,:) = MIN(1.0_wp, MERGE(spq_init_vars%soil_silt(:,:), 0.4_wp, spq_init_vars%soil_silt(:,:) > 0.0_wp))
 
     !> clay
     !>

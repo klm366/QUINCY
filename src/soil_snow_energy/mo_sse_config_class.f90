@@ -52,10 +52,10 @@ MODULE mo_sse_config_class
     REAL(wp) :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     REAL(wp) :: soil_awc_prescribe   !< ..
     REAL(wp) :: soil_theta_prescribe !< ..
-    REAL(wp) :: soil_sand            !< soil sand proportion - site specific from forcing info file
-    REAL(wp) :: soil_silt            !< soil silt proportion - site specific from forcing info file
-    REAL(wp) :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp) :: bulk_density
+    REAL(wp) :: qs_soil_sand         !< soil sand proportion - site specific from forcing info file
+    REAL(wp) :: qs_soil_silt         !< soil silt proportion - site specific from forcing info file
+    REAL(wp) :: qs_soil_clay         !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp) :: qs_bulk_density      !< ..
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config
@@ -94,6 +94,10 @@ CONTAINS
     REAL(wp) :: min_layer_depth !< for soil layer calculations
     INTEGER  :: isoil           !< loop over soil layers
     INTEGER  :: qs_nsoil_energy !< quincy-standalone specific number of soil layers consistent with SPQ_
+    REAL(wp) :: qs_soil_sand
+    REAL(wp) :: qs_soil_silt
+    REAL(wp) :: qs_soil_clay
+    REAL(wp) :: qs_bulk_density
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
@@ -104,13 +108,18 @@ CONTAINS
       & l_soil_texture, l_uniform_snow,         &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename,               &
-      & qs_nsoil_energy
+      & qs_nsoil_energy, &
+      & qs_soil_sand, &
+      & qs_soil_silt, &
+      & qs_soil_clay, &
+      & qs_bulk_density
 
     INTEGER :: nml_handler, nml_unit, istat, i
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
-    REAL(wp), ALLOCATABLE :: dz_energy(:)  !< thickness of soil layers
+    REAL(wp), ALLOCATABLE :: dz_energy(:)               !< thickness of soil layers
+    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< upper bound of soil layers (larger value compared to lower bound)
     INTEGER :: nsoil
 
     TYPE(t_jsb_vgrid), POINTER :: soil_vgrid, snow_vgrid
@@ -143,6 +152,10 @@ CONTAINS
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     qs_nsoil_energy  = 5
+    qs_soil_sand     = 0.3_wp
+    qs_soil_silt     = 0.4_wp
+    qs_soil_clay     = 0.3_wp
+    qs_bulk_density  = 1500.0_wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -207,6 +220,16 @@ CONTAINS
 
     ! quincy standalone
     config%qs_nsoil_energy = qs_nsoil_energy
+    config%qs_soil_sand    = qs_soil_sand
+    config%qs_soil_silt    = qs_soil_silt
+    config%qs_soil_clay    = 1.0_wp - qs_soil_sand - qs_soil_silt
+    config%qs_bulk_density = qs_bulk_density
+
+    ! check for an error in clay content of soil
+    IF(config%qs_soil_clay < eps8) THEN
+       WRITE(message_text,'(a)') 'invalid proportion of qs_soil_clay (value < eps8)'
+       CALL finish(routine, message_text)
+    END IF
 
     IF (.NOT. active) RETURN
 
@@ -224,6 +247,15 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+
+    soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+      & levels  = mids                 (1:nsoil  ),                              &
+      & lbounds = depths               (1:nsoil  ),                              &
+      & ubounds = depths               (2:nsoil+1),                              &
+      & units='m')
+    CALL register_vgrid(soil_vgrid)
+
+    DEALLOCATE(depths, mids)
 #else
     ! quincy standalone
     !
@@ -237,14 +269,12 @@ CONTAINS
     ! temporary solution: set consistently with SPQ_ config via namelist
     nsoil = qs_nsoil_energy
 
-    ALLOCATE(depths(nsoil+1))
-    ALLOCATE(mids(nsoil))
-    depths(1) = 0._wp
+    ALLOCATE(ubounds_soil_lay_energy(nsoil))
     ALLOCATE(dz_energy(nsoil))
 
     ! slightly modified copy/paste from SPQ_ config
     ! If not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses) to mimick standard JSB4 profile
-    !  assuming dz_energy(:) = dz_energy(:)
+    !  assuming dz_water(:) = dz_energy(:)
     IF (nsoil > 5) THEN
       ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
       DO isoil = 1,nsoil
@@ -256,23 +286,39 @@ CONTAINS
       dz_energy(1) = min_layer_depth
       DO isoil = 2,nsoil
         dz_energy(isoil) = MAX(min_layer_depth, &
-          &                    soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
+          &                   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
       END DO
-      ! temporary: for compatibility with "jsbach new_vgrid('soil_depth_energy', ...)" below
-      depths(2:nsoil+1) = dz_energy(1:nsoil)
     ELSE
-      depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+      dz_energy(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
     END IF
-    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+
+    ! calc upper bound of soil layers (water and energy) from layer thickness
+    ! note: upper bound is the larger value compared to lower bound of the same layer!
+    ubounds_soil_lay_energy(1)        = dz_energy(1)
+    DO isoil = 2,nsoil
+      ubounds_soil_lay_energy(isoil)  = ubounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
+    END DO
+    
+    !< Create vertical soil-layer axis (vgrid)
+    !!
+    !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
+    !!
+    !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
+    !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+    soil_vgrid => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+                      longname='Soil (energy) layers from SSE_ config', &
+                      units='m', &
+                      ! levels=  , &      ! is calculated from ubounds and dz
+                      ! lbounds=  , &     ! is calculated from ubounds and dz
+                      ubounds=ubounds_soil_lay_energy(:), &
+                      dz=dz_energy(:))
+    CALL register_vgrid(soil_vgrid)
+
+    DEALLOCATE(ubounds_soil_lay_energy)
     DEALLOCATE(dz_energy)
 #endif
 
-    soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
-      & levels  = mids                 (1:nsoil  ),                              &
-      & lbounds = depths               (1:nsoil  ),                              &
-      & ubounds = depths               (2:nsoil+1),                              &
-      & units='m')
-    CALL register_vgrid(soil_vgrid)
     WRITE(message_text, *) 'Soil levels in soil energy (upper) [m]: ', soil_vgrid%lbounds
     CALL message(TRIM(routine), message_text)
     WRITE(message_text, *) 'Soil levels in soil energy (mid)   [m]: ', soil_vgrid%levels
@@ -281,7 +327,6 @@ CONTAINS
     CALL message(TRIM(routine), message_text)
     WRITE(message_text, *) 'Soil level depths in soil energy   [m]: ', soil_vgrid%dz
     CALL message(TRIM(routine), message_text)
-    DEALLOCATE(depths, mids)
 
     IF (l_snow) THEN
       IF (dz_snow(1) < snow_depth_min)                                                                 &

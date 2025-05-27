@@ -1004,7 +1004,10 @@ CONTAINS
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)                     ! in
         dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,      q_sat_srf)                     ! in
+        ! use with quincy SPQ_
+        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          dsl4jsb_Get_var2D_onChunk(SEB_,      q_sat_srf)                   ! in (only calculated in SPQ_)
+        END IF
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           canopy_conductance(ic) = canopy_cond(ic)
@@ -1013,7 +1016,11 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          mask(ic) = canopy_conductance(ic) > eps8 .AND. (q_sat_srf(ic) - q_air(ic)) > 0.0_wp
+          IF (model%config%use_soil_phys_jsbach) THEN
+            mask(ic) = canopy_conductance(ic) > eps8 .AND. (qsat_star(ic) - q_air(ic)) > 0.0_wp
+          ELSE
+            mask(ic) = canopy_conductance(ic) > eps8 .AND. (q_sat_srf(ic) - q_air(ic)) > 0.0_wp
+          END IF
         END DO
         !$ACC END PARALLEL LOOP
 #endif

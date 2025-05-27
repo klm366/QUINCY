@@ -48,9 +48,11 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
-#ifdef __QUINCY_STANDALONE__
-#else
     USE mo_jsb_time,          ONLY: timestep_in_days
+#ifdef __QUINCY_STANDALONE__
+    USE mo_qs_forcing,          ONLY: forcing_options
+    USE mo_jsb_math_constants,  ONLY: eps8
+#else
     USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
 #endif
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -68,7 +70,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
 #ifdef __QUINCY_STANDALONE__
-    ! quincy init
+    CALL qs_seb_init_bc(tile)
 #else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL seb_read_init_vars(tile)
@@ -90,7 +92,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 #ifdef __QUINCY_STANDALONE__
-      F_pseudo_soil_temp = EXP(- model%options%dtime / 10._wp)
+      F_pseudo_soil_temp = EXP(- MAX(eps8, timestep_in_days(forcing_options%forcing_hour)) / 10._wp)
 #else
       F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/pheno_param_jsbach%EG_SG%tau_pseudo_soil)
 #endif
@@ -146,6 +148,39 @@ CONTAINS
     IF (ALLOCATED(seb_init_vars%skin_conductivity)) DEALLOCATE(seb_init_vars%skin_conductivity)
   END SUBROUTINE seb_finalize_init_vars
 
+  ! ======================================================================================================= !
+  !>
+  !> SEB_ init bc - quincy standalone
+  !> 
+  SUBROUTINE qs_seb_init_bc(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(SEB_)
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':qs_seb_init_bc'
+
+    model => get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_memory(SEB_)
+
+    IF (dsl4jsb_Config(SEB_)%l_skin_temp) THEN
+      IF (tile%is_land .OR. model%config%use_tmx) THEN
+        dsl4jsb_var2D_onDomain(SEB_, skin_conductivity) = 40.0_wp   ! estimated from icon-land input file
+        !$ACC UPDATE ASYNC(1) DEVICE(dsl4jsb_var2D_onDomain(SEB_, skin_conductivity))
+      END IF
+    END IF
+
+  END SUBROUTINE qs_seb_init_bc
+
+  ! ======================================================================================================= !
+  !>
+  !> SEB_ init bc
+  !> 
   SUBROUTINE seb_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

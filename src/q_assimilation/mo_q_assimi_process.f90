@@ -197,7 +197,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in      ! drag coefficient calculated by jsbach for coupled/standalone ("update_surface_temperature_standalone()")
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)    ! out
@@ -327,13 +327,16 @@ CONTAINS
 
     !> 1.2 determine aerodynamic conductance
     !>
-    ! use drag_srf from A2L_ or TURB_ - differ between standalone and coupled simulations
-    IF (jsb_standalone) THEN
+    !> use drag_srf from A2L_ or TURB_ - differ between standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
+    !>
+    ! use for: QUINCY SPQ_ standalone
+    IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         drag_srf_local(ic) = drag_srf_stdalone(ic)
       END DO
       !$ACC END PARALLEL LOOP
+    ! use for: QUINCY SPQ_ coupled and JSBACH coupled and standalone
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc

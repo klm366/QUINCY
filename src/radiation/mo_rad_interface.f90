@@ -1120,7 +1120,12 @@ CONTAINS
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
       & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN
+      & .NOT. jsbach_runs_standalone()) THEN
+      IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Update albedo only at experiment start, ', &
+        &                                  'if model runs standalone or one time step before the radiation time step ', &
+        &                                  'RETURN')
+      RETURN
+    END IF
 #endif
 
     ! Enable for debugging:
