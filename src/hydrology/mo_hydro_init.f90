@@ -1286,7 +1286,7 @@ CONTAINS
 
     ! TODO
     ! improve later: calculate below using average across soil layer of matric_pot_sl weighted with root_fraction_sl
-    ! 
+    !
     matric_pot_root(:,:) = dsl4jsb_var_ptr(HYDRO_, matric_pot)
 
     !> Set maximum root zone soil moisture (water plus ice)
@@ -1303,7 +1303,7 @@ CONTAINS
     !> Update the soil properties according to boundary and initial conditions just set
     !>
     ! output variables:
-    !     hyd_cond_sat_sl,    vol_porosity_sl,  bclapp_sl,     matric_pot_sl, 
+    !     hyd_cond_sat_sl,    vol_porosity_sl,  bclapp_sl,     matric_pot_sl,
     !     pore_size_index_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl
     CALL init_soil_properties(tile)
 

@@ -151,7 +151,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> SEB_ init bc - quincy standalone
-  !> 
+  !>
   SUBROUTINE qs_seb_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -180,7 +180,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> SEB_ init bc
-  !> 
+  !>
   SUBROUTINE seb_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

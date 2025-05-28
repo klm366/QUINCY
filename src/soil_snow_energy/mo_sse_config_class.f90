@@ -298,7 +298,7 @@ CONTAINS
     DO isoil = 2,nsoil
       ubounds_soil_lay_energy(isoil)  = ubounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
     END DO
-    
+
     !< Create vertical soil-layer axis (vgrid)
     !!
     !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !

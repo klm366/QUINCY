@@ -521,7 +521,7 @@ CONTAINS
     DO isoil = 2,nsoil
       ubounds_soil_lay_water(isoil)  = ubounds_soil_lay_water(isoil-1) + dz_water(isoil)
     END DO
-    
+
     !< Create vertical soil-layer axis (vgrid)
     !!
     !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
