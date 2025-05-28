@@ -47,6 +47,7 @@ MODULE mo_jsb_config_class
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
+    LOGICAL                        :: use_soil_phys_jsbach  !< use jsbach soil-physic processes instead of SPQ_ with quincy
     LOGICAL                        :: force_c_isotopes      !< If c isotopes forcing should be used (else use atmland constant)
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
@@ -137,6 +138,7 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
 #ifndef __NO_QUINCY__
+    LOGICAL :: use_soil_phys_jsbach       !< use jsbach soil-physic processes instead of SPQ_ with quincy
     LOGICAL :: force_c_isotopes           !< use c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_phosphorus         !< element variables in bgc_material (infrastructure)
@@ -166,6 +168,7 @@ CONTAINS
       output_tiles, &
       relative_fractions_in_file, &
 #ifndef __NO_QUINCY__
+      use_soil_phys_jsbach, &
       force_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
@@ -216,6 +219,7 @@ CONTAINS
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
+    use_soil_phys_jsbach       = .FALSE.      ! may be set to TRUE during a later dev stage
     force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
@@ -278,6 +282,7 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
+    model_config%use_soil_phys_jsbach       = use_soil_phys_jsbach
     model_config%force_c_isotopes           = force_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen

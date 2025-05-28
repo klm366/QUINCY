@@ -156,6 +156,7 @@ MODULE mo_hydro_constants
     ! Parameter for bedrock
     & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
 
+#ifdef __QUINCY_STANDALONE__
   ! quincy standalone
   REAL(wp), PARAMETER :: &
     & k_pwp_a         = 0.031_wp, &
@@ -179,6 +180,7 @@ MODULE mo_hydro_constants
     & k_sat_bt        = 0.6360_wp, &
     & k_sat_ct        = 0.097_wp, &
     & k_sat_dt        = 0.043_wp
+#endif
 
 #endif
 END MODULE mo_hydro_constants
